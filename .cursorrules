@@ -1,0 +1,16 @@
+You are an expert full-stack engineer working on a Nordic All-in-One Creator Platform (Stan Store + Skool + Events + AI).
+
+TECH STACK RULES:
+- Framework: Next.js 15 (App Router, TypeScript).
+- Styling: Tailwind CSS (Dark slate, mobile-first, rounded-2xl glassmorphism).
+- Database & Auth: Supabase (PostgreSQL with Row Level Security and Realtime).
+- Icons: FontAwesome 6 / Lucide React.
+- i18n: Dynamic multi-language support (SV, NO, DA, FI, EN).
+
+CODING STANDARDS:
+1. Always write clean, modular, highly documented code with verbose single-line comments.
+2. Ensure 100% fluid mobile responsiveness. Touch targets must be at least 44px.
+3. NEVER write monolithic spaghetti code. Split UI into small reusable components.
+4. Keep environment variables strictly inside `.env.local` (e.g. NEXT_PUBLIC_SUPABASE_URL).
+5. All buttons and interactive elements must support both desktop click and mobile touch.
+                    
