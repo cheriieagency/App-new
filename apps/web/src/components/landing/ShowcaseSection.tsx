@@ -67,7 +67,7 @@ export function ShowcaseSection({
         <div>
           <p
             className="text-xs font-extrabold uppercase tracking-[0.18em] mb-2"
-            style={{ color: 'var(--nc-coral, #ff5c35)' }}
+            style={{ color: 'var(--nc-coral, #9b8afb)' }}
           >
             Sök
           </p>
@@ -90,7 +90,7 @@ export function ShowcaseSection({
           <div className="flex items-center gap-3 mb-8">
             <p
               className="text-xs font-extrabold uppercase tracking-[0.18em]"
-              style={{ color: 'var(--nc-coral, #ff5c35)' }}
+              style={{ color: 'var(--nc-coral, #9b8afb)' }}
             >
               Veckans community
             </p>
@@ -147,7 +147,7 @@ export function ShowcaseSection({
                   <Link
                     href={`/communities/${featured.id}`}
                     className="flex items-center gap-2 min-h-11 px-6 rounded-full text-sm font-extrabold text-[#0b0d10] transition-all active:scale-95"
-                    style={{ background: 'var(--nc-coral, #ff5c35)' }}
+                    style={{ background: 'var(--nc-coral, #9b8afb)' }}
                   >
                     Kika in i communityt <ArrowRight size={13} />
                   </Link>
@@ -254,7 +254,7 @@ export function ShowcaseSection({
 
             <div className="pt-8 p-4">
               <p className="text-[10px] font-bold text-zinc-400 mb-0.5">{community.creator_name}</p>
-              <h3 className="font-display text-sm font-extrabold text-[#0b0d10] mb-2 group-hover:text-[var(--nc-coral,#ff5c35)] transition-colors leading-snug">
+              <h3 className="font-display text-sm font-extrabold text-[#0b0d10] mb-2 group-hover:text-[var(--nc-coral,#9b8afb)] transition-colors leading-snug">
                 {community.name}
               </h3>
               <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2 mb-4">

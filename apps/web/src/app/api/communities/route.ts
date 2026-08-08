@@ -2,6 +2,7 @@ import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { getMockCommunitiesForUser } from '@/lib/mock-communities';
+import { syncSubscriber } from '@/lib/mock-email-crm';
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
@@ -45,8 +46,11 @@ export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const body = await request.json().catch(() => ({} as Record<string, unknown>));
+  const community_id = body.community_id;
+  const action = body.action as string | undefined;
+
   try {
-    const { community_id, action } = await request.json();
     if (!community_id || !action) {
       return Response.json({ error: 'Missing fields' }, { status: 400 });
     }
@@ -60,6 +64,47 @@ export async function POST(request: Request) {
       await sql`
         UPDATE communities SET member_count = member_count + 1 WHERE id = ${community_id}
       `;
+      // Auto-sync to creator Email CRM with source tag.
+      syncSubscriber({
+        email: session.user.email,
+        name: session.user.name || 'Medlem',
+        user_id: session.user.id,
+        image: session.user.image ?? null,
+        source: 'community_member',
+        community_id: Number(community_id),
+        extra_tags: ['Community Member'],
+      });
+      try {
+        // Best-effort persist for the community creator's list.
+        const owners = await sql`
+          SELECT creator_id FROM communities WHERE id = ${Number(community_id)} LIMIT 1
+        `;
+        const creatorId = owners?.[0]?.creator_id as string | undefined;
+        if (creatorId) {
+          await sql`
+            INSERT INTO email_subscribers (
+              creator_id, user_id, name, email, image, source, tags, community_id
+            )
+            VALUES (
+              ${creatorId},
+              ${session.user.id},
+              ${session.user.name || 'Medlem'},
+              ${session.user.email},
+              ${session.user.image ?? null},
+              'community_member',
+              ${['Community Member']},
+              ${Number(community_id)}
+            )
+            ON CONFLICT (creator_id, email) DO UPDATE SET
+              tags = (
+                SELECT ARRAY(SELECT DISTINCT unnest(email_subscribers.tags || EXCLUDED.tags))
+              ),
+              updated_at = now()
+          `;
+        }
+      } catch {
+        /* demo / missing table — in-memory sync still applied */
+      }
     } else if (action === 'leave') {
       const deleted = await sql`
         DELETE FROM community_memberships
@@ -78,6 +123,17 @@ export async function POST(request: Request) {
     console.error(error);
     // Demo mode without DB: pretend join succeeded so UI can continue.
     if (!process.env.DATABASE_URL?.trim()) {
+      if (action === 'join') {
+        syncSubscriber({
+          email: session.user.email,
+          name: session.user.name || 'Medlem',
+          user_id: session.user.id,
+          image: session.user.image ?? null,
+          source: 'community_member',
+          community_id: Number(community_id) || null,
+          extra_tags: ['Community Member'],
+        });
+      }
       return Response.json({ success: true, mode: 'demo-mock' });
     }
     return Response.json({ error: 'Failed to update membership' }, { status: 500 });

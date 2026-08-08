@@ -1,6 +1,7 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { syncSubscriber } from '@/lib/mock-email-crm';
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -19,10 +20,30 @@ export async function POST(request: Request) {
       return Response.json({ rsvpd: false });
     } else {
       await sql`INSERT INTO rsvps (event_id, user_id) VALUES (${event_id}, ${session.user.id})`;
+      // Auto-sync webinar attendees into Email CRM.
+      syncSubscriber({
+        email: session.user.email,
+        name: session.user.name || 'Medlem',
+        user_id: session.user.id,
+        image: session.user.image ?? null,
+        source: 'webinar_attendee',
+        extra_tags: ['Webinar Attendee'],
+      });
       return Response.json({ rsvpd: true });
     }
   } catch (error) {
     console.error(error);
+    if (!process.env.DATABASE_URL?.trim()) {
+      syncSubscriber({
+        email: session.user.email,
+        name: session.user.name || 'Medlem',
+        user_id: session.user.id,
+        image: session.user.image ?? null,
+        source: 'webinar_attendee',
+        extra_tags: ['Webinar Attendee'],
+      });
+      return Response.json({ rsvpd: true, demo: true });
+    }
     return Response.json({ error: 'Failed to toggle RSVP' }, { status: 500 });
   }
 }

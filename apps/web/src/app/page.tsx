@@ -13,6 +13,7 @@ import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { RoiCalculator } from '@/components/landing/RoiCalculator';
 import { ShowcaseSection } from '@/components/landing/ShowcaseSection';
 import { FaqSection } from '@/components/landing/FaqSection';
+import { PricingSection } from '@/components/landing/PricingSection';
 import type { SearchableCommunity } from '@/components/landing/CommunitySearchAutocomplete';
 import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
 
@@ -92,6 +93,7 @@ export default function PlatformHome() {
       <ComparisonSection />
       <FeaturesSection />
       <RoiCalculator />
+      <PricingSection />
       <ShowcaseSection
         featured={featured}
         allCommunities={list}
@@ -134,7 +136,7 @@ export default function PlatformHome() {
               className="flex items-center gap-2 min-h-12 px-8 rounded-full font-extrabold text-sm text-white transition-all active:scale-[0.98]"
               style={{
                 background: 'var(--nc-coral)',
-                boxShadow: '0 14px 32px -12px rgba(255,122,92,0.5)',
+                boxShadow: '0 14px 32px -12px rgba(155,138,251,0.5)',
               }}
             >
               Skapa gratis community <ArrowRight size={14} />

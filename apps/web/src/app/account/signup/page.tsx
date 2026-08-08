@@ -90,7 +90,7 @@ function SignUpForm() {
 						required
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
-						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#ffe8e1]"
+						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff]"
 					/>
 				</label>
 
@@ -102,7 +102,7 @@ function SignUpForm() {
 						minLength={8}
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
-						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#ffe8e1]"
+						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff]"
 					/>
 				</label>
 

@@ -45,7 +45,7 @@ import {
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; dot: string; dark: string }> = {
   Summit: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: '#6366F1', dark: '#4338CA' },
   Masterclass: { bg: 'bg-[#d8f5ef]', text: 'text-[#0f766e]', dot: '#10B981', dark: '#047857' },
-  Workshop: { bg: 'bg-[#ffe8e1]', text: 'text-[#c45a3e]', dot: '#8B5CF6', dark: '#6D28D9' },
+  Workshop: { bg: 'bg-[#f2eeff]', text: 'text-[#6b5bb8]', dot: '#8B5CF6', dark: '#6D28D9' },
   Webinar: { bg: 'bg-blue-50', text: 'text-blue-700', dot: '#3B82F6', dark: '#1D4ED8' },
 };
 
@@ -778,14 +778,14 @@ export default function EventsPage() {
           className="rounded-[1.75rem] overflow-hidden mb-8 relative nc-glass"
           style={{
             background:
-              'linear-gradient(135deg, rgba(255,232,225,0.95) 0%, rgba(215,236,255,0.9) 100%)',
+              'linear-gradient(135deg, rgba(242,238,255,0.95) 0%, rgba(215,236,255,0.9) 100%)',
           }}
         >
           <div
             className="absolute inset-0"
             style={{
               backgroundImage:
-                'radial-gradient(ellipse at 20% 40%, rgba(255,122,92,0.18) 0%, transparent 50%), radial-gradient(ellipse at 90% 20%, rgba(125,211,252,0.25) 0%, transparent 50%)',
+                'radial-gradient(ellipse at 20% 40%, rgba(155,138,251,0.18) 0%, transparent 50%), radial-gradient(ellipse at 90% 20%, rgba(125,211,252,0.25) 0%, transparent 50%)',
             }}
           />
           <div className="relative px-6 sm:px-10 py-8 sm:py-10 flex flex-col sm:flex-row sm:items-center gap-6 justify-between">

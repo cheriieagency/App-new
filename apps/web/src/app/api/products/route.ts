@@ -9,6 +9,10 @@ import {
   type StoreKind,
   type StoreProductType,
 } from '@/lib/mock-store';
+import {
+  normalizeCollectFields,
+  normalizeOrderBump,
+} from '@/lib/store-collect-fields';
 
 function normalizeProduct(row: Record<string, unknown>) {
   const type = String(row.type ?? 'other') as StoreProductType;
@@ -25,6 +29,8 @@ function normalizeProduct(row: Record<string, unknown>) {
       row.community_id != null ? Number(row.community_id) : null,
     is_published: row.is_published !== false,
     created_at: String(row.created_at ?? new Date().toISOString()),
+    collect_fields: normalizeCollectFields(row.collect_fields),
+    order_bump: normalizeOrderBump(row.order_bump),
   };
 }
 
@@ -86,6 +92,8 @@ export async function POST(request: Request) {
 
     const productType = (type as StoreProductType) ?? 'ebook';
     const productKind = (kind as StoreKind) || kindForType(productType);
+    const collect_fields = normalizeCollectFields(body.collect_fields);
+    const order_bump = normalizeOrderBump(body.order_bump);
 
     if (!process.env.DATABASE_URL?.trim()) {
       const product = demoCreateStoreProduct({
@@ -97,6 +105,8 @@ export async function POST(request: Request) {
         image_url: image_url ?? null,
         community_id: community_id ?? null,
         is_published: true,
+        collect_fields,
+        order_bump,
       });
       return Response.json(product);
     }
@@ -104,7 +114,7 @@ export async function POST(request: Request) {
     const result = await sql`
       INSERT INTO products (
         creator_id, community_id, name, description, price, currency,
-        type, kind, image_url
+        type, kind, image_url, collect_fields, order_bump
       )
       VALUES (
         ${session.user.id},
@@ -115,7 +125,9 @@ export async function POST(request: Request) {
         'SEK',
         ${productType},
         ${productKind},
-        ${image_url ?? null}
+        ${image_url ?? null},
+        ${JSON.stringify(collect_fields)},
+        ${JSON.stringify(order_bump)}
       )
       RETURNING *
     `;

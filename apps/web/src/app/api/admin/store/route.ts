@@ -11,6 +11,10 @@ import {
   type StoreKind,
   type StoreProductType,
 } from '@/lib/mock-store';
+import {
+  normalizeCollectFields,
+  normalizeOrderBump,
+} from '@/lib/store-collect-fields';
 
 async function requireSession() {
   return auth.api.getSession({ headers: await headers() });
@@ -31,6 +35,8 @@ function normalizeProduct(row: Record<string, unknown>) {
       row.community_id != null ? Number(row.community_id) : null,
     is_published: row.is_published !== false,
     created_at: String(row.created_at ?? new Date().toISOString()),
+    collect_fields: normalizeCollectFields(row.collect_fields),
+    order_bump: normalizeOrderBump(row.order_bump),
   };
 }
 
@@ -98,6 +104,8 @@ export async function POST(request: Request) {
       const description = (body.description as string) || null;
       const image_url = (body.image_url as string) || null;
       const is_published = body.is_published !== false;
+      const collect_fields = normalizeCollectFields(body.collect_fields);
+      const order_bump = normalizeOrderBump(body.order_bump);
 
       if (!process.env.DATABASE_URL?.trim()) {
         const product = demoCreateStoreProduct({
@@ -109,6 +117,8 @@ export async function POST(request: Request) {
           image_url,
           community_id,
           is_published,
+          collect_fields,
+          order_bump,
         });
         return Response.json({ product, demo: true });
       }
@@ -116,7 +126,7 @@ export async function POST(request: Request) {
       const rows = await sql`
         INSERT INTO products (
           creator_id, community_id, name, description, price, currency,
-          type, kind, image_url, is_published
+          type, kind, image_url, is_published, collect_fields, order_bump
         )
         VALUES (
           ${session.user.id},
@@ -128,7 +138,9 @@ export async function POST(request: Request) {
           ${type},
           ${kind},
           ${image_url},
-          ${is_published}
+          ${is_published},
+          ${JSON.stringify(collect_fields)},
+          ${JSON.stringify(order_bump)}
         )
         RETURNING *
       `;
@@ -138,6 +150,15 @@ export async function POST(request: Request) {
     if (action === 'update') {
       const id = Number(body.id);
       if (!id) return Response.json({ error: 'id required' }, { status: 400 });
+
+      const collect_fields =
+        body.collect_fields !== undefined
+          ? normalizeCollectFields(body.collect_fields)
+          : undefined;
+      const order_bump =
+        body.order_bump !== undefined
+          ? normalizeOrderBump(body.order_bump)
+          : undefined;
 
       if (!process.env.DATABASE_URL?.trim()) {
         const product = demoUpdateStoreProduct(id, {
@@ -157,7 +178,9 @@ export async function POST(request: Request) {
             body.is_published !== undefined
               ? Boolean(body.is_published)
               : undefined,
-        } as Partial<ReturnType<typeof demoCreateStoreProduct>>);
+          collect_fields,
+          order_bump,
+        });
         if (!product) return Response.json({ error: 'Not found' }, { status: 404 });
         return Response.json({ product, demo: true });
       }
@@ -171,6 +194,12 @@ export async function POST(request: Request) {
           kind = COALESCE(${body.kind ?? null}, kind),
           image_url = COALESCE(${body.image_url ?? null}, image_url),
           is_published = COALESCE(${body.is_published ?? null}, is_published),
+          collect_fields = COALESCE(${
+            collect_fields ? JSON.stringify(collect_fields) : null
+          }, collect_fields),
+          order_bump = COALESCE(${
+            order_bump ? JSON.stringify(order_bump) : null
+          }, order_bump),
           updated_at = now()
         WHERE id = ${id}
         RETURNING *

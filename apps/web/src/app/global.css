@@ -6,9 +6,9 @@
     --nc-ink: #2c3340;
     --nc-ink-soft: #5b6472;
     --nc-paper: #f7f9fc;
-    --nc-blush: #ffd8cc;
-    --nc-coral: #ff7a5c;
-    --nc-coral-soft: #ffe8e1;
+    --nc-blush: #e8e2ff;
+    --nc-coral: #9b8afb;
+    --nc-coral-soft: #f2eeff;
     --nc-sky: #d7ecff;
     --nc-mint: #d8f5ef;
     --nc-glass: rgba(255, 255, 255, 0.55);
@@ -20,9 +20,9 @@
     --card-foreground: #2c3340;
     --popover: #ffffff;
     --popover-foreground: #2c3340;
-    --primary: #ff7a5c;
+    --primary: #9b8afb;
     --primary-foreground: #ffffff;
-    --secondary: #ffe8e1;
+    --secondary: #f2eeff;
     --secondary-foreground: #2c3340;
     --muted: #eef2f7;
     --muted-foreground: #5b6472;
@@ -32,21 +32,21 @@
     --destructive-foreground: hsl(0 0% 98%);
     --border: rgba(200, 210, 225, 0.55);
     --input: rgba(200, 210, 225, 0.7);
-    --ring: #ff7a5c;
+    --ring: #9b8afb;
     --radius: 1rem;
-    --chart-1: #ff7a5c;
+    --chart-1: #9b8afb;
     --chart-2: #38bdf8;
     --chart-3: #2dd4bf;
     --chart-4: #fbbf24;
     --chart-5: #a78bfa;
     --sidebar: rgba(255, 255, 255, 0.55);
     --sidebar-foreground: #2c3340;
-    --sidebar-primary: #ff7a5c;
+    --sidebar-primary: #9b8afb;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #ffe8e1;
+    --sidebar-accent: #f2eeff;
     --sidebar-accent-foreground: #2c3340;
     --sidebar-border: rgba(255, 255, 255, 0.7);
-    --sidebar-ring: #ff7a5c;
+    --sidebar-ring: #9b8afb;
 }
 
 .dark {
@@ -141,9 +141,9 @@
     --nc-ink: #2c3340;
     --nc-ink-soft: #5b6472;
     --nc-paper: #f7f9fc;
-    --nc-blush: #ffd8cc;
-    --nc-coral: #ff7a5c;
-    --nc-coral-soft: #ffe8e1;
+    --nc-blush: #e8e2ff;
+    --nc-coral: #9b8afb;
+    --nc-coral-soft: #f2eeff;
     --nc-sky: #d7ecff;
     --nc-mint: #d8f5ef;
     font-family: 'Outfit', system-ui, sans-serif;
@@ -179,7 +179,8 @@
     isolation: isolate;
     min-height: 100vh;
     background: var(--nc-paper);
-    overflow-x: hidden;
+    /* clip (not hidden) so position:sticky sidebars still follow page scroll */
+    overflow-x: clip;
 }
 
 .nc-app-shell::before,

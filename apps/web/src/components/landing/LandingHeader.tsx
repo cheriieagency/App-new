@@ -58,6 +58,15 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
             <button
               type="button"
               onClick={() =>
+                document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })
+              }
+              className="text-sm font-bold text-[#5b6472] hover:text-[#2c3340] transition-colors hidden sm:block min-h-11 px-2"
+            >
+              Priser
+            </button>
+            <button
+              type="button"
+              onClick={() =>
                 document.getElementById('communities')?.scrollIntoView({ behavior: 'smooth' })
               }
               className="text-sm font-bold text-[#5b6472] hover:text-[#2c3340] transition-colors hidden sm:block min-h-11 px-2"

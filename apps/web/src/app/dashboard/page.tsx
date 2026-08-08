@@ -39,6 +39,8 @@ import {
   FileText,
   Loader2,
   ShoppingBag,
+  Bell,
+  ChevronDown,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
@@ -111,7 +113,7 @@ function getLevelProgress(points: number) {
 
 const TAGS = [
   { label: '#Frågor', color: 'bg-blue-100 text-blue-700', dot: '#3B82F6' },
-  { label: '#Inspiration', color: 'bg-violet-100 text-[#c45a3e]', dot: '#8B5CF6' },
+  { label: '#Inspiration', color: 'bg-violet-100 text-[#6b5bb8]', dot: '#8B5CF6' },
   { label: '#Resultat', color: 'bg-green-100 text-green-700', dot: '#10B981' },
   { label: '#Tips', color: 'bg-amber-100 text-amber-700', dot: '#F59E0B' },
   { label: '#Milstolpe', color: 'bg-rose-100 text-rose-700', dot: '#F43F5E' },
@@ -351,7 +353,7 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
                   <div
                     className={`rounded-xl rounded-tl-none px-3 py-2 ${
                       c.is_pinned
-                        ? 'bg-[#fff4f0] border border-[#ffe0d4]'
+                        ? 'bg-[#f2eeff] border border-[#ffe0d4]'
                         : 'bg-zinc-50'
                     }`}
                   >
@@ -390,7 +392,7 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
                         }
                         className={`flex items-center gap-1 h-9 min-h-[36px] px-2 text-[10px] font-bold transition-colors disabled:opacity-50 ${
                           c.is_pinned
-                            ? 'text-[var(--nc-coral)] hover:text-[#c45a3e]'
+                            ? 'text-[var(--nc-coral)] hover:text-[#6b5bb8]'
                             : 'text-zinc-400 hover:text-[var(--nc-coral)]'
                         }`}
                       >
@@ -499,7 +501,7 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
             </button>
             <button
               onClick={() => vidInputRef.current?.click()}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-zinc-400 hover:text-violet-500 hover:bg-[#ffe8e1] transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-zinc-400 hover:text-violet-500 hover:bg-[#f2eeff] transition-all"
             >
               <Video size={11} /> Video
             </button>
@@ -1155,7 +1157,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-black text-[#2c3340]">{post.user_name}</p>
                         {post.is_pinned && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#fff4f0] px-1.5 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#f2eeff] px-1.5 py-0.5 rounded-full">
                             <Pin size={9} /> Fäst
                           </span>
                         )}
@@ -1214,7 +1216,7 @@ export default function DashboardPage() {
                       }
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] disabled:opacity-50 ${
                         post.is_pinned
-                          ? 'text-[var(--nc-coral)] bg-[#fff4f0] hover:bg-[#ffe8e1]'
+                          ? 'text-[var(--nc-coral)] bg-[#f2eeff] hover:bg-[#f2eeff]'
                           : 'text-zinc-400 hover:bg-zinc-50 hover:text-[var(--nc-coral)]'
                       }`}
                     >
@@ -1437,43 +1439,121 @@ export default function DashboardPage() {
   // ── Community View ───────────────────────────────────────────────────────
   const renderCommunity = () => {
     const comm = selectedCommunity;
+    const joinedForSelect = (communities as any[]).filter((c: any) => c.is_joined);
     return (
       <div>
-        <div className="bg-white border-b border-zinc-100 px-4 sm:px-6 py-4">
-          <div className="max-w-5xl mx-auto flex items-center gap-4 flex-wrap">
-            <div
-              className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-100 flex-shrink-0"
-              style={{ background: comm?.cover_color ?? '#1e1b4b' }}
-            >
-              {comm?.creator_image ? (
-                <img
-                  src={comm.creator_image}
-                  alt={comm.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white font-black">
-                  {comm?.name?.[0]}
-                </div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-base font-black text-[#2c3340] truncate">{comm?.name}</h1>
-              <p className="text-xs text-zinc-400 font-medium">
-                {comm?.category} · {comm?.member_count?.toLocaleString('sv-SE')} members
-              </p>
-            </div>
-            <nav className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl">
-              {MAIN_TABS.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === key ? 'bg-white text-[#2c3340] shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
+        {/* Skool-style top bar */}
+        <div className="bg-white/95 backdrop-blur-md border-b border-zinc-100 sticky top-0 z-20">
+          <div className="max-w-5xl mx-auto px-3 sm:px-6">
+            <div className="h-14 sm:h-16 flex items-center gap-2 sm:gap-4">
+              {/* Left: logo + community selector */}
+              <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
+                <div
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center text-white font-black"
+                  style={{ background: comm?.cover_color ?? '#1e1b4b' }}
                 >
-                  <Icon size={13} />
-                  <span className="hidden sm:inline">{label}</span>
+                  {comm?.creator_image ? (
+                    <img
+                      src={comm.creator_image}
+                      alt={comm?.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    comm?.name?.[0]
+                  )}
+                </div>
+                <div className="relative min-w-0">
+                  <select
+                    value={comm?.id ?? ''}
+                    onChange={(e) => {
+                      const next = (communities as any[]).find(
+                        (c: any) => String(c.id) === e.target.value
+                      );
+                      if (next) setSelectedCommunity(next);
+                    }}
+                    className="appearance-none h-11 min-h-[44px] max-w-[130px] sm:max-w-[220px] pl-1.5 pr-6 bg-transparent text-sm font-black text-[#2c3340] truncate focus:outline-none cursor-pointer"
+                    aria-label="Välj community"
+                  >
+                    {(joinedForSelect.length ? joinedForSelect : [comm].filter(Boolean)).map(
+                      (c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+                  <ChevronDown
+                    size={14}
+                    className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-zinc-400"
+                  />
+                </div>
+              </div>
+
+              {/* Center search */}
+              <div className="flex-1 flex justify-center min-w-0">
+                <div className="relative w-full max-w-md">
+                  <Search
+                    size={15}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
+                  />
+                  <input
+                    value={communitySearch}
+                    onChange={(e) => setCommunitySearch(e.target.value)}
+                    placeholder="Sök i communityn..."
+                    className="w-full h-11 min-h-[44px] rounded-full bg-zinc-100 border border-transparent focus:border-zinc-200 focus:bg-white pl-10 pr-4 text-sm font-medium text-[#2c3340] placeholder:text-zinc-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Right: notifications + avatar */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <button
+                  type="button"
+                  className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center text-zinc-600 relative"
+                  aria-label="Notiser"
+                >
+                  <Bell size={16} />
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[var(--nc-coral)]" />
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setSidebarView('profile')}
+                  className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border-2 border-white shadow-sm bg-[var(--nc-coral)] flex items-center justify-center text-white text-xs font-black"
+                >
+                  {session.user.image ? (
+                    <img
+                      src={session.user.image}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    session.user.name?.[0]
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-menu tabs with underline */}
+            <nav className="flex items-center gap-1 overflow-x-auto scrollbar-none -mb-px">
+              {MAIN_TABS.map(({ key, label, icon: Icon }) => {
+                const active = activeTab === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveTab(key)}
+                    className={`relative flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 text-xs font-extrabold whitespace-nowrap transition-colors flex-shrink-0 ${
+                      active ? 'text-[#2c3340]' : 'text-zinc-400 hover:text-zinc-700'
+                    }`}
+                  >
+                    <Icon size={13} />
+                    <span>{label}</span>
+                    {active && (
+                      <span className="absolute left-2 right-2 bottom-0 h-0.5 rounded-full bg-[#2c3340]" />
+                    )}
+                  </button>
+                );
+              })}
             </nav>
           </div>
         </div>
@@ -1619,7 +1699,7 @@ export default function DashboardPage() {
                                         {post.user_name}
                                       </p>
                                       {post.is_pinned && (
-                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#fff4f0] px-1.5 py-0.5 rounded-full">
+                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#f2eeff] px-1.5 py-0.5 rounded-full">
                                           <Pin size={9} /> Fäst
                                         </span>
                                       )}
@@ -1691,7 +1771,7 @@ export default function DashboardPage() {
                                     }
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] disabled:opacity-50 ${
                                       post.is_pinned
-                                        ? 'text-[var(--nc-coral)] bg-[#fff4f0] hover:bg-[#ffe8e1]'
+                                        ? 'text-[var(--nc-coral)] bg-[#f2eeff] hover:bg-[#f2eeff]'
                                         : 'text-zinc-400 hover:bg-zinc-50 hover:text-[var(--nc-coral)]'
                                     }`}
                                   >
@@ -2068,7 +2148,7 @@ export default function DashboardPage() {
                   )}
                   <button
                     onClick={() => setShowMemberChat((v) => !v)}
-                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#ff9a82] to-[#ff7a5c] shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#b8a9ff] to-[#9b8afb] shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
                     style={{ boxShadow: '0 8px 32px rgba(99,102,241,0.4)' }}
                   >
                     {showMemberChat ? (
@@ -2136,8 +2216,8 @@ export default function DashboardPage() {
                   setSidebarView('community');
                   setActiveTab('community');
                 }}
-                className={`relative w-10 h-10 rounded-2xl overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 ${isActive ? 'border-[var(--nc-coral)] shadow-md' : 'border-transparent hover:border-[#ffd8cc]'}`}
-                style={{ background: c.cover_color ?? '#ffd8cc' }}
+                className={`relative w-10 h-10 rounded-2xl overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 ${isActive ? 'border-[var(--nc-coral)] shadow-md' : 'border-transparent hover:border-[#e8e2ff]'}`}
+                style={{ background: c.cover_color ?? '#e8e2ff' }}
               >
                 {c.creator_image ? (
                   <img src={c.creator_image} alt={c.name} className="w-full h-full object-cover" />

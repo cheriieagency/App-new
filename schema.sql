@@ -366,6 +366,8 @@ CREATE TABLE IF NOT EXISTS products (
   kind          text NOT NULL DEFAULT 'product'
                   CHECK (kind IN ('product', 'service')),
   image_url     text,
+  collect_fields jsonb NOT NULL DEFAULT '[]'::jsonb,
+  order_bump    jsonb,
   vat_rate      numeric(5, 2) NOT NULL DEFAULT 25.00,
   is_published  boolean NOT NULL DEFAULT true,
   created_at    timestamptz NOT NULL DEFAULT now(),
@@ -381,6 +383,8 @@ ALTER TABLE products ADD CONSTRAINT products_type_check
   CHECK (type IN ('ebook', 'course', 'coaching', 'community', 'service', 'digital', 'other'));
 ALTER TABLE products ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'product';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url text;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS collect_fields jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS order_bump jsonb;
 ALTER TABLE products DROP CONSTRAINT IF EXISTS products_kind_check;
 ALTER TABLE products ADD CONSTRAINT products_kind_check
   CHECK (kind IN ('product', 'service'));
@@ -414,6 +418,49 @@ CREATE UNIQUE INDEX IF NOT EXISTS payments_provider_external_uidx
   WHERE external_id IS NOT NULL;
 
 -- -----------------------------------------------------------------------------
+-- 6b) email CRM (subscribers + broadcasts)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS email_subscribers (
+  id            serial PRIMARY KEY,
+  creator_id    text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  user_id       text REFERENCES "user"(id) ON DELETE SET NULL,
+  community_id  integer REFERENCES communities(id) ON DELETE SET NULL,
+  name          text NOT NULL,
+  email         text NOT NULL,
+  image         text,
+  source        text NOT NULL DEFAULT 'community_member',
+  tags          text[] NOT NULL DEFAULT '{}',
+  subscribed_at timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (creator_id, email)
+);
+
+CREATE INDEX IF NOT EXISTS email_subscribers_creator_idx
+  ON email_subscribers (creator_id, subscribed_at DESC);
+CREATE INDEX IF NOT EXISTS email_subscribers_source_idx
+  ON email_subscribers (creator_id, source);
+
+CREATE TABLE IF NOT EXISTS email_broadcasts (
+  id               serial PRIMARY KEY,
+  creator_id       text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  subject          text NOT NULL,
+  body             text NOT NULL,
+  audience         text NOT NULL DEFAULT 'all',
+  audience_label   text,
+  recipient_count  integer NOT NULL DEFAULT 0,
+  open_rate        numeric(5, 2) NOT NULL DEFAULT 0,
+  click_rate       numeric(5, 2) NOT NULL DEFAULT 0,
+  status           text NOT NULL DEFAULT 'sent'
+                     CHECK (status IN ('sent', 'draft', 'test')),
+  sent_at          timestamptz NOT NULL DEFAULT now(),
+  created_at       timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS email_broadcasts_creator_idx
+  ON email_broadcasts (creator_id, sent_at DESC);
+
+-- -----------------------------------------------------------------------------
 -- 7) events + RSVPs + live chat
 -- -----------------------------------------------------------------------------
 
@@ -432,10 +479,21 @@ CREATE TABLE IF NOT EXISTS events (
   speaker_bio     text,
   speaker_image   text,
   category        text DEFAULT 'Webinar',
+  -- online | in_person
+  location_type   text NOT NULL DEFAULT 'online',
+  location_address text,
+  -- invite_only | selected | community
+  audience        text NOT NULL DEFAULT 'community',
+  invited_member_ids text[] NOT NULL DEFAULT '{}',
   is_published    boolean NOT NULL DEFAULT true,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE events ADD COLUMN IF NOT EXISTS location_type text NOT NULL DEFAULT 'online';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS location_address text;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS audience text NOT NULL DEFAULT 'community';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS invited_member_ids text[] NOT NULL DEFAULT '{}';
 
 CREATE INDEX IF NOT EXISTS events_start_time_idx ON events (start_time ASC);
 CREATE INDEX IF NOT EXISTS events_community_id_idx ON events (community_id);
@@ -475,9 +533,12 @@ CREATE TABLE IF NOT EXISTS bio_blocks (
   bio_text      text,
   avatar_url    text,
   social_links  jsonb NOT NULL DEFAULT '[]'::jsonb,
+  theme         jsonb NOT NULL DEFAULT '{}'::jsonb,
   updated_at    timestamptz NOT NULL DEFAULT now(),
   created_at    timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE bio_blocks ADD COLUMN IF NOT EXISTS theme jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE TABLE IF NOT EXISTS referrals (
   id                      serial PRIMARY KEY,

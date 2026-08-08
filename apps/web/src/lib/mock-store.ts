@@ -1,5 +1,14 @@
 /** Demo store catalog for community products & services. */
 
+import {
+  DEFAULT_COLLECT_FIELDS,
+  DEFAULT_ORDER_BUMP,
+  normalizeCollectFields,
+  normalizeOrderBump,
+  type CollectField,
+  type OrderBump,
+} from '@/lib/store-collect-fields';
+
 export type StoreKind = 'product' | 'service';
 
 export type StoreProductType =
@@ -23,7 +32,13 @@ export type StoreProduct = {
   community_id: number | null;
   is_published: boolean;
   created_at: string;
+  /** Creator-configured checkout form fields. */
+  collect_fields: CollectField[];
+  /** Optional order bump upsell at checkout. */
+  order_bump: OrderBump | null;
 };
+
+export type { CollectField, OrderBump };
 
 export const PRODUCT_TYPES: StoreProductType[] = [
   'ebook',
@@ -47,8 +62,23 @@ let demoOverrides = new Map<number, StoreProduct>();
 const deletedIds = new Set<number>();
 let nextId = 900;
 
+function withCheckoutDefaults(
+  product: Omit<StoreProduct, 'collect_fields' | 'order_bump'> & {
+    collect_fields?: CollectField[];
+    order_bump?: OrderBump | null;
+  }
+): StoreProduct {
+  return {
+    ...product,
+    collect_fields: normalizeCollectFields(product.collect_fields),
+    order_bump: product.order_bump
+      ? normalizeOrderBump(product.order_bump)
+      : { ...DEFAULT_ORDER_BUMP },
+  };
+}
+
 export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
-  {
+  withCheckoutDefaults({
     id: 801,
     name: 'Creator Starter Pack',
     description: 'E-bok + CapCut-templates + Swish-checklist för din första launch.',
@@ -61,8 +91,14 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
     community_id: 101,
     is_published: true,
     created_at: daysAgo(12),
-  },
-  {
+    order_bump: {
+      enabled: true,
+      title: '⚡ Lägg till arbetsbok för +49 kr',
+      price: 49,
+      description: 'Bonus-PDF med övningar och templates',
+    },
+  }),
+  withCheckoutDefaults({
     id: 802,
     name: 'Live Workshop Replay',
     description: 'Inspelning + slides från Swish-workshopen.',
@@ -75,8 +111,8 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
     community_id: 101,
     is_published: true,
     created_at: daysAgo(8),
-  },
-  {
+  }),
+  withCheckoutDefaults({
     id: 803,
     name: '1:1 Creator Mentorship',
     description: '60 min coaching med kreatören — erbjudande, funnel och prissättning.',
@@ -89,8 +125,18 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
     community_id: 101,
     is_published: true,
     created_at: daysAgo(5),
-  },
-  {
+    collect_fields: [
+      ...DEFAULT_COLLECT_FIELDS,
+      {
+        id: 'context',
+        label: 'Please provide additional context on how I can help you!',
+        type: 'textarea',
+        required: true,
+        visible: true,
+      },
+    ],
+  }),
+  withCheckoutDefaults({
     id: 804,
     name: 'Ebba Creator Lab — Månad',
     description: 'Full access till community + classroom i 30 dagar.',
@@ -103,8 +149,8 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
     community_id: 101,
     is_published: true,
     created_at: daysAgo(20),
-  },
-  {
+  }),
+  withCheckoutDefaults({
     id: 805,
     name: 'Live Studio Hook Pack',
     description: '20 färdiga hooks + CapCut-templates för live-webbinarier.',
@@ -117,8 +163,14 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
     community_id: 102,
     is_published: true,
     created_at: daysAgo(6),
-  },
-  {
+    order_bump: {
+      enabled: true,
+      title: '⚡ Lägg till CapCut pack för +29 kr',
+      price: 29,
+      description: 'Extra templates för hooks',
+    },
+  }),
+  withCheckoutDefaults({
     id: 806,
     name: 'Live Session Review',
     description: '30 min feedback på din senaste live — pitch, CTA och tempo.',
@@ -131,7 +183,19 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
     community_id: 102,
     is_published: true,
     created_at: daysAgo(3),
-  },
+    collect_fields: [
+      ...DEFAULT_COLLECT_FIELDS.map((f) =>
+        f.id === 'phone' ? { ...f, required: true } : { ...f }
+      ),
+      {
+        id: 'replay-link',
+        label: 'Link to your latest live replay',
+        type: 'text',
+        required: true,
+        visible: true,
+      },
+    ],
+  }),
 ];
 
 export function kindForType(type: string): StoreKind {
@@ -184,8 +248,10 @@ export function demoCreateStoreProduct(input: {
   community_id?: number | null;
   is_published?: boolean;
   currency?: string;
+  collect_fields?: CollectField[];
+  order_bump?: OrderBump | null;
 }): StoreProduct {
-  const product: StoreProduct = {
+  const product = withCheckoutDefaults({
     id: nextId++,
     name: input.name,
     description: input.description ?? null,
@@ -197,7 +263,9 @@ export function demoCreateStoreProduct(input: {
     community_id: input.community_id ?? null,
     is_published: input.is_published ?? true,
     created_at: new Date().toISOString(),
-  };
+    collect_fields: input.collect_fields,
+    order_bump: input.order_bump ?? { ...DEFAULT_ORDER_BUMP },
+  });
   demoOverrides.set(product.id, product);
   return product;
 }
@@ -209,7 +277,17 @@ export function demoUpdateStoreProduct(
   const current =
     demoOverrides.get(id) ?? MOCK_STORE_PRODUCTS.find((p) => p.id === id);
   if (!current || deletedIds.has(id)) return null;
-  const updated = { ...current, ...patch, id };
+  const updated = withCheckoutDefaults({
+    ...current,
+    ...patch,
+    id,
+    collect_fields:
+      patch.collect_fields !== undefined
+        ? patch.collect_fields
+        : current.collect_fields,
+    order_bump:
+      patch.order_bump !== undefined ? patch.order_bump : current.order_bump,
+  });
   demoOverrides.set(id, updated);
   return updated;
 }
@@ -232,4 +310,6 @@ export const MOCK_PRODUCTS = MOCK_STORE_PRODUCTS.map((p) => ({
   image_url: p.image_url,
   community_id: p.community_id,
   is_published: p.is_published,
+  collect_fields: p.collect_fields,
+  order_bump: p.order_bump,
 }));

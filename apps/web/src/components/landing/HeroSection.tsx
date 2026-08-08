@@ -56,8 +56,8 @@ function PhoneStorefront() {
               <div
                 className="w-16 h-16 rounded-full mb-3 flex items-center justify-center text-white font-display font-extrabold text-xl"
                 style={{
-                  background: 'linear-gradient(145deg, #ff9a82 0%, #ff7a5c 100%)',
-                  boxShadow: '0 10px 28px -10px rgba(255,122,92,0.55)',
+                  background: 'linear-gradient(145deg, #b8a9ff 0%, #9b8afb 100%)',
+                  boxShadow: '0 10px 28px -10px rgba(155,138,251,0.55)',
                 }}
               >
                 SB
@@ -191,7 +191,7 @@ export function HeroSection() {
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-full font-extrabold text-sm text-white transition-all active:scale-[0.98]"
                 style={{
                   background: 'var(--nc-coral)',
-                  boxShadow: '0 14px 36px -12px rgba(255,122,92,0.55)',
+                  boxShadow: '0 14px 36px -12px rgba(155,138,251,0.55)',
                 }}
               >
                 Skapa gratis community <ArrowRight size={15} />

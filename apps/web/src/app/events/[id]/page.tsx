@@ -551,7 +551,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               className={`flex items-center gap-1.5 h-8 px-4 rounded-xl text-xs font-black transition-all active:scale-95 ${
                 rsvpd
                   ? 'bg-green-600/20 text-green-400 border border-green-600/40 hover:bg-green-600/30'
-                  : 'bg-[var(--nc-coral)] hover:opacity-90 text-white shadow-md shadow-[rgba(255,122,92,0.35)]'
+                  : 'bg-[var(--nc-coral)] hover:opacity-90 text-white shadow-md shadow-[rgba(155,138,251,0.35)]'
               }`}
             >
               {rsvpd ? (
@@ -720,7 +720,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 className={`w-full h-12 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
                   rsvpd
                     ? 'bg-green-600/20 text-green-400 border border-green-600/30 hover:bg-green-600/25'
-                    : 'bg-[var(--nc-coral)] hover:opacity-90 text-white shadow-lg shadow-[rgba(255,122,92,0.35)]'
+                    : 'bg-[var(--nc-coral)] hover:opacity-90 text-white shadow-lg shadow-[rgba(155,138,251,0.35)]'
                 }`}
               >
                 {rsvpd ? (

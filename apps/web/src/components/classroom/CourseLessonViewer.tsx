@@ -58,7 +58,7 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
               ? 'bg-emerald-50 border-emerald-100 text-emerald-900'
               : tone === 'warn'
                 ? 'bg-amber-50 border-amber-100 text-amber-900'
-                : 'bg-[#fff4f0] border-[#ffe0d4] text-[#7a3b2a]';
+                : 'bg-[#f2eeff] border-[#ffe0d4] text-[#7a3b2a]';
           return (
             <blockquote
               key={i}
@@ -210,7 +210,7 @@ export default function CourseLessonViewer({
                               }}
                               className={`w-full flex items-center gap-2 min-h-[44px] px-3 py-2 rounded-xl text-left transition-all ${
                                 active
-                                  ? 'bg-[#ffe8e1] text-[#c45a3e]'
+                                  ? 'bg-[#f2eeff] text-[#6b5bb8]'
                                   : 'hover:bg-zinc-50 text-zinc-600'
                               }`}
                             >

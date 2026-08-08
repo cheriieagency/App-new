@@ -6,12 +6,12 @@ import {
   ShoppingBag,
   Briefcase,
   Package,
-  CheckCircle2,
   Loader2,
 } from 'lucide-react';
 import type { StoreKind, StoreProduct } from '@/lib/mock-store';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import OneTapCheckoutDrawer from '@/components/store/OneTapCheckoutDrawer';
 
 type FilterKey = 'all' | StoreKind;
 
@@ -33,8 +33,9 @@ export default function StoreView({
 }) {
   const { locale } = useLocale();
   const [filter, setFilter] = useState<FilterKey>('all');
-  const [buyingId, setBuyingId] = useState<number | null>(null);
-  const [boughtId, setBoughtId] = useState<number | null>(null);
+  const [checkoutProduct, setCheckoutProduct] = useState<StoreProduct | null>(
+    null
+  );
 
   const { data: products = [], isLoading } = useQuery<StoreProduct[]>({
     queryKey: ['store', communityId ?? 'all'],
@@ -50,15 +51,6 @@ export default function StoreView({
     if (filter === 'all') return products;
     return products.filter((p) => p.kind === filter);
   }, [products, filter]);
-
-  const handleBuy = async (product: StoreProduct) => {
-    setBuyingId(product.id);
-    // Demo checkout placeholder — Swish flow can plug in here later.
-    await new Promise((r) => setTimeout(r, 700));
-    setBuyingId(null);
-    setBoughtId(product.id);
-    setTimeout(() => setBoughtId(null), 2500);
-  };
 
   const filters: { key: FilterKey; label: string; icon: React.ElementType }[] = [
     { key: 'all', label: t('storeAll', locale), icon: ShoppingBag },
@@ -112,12 +104,12 @@ export default function StoreView({
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
           {filtered.map((product) => {
             const isService = product.kind === 'service';
-            const isBuying = buyingId === product.id;
-            const justBought = boughtId === product.id;
             return (
-              <div
+              <button
                 key={product.id}
-                className="nc-glass rounded-[1.5rem] overflow-hidden border border-white/60 flex flex-col hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                type="button"
+                onClick={() => setCheckoutProduct(product)}
+                className="nc-glass rounded-[1.5rem] overflow-hidden border border-white/60 flex flex-col text-left hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
               >
                 <div className="relative aspect-[16/10] bg-zinc-100 overflow-hidden">
                   {product.image_url ? (
@@ -127,7 +119,7 @@ export default function StoreView({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#fff4f0] to-zinc-100">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#f2eeff] to-zinc-100">
                       {isService ? (
                         <Briefcase size={32} className="text-[#ffb59f]" />
                       ) : (
@@ -163,33 +155,23 @@ export default function StoreView({
                     <p className="text-lg font-black text-[#2c3340] tabular-nums">
                       {formatPrice(product.price, product.currency, locale)}
                     </p>
-                    <button
-                      type="button"
-                      disabled={isBuying}
-                      onClick={() => void handleBuy(product)}
-                      className={`h-11 min-h-[44px] px-4 rounded-xl text-xs font-black transition-all active:scale-95 disabled:opacity-60 flex items-center gap-1.5 ${
-                        justBought
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-[var(--nc-coral)] text-white hover:opacity-90'
-                      }`}
-                    >
-                      {isBuying ? (
-                        <Loader2 size={13} className="animate-spin" />
-                      ) : justBought ? (
-                        <>
-                          <CheckCircle2 size={13} /> {t('storeBought', locale)}
-                        </>
-                      ) : (
-                        t('storeBuy', locale)
-                      )}
-                    </button>
+                    <span className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-black bg-[var(--nc-coral)] text-white flex items-center">
+                      {t('storeBuy', locale)}
+                    </span>
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
       )}
+
+      <OneTapCheckoutDrawer
+        open={Boolean(checkoutProduct)}
+        product={checkoutProduct}
+        communityId={communityId}
+        onClose={() => setCheckoutProduct(null)}
+      />
     </div>
   );
 }

@@ -274,7 +274,7 @@ function AdminPostComments({
                   <div
                     className={`rounded-xl rounded-tl-none px-3 py-2 border ${
                       c.is_pinned
-                        ? 'bg-[#fff4f0] border-[#ffe0d4]'
+                        ? 'bg-[#f2eeff] border-[#ffe0d4]'
                         : 'bg-white border-zinc-100'
                     }`}
                   >
@@ -313,7 +313,7 @@ function AdminPostComments({
                       }
                       className={`inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-extrabold transition-colors disabled:opacity-50 ${
                         c.is_pinned
-                          ? 'text-[var(--nc-coral)] hover:text-[#c45a3e]'
+                          ? 'text-[var(--nc-coral)] hover:text-[#6b5bb8]'
                           : 'text-zinc-400 hover:text-[var(--nc-coral)]'
                       }`}
                     >
@@ -339,13 +339,13 @@ function AdminPostComments({
                 .filter((n) => n.parent_id === c.id)
                 .map((n) => (
                   <div key={n.id} className="flex items-start gap-2 mt-2 ml-8">
-                    <div className="w-6 h-6 rounded-lg bg-[#ffe8e1] flex items-center justify-center text-[10px] font-black text-[#c45a3e] flex-shrink-0">
+                    <div className="w-6 h-6 rounded-lg bg-[#f2eeff] flex items-center justify-center text-[10px] font-black text-[#6b5bb8] flex-shrink-0">
                       {n.user_name?.[0] ?? '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="bg-[#fff4f0] rounded-xl rounded-tl-none px-3 py-2 border border-[#ffe8e1]">
+                      <div className="bg-[#f2eeff] rounded-xl rounded-tl-none px-3 py-2 border border-[#f2eeff]">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <p className="text-xs font-black text-[#c45a3e]">{n.user_name}</p>
+                          <p className="text-xs font-black text-[#6b5bb8]">{n.user_name}</p>
                           <span className="text-[10px] text-zinc-300 font-bold">
                             {formatRelative(n.created_at, locale)}
                           </span>
@@ -386,9 +386,9 @@ function AdminPostComments({
       {/* Composer: new comment or reply + optional photo */}
       <div className="px-4 sm:px-5 pb-4 pt-1 border-t border-zinc-100">
         {replyTo && (
-          <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-[#ffe8e1] rounded-xl w-fit max-w-full">
-            <Reply size={11} className="text-[#c45a3e] flex-shrink-0" />
-            <span className="text-[11px] font-bold text-[#c45a3e] truncate">
+          <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-[#f2eeff] rounded-xl w-fit max-w-full">
+            <Reply size={11} className="text-[#6b5bb8] flex-shrink-0" />
+            <span className="text-[11px] font-bold text-[#6b5bb8] truncate">
               {t('reply', locale)} {replyToName}
             </span>
             <button
@@ -397,7 +397,7 @@ function AdminPostComments({
                 setReplyTo(null);
                 setReplyToName('');
               }}
-              className="h-8 w-8 min-h-[44px] min-w-[44px] -my-1 -mr-1 flex items-center justify-center text-[#c45a3e]/70 hover:text-[#c45a3e]"
+              className="h-8 w-8 min-h-[44px] min-w-[44px] -my-1 -mr-1 flex items-center justify-center text-[#6b5bb8]/70 hover:text-[#6b5bb8]"
             >
               <X size={12} />
             </button>
@@ -468,7 +468,7 @@ function AdminPostComments({
           type="button"
           onClick={() => photoRef.current?.click()}
           disabled={uploading}
-          className="mt-1.5 inline-flex items-center gap-1.5 h-10 min-h-[44px] px-2 rounded-lg text-[11px] font-extrabold text-zinc-400 hover:text-[var(--nc-coral)] hover:bg-[#ffe8e1]/60 transition-all disabled:opacity-50"
+          className="mt-1.5 inline-flex items-center gap-1.5 h-10 min-h-[44px] px-2 rounded-lg text-[11px] font-extrabold text-zinc-400 hover:text-[var(--nc-coral)] hover:bg-[#f2eeff]/60 transition-all disabled:opacity-50"
         >
           <ImageIcon size={13} /> {t('uploadImage', locale)}
         </button>
@@ -872,7 +872,7 @@ export default function CommunityAdminPanel() {
                   return (
                     <div
                       key={m.id}
-                      className={`flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 hover:bg-zinc-50/80 transition-colors ${isMod ? 'bg-[#ffe8e1]/40' : ''}`}
+                      className={`flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 hover:bg-zinc-50/80 transition-colors ${isMod ? 'bg-[#f2eeff]/40' : ''}`}
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-sm font-black text-[var(--nc-coral)] flex-shrink-0">
@@ -1008,7 +1008,7 @@ export default function CommunityAdminPanel() {
               )}
             </div>
 
-            <div className="bg-[#ffe8e1] border border-violet-100 rounded-2xl p-5">
+            <div className="bg-[#f2eeff] border border-violet-100 rounded-2xl p-5">
               <h4 className="text-xs font-extrabold text-violet-800 mb-3 flex items-center gap-2">
                 <Shield size={11} /> {t('moderatorPerms', locale)}
               </h4>
@@ -1019,7 +1019,7 @@ export default function CommunityAdminPanel() {
                 t('seeReported', locale),
                 t('moderateLiveChat', locale),
               ].map((p) => (
-                <div key={p} className="flex items-center gap-2 text-xs text-[#c45a3e] mb-1.5">
+                <div key={p} className="flex items-center gap-2 text-xs text-[#6b5bb8] mb-1.5">
                   <Check size={10} className="text-violet-500 flex-shrink-0" /> {p}
                 </div>
               ))}
@@ -1063,12 +1063,12 @@ export default function CommunityAdminPanel() {
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <p className="text-sm font-black text-[#2c3340]">{post.user_name}</p>
                           {post.is_pinned && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#fff4f0] px-1.5 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#f2eeff] px-1.5 py-0.5 rounded-full">
                               <Pin size={9} /> {t('pinned', locale)}
                             </span>
                           )}
                           {post.tag && (
-                            <span className="text-[9px] font-black uppercase tracking-wide bg-[#ffe8e1] text-[#c45a3e] px-1.5 py-0.5 rounded-full">
+                            <span className="text-[9px] font-black uppercase tracking-wide bg-[#f2eeff] text-[#6b5bb8] px-1.5 py-0.5 rounded-full">
                               {post.tag}
                             </span>
                           )}
@@ -1100,8 +1100,8 @@ export default function CommunityAdminPanel() {
                           }
                           className={`h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 ${
                             post.is_pinned
-                              ? 'bg-[#fff4f0] text-[var(--nc-coral)] hover:bg-[#ffe8e1]'
-                              : 'bg-zinc-50 text-zinc-400 hover:bg-[#fff4f0] hover:text-[var(--nc-coral)]'
+                              ? 'bg-[#f2eeff] text-[var(--nc-coral)] hover:bg-[#f2eeff]'
+                              : 'bg-zinc-50 text-zinc-400 hover:bg-[#f2eeff] hover:text-[var(--nc-coral)]'
                           }`}
                           title={
                             post.is_pinned

@@ -13,6 +13,7 @@ import {
   EyeOff,
   Package,
   Briefcase,
+  Pencil,
 } from 'lucide-react';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
@@ -24,24 +25,47 @@ import {
   type StoreProduct,
   type StoreProductType,
 } from '@/lib/mock-store';
+import {
+  DEFAULT_COLLECT_FIELDS,
+  DEFAULT_ORDER_BUMP,
+  type CollectField,
+  type OrderBump,
+} from '@/lib/store-collect-fields';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import CollectInfoFieldBuilder from '@/components/admin/CollectInfoFieldBuilder';
 
 type StoreResponse = {
   products: StoreProduct[];
   demo?: boolean;
 };
 
-const EMPTY_FORM = {
+type ProductForm = {
+  id: number | null;
+  name: string;
+  description: string;
+  price: string;
+  kind: StoreKind;
+  type: StoreProductType;
+  image_url: string;
+  is_published: boolean;
+  collect_fields: CollectField[];
+  order_bump: OrderBump;
+};
+
+const EMPTY_FORM = (): ProductForm => ({
+  id: null,
   name: '',
   description: '',
   price: '',
-  kind: 'product' as StoreKind,
-  type: 'ebook' as StoreProductType,
-  image_url: '' as string,
+  kind: 'product',
+  type: 'ebook',
+  image_url: '',
   is_published: true,
-};
+  collect_fields: DEFAULT_COLLECT_FIELDS.map((f) => ({ ...f })),
+  order_bump: { ...DEFAULT_ORDER_BUMP },
+});
 
 export default function StoreAdminSection({
   communityId,
@@ -51,7 +75,7 @@ export default function StoreAdminSection({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [kindFilter, setKindFilter] = useState<'all' | StoreKind>('all');
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [upload, { loading: uploading }] = useUpload();
   const imageRef = useRef<HTMLInputElement>(null);
@@ -75,6 +99,7 @@ export default function StoreAdminSection({
   }, [data?.products, kindFilter]);
 
   const typeOptions = form.kind === 'service' ? SERVICE_TYPES : PRODUCT_TYPES;
+  const isEditing = form.id != null;
 
   const mutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
@@ -92,19 +117,7 @@ export default function StoreAdminSection({
         const action = String(variables.action ?? 'create');
 
         if (action === 'create') {
-          const product: StoreProduct = res.product ?? {
-            id: Date.now(),
-            name: String(variables.name ?? ''),
-            description: (variables.description as string) || null,
-            price: Number(variables.price ?? 0),
-            currency: 'SEK',
-            type: variables.type as StoreProductType,
-            kind: variables.kind as StoreKind,
-            image_url: (variables.image_url as string) || null,
-            community_id: communityId ?? null,
-            is_published: Boolean(variables.is_published ?? true),
-            created_at: new Date().toISOString(),
-          };
+          const product: StoreProduct = res.product;
           return { ...prev, products: [product, ...prev.products] };
         }
 
@@ -131,8 +144,11 @@ export default function StoreAdminSection({
       });
       queryClient.invalidateQueries({ queryKey: ['store'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      if (String(variables.action ?? 'create') === 'create') {
-        setForm(EMPTY_FORM);
+      if (
+        String(variables.action ?? 'create') === 'create' ||
+        String(variables.action) === 'update'
+      ) {
+        setForm(EMPTY_FORM());
         setShowForm(false);
       }
     },
@@ -147,11 +163,56 @@ export default function StoreAdminSection({
     setForm((f) => ({ ...f, image_url: URL.createObjectURL(file) }));
   };
 
+  const openCreate = () => {
+    setForm(EMPTY_FORM());
+    setShowForm(true);
+  };
+
+  const openEdit = (product: StoreProduct) => {
+    setForm({
+      id: product.id,
+      name: product.name,
+      description: product.description ?? '',
+      price: String(product.price),
+      kind: product.kind,
+      type: product.type,
+      image_url: product.image_url ?? '',
+      is_published: product.is_published,
+      collect_fields: (product.collect_fields ?? DEFAULT_COLLECT_FIELDS).map(
+        (f) => ({ ...f })
+      ),
+      order_bump: product.order_bump
+        ? { ...product.order_bump }
+        : { ...DEFAULT_ORDER_BUMP },
+    });
+    setShowForm(true);
+  };
+
   const canSubmit =
     Boolean(form.name.trim()) &&
     form.price !== '' &&
     !mutation.isPending &&
     !uploading;
+
+  const submit = () => {
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      price: Number(form.price),
+      type: form.type,
+      kind: form.kind,
+      image_url: form.image_url || null,
+      is_published: form.is_published,
+      community_id: communityId ?? null,
+      collect_fields: form.collect_fields,
+      order_bump: form.order_bump,
+    };
+    if (isEditing) {
+      mutation.mutate({ action: 'update', id: form.id, ...payload });
+    } else {
+      mutation.mutate({ action: 'create', ...payload });
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -166,7 +227,14 @@ export default function StoreAdminSection({
           </div>
           <button
             type="button"
-            onClick={() => setShowForm((v) => !v)}
+            onClick={() => {
+              if (showForm) {
+                setShowForm(false);
+                setForm(EMPTY_FORM());
+              } else {
+                openCreate();
+              }
+            }}
             className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[var(--nc-coral)] text-white text-xs font-black"
           >
             {showForm ? <X size={14} /> : <Plus size={14} />}
@@ -198,114 +266,141 @@ export default function StoreAdminSection({
         </div>
 
         {showForm && (
-          <div className="rounded-2xl border border-zinc-100 bg-zinc-50/80 p-4 space-y-3 mb-4">
-            <input
-              ref={imageRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleImage(f);
-                e.target.value = '';
-              }}
-            />
+          <div className="rounded-2xl border border-zinc-100 bg-zinc-50/80 p-4 space-y-5 mb-4">
+            <div>
+              <p className="text-sm font-black text-[#2c3340] mb-3">
+                1. {isEditing ? 'Edit offer' : 'Basics'}
+              </p>
+              <input
+                ref={imageRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleImage(f);
+                  e.target.value = '';
+                }}
+              />
 
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  { key: 'product' as const, label: t('storeProducts', locale), icon: Package },
-                  { key: 'service' as const, label: t('storeServices', locale), icon: Briefcase },
-                ] as const
-              ).map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() =>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {(
+                  [
+                    { key: 'product' as const, label: t('storeProducts', locale), icon: Package },
+                    { key: 'service' as const, label: t('storeServices', locale), icon: Briefcase },
+                  ] as const
+                ).map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        kind: key,
+                        type: key === 'service' ? 'coaching' : 'ebook',
+                      }))
+                    }
+                    className={`h-11 min-h-[44px] rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 border transition-all ${
+                      form.kind === key
+                        ? 'bg-white border-[var(--nc-coral)] text-[var(--nc-coral)]'
+                        : 'bg-white border-zinc-200 text-zinc-500'
+                    }`}
+                  >
+                    <Icon size={13} /> {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                <Input
+                  placeholder={t('productName', locale)}
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  className="rounded-xl bg-white border-zinc-200"
+                />
+                <Textarea
+                  placeholder={t('description', locale)}
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description: e.target.value }))
+                  }
+                  className="rounded-xl bg-white border-zinc-200 min-h-[80px] resize-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-black text-[#2c3340] mb-3">2. Pricing & type</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder={t('price', locale)}
+                  value={form.price}
+                  onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                  className="rounded-xl bg-white border-zinc-200"
+                />
+                <select
+                  value={form.type}
+                  onChange={(e) =>
                     setForm((f) => ({
                       ...f,
-                      kind: key,
-                      type: key === 'service' ? 'coaching' : 'ebook',
+                      type: e.target.value as StoreProductType,
                     }))
                   }
-                  className={`h-11 min-h-[44px] rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 border transition-all ${
-                    form.kind === key
-                      ? 'bg-white border-[var(--nc-coral)] text-[var(--nc-coral)]'
-                      : 'bg-white border-zinc-200 text-zinc-500'
-                  }`}
+                  className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:outline-none"
                 >
-                  <Icon size={13} /> {label}
-                </button>
-              ))}
+                  {typeOptions.map((tp) => (
+                    <option key={tp} value={tp}>
+                      {tp}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <Input
-              placeholder={t('productName', locale)}
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="rounded-xl bg-white border-zinc-200"
-            />
-            <Textarea
-              placeholder={t('description', locale)}
-              value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
-              className="rounded-xl bg-white border-zinc-200 min-h-[80px] resize-none"
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                type="number"
-                min={0}
-                placeholder={t('price', locale)}
-                value={form.price}
-                onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                className="rounded-xl bg-white border-zinc-200"
-              />
-              <select
-                value={form.type}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    type: e.target.value as StoreProductType,
-                  }))
-                }
-                className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:outline-none"
-              >
-                {typeOptions.map((tp) => (
-                  <option key={tp} value={tp}>
-                    {tp}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {form.image_url ? (
-              <div className="relative rounded-xl overflow-hidden border border-zinc-200 max-w-[220px]">
-                <img src={form.image_url} alt="" className="w-full h-28 object-cover" />
+            <div>
+              <p className="text-sm font-black text-[#2c3340] mb-3">3. Cover image</p>
+              {form.image_url ? (
+                <div className="relative rounded-xl overflow-hidden border border-zinc-200 max-w-[220px]">
+                  <img src={form.image_url} alt="" className="w-full h-28 object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, image_url: '' }))}
+                    className="absolute top-2 right-2 h-8 w-8 rounded-lg bg-black/50 text-white flex items-center justify-center"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, image_url: '' }))}
-                  className="absolute top-2 right-2 h-8 w-8 rounded-lg bg-black/50 text-white flex items-center justify-center"
+                  onClick={() => imageRef.current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-zinc-500 bg-white border border-zinc-200 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] disabled:opacity-50"
                 >
-                  <X size={12} />
+                  {uploading ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <ImageIcon size={13} />
+                  )}
+                  {t('uploadImage', locale)}
                 </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => imageRef.current?.click()}
-                disabled={uploading}
-                className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-zinc-500 bg-white border border-zinc-200 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] disabled:opacity-50"
-              >
-                {uploading ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <ImageIcon size={13} />
-                )}
-                {t('uploadImage', locale)}
-              </button>
-            )}
+              )}
+            </div>
+
+            <div className="border-t border-zinc-200 pt-4">
+              <CollectInfoFieldBuilder
+                fields={form.collect_fields}
+                onChange={(collect_fields) =>
+                  setForm((f) => ({ ...f, collect_fields }))
+                }
+                orderBump={form.order_bump}
+                onOrderBumpChange={(order_bump) =>
+                  setForm((f) => ({ ...f, order_bump }))
+                }
+              />
+            </div>
 
             <label className="flex items-center gap-2 text-xs font-bold text-zinc-500 min-h-[44px]">
               <input
@@ -322,23 +417,13 @@ export default function StoreAdminSection({
             <Button
               type="button"
               disabled={!canSubmit}
-              onClick={() =>
-                mutation.mutate({
-                  action: 'create',
-                  name: form.name.trim(),
-                  description: form.description.trim() || null,
-                  price: Number(form.price),
-                  type: form.type,
-                  kind: form.kind,
-                  image_url: form.image_url || null,
-                  is_published: form.is_published,
-                  community_id: communityId ?? null,
-                })
-              }
+              onClick={submit}
               className="w-full rounded-xl bg-[var(--nc-coral)] text-white font-black h-11"
             >
               {mutation.isPending ? (
                 <Loader2 size={14} className="animate-spin" />
+              ) : isEditing ? (
+                'Save changes'
               ) : (
                 <>
                   <Plus size={14} className="mr-1" /> {t('addProductBtn', locale)}
@@ -362,6 +447,9 @@ export default function StoreAdminSection({
         <div className="space-y-3">
           {products.map((product) => {
             const isService = product.kind === 'service';
+            const fieldCount = (product.collect_fields ?? []).filter(
+              (f) => f.visible
+            ).length;
             return (
               <div
                 key={product.id}
@@ -393,7 +481,7 @@ export default function StoreAdminSection({
                       className={`text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
                         isService
                           ? 'bg-zinc-100 text-zinc-600'
-                          : 'bg-[#ffe8e1] text-[#c45a3e]'
+                          : 'bg-[#f2eeff] text-[#6b5bb8]'
                       }`}
                     >
                       {isService
@@ -414,18 +502,27 @@ export default function StoreAdminSection({
                       ? t('freeLabel', locale)
                       : `${Math.round(product.price)} ${product.currency}`}
                     <span className="text-[10px] font-bold text-zinc-400 ml-2">
-                      {product.type}
+                      {product.type} · {fieldCount} checkout fields
+                      {product.order_bump?.enabled ? ' · bump' : ''}
                     </span>
                   </p>
                 </div>
                 <div className="flex flex-col gap-1 flex-shrink-0">
                   <button
                     type="button"
+                    onClick={() => openEdit(product)}
+                    className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-zinc-50 text-zinc-500 hover:bg-[#f2eeff] hover:text-[var(--nc-coral)] flex items-center justify-center"
+                    title="Edit"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    type="button"
                     disabled={mutation.isPending}
                     onClick={() =>
                       mutation.mutate({ action: 'toggle_publish', id: product.id })
                     }
-                    className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-zinc-50 text-zinc-500 hover:bg-[#fff4f0] hover:text-[var(--nc-coral)] flex items-center justify-center disabled:opacity-50"
+                    className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-zinc-50 text-zinc-500 hover:bg-[#f2eeff] hover:text-[var(--nc-coral)] flex items-center justify-center disabled:opacity-50"
                     title={product.is_published ? 'Hide' : 'Publish'}
                   >
                     {product.is_published ? <Eye size={14} /> : <EyeOff size={14} />}

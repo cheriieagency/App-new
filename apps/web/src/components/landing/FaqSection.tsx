@@ -15,6 +15,18 @@ const FAQ_ITEMS = [
       'Medlemmar betalar direkt med Swish eller Vipps i kassan – ofta på under 10 sekunder. Pengarna kopplas till ditt konto och du slipper bygga om checkouten själv. Perfekt för nordiska köpare som redan använder Swish varje dag.',
   },
   {
+    id: 'payouts',
+    question: 'När får jag utbetalning (payout)?',
+    answer:
+      'Intäkter syns i Analytics och betalas ut till ditt bankkonto enligt plattformens payout-schema. Du följer status, belopp och historik utan att behöva jaga Stripe-rapporter.',
+  },
+  {
+    id: 'trial',
+    question: 'Finns det gratis trial?',
+    answer:
+      'Starter är gratis för alltid. Creator (199 SEK/mån) och Pro (499 SEK/mån) kan startas när du är redo — ingen lång bindningstid. Årsvis sparar du 17%.',
+  },
+  {
     id: 'moms',
     question: 'Hur hanteras moms och Fortnox-bokföring?',
     answer:
