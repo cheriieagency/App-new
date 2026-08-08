@@ -1,20 +1,57 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { MOCK_POSTS } from '@/lib/mock-demo-content';
+import { applyPostPinOverride, demoPostPinOverrides } from '@/lib/demo-pin-state';
+
+function withDemoPins(posts: Array<Record<string, unknown>>) {
+  return posts.map((p) =>
+    applyPostPinOverride({
+      ...p,
+      id: Number(p.id),
+      is_pinned: Boolean(p.is_pinned),
+      pinned_at: (p.pinned_at as string | null | undefined) ?? null,
+    })
+  );
+}
+
+function sortPinnedFirst(posts: Array<Record<string, unknown>>) {
+  return [...posts].sort((a, b) => {
+    const ap = a.is_pinned ? 1 : 0;
+    const bp = b.is_pinned ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    return (
+      new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime()
+    );
+  });
+}
 
 export async function GET() {
   try {
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json(
+        sortPinnedFirst(withDemoPins(MOCK_POSTS as Array<Record<string, unknown>>))
+      );
+    }
+
     const posts = await sql`
       SELECT p.*,
              (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id)::int    AS like_count,
              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count
       FROM posts p
-      ORDER BY p.created_at DESC
+      ORDER BY p.is_pinned DESC, p.created_at DESC
     `;
+    if (!Array.isArray(posts) || posts.length === 0) {
+      return Response.json(
+        sortPinnedFirst(withDemoPins(MOCK_POSTS as Array<Record<string, unknown>>))
+      );
+    }
     return Response.json(posts);
   } catch (error) {
     console.error(error);
-    return Response.json({ error: 'Failed to fetch posts' }, { status: 500 });
+    return Response.json(
+      sortPinnedFirst(withDemoPins(MOCK_POSTS as Array<Record<string, unknown>>))
+    );
   }
 }
 
@@ -23,7 +60,48 @@ export async function POST(request: Request) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { content, tag, image_url } = await request.json();
+    const body = await request.json();
+    const { action } = body as { action?: string };
+
+    // Pin / unpin an entire community post.
+    if (action === 'pin' || action === 'unpin') {
+      const postId = Number(body.post_id);
+      if (!postId) {
+        return Response.json({ error: 'post_id required' }, { status: 400 });
+      }
+      const pinned = action === 'pin';
+
+      if (!process.env.DATABASE_URL?.trim()) {
+        demoPostPinOverrides.set(postId, pinned);
+        return Response.json({
+          success: true,
+          id: postId,
+          is_pinned: pinned,
+          pinned_at: pinned ? new Date().toISOString() : null,
+          demo: true,
+        });
+      }
+
+      const rows = await sql`
+        UPDATE posts
+        SET is_pinned = ${pinned},
+            pinned_at = ${pinned ? new Date().toISOString() : null},
+            updated_at = now()
+        WHERE id = ${postId}
+        RETURNING id, is_pinned, pinned_at
+      `;
+      if (!rows[0]) {
+        return Response.json({ error: 'Post not found' }, { status: 404 });
+      }
+      return Response.json({ success: true, ...rows[0] });
+    }
+
+    const { content, tag, image_url } = body as {
+      content?: string;
+      tag?: string | null;
+      image_url?: string | null;
+    };
+
     if (!content?.trim()) return Response.json({ error: 'Content required' }, { status: 400 });
 
     const post = await sql`
@@ -38,9 +116,50 @@ export async function POST(request: Request) {
       )
       RETURNING *
     `;
-    return Response.json(post[0]);
+    return Response.json({
+      ...post[0],
+      like_count: 0,
+      comment_count: 0,
+      is_pinned: false,
+      pinned_at: null,
+    });
   } catch (error) {
     console.error(error);
+    if (!process.env.DATABASE_URL?.trim()) {
+      const body = await request
+        .clone()
+        .json()
+        .catch(() => ({} as Record<string, unknown>));
+
+      if (body.action === 'pin' || body.action === 'unpin') {
+        const postId = Number(body.post_id);
+        const pinned = body.action === 'pin';
+        demoPostPinOverrides.set(postId, pinned);
+        return Response.json({
+          success: true,
+          id: postId,
+          is_pinned: pinned,
+          pinned_at: pinned ? new Date().toISOString() : null,
+          demo: true,
+        });
+      }
+
+      return Response.json({
+        id: Date.now(),
+        user_id: session.user.id,
+        user_name: session.user.name,
+        user_image: session.user.image ?? null,
+        content: body.content,
+        tag: body.tag ?? null,
+        image_url: body.image_url ?? null,
+        is_pinned: false,
+        pinned_at: null,
+        created_at: new Date().toISOString(),
+        like_count: 0,
+        comment_count: 0,
+        demo: true,
+      });
+    }
     return Response.json({ error: 'Failed to create post' }, { status: 500 });
   }
 }

@@ -1,12 +1,15 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { getMockCommunitiesForUser } from '@/lib/mock-communities';
 
 export async function GET() {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const userId = session?.user?.id ?? null;
+  const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
+  const userId = session?.user?.id ?? null;
+  const email = session?.user?.email ?? null;
+  const name = session?.user?.name ?? null;
 
+  try {
     let communities;
     if (userId) {
       communities = await sql`
@@ -26,10 +29,15 @@ export async function GET() {
       `;
     }
 
+    if (!Array.isArray(communities) || communities.length === 0) {
+      return Response.json(getMockCommunitiesForUser({ email, name }));
+    }
+
     return Response.json(communities);
   } catch (error) {
     console.error(error);
-    return Response.json({ error: 'Failed to fetch communities' }, { status: 500 });
+    // Local/demo: return mocks so Ebba can test without DATABASE_URL.
+    return Response.json(getMockCommunitiesForUser({ email, name }));
   }
 }
 
@@ -68,6 +76,10 @@ export async function POST(request: Request) {
     return Response.json({ success: true });
   } catch (error) {
     console.error(error);
+    // Demo mode without DB: pretend join succeeded so UI can continue.
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json({ success: true, mode: 'demo-mock' });
+    }
     return Response.json({ error: 'Failed to update membership' }, { status: 500 });
   }
 }

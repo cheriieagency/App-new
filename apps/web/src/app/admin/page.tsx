@@ -24,9 +24,6 @@ import {
   Copy,
   CheckCheck,
   X,
-  Shield,
-  ShieldCheck,
-  ShieldOff,
   Radio,
   Mic,
   Video,
@@ -53,8 +50,14 @@ import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
+import CommunityAdminPanel from '@/components/admin/CommunityAdminPanel';
 
-type AdminTab = 'analytics' | 'content' | 'moderators' | 'broadcast' | 'biobuilder' | 'customizer';
+type AdminTab =
+  | 'analytics'
+  | 'content'
+  | 'community'
+  | 'broadcast'
+  | 'biobuilder';
 
 const THEMES = [
   {
@@ -111,7 +114,7 @@ const BLOCK_TYPES = [
     type: 'course' as const,
     label: 'Kurs',
     emoji: '🎓',
-    color: '#8B5CF6',
+    color: '#ff7a5c',
     defaultTitle: 'Online Kurs',
     defaultSubtitle: '12 lektioner · Börja idag',
   },
@@ -208,6 +211,8 @@ function MobilePreview({
   bioText,
   avatarUrl,
   socialLinks,
+  themeAccent = '#ff7a5c',
+  themeBg = '#F8F8F8',
 }: {
   blocks: BioBlock[];
   handle: string;
@@ -215,13 +220,18 @@ function MobilePreview({
   bioText: string;
   avatarUrl: string;
   socialLinks: SocialLink[];
+  themeAccent?: string;
+  themeBg?: string;
 }) {
   return (
     <div className="flex items-center justify-center py-2">
       <div style={{ width: 240 }}>
-        <div className="bg-zinc-900 rounded-[34px] p-2.5 shadow-2xl">
+        <div className="rounded-[34px] p-2.5 shadow-2xl" style={{ background: themeAccent }}>
           <div className="bg-white rounded-[26px] overflow-hidden" style={{ height: 490 }}>
-            <div className="h-7 bg-zinc-900 flex items-center justify-between px-5">
+            <div
+              className="h-7 flex items-center justify-between px-5"
+              style={{ background: themeAccent }}
+            >
               <span className="text-white text-[8px] font-bold">9:41</span>
               <div className="w-20 h-3.5 bg-zinc-700 rounded-full" />
               <div className="flex gap-0.5">
@@ -230,18 +240,23 @@ function MobilePreview({
               </div>
             </div>
             <div
-              className="overflow-y-auto px-3 pt-4 pb-4 space-y-2 bg-[#F8F8F8]"
-              style={{ height: 463 }}
+              className="overflow-y-auto px-3 pt-4 pb-4 space-y-2"
+              style={{ height: 463, background: themeBg }}
             >
               <div className="text-center mb-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mx-auto mb-2 overflow-hidden border-2 border-white shadow">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 overflow-hidden border-2 border-white shadow"
+                  style={{
+                    background: `linear-gradient(135deg, ${themeAccent}cc, ${themeAccent})`,
+                  }}
+                >
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <Crown size={18} className="text-white" />
                   )}
                 </div>
-                <p className="text-[10px] font-black text-zinc-900">
+                <p className="text-[10px] font-black text-[#2c3340]">
                   {displayName || 'Creator Name'}
                 </p>
                 <p className="text-[8px] text-zinc-400 font-medium">@{handle || 'creator'}</p>
@@ -283,7 +298,7 @@ function MobilePreview({
                         {block.emoji}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[9px] font-black text-zinc-900 truncate">
+                        <p className="text-[9px] font-black text-[#2c3340] truncate">
                           {block.title}
                         </p>
                         <p className="text-[7px] text-zinc-400 truncate">{block.subtitle}</p>
@@ -375,7 +390,7 @@ function BioDragBlock({
             <input
               value={block.title}
               onChange={(e) => onUpdate(index, { title: e.target.value })}
-              className="w-full text-xs font-black text-zinc-900 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
+              className="w-full text-xs font-extrabold text-[#2c3340] bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
             />
             <input
               value={block.subtitle}
@@ -405,7 +420,7 @@ function BioDragBlock({
           </div>
         ) : (
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-black text-zinc-900 truncate">
+            <p className="text-xs font-extrabold text-[#2c3340] truncate">
               {block.title || '(Inget namn)'}
             </p>
             <p className="text-[10px] text-zinc-400 truncate">{block.subtitle}</p>
@@ -414,7 +429,7 @@ function BioDragBlock({
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => setEditing((v) => !v)}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${editing ? 'bg-indigo-100 text-indigo-600' : 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200'}`}
+            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${editing ? 'bg-indigo-100 text-[var(--nc-coral)]' : 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200'}`}
           >
             {editing ? <Check size={11} /> : <Edit3 size={11} />}
           </button>
@@ -472,7 +487,7 @@ function AvatarUploader({
   return (
     <div className="flex items-center gap-5">
       <div className="relative flex-shrink-0">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center overflow-hidden border-4 border-white shadow-lg ring-2 ring-zinc-100">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#ff9a82] to-[#ff7a5c] flex items-center justify-center overflow-hidden border-4 border-white shadow-lg ring-2 ring-zinc-100">
           {previewUrl ? (
             <img src={previewUrl} alt="avatar" className="w-full h-full object-cover" />
           ) : (
@@ -500,7 +515,7 @@ function AvatarUploader({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all disabled:opacity-60 active:scale-95"
+          className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-extrabold transition-all disabled:opacity-60 active:scale-95"
         >
           <Camera size={13} /> {previewUrl ? 'Byt foto' : 'Ladda upp foto'}
         </button>
@@ -511,7 +526,7 @@ function AvatarUploader({
               setPreviewUrl('');
               onUpdate('');
             }}
-            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 text-xs font-black transition-all border border-red-100"
+            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 text-xs font-extrabold transition-all border border-red-100"
           >
             <X size={12} /> Ta bort
           </button>
@@ -644,7 +659,7 @@ function SocialLinksEditor({
             <button
               onClick={handleAdd}
               disabled={!newUrl.trim()}
-              className="flex-1 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black disabled:opacity-40 transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 h-9 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-extrabold disabled:opacity-40 transition-all flex items-center justify-center gap-1.5"
             >
               <Plus size={12} /> Lägg till
             </button>
@@ -689,10 +704,6 @@ export default function AdminPage() {
     speaker_name: '',
   });
   const [postForm, setPostForm] = useState({ content: '' });
-  const [bioForm, setBioForm] = useState({ name: '', bio: '', handle: '' });
-
-  // Moderators
-  const [searchMember, setSearchMember] = useState('');
 
   // useId gives a stable unique ID that matches between server and client
   const uid = useId();
@@ -725,7 +736,7 @@ export default function AdminPage() {
       title: 'Kurs: Nordic Creator',
       subtitle: 'Onlinekurs · 12 lektioner',
       emoji: '🎓',
-      color: '#8B5CF6',
+      color: '#ff7a5c',
       visible: true,
     },
     {
@@ -863,15 +874,6 @@ export default function AdminPage() {
       return data;
     },
   });
-  const { data: moderatorData } = useQuery({
-    queryKey: ['moderators'],
-    enabled: !!session && activeTab === 'moderators',
-    queryFn: async () => {
-      const r = await fetch('/api/admin/moderators');
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
-    },
-  });
   const { data: bioData } = useQuery({
     queryKey: ['bio'],
     enabled: !!session && activeTab === 'biobuilder',
@@ -948,17 +950,6 @@ export default function AdminPage() {
       setTimeout(() => setSaved(''), 2200);
     },
   });
-  const moderatorMutation = useMutation({
-    mutationFn: async ({ user_id, action }: { user_id: string; action: 'assign' | 'remove' }) => {
-      const r = await fetch('/api/admin/moderators', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id, community_id: 1, action }),
-      });
-      return r.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['moderators'] }),
-  });
   const saveBioMutation = useMutation({
     mutationFn: async () => {
       const r = await fetch('/api/admin/bio', {
@@ -1019,19 +1010,9 @@ export default function AdminPage() {
     setIsLive(true);
   }, []);
 
-  const moderators = (moderatorData?.moderators ?? []) as any[];
-  const allMembers = (moderatorData?.members ?? []) as any[];
-  const members = searchMember
-    ? allMembers.filter(
-        (m: any) =>
-          m.name?.toLowerCase().includes(searchMember.toLowerCase()) ||
-          m.email?.toLowerCase().includes(searchMember.toLowerCase())
-      )
-    : allMembers;
-
   if (isPending)
     return (
-      <div className="min-h-screen flex items-center justify-center font-plus-jakarta-sans text-zinc-400">
+      <div className="min-h-screen flex items-center justify-center  text-zinc-400">
         {t('loading', locale)}
       </div>
     );
@@ -1043,38 +1024,38 @@ export default function AdminPage() {
   const TABS: { key: AdminTab; label: string; icon: React.ElementType }[] = [
     { key: 'analytics', label: 'Analytics', icon: BarChart3 },
     { key: 'content', label: 'Content', icon: FileText },
-    { key: 'moderators', label: 'Moderatorer', icon: Shield },
+    { key: 'community', label: t('community', locale), icon: Users },
     { key: 'broadcast', label: 'Sänd Live', icon: Radio },
     { key: 'biobuilder', label: 'Bio Builder', icon: Smartphone },
-    { key: 'customizer', label: 'Customizer', icon: Palette },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F4F6] font-plus-jakarta-sans">
+    <div className="nc-app nc-app-shell min-h-screen">
       {/* ── Header ── */}
-      <header className="bg-white border-b border-zinc-100 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-20 px-3 sm:px-4 pt-3 bg-transparent border-0">
+        <div className="nc-glass rounded-[1.5rem] max-w-7xl mx-auto overflow-hidden">
+        <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[var(--nc-coral)] flex items-center justify-center flex-shrink-0">
               <Crown size={14} className="text-white" />
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-black text-zinc-900 leading-none">
+              <p className="text-sm font-display font-extrabold text-[#2c3340] leading-none">
                 {t('creatorAdmin', locale)}
               </p>
-              <p className="text-[10px] text-zinc-400 font-medium mt-0.5">{session.user.email}</p>
+              <p className="text-[10px] text-[#94a0b0] font-medium mt-0.5">{session.user.email}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreatorAI(true)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-black transition-all shadow-sm"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-extrabold transition-all shadow-sm"
             >
               <Sparkles size={13} /> {t('aiCopilot', locale)}
             </button>
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-zinc-200 text-xs font-bold text-zinc-600 hover:bg-zinc-50 transition-colors"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-white/60 border border-white text-xs font-bold text-[#5b6472] hover:bg-white transition-colors"
             >
               <Home size={12} className="hidden sm:inline" />{' '}
               <span className="hidden sm:inline">{t('dashboard', locale)}</span>
@@ -1083,18 +1064,18 @@ export default function AdminPage() {
               onClick={() =>
                 authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } })
               }
-              className="w-8 h-8 rounded-xl border border-zinc-200 flex items-center justify-center text-zinc-400 hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
+              className="w-8 h-8 rounded-full bg-white/60 border border-white flex items-center justify-center text-[#94a0b0] hover:bg-white hover:text-[#2c3340] transition-colors"
             >
               <LogOut size={13} />
             </button>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-0.5 overflow-x-auto scrollbar-none pb-0">
+        <div className="px-4 sm:px-6 flex gap-0.5 overflow-x-auto scrollbar-none pb-0 border-t border-white/50">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-[11px] sm:text-xs font-black whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${activeTab === key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-zinc-400 hover:text-zinc-700'}`}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-[11px] sm:text-xs font-extrabold whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${activeTab === key ? 'border-[var(--nc-coral)] text-[var(--nc-coral)]' : 'border-transparent text-[#94a0b0] hover:text-[#2c3340]'}`}
             >
               <Icon size={12} /> {label}
               {key === 'broadcast' && isLive && (
@@ -1106,9 +1087,10 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
+        </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-16">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-16">
         {/* ── ANALYTICS ── */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
@@ -1130,7 +1112,7 @@ export default function AdminPage() {
                   label: t('eventRsvps', locale),
                   value: stats?.rsvps ?? 0,
                   icon: Calendar,
-                  color: '#8B5CF6',
+                  color: '#ff7a5c',
                 },
                 {
                   label: 'Produkter',
@@ -1143,7 +1125,7 @@ export default function AdminPage() {
                 return (
                   <div
                     key={s.label}
-                    className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5"
+                    className="nc-glass rounded-[1.5rem] p-5"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
@@ -1156,15 +1138,15 @@ export default function AdminPage() {
                         <Icon size={14} style={{ color: s.color }} />
                       </div>
                     </div>
-                    <p className="text-2xl font-black text-zinc-900">{s.value}</p>
+                    <p className="text-2xl font-black text-[#2c3340]">{s.value}</p>
                   </div>
                 );
               })}
             </div>
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
+            <div className="nc-glass rounded-[1.5rem] p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h3 className="text-sm font-black text-zinc-900">
+                  <h3 className="text-sm font-black text-[#2c3340]">
                     {t('revenueOverview', locale)}
                   </h3>
                   <p className="text-xs text-zinc-400 mt-0.5">{t('last7days', locale)}</p>
@@ -1188,10 +1170,10 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
+            <div className="nc-glass rounded-[1.5rem] overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-50">
                 <div>
-                  <h3 className="text-sm font-black text-zinc-900">{t('emailList', locale)}</h3>
+                  <h3 className="text-sm font-black text-[#2c3340]">{t('emailList', locale)}</h3>
                   <p className="text-xs text-zinc-400 mt-0.5">
                     {stats?.members ?? 0} {t('registered', locale)}
                   </p>
@@ -1199,7 +1181,7 @@ export default function AdminPage() {
                 <Button
                   onClick={exportEmails}
                   size="sm"
-                  className="rounded-xl bg-zinc-900 text-white font-bold flex items-center gap-2 h-8 text-xs"
+                  className="rounded-full bg-[var(--nc-coral)] text-white font-bold flex items-center gap-2 h-8 text-xs"
                 >
                   <Download size={12} /> {t('exportCsv', locale)}
                 </Button>
@@ -1207,11 +1189,11 @@ export default function AdminPage() {
               <div className="divide-y divide-zinc-50">
                 {(stats?.emails ?? []).slice(0, 8).map((e: any, i: number) => (
                   <div key={i} className="flex items-center gap-3 px-6 py-3">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-sm font-black text-indigo-600 flex-shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-sm font-black text-[var(--nc-coral)] flex-shrink-0">
                       {e.name?.[0] ?? '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-zinc-900 truncate">{e.name}</p>
+                      <p className="text-sm font-black text-[#2c3340] truncate">{e.name}</p>
                       <p className="text-xs text-zinc-400 truncate">{e.email}</p>
                     </div>
                     <p className="text-xs text-zinc-300 flex-shrink-0">
@@ -1230,8 +1212,8 @@ export default function AdminPage() {
         {/* ── CONTENT ── */}
         {activeTab === 'content' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
-              <h3 className="text-sm font-black text-zinc-900 mb-4 flex items-center gap-2">
+            <div className="nc-glass rounded-[1.5rem] p-6">
+              <h3 className="text-sm font-black text-[#2c3340] mb-4 flex items-center gap-2">
                 <ShoppingBag size={14} /> {t('addProduct', locale)}
               </h3>
               <div className="space-y-3">
@@ -1270,7 +1252,7 @@ export default function AdminPage() {
                 <Button
                   onClick={() => addProductMutation.mutate()}
                   disabled={!productForm.name || addProductMutation.isPending}
-                  className="w-full rounded-xl bg-zinc-900 text-white font-black h-10 flex items-center justify-center gap-2"
+                  className="w-full rounded-full bg-[var(--nc-coral)] text-white font-black h-10 flex items-center justify-center gap-2"
                 >
                   {saved === 'product' ? (
                     <>
@@ -1288,15 +1270,15 @@ export default function AdminPage() {
                   <div key={p.id} className="flex items-center gap-2 p-2 rounded-xl bg-zinc-50">
                     <ShoppingBag size={11} className="text-zinc-400 flex-shrink-0" />
                     <p className="text-xs font-bold text-zinc-700 flex-1 truncate">{p.name}</p>
-                    <span className="text-xs font-black text-zinc-400">
+                    <span className="text-xs font-extrabold text-zinc-400">
                       {p.price === 0 ? t('freeLabel', locale) : `${Math.round(p.price)} SEK`}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
-              <h3 className="text-sm font-black text-zinc-900 mb-4 flex items-center gap-2">
+            <div className="nc-glass rounded-[1.5rem] p-6">
+              <h3 className="text-sm font-black text-[#2c3340] mb-4 flex items-center gap-2">
                 <Calendar size={14} /> {t('scheduleEvent', locale)}
               </h3>
               <div className="space-y-3">
@@ -1347,8 +1329,8 @@ export default function AdminPage() {
                 </Button>
               </div>
             </div>
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6 lg:col-span-2">
-              <h3 className="text-sm font-black text-zinc-900 mb-4 flex items-center gap-2">
+            <div className="nc-glass rounded-[1.5rem] p-6 lg:col-span-2">
+              <h3 className="text-sm font-black text-[#2c3340] mb-4 flex items-center gap-2">
                 <FileText size={14} /> {t('communityPost', locale)}
               </h3>
               <Textarea
@@ -1360,7 +1342,7 @@ export default function AdminPage() {
               <Button
                 onClick={() => addPostMutation.mutate()}
                 disabled={!postForm.content || addPostMutation.isPending}
-                className="rounded-xl bg-zinc-900 text-white font-black h-10 px-6 flex items-center gap-2"
+                className="rounded-full bg-[var(--nc-coral)] text-white font-black h-10 px-6 flex items-center gap-2"
               >
                 {saved === 'post' ? (
                   <>
@@ -1376,151 +1358,14 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── MODERATORS ── */}
-        {activeTab === 'moderators' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-zinc-50">
-                <h3 className="text-sm font-black text-zinc-900 mb-3 flex items-center gap-2">
-                  <Users size={14} className="text-blue-500" /> {t('chooseModerators', locale)}
-                </h3>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder={t('searchMembers', locale)}
-                    value={searchMember}
-                    onChange={(e) => setSearchMember(e.target.value)}
-                    className="w-full h-9 pl-9 pr-3 rounded-xl border border-zinc-200 text-xs bg-zinc-50 focus:outline-none focus:border-indigo-300"
-                  />
-                  <Users
-                    size={13}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
-                  />
-                </div>
-              </div>
-              <div className="divide-y divide-zinc-50 max-h-[420px] overflow-y-auto">
-                {members.length === 0 ? (
-                  <div className="py-12 text-center text-zinc-400 text-sm font-medium">
-                    {allMembers.length === 0 ? t('loading', locale) : 'Inga träffar'}
-                  </div>
-                ) : (
-                  members.map((m: any) => {
-                    const isMod = moderators.some((mod: any) => mod.user_id === m.id);
-                    return (
-                      <div
-                        key={m.id}
-                        className={`flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-50 transition-colors ${isMod ? 'bg-violet-50/40' : ''}`}
-                      >
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-sm font-black text-indigo-600 flex-shrink-0">
-                          {m.name?.[0] ?? '?'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-black text-zinc-900 truncate">{m.name}</p>
-                            {isMod && (
-                              <span className="flex items-center gap-0.5 text-[9px] font-black text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                <ShieldCheck size={8} /> MOD
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-zinc-400 truncate">{m.email}</p>
-                        </div>
-                        <button
-                          onClick={() =>
-                            moderatorMutation.mutate({
-                              user_id: m.id,
-                              action: isMod ? 'remove' : 'assign',
-                            })
-                          }
-                          disabled={moderatorMutation.isPending}
-                          className={`flex items-center gap-1 h-8 px-3 rounded-xl text-xs font-black transition-all disabled:opacity-60 flex-shrink-0 ${isMod ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-violet-100 text-violet-600 hover:bg-violet-200'}`}
-                        >
-                          {isMod ? (
-                            <>
-                              <ShieldOff size={11} /> {t('remove', locale)}
-                            </>
-                          ) : (
-                            <>
-                              <ShieldCheck size={11} /> {t('assign', locale)}
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-zinc-50">
-                  <h3 className="text-sm font-black text-zinc-900 flex items-center gap-2">
-                    <ShieldCheck size={14} className="text-violet-500" />{' '}
-                    {t('activeModerators', locale)}
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-1">
-                    {moderators.length} {t('moderatorsAssigned', locale)}
-                  </p>
-                </div>
-                {moderators.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <Shield size={28} className="text-zinc-200 mx-auto mb-2" />
-                    <p className="text-sm text-zinc-400">{t('noModeratorsYet', locale)}</p>
-                    <p className="text-xs text-zinc-300 mt-1">{t('chooseFromList', locale)}</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-zinc-50">
-                    {moderators.map((mod: any) => (
-                      <div key={mod.user_id} className="flex items-center gap-3 px-5 py-3.5">
-                        <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-sm font-black text-violet-600 flex-shrink-0">
-                          {mod.name?.[0] ?? '?'}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-black text-zinc-900">{mod.name}</p>
-                            <span className="text-[9px] font-black text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded-full">
-                              MOD
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() =>
-                            moderatorMutation.mutate({ user_id: mod.user_id, action: 'remove' })
-                          }
-                          className="w-7 h-7 rounded-xl bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-400 transition-colors"
-                        >
-                          <X size={11} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="bg-violet-50 border border-violet-100 rounded-2xl p-5">
-                <h4 className="text-xs font-black text-violet-800 mb-3 flex items-center gap-2">
-                  <Shield size={11} /> {t('moderatorPerms', locale)}
-                </h4>
-                {[
-                  t('pinPosts', locale),
-                  t('deleteComments', locale),
-                  t('hideInappropriate', locale),
-                  t('seeReported', locale),
-                  t('moderateLiveChat', locale),
-                ].map((p) => (
-                  <div key={p} className="flex items-center gap-2 text-xs text-violet-700 mb-1.5">
-                    <Check size={10} className="text-violet-500 flex-shrink-0" /> {p}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ── COMMUNITY ── */}
+        {activeTab === 'community' && <CommunityAdminPanel />}
 
         {/* ── BROADCAST STUDIO ── */}
         {activeTab === 'broadcast' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              <div className="bg-zinc-900 rounded-2xl overflow-hidden">
+              <div className="bg-[var(--nc-coral)] rounded-2xl overflow-hidden">
                 <div className="aspect-video bg-zinc-950 flex items-center justify-center relative">
                   {isLive ? (
                     <div className="text-center text-white">
@@ -1533,7 +1378,7 @@ export default function AdminPage() {
                       </div>
                       <p className="text-lg font-black">{liveTitle || 'Live Sändning'}</p>
                       <div className="flex items-center justify-center gap-2 mt-2">
-                        <span className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-black px-3 py-1 rounded-full">
+                        <span className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-extrabold px-3 py-1 rounded-full">
                           <div
                             className="w-1.5 h-1.5 bg-white rounded-full"
                             style={{ animation: 'livePulse 1s ease-in-out infinite' }}
@@ -1577,8 +1422,8 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
-              <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
-                <h3 className="text-sm font-black text-zinc-900 mb-4 flex items-center gap-2">
+              <div className="nc-glass rounded-[1.5rem] p-6">
+                <h3 className="text-sm font-black text-[#2c3340] mb-4 flex items-center gap-2">
                   <Activity size={14} className="text-red-500" /> {t('broadcastSettings', locale)}
                 </h3>
                 <div className="space-y-3">
@@ -1617,13 +1462,13 @@ export default function AdminPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-zinc-50 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-black text-zinc-900">{attendeeCount}</p>
+                      <p className="text-2xl font-black text-[#2c3340]">{attendeeCount}</p>
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
                         {t('viewers', locale)}
                       </p>
                     </div>
                     <div className="bg-zinc-50 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-black text-zinc-900">{liveChat.length}</p>
+                      <p className="text-2xl font-black text-[#2c3340]">{liveChat.length}</p>
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
                         {t('chatMessages', locale)}
                       </p>
@@ -1633,12 +1478,12 @@ export default function AdminPage() {
               </div>
             </div>
             <div
-              className="bg-white rounded-2xl border border-zinc-100 shadow-sm flex flex-col overflow-hidden"
+              className="nc-glass rounded-[1.5rem] flex flex-col overflow-hidden"
               style={{ height: 560 }}
             >
               <div className="p-4 border-b border-zinc-50 flex items-center gap-2 flex-shrink-0">
                 <Radio size={13} className={isLive ? 'text-red-500' : 'text-zinc-300'} />
-                <h3 className="text-sm font-black text-zinc-900">{t('liveChat', locale)}</h3>
+                <h3 className="text-sm font-black text-[#2c3340]">{t('liveChat', locale)}</h3>
                 {isLive && (
                   <span className="ml-auto text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
                     LIVE
@@ -1658,11 +1503,11 @@ export default function AdminPage() {
                 ) : (
                   liveChat.map((msg, i) => (
                     <div key={i} className="flex gap-2">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-black text-indigo-600 flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-extrabold text-[var(--nc-coral)] flex-shrink-0">
                         {msg.name[0]}
                       </div>
                       <div>
-                        <span className="text-xs font-black text-indigo-600">{msg.name}: </span>
+                        <span className="text-xs font-extrabold text-[var(--nc-coral)]">{msg.name}: </span>
                         <span className="text-xs text-zinc-600">{msg.msg}</span>
                       </div>
                     </div>
@@ -1690,7 +1535,7 @@ export default function AdminPage() {
                     }
                   }}
                   disabled={!chatMsg.trim()}
-                  className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center disabled:opacity-40 hover:bg-indigo-700 transition-colors flex-shrink-0"
+                  className="w-9 h-9 rounded-xl bg-[var(--nc-coral)] flex items-center justify-center disabled:opacity-40 hover:bg-indigo-700 transition-colors flex-shrink-0"
                 >
                   <Send size={12} className="text-white" />
                 </button>
@@ -1703,10 +1548,10 @@ export default function AdminPage() {
         {activeTab === 'biobuilder' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              {/* Profile card */}
-              <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
-                <h3 className="text-sm font-black text-zinc-900 mb-5 flex items-center gap-2">
-                  <Crown size={14} className="text-violet-500" /> {t('profileInfo', locale)}
+              {/* Redigera profil */}
+              <div className="nc-glass rounded-[1.5rem] p-6">
+                <h3 className="text-sm font-black text-[#2c3340] mb-5 flex items-center gap-2">
+                  <Settings size={14} className="text-zinc-500" /> {t('editProfile', locale)}
                 </h3>
                 <div className="mb-5 pb-5 border-b border-zinc-50">
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-3">
@@ -1758,22 +1603,62 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Välj tema */}
+              <div className="nc-glass rounded-[1.5rem] p-6">
+                <h3 className="text-sm font-black text-[#2c3340] mb-4 flex items-center gap-2">
+                  <Palette size={14} /> {t('chooseTheme', locale)}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {THEMES.map((theme) => (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      onClick={() => setActiveTheme(theme.id)}
+                      className={`p-4 rounded-2xl border-2 text-left transition-all ${activeTheme === theme.id ? 'border-indigo-500 shadow-md' : 'border-zinc-100 hover:border-zinc-200'}`}
+                      style={{ background: theme.bg }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg mb-2"
+                        style={{ background: theme.accent }}
+                      />
+                      <p className="text-xs font-extrabold text-[#2c3340]">{theme.label}</p>
+                      <p className="text-[10px] text-zinc-400">{theme.desc}</p>
+                      {activeTheme === theme.id && (
+                        <div className="mt-1.5 flex items-center gap-1 text-[10px] font-black text-[var(--nc-coral)]">
+                          <Check size={10} /> Aktivt
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  className="w-full mt-4 rounded-full bg-[var(--nc-coral)] text-white font-black h-10"
+                  onClick={() => {
+                    setSaved('theme');
+                    setTimeout(() => setSaved(''), 2000);
+                  }}
+                >
+                  {saved === 'theme' ? t('themeSaved', locale) : t('applyTheme', locale)}
+                </Button>
+              </div>
+
               {/* Social links card */}
-              <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
+              <div className="nc-glass rounded-[1.5rem] p-6">
                 <SocialLinksEditor links={socialLinks} onChange={setSocialLinks} />
               </div>
 
               {/* Content blocks card */}
-              <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
+              <div className="nc-glass rounded-[1.5rem] p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-black text-zinc-900 flex items-center gap-2">
+                  <h3 className="text-sm font-black text-[#2c3340] flex items-center gap-2">
                     <GripVertical size={14} className="text-zinc-400" />{' '}
                     {t('contentBlocks', locale)}
                   </h3>
                   <div className="relative">
                     <button
                       onClick={() => setAddBlockOpen((v) => !v)}
-                      className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-indigo-100 text-indigo-600 text-xs font-black hover:bg-indigo-200 transition-colors"
+                      className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-indigo-100 text-[var(--nc-coral)] text-xs font-extrabold hover:bg-indigo-200 transition-colors"
                     >
                       <Plus size={12} /> {t('addBlock', locale)}{' '}
                       <ChevronDown
@@ -1828,7 +1713,7 @@ export default function AdminPage() {
                 <button
                   onClick={() => saveBioMutation.mutate()}
                   disabled={saveBioMutation.isPending}
-                  className={`flex items-center gap-2 h-11 px-6 rounded-xl font-black text-sm transition-all disabled:opacity-60 ${bioSaved ? 'bg-green-600 text-white' : 'bg-zinc-900 hover:bg-black text-white'}`}
+                  className={`flex items-center gap-2 h-11 px-6 rounded-xl font-black text-sm transition-all disabled:opacity-60 ${bioSaved ? 'bg-green-600 text-white' : 'bg-[var(--nc-coral)] hover:opacity-90 text-white'}`}
                 >
                   {bioSaved ? (
                     <>
@@ -1865,7 +1750,7 @@ export default function AdminPage() {
                 </div>
                 <button
                   onClick={() => setShowPreview((v) => !v)}
-                  className={`h-11 px-4 rounded-xl border text-xs font-black transition-colors flex items-center gap-2 ${showPreview ? 'border-indigo-200 bg-indigo-50 text-indigo-600' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50'}`}
+                  className={`h-11 px-4 rounded-xl border text-xs font-extrabold transition-colors flex items-center gap-2 ${showPreview ? 'border-indigo-200 bg-indigo-50 text-[var(--nc-coral)]' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50'}`}
                 >
                   {showPreview ? <EyeOff size={13} /> : <Eye size={13} />} {t('preview', locale)}
                 </button>
@@ -1875,8 +1760,8 @@ export default function AdminPage() {
             {/* Mobile preview panel */}
             <div>
               {showPreview ? (
-                <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6 sticky top-24">
-                  <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <div className="nc-glass rounded-[1.5rem] p-6 sticky top-24">
+                  <h3 className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <Smartphone size={12} /> {t('livePreview', locale)}
                   </h3>
                   <MobilePreview
@@ -1886,6 +1771,10 @@ export default function AdminPage() {
                     bioText={bioBioText}
                     avatarUrl={bioAvatarUrl}
                     socialLinks={socialLinks}
+                    themeAccent={
+                      THEMES.find((th) => th.id === activeTheme)?.accent ?? '#ff7a5c'
+                    }
+                    themeBg={THEMES.find((th) => th.id === activeTheme)?.bg ?? '#F8F8F8'}
                   />
                 </div>
               ) : (
@@ -1903,98 +1792,6 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-
-        {/* ── CUSTOMIZER ── */}
-        {activeTab === 'customizer' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-3xl">
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
-              <h3 className="text-sm font-black text-zinc-900 mb-4 flex items-center gap-2">
-                <Palette size={14} /> {t('chooseTheme', locale)}
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {THEMES.map((theme) => (
-                  <button
-                    key={theme.id}
-                    onClick={() => setActiveTheme(theme.id)}
-                    className={`p-4 rounded-2xl border-2 text-left transition-all ${activeTheme === theme.id ? 'border-indigo-500 shadow-md' : 'border-zinc-100 hover:border-zinc-200'}`}
-                    style={{ background: theme.bg }}
-                  >
-                    <div className="w-8 h-8 rounded-lg mb-2" style={{ background: theme.accent }} />
-                    <p className="text-xs font-black text-zinc-900">{theme.label}</p>
-                    <p className="text-[10px] text-zinc-400">{theme.desc}</p>
-                    {activeTheme === theme.id && (
-                      <div className="mt-1.5 flex items-center gap-1 text-[10px] font-black text-indigo-600">
-                        <Check size={10} /> Aktivt
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <Button
-                className="w-full mt-4 rounded-xl bg-zinc-900 text-white font-black h-10"
-                onClick={() => {
-                  setSaved('theme');
-                  setTimeout(() => setSaved(''), 2000);
-                }}
-              >
-                {saved === 'theme' ? t('themeSaved', locale) : t('applyTheme', locale)}
-              </Button>
-            </div>
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
-              <h3 className="text-sm font-black text-zinc-900 mb-4 flex items-center gap-2">
-                <Settings size={14} /> {t('editProfile', locale)}
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                    {t('displayName', locale)}
-                  </label>
-                  <Input
-                    value={bioForm.name || session.user.name}
-                    onChange={(e) => setBioForm((p) => ({ ...p, name: e.target.value }))}
-                    className="rounded-xl bg-zinc-50 border-zinc-100"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                    Handle
-                  </label>
-                  <Input
-                    value={bioForm.handle}
-                    onChange={(e) => setBioForm((p) => ({ ...p, handle: e.target.value }))}
-                    placeholder={t('handlePlaceholder', locale)}
-                    className="rounded-xl bg-zinc-50 border-zinc-100"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                    {t('bioLabel', locale)}
-                  </label>
-                  <Textarea
-                    value={bioForm.bio}
-                    onChange={(e) => setBioForm((p) => ({ ...p, bio: e.target.value }))}
-                    className="rounded-xl bg-zinc-50 border-zinc-100 resize-none min-h-[80px]"
-                  />
-                </div>
-                <Button
-                  onClick={() => {
-                    setSaved('bio');
-                    setTimeout(() => setSaved(''), 2000);
-                  }}
-                  className="w-full rounded-xl bg-zinc-900 text-white font-black h-10 flex items-center justify-center gap-2"
-                >
-                  {saved === 'bio' ? (
-                    <>
-                      <CheckCircle2 size={14} /> {t('saved', locale)}
-                    </>
-                  ) : (
-                    t('saveProfile', locale)
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* ── AI COPILOT DRAWER ── */}
@@ -2002,7 +1799,7 @@ export default function AdminPage() {
         <>
           <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowCreatorAI(false)} />
           <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0">
+            <div className="flex items-center justify-between px-5 py-4 bg-[var(--nc-coral)] flex-shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
                   <Sparkles size={16} className="text-white" />
@@ -2054,7 +1851,7 @@ export default function AdminPage() {
                   {
                     id: 'headlines',
                     label: t('headlines', locale),
-                    color: 'bg-violet-50 text-violet-700 hover:bg-violet-100 border-violet-100',
+                    color: 'bg-[#ffe8e1] text-[#c45a3e] hover:bg-violet-100 border-violet-100',
                   },
                 ].map(({ id, label, color }) => (
                   <button
@@ -2072,7 +1869,7 @@ export default function AdminPage() {
               {aiLoading && !aiStreamingOutput && (
                 <div className="flex items-center gap-3 text-zinc-400">
                   <div
-                    className="w-5 h-5 border-2 border-violet-200 border-t-violet-600 rounded-full flex-shrink-0"
+                    className="w-5 h-5 border-2 border-[#ffd8cc] border-t-violet-600 rounded-full flex-shrink-0"
                     style={{ animation: 'spin 1s linear infinite' }}
                   />
                   <span className="text-sm font-medium">{t('generating', locale)}</span>
@@ -2085,7 +1882,7 @@ export default function AdminPage() {
               ) : (
                 !aiLoading && (
                   <div className="text-center py-10">
-                    <div className="w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center mx-auto mb-3">
+                    <div className="w-14 h-14 rounded-2xl bg-[#ffe8e1] flex items-center justify-center mx-auto mb-3">
                       <Sparkles size={26} className="text-violet-300" />
                     </div>
                     <p className="text-sm font-black text-zinc-400">
@@ -2104,7 +1901,7 @@ export default function AdminPage() {
                     setAiCopied(true);
                     setTimeout(() => setAiCopied(false), 2200);
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-black transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 h-10 rounded-full bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-extrabold transition-colors"
                 >
                   {aiCopied ? (
                     <>

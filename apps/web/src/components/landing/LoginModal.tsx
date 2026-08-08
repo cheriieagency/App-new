@@ -66,11 +66,11 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px] rounded-2xl border-zinc-100 p-0 gap-0 overflow-hidden font-plus-jakarta-sans">
+      <DialogContent className="sm:max-w-[440px] rounded-[1.5rem] border-white/70 bg-white/80 backdrop-blur-xl p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-xl bg-zinc-900 flex items-center justify-center">
-              <span className="text-white font-black text-xs">NC</span>
+            <div className="w-8 h-8 rounded-full bg-[var(--nc-coral)] flex items-center justify-center">
+              <span className="text-white font-display font-extrabold text-xs">N</span>
             </div>
             <DialogTitle className="text-base font-black text-zinc-900">
               Logga in
@@ -90,17 +90,17 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
             }}
             className="gap-4"
           >
-            <TabsList className="w-full h-auto p-1.5 rounded-2xl bg-zinc-100">
+            <TabsList className="w-full h-auto p-1.5 rounded-full bg-[#eef2f7]">
               <TabsTrigger
                 value="member"
-                className="flex-1 min-h-11 gap-2 rounded-xl text-xs font-black data-[state=active]:bg-zinc-900 data-[state=active]:text-white"
+                className="flex-1 min-h-11 gap-2 rounded-xl text-xs font-black data-[state=active]:bg-[var(--nc-coral)] data-[state=active]:text-white"
               >
                 <Users size={14} />
                 Logga in som Medlem
               </TabsTrigger>
               <TabsTrigger
                 value="creator"
-                className="flex-1 min-h-11 gap-2 rounded-xl text-xs font-black data-[state=active]:bg-zinc-900 data-[state=active]:text-white"
+                className="flex-1 min-h-11 gap-2 rounded-xl text-xs font-black data-[state=active]:bg-[var(--nc-coral)] data-[state=active]:text-white"
               >
                 <Crown size={14} />
                 Kreatör / Admin
@@ -154,7 +154,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="min-h-12 rounded-xl text-sm font-black text-white bg-zinc-900 hover:bg-black transition-all active:scale-95 disabled:opacity-60"
+              className="min-h-12 rounded-xl text-sm font-black text-white bg-[var(--nc-coral)] hover:opacity-90 transition-all active:scale-95 disabled:opacity-60"
             >
               {loading
                 ? 'Loggar in…'

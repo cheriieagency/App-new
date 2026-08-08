@@ -3,39 +3,50 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-    --background: hsl(0 0% 100%);
-    --foreground: hsl(240 10% 3.9%);
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(240 10% 3.9%);
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(240 10% 3.9%);
-    --primary: hsl(240 5.9% 10%);
-    --primary-foreground: hsl(0 0% 98%);
-    --secondary: hsl(240 4.8% 95.9%);
-    --secondary-foreground: hsl(240 5.9% 10%);
-    --muted: hsl(240 4.8% 95.9%);
-    --muted-foreground: hsl(240 3.8% 46.1%);
-    --accent: hsl(240 4.8% 95.9%);
-    --accent-foreground: hsl(240 5.9% 10%);
+    --nc-ink: #2c3340;
+    --nc-ink-soft: #5b6472;
+    --nc-paper: #f7f9fc;
+    --nc-blush: #ffd8cc;
+    --nc-coral: #ff7a5c;
+    --nc-coral-soft: #ffe8e1;
+    --nc-sky: #d7ecff;
+    --nc-mint: #d8f5ef;
+    --nc-glass: rgba(255, 255, 255, 0.55);
+    --nc-glass-border: rgba(255, 255, 255, 0.75);
+
+    --background: #f7f9fc;
+    --foreground: #2c3340;
+    --card: rgba(255, 255, 255, 0.72);
+    --card-foreground: #2c3340;
+    --popover: #ffffff;
+    --popover-foreground: #2c3340;
+    --primary: #ff7a5c;
+    --primary-foreground: #ffffff;
+    --secondary: #ffe8e1;
+    --secondary-foreground: #2c3340;
+    --muted: #eef2f7;
+    --muted-foreground: #5b6472;
+    --accent: #d7ecff;
+    --accent-foreground: #2c3340;
     --destructive: hsl(0 84.2% 60.2%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(240 5.9% 90%);
-    --input: hsl(240 5.9% 90%);
-    --ring: hsl(240 5.9% 10%);
-    --radius: 0.5rem;
-    --chart-1: hsl(12 76% 61%);
-    --chart-2: hsl(173 58% 39%);
-    --chart-3: hsl(197 37% 24%);
-    --chart-4: hsl(43 74% 66%);
-    --chart-5: hsl(27 87% 67%);
-    --sidebar: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(240 5.9% 10%);
-    --sidebar-primary-foreground: hsl(0 0% 98%);
-    --sidebar-accent: hsl(240 4.8% 95.9%);
-    --sidebar-accent-foreground: hsl(240 5.9% 10%);
-    --sidebar-border: hsl(220 13% 91%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+    --border: rgba(200, 210, 225, 0.55);
+    --input: rgba(200, 210, 225, 0.7);
+    --ring: #ff7a5c;
+    --radius: 1rem;
+    --chart-1: #ff7a5c;
+    --chart-2: #38bdf8;
+    --chart-3: #2dd4bf;
+    --chart-4: #fbbf24;
+    --chart-5: #a78bfa;
+    --sidebar: rgba(255, 255, 255, 0.55);
+    --sidebar-foreground: #2c3340;
+    --sidebar-primary: #ff7a5c;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #ffe8e1;
+    --sidebar-accent-foreground: #2c3340;
+    --sidebar-border: rgba(255, 255, 255, 0.7);
+    --sidebar-ring: #ff7a5c;
 }
 
 .dark {
@@ -118,11 +129,15 @@
     }
     body {
         @apply bg-background text-foreground;
+        font-family: 'Outfit', system-ui, sans-serif;
+        color: var(--nc-ink);
+        background: var(--nc-paper);
     }
 }
 
-/* Nordic Creator landing — soft glass tokens */
-.nc-landing {
+/* Soft glass design system — landing + app */
+.nc-landing,
+.nc-app {
     --nc-ink: #2c3340;
     --nc-ink-soft: #5b6472;
     --nc-paper: #f7f9fc;
@@ -131,14 +146,14 @@
     --nc-coral-soft: #ffe8e1;
     --nc-sky: #d7ecff;
     --nc-mint: #d8f5ef;
-    --nc-glass: rgba(255, 255, 255, 0.55);
-    --nc-glass-border: rgba(255, 255, 255, 0.75);
     font-family: 'Outfit', system-ui, sans-serif;
     color: var(--nc-ink);
     background: var(--nc-paper);
 }
 
-.nc-landing .font-display {
+.nc-landing .font-display,
+.nc-app .font-display,
+.font-display {
     font-family: 'Nunito', 'Outfit', system-ui, sans-serif;
 }
 
@@ -157,4 +172,40 @@
     border-radius: 9999px;
     filter: blur(60px);
     pointer-events: none;
+}
+
+.nc-app-shell {
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    background: var(--nc-paper);
+    overflow-x: hidden;
+}
+
+.nc-app-shell::before,
+.nc-app-shell::after {
+    content: '';
+    position: fixed;
+    border-radius: 9999px;
+    filter: blur(70px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.nc-app-shell::before {
+    width: 28rem;
+    height: 28rem;
+    top: -6rem;
+    left: -4rem;
+    background: var(--nc-blush);
+    opacity: 0.7;
+}
+
+.nc-app-shell::after {
+    width: 32rem;
+    height: 32rem;
+    top: 20%;
+    right: -8rem;
+    background: var(--nc-sky);
+    opacity: 0.65;
 }

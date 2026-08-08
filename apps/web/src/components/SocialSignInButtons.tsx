@@ -89,7 +89,7 @@ export function SocialSignInButtons({ callbackUrl }: { callbackUrl: string }) {
 					onClick={() => {
 						void onClick(provider);
 					}}
-					className="flex items-center justify-center gap-[8px] rounded-[8px] border border-gray-300 bg-white p-[12px] text-[16px] font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+					className="flex items-center justify-center gap-[8px] rounded-[8px] border border-gray-300 bg-white p-[12px] text-[16px] font-medium text-gray-700 hover:bg-[#f7f9fc] disabled:opacity-50"
 				>
 					{pending === provider
 						? "Redirecting…"

@@ -302,7 +302,7 @@ function LiveChat({ eventId, session }: { eventId: number; session: any }) {
             <button
               onClick={handleSend}
               disabled={!msg.trim() || sendMutation.isPending}
-              className="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center flex-shrink-0 disabled:opacity-30 transition-all"
+              className="w-9 h-9 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 flex items-center justify-center flex-shrink-0 disabled:opacity-30 transition-all"
             >
               <Send size={13} className="text-white" />
             </button>
@@ -449,7 +449,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   // ── Loading ──
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-3 font-plus-jakarta-sans">
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-3 ">
         <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
         <p className="text-zinc-400 text-sm">Laddar event...</p>
       </div>
@@ -458,7 +458,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 font-plus-jakarta-sans">
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 ">
         <p className="text-white text-lg font-black">Event hittades inte</p>
         <Link
           href="/events"
@@ -495,7 +495,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-plus-jakarta-sans flex flex-col">
+    <div className="min-h-screen bg-zinc-950 text-white  flex flex-col">
       {/* ── Top bar ── */}
       <header className="bg-zinc-900/95 backdrop-blur-sm border-b border-zinc-800 flex-shrink-0 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
@@ -551,7 +551,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               className={`flex items-center gap-1.5 h-8 px-4 rounded-xl text-xs font-black transition-all active:scale-95 ${
                 rsvpd
                   ? 'bg-green-600/20 text-green-400 border border-green-600/40 hover:bg-green-600/30'
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30'
+                  : 'bg-[var(--nc-coral)] hover:opacity-90 text-white shadow-md shadow-[rgba(255,122,92,0.35)]'
               }`}
             >
               {rsvpd ? (
@@ -720,7 +720,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 className={`w-full h-12 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
                   rsvpd
                     ? 'bg-green-600/20 text-green-400 border border-green-600/30 hover:bg-green-600/25'
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30'
+                    : 'bg-[var(--nc-coral)] hover:opacity-90 text-white shadow-lg shadow-[rgba(255,122,92,0.35)]'
                 }`}
               >
                 {rsvpd ? (

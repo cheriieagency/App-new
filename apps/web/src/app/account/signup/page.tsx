@@ -66,14 +66,14 @@ function SignUpForm() {
 	};
 
 	return (
-		<main className="flex min-h-screen w-full items-center justify-center bg-gray-50 p-[16px]">
+		<main className="nc-app nc-app-shell flex min-h-screen w-full items-center justify-center p-4 relative z-10">
 			<form
 				onSubmit={(e) => {
 					void onSubmit(e);
 				}}
-				className="flex w-full max-w-[400px] flex-col gap-[16px] rounded-[12px] bg-white p-[24px] shadow"
+				className="nc-glass flex w-full max-w-[400px] flex-col gap-4 rounded-[1.5rem] p-7 relative z-10"
 			>
-				<h1 className="text-[24px] font-semibold">Create account</h1>
+				<h1 className="font-display text-2xl font-extrabold text-[#2c3340]">Create account</h1>
 
 				{demoMode && (
 					<div className="rounded-[8px] border border-amber-300 bg-amber-50 p-[10px] text-[13px] text-amber-900">
@@ -90,7 +90,7 @@ function SignUpForm() {
 						required
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
-						className="rounded-[8px] border border-gray-300 p-[10px] text-[16px] outline-none focus:border-blue-500"
+						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#ffe8e1]"
 					/>
 				</label>
 
@@ -102,7 +102,7 @@ function SignUpForm() {
 						minLength={8}
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
-						className="rounded-[8px] border border-gray-300 p-[10px] text-[16px] outline-none focus:border-blue-500"
+						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#ffe8e1]"
 					/>
 				</label>
 
@@ -115,7 +115,7 @@ function SignUpForm() {
 				<button
 					type="submit"
 					disabled={loading}
-					className="rounded-[8px] bg-blue-600 p-[12px] text-[16px] font-medium text-white disabled:opacity-50"
+					className="rounded-full bg-[var(--nc-coral)] p-3 text-[16px] font-extrabold text-white disabled:opacity-50 hover:opacity-90 transition-all"
 				>
 					{loading ? "Creating account…" : "Sign Up"}
 				</button>
@@ -124,7 +124,7 @@ function SignUpForm() {
 
 				<a
 					href={`/account/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-					className="text-center text-[14px] text-blue-600 hover:underline"
+					className="text-center text-[14px] text-[var(--nc-coral)] hover:opacity-80"
 				>
 					Already have an account? Sign in
 				</a>

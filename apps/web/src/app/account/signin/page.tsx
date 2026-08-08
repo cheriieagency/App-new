@@ -65,22 +65,22 @@ function SignInForm() {
   };
 
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-[#F4F4F6] p-4 font-plus-jakarta-sans">
+    <main className="nc-app nc-app-shell flex min-h-screen w-full items-center justify-center p-4 relative z-10">
       <div className="w-full max-w-[420px]">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-zinc-900 flex items-center justify-center">
-            <span className="text-white font-black text-sm">NC</span>
+          <div className="w-9 h-9 rounded-full bg-[var(--nc-coral)] flex items-center justify-center">
+            <span className="text-white font-display font-extrabold text-sm">N</span>
           </div>
-          <span className="font-black text-zinc-900 text-base">Nordic Creator</span>
+          <span className="font-display font-extrabold text-[#2c3340] text-base">Nordic Creator</span>
         </div>
 
         {/* Role switcher */}
-        <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-1.5 flex gap-1.5 mb-5">
+        <div className="nc-glass rounded-[1.5rem] p-1.5 flex gap-1.5 mb-5">
           <button
             type="button"
             onClick={() => setRole('member')}
-            className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-black transition-all ${role === 'member' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
+            className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-black transition-all ${role === 'member' ? 'bg-[var(--nc-coral)] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
           >
             <Users size={14} />
             Logga in som Medlem
@@ -88,7 +88,7 @@ function SignInForm() {
           <button
             type="button"
             onClick={() => setRole('creator')}
-            className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-black transition-all ${role === 'creator' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
+            className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-black transition-all ${role === 'creator' ? 'bg-[var(--nc-coral)] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
           >
             <Crown size={14} />
             Kreatör / Admin
@@ -97,7 +97,7 @@ function SignInForm() {
 
         {/* Role badge */}
         <div
-          className={`flex items-center gap-2 mb-5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${role === 'creator' ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}
+          className={`flex items-center gap-2 mb-5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${role === 'creator' ? 'bg-[#ffe8e1] border-[#ffd8cc] text-[#c45a3e]' : 'bg-[#d7ecff] border-[#b6d9f5] text-[#0369a1]'}`}
         >
           {role === 'creator' ? (
             <>
@@ -122,10 +122,10 @@ function SignInForm() {
           onSubmit={(e) => {
             void onSubmit(e);
           }}
-          className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-7 flex flex-col gap-4"
+          className="nc-glass rounded-[1.5rem] p-7 flex flex-col gap-4"
         >
           <div>
-            <h1 className="text-xl font-black text-zinc-900">Välkommen tillbaka</h1>
+            <h1 className="text-xl font-display font-extrabold text-[#2c3340]">Välkommen tillbaka</h1>
             <p className="text-sm text-zinc-400 font-medium mt-0.5">
               {role === 'creator' ? 'Logga in till ditt skaparkonto' : 'Logga in på din profil'}
             </p>
@@ -139,7 +139,7 @@ function SignInForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="namn@example.com"
-              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:text-zinc-300"
+              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#ffe8e1] transition-all placeholder:text-zinc-300"
             />
           </label>
 
@@ -151,7 +151,7 @@ function SignInForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:text-zinc-300"
+              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#ffe8e1] transition-all placeholder:text-zinc-300"
             />
           </label>
 
@@ -164,7 +164,7 @@ function SignInForm() {
           <button
             type="submit"
             disabled={loading}
-            className={`h-12 rounded-xl text-sm font-black text-white transition-all active:scale-95 disabled:opacity-60 ${role === 'creator' ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700' : 'bg-zinc-900 hover:bg-black'}`}
+            className={`h-12 rounded-full text-sm font-extrabold text-white transition-all active:scale-95 disabled:opacity-60 ${role === 'creator' ? 'bg-[var(--nc-coral)] hover:opacity-90' : 'bg-[var(--nc-coral)] hover:opacity-90'}`}
           >
             {loading ? 'Loggar in…' : role === 'creator' ? 'Logga in som Kreatör →' : 'Logga in →'}
           </button>
@@ -175,7 +175,7 @@ function SignInForm() {
             Inget konto?{' '}
             <Link
               href={`/account/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-              className="font-black text-indigo-600 hover:text-indigo-800 transition-colors"
+              className="font-black text-[var(--nc-coral)] hover:opacity-80 transition-colors"
             >
               Skapa konto
             </Link>

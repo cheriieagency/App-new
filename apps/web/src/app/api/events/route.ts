@@ -1,6 +1,7 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { MOCK_EVENTS } from '@/lib/mock-demo-content';
 
 export async function GET() {
   try {
@@ -21,10 +22,13 @@ export async function GET() {
       GROUP BY e.id
       ORDER BY e.start_time ASC
     `;
+    if (!Array.isArray(events) || events.length === 0) {
+      return Response.json(MOCK_EVENTS);
+    }
     return Response.json(events);
   } catch (error) {
     console.error(error);
-    return Response.json({ error: 'Failed to fetch events' }, { status: 500 });
+    return Response.json(MOCK_EVENTS);
   }
 }
 

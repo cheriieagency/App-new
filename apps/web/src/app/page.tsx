@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
@@ -13,6 +13,20 @@ import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { RoiCalculator } from '@/components/landing/RoiCalculator';
 import { ShowcaseSection } from '@/components/landing/ShowcaseSection';
 import { FaqSection } from '@/components/landing/FaqSection';
+import type { SearchableCommunity } from '@/components/landing/CommunitySearchAutocomplete';
+import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
+
+function filterCommunities(list: SearchableCommunity[], query: string): SearchableCommunity[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter((c) => {
+    const haystack = [c.name, c.category, c.creator_name, c.slug, c.description]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(q);
+  });
+}
 
 export default function PlatformHome() {
   const { data: session } = authClient.useSession();
@@ -20,14 +34,36 @@ export default function PlatformHome() {
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: communities = [] } = useQuery({
+  const {
+    data: apiCommunities,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['communities-public'],
     queryFn: async () => {
       const res = await fetch('/api/communities');
-      if (!res.ok) throw new Error('Failed');
-      return res.json();
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) {
+        throw new Error(
+          typeof data?.error === 'string' ? data.error : 'Failed to fetch communities'
+        );
+      }
+      return normalizeCommunities(data);
     },
+    retry: 1,
   });
+
+  // Prefer API data; fall back to local mocks while loading or on error.
+  const list = useMemo(() => {
+    if (Array.isArray(apiCommunities) && apiCommunities.length > 0) return apiCommunities;
+    if (isLoading || isError || !apiCommunities) {
+      return getMockCommunitiesForUser({
+        email: session?.user?.email,
+        name: session?.user?.name,
+      });
+    }
+    return apiCommunities;
+  }, [apiCommunities, isLoading, isError, session?.user?.email, session?.user?.name]);
 
   const joinMutation = useMutation({
     mutationFn: async ({ id, action }: { id: number; action: 'join' | 'leave' }) => {
@@ -42,27 +78,12 @@ export default function PlatformHome() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['communities-public'] }),
   });
 
-  const list = communities as Array<{
-    id: number;
-    name: string;
-    description: string;
-    category: string;
-    creator_name: string;
-    creator_image?: string | null;
-    cover_color?: string | null;
-    member_count: number;
-    is_featured?: boolean;
-    is_joined?: boolean;
-  }>;
+  const featured = list.find((c) => c.is_featured) ?? list[0] ?? null;
+  const filtered = filterCommunities(list, searchQuery);
 
-  const featured = list.find((c) => c.is_featured) ?? null;
-  const filtered = searchQuery
-    ? list.filter(
-        (c) =>
-          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.category.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : list;
+  const handleSelectCommunity = (community: SearchableCommunity) => {
+    router.push(`/communities/${community.id}`);
+  };
 
   return (
     <div className="nc-landing min-h-screen">
@@ -73,9 +94,12 @@ export default function PlatformHome() {
       <RoiCalculator />
       <ShowcaseSection
         featured={featured}
+        allCommunities={list}
         communities={filtered}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        onSelectCommunity={handleSelectCommunity}
+        isSearchLoading={isLoading && !apiCommunities}
         isLoggedIn={!!session}
         onJoin={(id) =>
           joinMutation.mutate(

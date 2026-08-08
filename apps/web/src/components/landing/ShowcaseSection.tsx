@@ -11,19 +11,12 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import {
+  CommunitySearchAutocomplete,
+  type SearchableCommunity,
+} from '@/components/landing/CommunitySearchAutocomplete';
 
-export type CommunityCard = {
-  id: number;
-  name: string;
-  description: string;
-  category: string;
-  creator_name: string;
-  creator_image?: string | null;
-  cover_color?: string | null;
-  member_count: number;
-  is_featured?: boolean;
-  is_joined?: boolean;
-};
+export type CommunityCard = SearchableCommunity;
 
 const CATEGORY_PILLS = [
   { label: '#Marknadsföring', filter: 'Marketing', icon: TrendingUp, color: '#0f766e' },
@@ -35,32 +28,63 @@ const CATEGORY_PILLS = [
 
 type ShowcaseSectionProps = {
   featured?: CommunityCard | null;
+  /** Full list used for autocomplete suggestions */
+  allCommunities: CommunityCard[];
+  /** Filtered list for the grid */
   communities: CommunityCard[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onSelectCommunity: (community: CommunityCard) => void;
   isLoggedIn: boolean;
   onJoin: (id: number) => void;
   onGoToCommunity: () => void;
   joinPending?: boolean;
+  isSearchLoading?: boolean;
 };
 
 export function ShowcaseSection({
   featured,
+  allCommunities,
   communities,
   searchQuery,
   onSearchChange,
+  onSelectCommunity,
   isLoggedIn,
   onJoin,
   onGoToCommunity,
   joinPending,
+  isSearchLoading = false,
 }: ShowcaseSectionProps) {
   return (
-    <section id="communities" className="relative bg-transparent py-20 sm:py-28 scroll-mt-20 overflow-hidden">
+    <section id="communities" className="relative bg-transparent py-20 sm:py-28 scroll-mt-20 overflow-visible">
       <div
-        className="nc-blob w-96 h-96 -right-20 top-20 opacity-50"
+        className="nc-blob w-96 h-96 -right-20 top-20 opacity-50 pointer-events-none"
         style={{ background: 'var(--nc-sky)' }}
       />
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 overflow-visible">
+      {/* Real-time community search + Google-style autocomplete */}
+      <div className="relative z-20 mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <p
+            className="text-xs font-extrabold uppercase tracking-[0.18em] mb-2"
+            style={{ color: 'var(--nc-coral, #ff5c35)' }}
+          >
+            Sök
+          </p>
+          <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[#0b0d10] tracking-tight">
+            Sök communities
+          </h2>
+        </div>
+        <CommunitySearchAutocomplete
+          value={searchQuery}
+          onChange={onSearchChange}
+          communities={allCommunities}
+          onSelectCommunity={onSelectCommunity}
+          isLoading={isSearchLoading}
+          placeholder="Sök communities, ämnen, kreatörer..."
+        />
+      </div>
+
       {featured && (
         <div className="mb-14">
           <div className="flex items-center gap-3 mb-8">
@@ -120,24 +144,13 @@ export function ShowcaseSection({
                       {featured.member_count.toLocaleString('sv-SE')} medlemmar
                     </span>
                   </div>
-                  {isLoggedIn ? (
-                    <button
-                      type="button"
-                      onClick={onGoToCommunity}
-                      className="flex items-center gap-2 min-h-11 px-6 rounded-full text-sm font-extrabold text-[#0b0d10] transition-all active:scale-95"
-                      style={{ background: 'var(--nc-coral, #ff5c35)' }}
-                    >
-                      Kika in i communityt <ArrowRight size={13} />
-                    </button>
-                  ) : (
-                    <Link
-                      href="/account/signup"
-                      className="flex items-center gap-2 min-h-11 px-6 rounded-full text-sm font-extrabold text-[#0b0d10] transition-all active:scale-95"
-                      style={{ background: 'var(--nc-coral, #ff5c35)' }}
-                    >
-                      Kika in i communityt <ArrowRight size={13} />
-                    </Link>
-                  )}
+                  <Link
+                    href={`/communities/${featured.id}`}
+                    className="flex items-center gap-2 min-h-11 px-6 rounded-full text-sm font-extrabold text-[#0b0d10] transition-all active:scale-95"
+                    style={{ background: 'var(--nc-coral, #ff5c35)' }}
+                  >
+                    Kika in i communityt <ArrowRight size={13} />
+                  </Link>
                 </div>
               </div>
             </div>
@@ -162,7 +175,7 @@ export function ShowcaseSection({
                 onClick={() => onSearchChange(active ? '' : cat.filter)}
                 className={`inline-flex items-center gap-2 min-h-11 px-4 rounded-2xl border text-sm font-black transition-all active:scale-95 ${
                   active
-                    ? 'bg-zinc-900 text-white border-zinc-900'
+                    ? 'bg-[var(--nc-coral)] text-white border-[var(--nc-coral)]'
                     : 'bg-white text-zinc-700 border-zinc-100 hover:border-zinc-200'
                 }`}
               >
@@ -197,9 +210,10 @@ export function ShowcaseSection({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {communities.map((community) => (
-          <div
+          <Link
             key={community.id}
-            className="bg-white rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md transition-all overflow-hidden group"
+            href={`/communities/${community.id}`}
+            className="bg-white rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md transition-all overflow-hidden group block"
           >
             <div
               className="h-24 relative"
@@ -253,36 +267,12 @@ export function ShowcaseSection({
                     {community.member_count.toLocaleString('sv-SE')}
                   </span>
                 </div>
-                {isLoggedIn ? (
-                  community.is_joined ? (
-                    <button
-                      type="button"
-                      onClick={onGoToCommunity}
-                      className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black hover:bg-emerald-200 transition-all"
-                    >
-                      Kika in i communityt
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onJoin(community.id)}
-                      disabled={joinPending}
-                      className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl bg-zinc-900 text-white text-xs font-black hover:bg-black transition-all active:scale-95 disabled:opacity-60"
-                    >
-                      Kika in i communityt <ArrowRight size={11} />
-                    </button>
-                  )
-                ) : (
-                  <Link
-                    href="/account/signup"
-                    className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl bg-zinc-900 text-white text-xs font-black hover:bg-black transition-all"
-                  >
-                    Kika in i communityt <ArrowRight size={11} />
-                  </Link>
-                )}
+                <span className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl bg-[var(--nc-coral)] text-white text-xs font-black">
+                  Kika in i communityt <ArrowRight size={11} />
+                </span>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 

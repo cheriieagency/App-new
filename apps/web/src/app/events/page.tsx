@@ -44,8 +44,8 @@ import {
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; dot: string; dark: string }> = {
   Summit: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: '#6366F1', dark: '#4338CA' },
-  Masterclass: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: '#10B981', dark: '#047857' },
-  Workshop: { bg: 'bg-violet-50', text: 'text-violet-700', dot: '#8B5CF6', dark: '#6D28D9' },
+  Masterclass: { bg: 'bg-[#d8f5ef]', text: 'text-[#0f766e]', dot: '#10B981', dark: '#047857' },
+  Workshop: { bg: 'bg-[#ffe8e1]', text: 'text-[#c45a3e]', dot: '#8B5CF6', dark: '#6D28D9' },
   Webinar: { bg: 'bg-blue-50', text: 'text-blue-700', dot: '#3B82F6', dark: '#1D4ED8' },
 };
 
@@ -284,7 +284,7 @@ function EventCard({
   const attendeeCount = Number(event.attendee_count) + (rsvpd ? 1 : 0);
 
   return (
-    <div className="group bg-white rounded-2xl border border-zinc-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col">
+    <div className="group nc-glass rounded-[1.5rem] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col">
       {/* ── Cover ── */}
       <div
         className="relative h-52 flex-shrink-0 overflow-hidden"
@@ -382,7 +382,7 @@ function EventCard({
         </div>
 
         {/* Title */}
-        <h3 className="text-base font-black text-zinc-900 leading-snug mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2">
+        <h3 className="text-base font-black text-zinc-900 leading-snug mb-2 group-hover:text-[var(--nc-coral)] transition-colors line-clamp-2">
           {event.title}
         </h3>
 
@@ -439,7 +439,7 @@ function EventCard({
               className={`flex-1 h-10 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] ${
                 rsvpd
                   ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200'
-                  : 'bg-zinc-900 text-white hover:bg-black shadow-sm'
+                  : 'bg-[var(--nc-coral)] text-white hover:opacity-90 shadow-sm'
               }`}
             >
               {rsvpd ? (
@@ -529,7 +529,7 @@ function MiniCalendar({
   const WEEKDAYS = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
 
   return (
-    <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
+    <div className="nc-glass rounded-[1.5rem] overflow-hidden">
       {/* Month nav */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-50">
         <button
@@ -575,9 +575,9 @@ function MiniCalendar({
                 onClick={() => onDaySelect(isSelected ? null : day)}
                 className={`relative flex flex-col items-center py-1.5 rounded-xl transition-all ${
                   isSelected
-                    ? 'bg-indigo-600'
+                    ? 'bg-[var(--nc-coral)]'
                     : today
-                      ? 'bg-zinc-900'
+                      ? 'bg-[var(--nc-coral)]'
                       : dayEvents.length
                         ? 'hover:bg-indigo-50'
                         : 'hover:bg-zinc-50'
@@ -711,29 +711,31 @@ export default function EventsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F4F4F6] font-plus-jakarta-sans">
+    <div className="nc-app nc-app-shell min-h-screen">
       {/* ── Header ── */}
-      <header className="bg-white border-b border-zinc-100 sticky top-0 z-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-20 px-3 sm:px-4 pt-3">
+        <div className="nc-glass rounded-full max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-700 transition-colors text-xs font-bold flex-shrink-0"
+              className="flex items-center gap-1.5 text-[#94a0b0] hover:text-[#2c3340] transition-colors text-xs font-bold flex-shrink-0"
             >
               <ArrowLeft size={14} /> Hem
             </Link>
-            <div className="h-4 w-px bg-zinc-200 flex-shrink-0" />
+            <div className="h-4 w-px bg-[#d5dce8] flex-shrink-0" />
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-[var(--nc-coral)] flex items-center justify-center flex-shrink-0">
                 <Calendar size={13} className="text-white" />
               </div>
-              <span className="text-sm font-black text-zinc-900 truncate">Events & Webinarer</span>
+              <span className="text-sm font-display font-extrabold text-[#2c3340] truncate">
+                Events & Webinarer
+              </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* View toggle */}
-            <div className="flex items-center gap-0.5 bg-zinc-100 p-0.5 rounded-xl">
+            <div className="flex items-center gap-0.5 bg-white/50 p-0.5 rounded-full">
               {(
                 [
                   { key: 'list', icon: List, label: 'Lista' },
@@ -754,14 +756,14 @@ export default function EventsPage() {
             {session ? (
               <Link
                 href="/dashboard"
-                className="h-8 px-3 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-black transition-all flex items-center"
+                className="h-8 px-3 rounded-full bg-[var(--nc-coral)] text-white text-xs font-bold hover:opacity-90 transition-all flex items-center"
               >
                 Member Portal →
               </Link>
             ) : (
               <Link
                 href="/account/signin"
-                className="h-8 px-3 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-black transition-all flex items-center gap-1.5"
+                className="h-8 px-3 rounded-full bg-[var(--nc-coral)] text-white text-xs font-bold hover:opacity-90 transition-all flex items-center gap-1.5"
               >
                 <LogIn size={13} /> Logga in
               </Link>
@@ -770,31 +772,37 @@ export default function EventsPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-6">
         {/* ── Hero banner ── */}
         <div
-          className="rounded-2xl overflow-hidden mb-8 relative"
-          style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' }}
+          className="rounded-[1.75rem] overflow-hidden mb-8 relative nc-glass"
+          style={{
+            background:
+              'linear-gradient(135deg, rgba(255,232,225,0.95) 0%, rgba(215,236,255,0.9) 100%)',
+          }}
         >
           <div
             className="absolute inset-0"
             style={{
               backgroundImage:
-                'radial-gradient(ellipse at 10% 50%, rgba(99,102,241,0.25) 0%, transparent 50%), radial-gradient(ellipse at 90% 20%, rgba(139,92,246,0.2) 0%, transparent 50%)',
+                'radial-gradient(ellipse at 20% 40%, rgba(255,122,92,0.18) 0%, transparent 50%), radial-gradient(ellipse at 90% 20%, rgba(125,211,252,0.25) 0%, transparent 50%)',
             }}
           />
           <div className="relative px-6 sm:px-10 py-8 sm:py-10 flex flex-col sm:flex-row sm:items-center gap-6 justify-between">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={14} className="text-indigo-400" />
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                <Sparkles size={14} style={{ color: 'var(--nc-coral)' }} />
+                <span
+                  className="text-[10px] font-extrabold uppercase tracking-widest"
+                  style={{ color: 'var(--nc-coral)' }}
+                >
                   Nordic Creator Community
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-2">
+              <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-[#2c3340] leading-tight mb-2">
                 Live Events &<br /> Webbinarier
               </h1>
-              <p className="text-sm text-white/50 leading-relaxed max-w-sm">
+              <p className="text-sm text-[#5b6472] leading-relaxed max-w-sm">
                 Exklusiva live-sessioner, masterclasses och workshops. Lär av de bästa och nätverka
                 med {mounted && totalAttendees > 0 ? `${totalAttendees}+` : 'hundratals'} nordiska
                 kreatörer.
@@ -807,8 +815,8 @@ export default function EventsPage() {
                 { val: `${liveEvents.length}`, label: 'Live Nu' },
               ].map((stat) => (
                 <div key={stat.label} className="text-center" suppressHydrationWarning>
-                  <p className="text-2xl font-black text-white">{stat.val}</p>
-                  <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest leading-tight mt-0.5">
+                  <p className="text-2xl font-display font-extrabold text-[#2c3340]">{stat.val}</p>
+                  <p className="text-[9px] font-bold text-[#94a0b0] uppercase tracking-widest leading-tight mt-0.5">
                     {stat.label}
                   </p>
                 </div>
@@ -862,7 +870,7 @@ export default function EventsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-zinc-100">
+                <div className="flex flex-col items-center justify-center py-16 nc-glass rounded-[1.5rem]">
                   <Calendar size={32} className="text-zinc-300 mb-3" />
                   <p className="text-zinc-400 text-sm font-medium">
                     {selectedDay ? 'Inga events denna dag' : 'Inga kommande events'}
@@ -896,7 +904,7 @@ export default function EventsPage() {
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden"
+                    className="nc-glass rounded-[1.5rem] overflow-hidden"
                   >
                     <div className="h-52 bg-zinc-100 animate-pulse" />
                     <div className="p-5 space-y-3">
@@ -908,7 +916,7 @@ export default function EventsPage() {
                 ))}
               </div>
             ) : events.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-zinc-100">
+              <div className="flex flex-col items-center justify-center py-24 nc-glass rounded-[1.5rem]">
                 <Calendar size={40} className="text-zinc-200 mb-4" />
                 <p className="text-zinc-400 font-medium">Inga kommande events planerade</p>
                 <p className="text-zinc-300 text-sm mt-1">Kom tillbaka snart!</p>

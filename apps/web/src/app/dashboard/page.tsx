@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,6 @@ import {
   PlayCircle,
   Heart,
   Users,
-  Download,
   CheckCircle2,
   ChevronRight,
   LogOut,
@@ -23,12 +22,12 @@ import {
   Image as ImageIcon,
   X,
   Reply,
+  Pin,
   Flame,
   Star,
   Medal,
   Crown,
   Sparkles,
-  Headphones,
   Copy,
   Gift,
   LinkIcon,
@@ -38,18 +37,25 @@ import {
   Plus,
   Video,
   FileText,
-  Globe,
   Loader2,
+  ShoppingBag,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
 import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
-import AudioMiniPlayer from '@/components/AudioMiniPlayer';
 import useUpload from '@/utils/useUpload';
+import {
+  CommunitySearchAutocomplete,
+  type SearchableCommunity,
+} from '@/components/landing/CommunitySearchAutocomplete';
+import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
+import ClassroomView from '@/components/classroom/ClassroomView';
+import StoreView from '@/components/store/StoreView';
+import { normalizeClassroomCourses } from '@/lib/classroom-content';
 
-type TabKey = 'community' | 'events' | 'classroom';
+type TabKey = 'community' | 'events' | 'classroom' | 'store';
 type CommunitySubTab = 'feed' | 'leaderboard';
 type SidebarView = 'home' | 'search' | 'profile' | 'community';
 interface CountdownMap {
@@ -105,7 +111,7 @@ function getLevelProgress(points: number) {
 
 const TAGS = [
   { label: '#Frågor', color: 'bg-blue-100 text-blue-700', dot: '#3B82F6' },
-  { label: '#Inspiration', color: 'bg-violet-100 text-violet-700', dot: '#8B5CF6' },
+  { label: '#Inspiration', color: 'bg-violet-100 text-[#c45a3e]', dot: '#8B5CF6' },
   { label: '#Resultat', color: 'bg-green-100 text-green-700', dot: '#10B981' },
   { label: '#Tips', color: 'bg-amber-100 text-amber-700', dot: '#F59E0B' },
   { label: '#Milstolpe', color: 'bg-rose-100 text-rose-700', dot: '#F43F5E' },
@@ -244,8 +250,60 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
     },
   });
 
-  const topLevel = (comments as any[]).filter((c) => !c.parent_id);
+  const pinComment = useMutation({
+    mutationFn: async ({
+      comment_id,
+      action,
+    }: {
+      comment_id: number;
+      action: 'pin' | 'unpin';
+    }) => {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, comment_id }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
+    },
+    onSuccess: (_res, vars) => {
+      queryClient.setQueryData(['comments', postId], (prev: unknown) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev
+          .map((c: any) =>
+            c.id === vars.comment_id
+              ? {
+                  ...c,
+                  is_pinned: vars.action === 'pin',
+                  pinned_at:
+                    vars.action === 'pin' ? new Date().toISOString() : null,
+                }
+              : c
+          )
+          .sort((a: any, b: any) => {
+            const ap = a.is_pinned ? 1 : 0;
+            const bp = b.is_pinned ? 1 : 0;
+            if (ap !== bp) return bp - ap;
+            return (
+              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            );
+          });
+      });
+      queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+    },
+  });
+
+  const topLevel = (comments as any[])
+    .filter((c) => !c.parent_id)
+    .slice()
+    .sort((a, b) => {
+      const ap = a.is_pinned ? 1 : 0;
+      const bp = b.is_pinned ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
   const nested = (comments as any[]).filter((c) => !!c.parent_id);
+  const canPin = Boolean(session?.user);
 
   return (
     <div className="border-t border-zinc-50 pt-3 mt-3">
@@ -289,22 +347,58 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
             <div key={c.id}>
               <div className="flex gap-2.5">
                 <LevelAvatar name={c.user_name} size={28} />
-                <div className="flex-1">
-                  <div className="bg-zinc-50 rounded-xl rounded-tl-none px-3 py-2">
-                    <span className="text-xs font-black text-zinc-800">{c.user_name} </span>
+                <div className="flex-1 min-w-0">
+                  <div
+                    className={`rounded-xl rounded-tl-none px-3 py-2 ${
+                      c.is_pinned
+                        ? 'bg-[#fff4f0] border border-[#ffe0d4]'
+                        : 'bg-zinc-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                      <span className="text-xs font-black text-zinc-800">{c.user_name}</span>
+                      {c.is_pinned && (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-white/80 px-1.5 py-0.5 rounded-full">
+                          <Pin size={9} /> Fäst
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-zinc-600 leading-relaxed">{c.content}</span>
                     {c.media_url && <CommentMedia url={c.media_url} type={c.media_type} />}
                   </div>
-                  <button
-                    onClick={() => {
-                      setReplyTo(c.id);
-                      setReplyToName(c.user_name);
-                      setTimeout(() => inputRef.current?.focus(), 50);
-                    }}
-                    className="flex items-center gap-1 mt-1 text-[10px] font-bold text-zinc-400 hover:text-blue-500 transition-colors ml-2"
-                  >
-                    <Reply size={10} /> Svara
-                  </button>
+                  <div className="flex items-center gap-1 mt-0.5 ml-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyTo(c.id);
+                        setReplyToName(c.user_name);
+                        setTimeout(() => inputRef.current?.focus(), 50);
+                      }}
+                      className="flex items-center gap-1 h-9 min-h-[36px] px-2 text-[10px] font-bold text-zinc-400 hover:text-blue-500 transition-colors"
+                    >
+                      <Reply size={10} /> Svara
+                    </button>
+                    {canPin && (
+                      <button
+                        type="button"
+                        disabled={pinComment.isPending}
+                        onClick={() =>
+                          pinComment.mutate({
+                            comment_id: c.id,
+                            action: c.is_pinned ? 'unpin' : 'pin',
+                          })
+                        }
+                        className={`flex items-center gap-1 h-9 min-h-[36px] px-2 text-[10px] font-bold transition-colors disabled:opacity-50 ${
+                          c.is_pinned
+                            ? 'text-[var(--nc-coral)] hover:text-[#c45a3e]'
+                            : 'text-zinc-400 hover:text-[var(--nc-coral)]'
+                        }`}
+                      >
+                        <Pin size={10} />
+                        {c.is_pinned ? 'Ta bort fästning' : 'Fäst'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               {nested
@@ -391,7 +485,7 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
             <button
               onClick={() => addComment.mutate()}
               disabled={(!reply.trim() && !pendingMedia) || addComment.isPending || uploading}
-              className="w-8 h-8 rounded-xl bg-zinc-900 flex items-center justify-center disabled:opacity-40 transition-opacity flex-shrink-0 mt-0.5"
+              className="w-8 h-8 rounded-full bg-[var(--nc-coral)] flex items-center justify-center disabled:opacity-40 transition-opacity flex-shrink-0 mt-0.5"
             >
               <Send size={12} className="text-white" />
             </button>
@@ -405,7 +499,7 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
             </button>
             <button
               onClick={() => vidInputRef.current?.click()}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-zinc-400 hover:text-violet-500 hover:bg-violet-50 transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-zinc-400 hover:text-violet-500 hover:bg-[#ffe8e1] transition-all"
             >
               <Video size={11} /> Video
             </button>
@@ -437,17 +531,12 @@ export default function DashboardPage() {
   const [countdown, setCountdown] = useState<CountdownMap>({});
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
   const [expandedPosts, setExpandedPosts] = useState<Set<number>>(new Set());
-  const [activeLesson, setActiveLesson] = useState<any>(null);
-  const [completedLessons, setCompletedLessons] = useState<Set<number>>(new Set());
-  const [activeCourse, setActiveCourse] = useState<any>(null);
   const [rsvpdEvents, setRsvpdEvents] = useState<Set<number>>(new Set());
   const [liveEvent, setLiveEvent] = useState<any>(null);
   const [newPost, setNewPost] = useState('');
   const [postTag, setPostTag] = useState<string | null>(null);
   const [postImage, setPostImage] = useState('');
   const [showImage, setShowImage] = useState(false);
-  const [audioMode, setAudioMode] = useState(false);
-  const audioIframeRef = useRef<HTMLIFrameElement | null>(null);
   const [refLinkCopied, setRefLinkCopied] = useState(false);
   const [showMemberChat, setShowMemberChat] = useState(false);
   const [memberChatMessages, setMemberChatMessages] = useState<{ role: string; content: string }[]>(
@@ -474,19 +563,43 @@ export default function DashboardPage() {
   useEffect(() => {
     if (memberChatRef.current) memberChatRef.current.scrollTop = memberChatRef.current.scrollHeight;
   }, [memberChatMessages, memberStreamingMsg]);
-  useEffect(() => {
-    setAudioMode(false);
-  }, [activeLesson?.id]);
-
-  const { data: communities = [] } = useQuery({
+  const {
+    data: apiCommunities,
+    isLoading: isCommunitiesLoading,
+    isError: isCommunitiesError,
+  } = useQuery({
     queryKey: ['communities'],
     queryFn: async () => {
       const r = await fetch('/api/communities');
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
+      const data = await r.json();
+      if (!r.ok || !Array.isArray(data)) {
+        throw new Error(
+          typeof data?.error === 'string' ? data.error : 'Failed to fetch communities'
+        );
+      }
+      return normalizeCommunities(data);
     },
     enabled: !!session,
+    retry: 1,
   });
+
+  // Prefer API data; fall back to local mocks while loading or on error.
+  const communities = useMemo((): SearchableCommunity[] => {
+    if (Array.isArray(apiCommunities) && apiCommunities.length > 0) return apiCommunities;
+    if (isCommunitiesLoading || isCommunitiesError || !apiCommunities) {
+      return getMockCommunitiesForUser({
+        email: session?.user?.email,
+        name: session?.user?.name,
+      });
+    }
+    return apiCommunities;
+  }, [
+    apiCommunities,
+    isCommunitiesLoading,
+    isCommunitiesError,
+    session?.user?.email,
+    session?.user?.name,
+  ]);
   const { data: feed, isLoading: isFeedLoading } = useQuery({
     queryKey: ['feed'],
     queryFn: async () => {
@@ -503,7 +616,7 @@ export default function DashboardPage() {
       return r.json();
     },
   });
-  const { data: classroom, isLoading: isClassroomLoading } = useQuery({
+  const { data: classroom } = useQuery({
     queryKey: ['classroom'],
     queryFn: async () => {
       const r = await fetch('/api/classroom');
@@ -574,13 +687,6 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, [events, mounted]);
 
-  useEffect(() => {
-    if (classroom?.length && !activeCourse) {
-      setActiveCourse(classroom[0]);
-      if (classroom[0].lessons?.length) setActiveLesson(classroom[0].lessons[0]);
-    }
-  }, [classroom, activeCourse]);
-
   const createPostMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch('/api/feed', {
@@ -621,6 +727,59 @@ export default function DashboardPage() {
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
   });
+
+  const pinPostMutation = useMutation({
+    mutationFn: async ({
+      post_id,
+      action,
+    }: {
+      post_id: number;
+      action: 'pin' | 'unpin';
+    }) => {
+      const res = await fetch('/api/feed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, post_id }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
+    },
+    onSuccess: (_res, vars) => {
+      queryClient.setQueryData(['feed'], (prev: unknown) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev
+          .map((p: any) =>
+            p.id === vars.post_id
+              ? {
+                  ...p,
+                  is_pinned: vars.action === 'pin',
+                  pinned_at:
+                    vars.action === 'pin' ? new Date().toISOString() : null,
+                }
+              : p
+          )
+          .sort((a: any, b: any) => {
+            const ap = a.is_pinned ? 1 : 0;
+            const bp = b.is_pinned ? 1 : 0;
+            if (ap !== bp) return bp - ap;
+            return (
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+          });
+      });
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+
+  const sortedFeed = useMemo(() => {
+    if (!Array.isArray(feed)) return [];
+    return [...feed].sort((a: any, b: any) => {
+      const ap = a.is_pinned ? 1 : 0;
+      const bp = b.is_pinned ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [feed]);
   const rsvpMutation = useMutation({
     mutationFn: async (eventId: number) => {
       const res = await fetch('/api/rsvp', {
@@ -664,12 +823,11 @@ export default function DashboardPage() {
     setMemberChatInput('');
     setMemberChatLoading(true);
     setMemberStreamingMsg('');
-    const lessonContext =
-      classroom
-        ?.flatMap((c: any) =>
-          (c.lessons ?? []).map((l: any) => `[${l.id}] ${l.title} (Course: ${c.title})`)
-        )
-        .join('\n') ?? '';
+    const lessonContext = normalizeClassroomCourses(classroom)
+      .flatMap((c) =>
+        (c.lessons ?? []).map((l) => `[${l.id}] ${l.title} (Course: ${c.title})`)
+      )
+      .join('\n');
     try {
       const response = await fetch('/api/ai/assistant', {
         method: 'POST',
@@ -691,18 +849,19 @@ export default function DashboardPage() {
       if (match) {
         const lessonId = parseInt(match[1]);
         const lessonTitle = match[2];
-        const course = classroom?.find((c: any) => c.lessons?.some((l: any) => l.id === lessonId));
-        const lesson = course?.lessons?.find((l: any) => l.id === lessonId);
+        const course = normalizeClassroomCourses(classroom).find((c) =>
+          c.lessons?.some((l) => l.id === lessonId)
+        );
         return (
           <button
             key={i}
             onClick={() => {
-              if (lesson) setActiveLesson(lesson);
-              if (course) setActiveCourse(course);
               setShowMemberChat(false);
-              setSelectedCommunity((communities as any[]).find((c) => c.slug === 'nordic-creator'));
               setSidebarView('community');
               setActiveTab('classroom');
+              if (course) {
+                router.push(`/classroom?course=${course.id}`);
+              }
             }}
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-xs font-bold hover:bg-blue-200 transition-colors mx-0.5 underline underline-offset-2"
           >
@@ -714,21 +873,27 @@ export default function DashboardPage() {
     });
   };
 
-  const progressPct = activeCourse
-    ? Math.round((completedLessons.size / Math.max(activeCourse.lessons?.length, 1)) * 100)
-    : 0;
-  const joinedCommunities = (communities as any[]).filter((c: any) => c.is_joined);
-  const filteredCommunities = communitySearch
-    ? (communities as any[]).filter(
-        (c: any) =>
-          c.name.toLowerCase().includes(communitySearch.toLowerCase()) ||
-          c.category.toLowerCase().includes(communitySearch.toLowerCase())
-      )
-    : (communities as any[]);
+  const joinedCommunities = communities.filter((c) => c.is_joined);
+  const filteredCommunities = useMemo(() => {
+    const q = communitySearch.trim().toLowerCase();
+    if (!q) return communities;
+    return communities.filter((c) => {
+      const haystack = [c.name, c.category, c.creator_name, c.slug, c.description]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [communities, communitySearch]);
+
+  const handleSelectCommunitySearch = (community: SearchableCommunity) => {
+    setMobileCommunitiesOpen(false);
+    router.push(`/communities/${community.id}?from=dashboard`);
+  };
 
   if (isAuthPending)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white font-plus-jakarta-sans">
+      <div className="min-h-screen flex items-center justify-center bg-white ">
         <div className="text-zinc-400">Authenticating…</div>
       </div>
     );
@@ -739,8 +904,8 @@ export default function DashboardPage() {
 
   if (liveEvent)
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex flex-col font-plus-jakarta-sans">
-        <div className="flex items-center gap-3 px-4 py-3 bg-zinc-900 border-b border-zinc-800">
+      <div className="min-h-screen bg-zinc-950 text-white flex flex-col ">
+        <div className="flex items-center gap-3 px-4 py-3 bg-[var(--nc-coral)] border-b border-zinc-800">
           <button
             onClick={() => setLiveEvent(null)}
             className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
@@ -773,7 +938,7 @@ export default function DashboardPage() {
               <p className="text-sm text-zinc-400 mt-1">{liveEvent.description}</p>
             </div>
           </div>
-          <div className="w-full lg:w-80 bg-zinc-900 flex flex-col border-l border-zinc-800">
+          <div className="w-full lg:w-80 bg-[var(--nc-coral)] flex flex-col border-l border-zinc-800">
             <div className="p-3 border-b border-zinc-800 flex items-center gap-2">
               <Radio size={14} className="text-red-400" />
               <span className="text-xs font-black uppercase tracking-widest text-zinc-300">
@@ -822,6 +987,7 @@ export default function DashboardPage() {
     { key: 'community', label: 'Community', icon: MessageSquare },
     { key: 'events', label: 'Events', icon: Calendar },
     { key: 'classroom', label: 'Classroom', icon: GraduationCap },
+    { key: 'store', label: 'Store', icon: ShoppingBag },
   ];
 
   // ── Sidebar icon item ────────────────────────────────────────────────────
@@ -839,10 +1005,14 @@ export default function DashboardPage() {
     <button
       onClick={onClick}
       title={label}
-      className={`group relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all ${active ? 'bg-white/20 text-white' : 'text-white/40 hover:bg-white/10 hover:text-white/80'}`}
+      className={`group relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all ${
+        active
+          ? 'bg-[var(--nc-coral)] text-white shadow-sm'
+          : 'text-[#94a0b0] hover:bg-white/70 hover:text-[#2c3340]'
+      }`}
     >
       <Icon size={18} />
-      <span className="absolute left-full ml-3 px-2 py-1 bg-zinc-800 text-white text-xs font-bold rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+      <span className="absolute left-full ml-3 px-2.5 py-1 nc-glass text-[#2c3340] text-xs font-bold rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
         {label}
       </span>
     </button>
@@ -852,7 +1022,7 @@ export default function DashboardPage() {
   const renderPlatformHome = () => (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-black text-zinc-900">
+        <h1 className="text-2xl font-black text-[#2c3340]">
           Hej, {session.user.name.split(' ')[0]}! 👋
         </h1>
         <p className="text-zinc-500 text-sm mt-1">
@@ -886,8 +1056,8 @@ export default function DashboardPage() {
             color: '#F59E0B',
           },
         ].map((s) => (
-          <div key={s.label} className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-4">
-            <p className="text-2xl font-black text-zinc-900">{s.value}</p>
+          <div key={s.label} className="nc-glass rounded-[1.5rem] p-4">
+            <p className="text-2xl font-black text-[#2c3340]">{s.value}</p>
             <p
               className="text-xs font-black uppercase tracking-wider mt-0.5"
               style={{ color: s.color }}
@@ -911,7 +1081,7 @@ export default function DashboardPage() {
                 setSidebarView('community');
                 setActiveTab('community');
               }}
-              className="group flex items-center gap-4 p-4 bg-white rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md hover:border-zinc-200 transition-all text-left"
+              className="group flex items-center gap-4 p-4 nc-glass rounded-[1.5rem] hover:shadow-md hover:border-zinc-200 transition-all text-left"
             >
               <div
                 className="w-12 h-12 rounded-xl overflow-hidden border-2 border-zinc-100 flex-shrink-0"
@@ -926,7 +1096,7 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-zinc-900 truncate group-hover:text-indigo-600 transition-colors">
+                <p className="text-sm font-black text-[#2c3340] truncate group-hover:text-[var(--nc-coral)] transition-colors">
                   {c.name}
                 </p>
                 <p className="text-xs text-zinc-400 font-medium">
@@ -963,14 +1133,16 @@ export default function DashboardPage() {
           <div className="text-center py-12 text-zinc-400 text-sm">Laddar feed...</div>
         ) : (
           <div className="space-y-4">
-            {(feed as any[])?.slice(0, 5).map((post: any) => {
+            {sortedFeed.slice(0, 5).map((post: any) => {
               const isLiked = likedPosts.has(post.id);
               const ts = tagStyle(post.tag);
               const isExpanded = expandedPosts.has(post.id);
               return (
                 <div
                   key={post.id}
-                  className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5"
+                  className={`nc-glass rounded-[1.5rem] p-5 ${
+                    post.is_pinned ? 'ring-1 ring-[#ffe0d4]' : ''
+                  }`}
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <LevelAvatar
@@ -980,8 +1152,13 @@ export default function DashboardPage() {
                       size={36}
                     />
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-black text-zinc-900">{post.user_name}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-black text-[#2c3340]">{post.user_name}</p>
+                        {post.is_pinned && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#fff4f0] px-1.5 py-0.5 rounded-full">
+                            <Pin size={9} /> Fäst
+                          </span>
+                        )}
                         {post.tag && (
                           <span
                             className={`flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${ts.color}`}
@@ -1005,10 +1182,10 @@ export default function DashboardPage() {
                   <p className="text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap mb-3">
                     {post.content}
                   </p>
-                  <div className="flex items-center gap-1 pt-3 border-t border-zinc-50">
+                  <div className="flex items-center gap-1 pt-3 border-t border-zinc-50 flex-wrap">
                     <button
                       onClick={() => likeMutation.mutate(post.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${isLiked ? 'bg-red-50 text-red-500' : 'text-zinc-400 hover:bg-zinc-50 hover:text-red-400'}`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isLiked ? 'bg-red-50 text-red-500' : 'text-zinc-400 hover:bg-zinc-50 hover:text-red-400'}`}
                     >
                       <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
                       {Number(post.like_count) + (isLiked ? 1 : 0)}
@@ -1021,10 +1198,28 @@ export default function DashboardPage() {
                           return n;
                         })
                       }
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-400 hover:bg-zinc-50 hover:text-blue-400 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-zinc-400 hover:bg-zinc-50 hover:text-blue-400 transition-all min-h-[44px]"
                     >
                       <MessageSquare size={14} />
                       {post.comment_count}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pinPostMutation.isPending}
+                      onClick={() =>
+                        pinPostMutation.mutate({
+                          post_id: post.id,
+                          action: post.is_pinned ? 'unpin' : 'pin',
+                        })
+                      }
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] disabled:opacity-50 ${
+                        post.is_pinned
+                          ? 'text-[var(--nc-coral)] bg-[#fff4f0] hover:bg-[#ffe8e1]'
+                          : 'text-zinc-400 hover:bg-zinc-50 hover:text-[var(--nc-coral)]'
+                      }`}
+                    >
+                      <Pin size={14} />
+                      {post.is_pinned ? 'Ta bort fästning' : 'Fäst'}
                     </button>
                     <button
                       onClick={() => {
@@ -1034,7 +1229,7 @@ export default function DashboardPage() {
                           setSidebarView('community');
                         }
                       }}
-                      className="ml-auto flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-600 transition-colors"
+                      className="ml-auto flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-[var(--nc-coral)] transition-colors min-h-[44px]"
                     >
                       Öppna community <ChevronRight size={12} />
                     </button>
@@ -1052,23 +1247,39 @@ export default function DashboardPage() {
   // ── Search View ──────────────────────────────────────────────────────────
   const renderSearch = () => (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
-      <h1 className="text-2xl font-black text-zinc-900 mb-2">Sök Communities</h1>
+      <h1 className="text-2xl font-black text-[#2c3340] mb-2">Sök Communities</h1>
       <p className="text-zinc-500 text-sm mb-6">Hitta communities som matchar dina intressen</p>
-      <div className="relative mb-6">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-        <input
-          type="text"
-          placeholder="Sök på namn, kategori..."
+      <div className="relative z-20 mb-6 max-w-xl">
+        <CommunitySearchAutocomplete
           value={communitySearch}
-          onChange={(e) => setCommunitySearch(e.target.value)}
-          className="w-full h-11 pl-11 pr-4 rounded-2xl bg-white border border-zinc-200 text-sm font-medium focus:outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 transition-all"
+          onChange={setCommunitySearch}
+          communities={communities}
+          onSelectCommunity={handleSelectCommunitySearch}
+          isLoading={isCommunitiesLoading && !apiCommunities}
+          placeholder="Sök communities, ämnen, kreatörer..."
         />
       </div>
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xs font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">
+          {filteredCommunities.length} st
+        </span>
+        {communitySearch && (
+          <button
+            type="button"
+            onClick={() => setCommunitySearch('')}
+            className="text-xs font-bold text-zinc-600 hover:text-[#2c3340] transition-colors min-h-11 px-2"
+          >
+            Rensa filter
+          </button>
+        )}
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredCommunities.map((c: any) => (
-          <div
+        {filteredCommunities.map((c) => (
+          <button
             key={c.id}
-            className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden hover:shadow-md transition-all"
+            type="button"
+            onClick={() => router.push(`/communities/${c.id}?from=dashboard`)}
+            className="nc-glass rounded-[1.5rem] overflow-hidden hover:shadow-md transition-all text-left w-full"
           >
             <div
               className="h-20 relative"
@@ -1102,7 +1313,7 @@ export default function DashboardPage() {
             </div>
             <div className="pt-6 p-4">
               <p className="text-[10px] font-bold text-zinc-400 mb-0.5">{c.creator_name}</p>
-              <h3 className="text-sm font-black text-zinc-900 mb-1">{c.name}</h3>
+              <h3 className="text-sm font-black text-[#2c3340] mb-1">{c.name}</h3>
               <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2 mb-3">
                 {c.description}
               </p>
@@ -1113,43 +1324,40 @@ export default function DashboardPage() {
                     {c.member_count.toLocaleString('sv-SE')}
                   </span>
                 </div>
-                {c.is_joined ? (
-                  <button
-                    onClick={() => {
-                      setSelectedCommunity(c);
-                      setSidebarView('community');
-                      setActiveTab('community');
-                    }}
-                    className="flex items-center gap-1 h-7 px-3 rounded-xl bg-green-100 text-green-700 text-xs font-black hover:bg-green-200 transition-all"
-                  >
-                    ✓ Gå till community
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => joinMutation.mutate({ id: c.id, action: 'join' })}
-                    disabled={joinMutation.isPending}
-                    className="flex items-center gap-1 h-7 px-3 rounded-xl bg-zinc-900 text-white text-xs font-black hover:bg-black transition-all disabled:opacity-60"
-                  >
-                    Gå med <Plus size={10} />
-                  </button>
-                )}
+                <span className="flex items-center gap-1 h-7 px-3 rounded-full bg-[var(--nc-coral)] text-white text-xs font-black">
+                  {c.is_joined ? 'Öppna about' : 'Kika in'} <ChevronRight size={10} />
+                </span>
               </div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
+      {filteredCommunities.length === 0 && (
+        <div className="text-center py-16">
+          <p className="text-zinc-500 font-bold">
+            Inga communities hittades för &quot;{communitySearch}&quot;
+          </p>
+          <button
+            type="button"
+            onClick={() => setCommunitySearch('')}
+            className="mt-3 text-sm text-[#2c3340] font-bold hover:underline min-h-11"
+          >
+            Visa alla communities
+          </button>
+        </div>
+      )}
     </div>
   );
 
   // ── Profile View ─────────────────────────────────────────────────────────
   const renderProfile = () => (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
-      <h1 className="text-2xl font-black text-zinc-900 mb-6">Profil & Inställningar</h1>
-      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6 mb-4">
+      <h1 className="text-2xl font-black text-[#2c3340] mb-6">Profil & Inställningar</h1>
+      <div className="nc-glass rounded-[1.5rem] p-6 mb-4">
         <div className="flex items-center gap-4 mb-6">
           <LevelAvatar name={session.user.name} image={session.user.image} points={0} size={56} />
           <div>
-            <p className="text-lg font-black text-zinc-900">{session.user.name}</p>
+            <p className="text-lg font-black text-[#2c3340]">{session.user.name}</p>
             <p className="text-sm text-zinc-500">{session.user.email}</p>
             <div className="flex items-center gap-1 mt-1">
               <Medal size={12} style={{ color: LEVELS[0].color }} />
@@ -1166,7 +1374,7 @@ export default function DashboardPage() {
             { label: 'Poäng', val: 0 },
           ].map((s) => (
             <div key={s.label} className="bg-zinc-50 rounded-xl p-3 text-center">
-              <p className="text-xl font-black text-zinc-900">{s.val}</p>
+              <p className="text-xl font-black text-[#2c3340]">{s.val}</p>
               <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">
                 {s.label}
               </p>
@@ -1183,7 +1391,7 @@ export default function DashboardPage() {
         </button>
       </div>
       {referral && (
-        <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
+        <div className="nc-glass rounded-[1.5rem] p-6">
           <h3 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <Gift size={13} className="text-green-500" /> Ref &amp; Earn
           </h3>
@@ -1194,7 +1402,7 @@ export default function DashboardPage() {
               { label: 'Bonus XP', val: referral.bonus_xp },
             ].map((s) => (
               <div key={s.label} className="bg-zinc-50 rounded-xl p-3 text-center">
-                <p className="text-xl font-black text-zinc-900">{s.val}</p>
+                <p className="text-xl font-black text-[#2c3340]">{s.val}</p>
                 <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wide leading-tight mt-0.5">
                   {s.label}
                 </p>
@@ -1216,7 +1424,7 @@ export default function DashboardPage() {
                 setRefLinkCopied(true);
                 setTimeout(() => setRefLinkCopied(false), 2200);
               }}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${refLinkCopied ? 'bg-green-100 text-green-600' : 'bg-zinc-900 text-white hover:bg-black'}`}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${refLinkCopied ? 'bg-green-100 text-green-600' : 'bg-[var(--nc-coral)] text-white hover:opacity-90'}`}
             >
               {refLinkCopied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
             </button>
@@ -1229,9 +1437,8 @@ export default function DashboardPage() {
   // ── Community View ───────────────────────────────────────────────────────
   const renderCommunity = () => {
     const comm = selectedCommunity;
-    const isNordicCreator = comm?.slug === 'nordic-creator';
     return (
-      <div style={{ paddingBottom: audioMode && activeLesson ? 80 : 0 }}>
+      <div>
         <div className="bg-white border-b border-zinc-100 px-4 sm:px-6 py-4">
           <div className="max-w-5xl mx-auto flex items-center gap-4 flex-wrap">
             <div
@@ -1251,7 +1458,7 @@ export default function DashboardPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-base font-black text-zinc-900 truncate">{comm?.name}</h1>
+              <h1 className="text-base font-black text-[#2c3340] truncate">{comm?.name}</h1>
               <p className="text-xs text-zinc-400 font-medium">
                 {comm?.category} · {comm?.member_count?.toLocaleString('sv-SE')} members
               </p>
@@ -1261,7 +1468,7 @@ export default function DashboardPage() {
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === key ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === key ? 'bg-white text-[#2c3340] shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
                 >
                   <Icon size={13} />
                   <span className="hidden sm:inline">{label}</span>
@@ -1271,21 +1478,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {!isNordicCreator ? (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-20 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-zinc-100 flex items-center justify-center mx-auto mb-4">
-              <Globe size={28} className="text-zinc-400" />
-            </div>
-            <h2 className="text-xl font-black text-zinc-700 mb-2">{comm?.name}</h2>
-            <p className="text-zinc-400 text-sm mb-6">
-              Denna community öppnar snart. Håll utkik! 🚀
-            </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-100 text-green-700 text-sm font-bold">
-              <CheckCircle2 size={14} /> Du är med i denna community
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-6">
             {activeTab === 'community' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
@@ -1299,7 +1492,7 @@ export default function DashboardPage() {
                       <button
                         key={key}
                         onClick={() => setCommunitySubTab(key as CommunitySubTab)}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${communitySubTab === key ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${communitySubTab === key ? 'bg-[var(--nc-coral)] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
                       >
                         <Icon size={13} />
                         {label}
@@ -1309,7 +1502,7 @@ export default function DashboardPage() {
 
                   {communitySubTab === 'feed' && (
                     <>
-                      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
+                      <div className="nc-glass rounded-[1.5rem] overflow-hidden">
                         <div className="p-5">
                           <div className="flex gap-3">
                             <LevelAvatar
@@ -1387,7 +1580,7 @@ export default function DashboardPage() {
                               size="sm"
                               onClick={() => createPostMutation.mutate()}
                               disabled={!newPost.trim() || createPostMutation.isPending}
-                              className="rounded-xl bg-zinc-900 hover:bg-black text-white font-bold h-9 px-5 flex items-center gap-2"
+                              className="rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-bold h-9 px-5 flex items-center gap-2"
                             >
                               <Send size={12} />
                               {createPostMutation.isPending ? 'Publicerar...' : 'Publicera'}
@@ -1401,14 +1594,16 @@ export default function DashboardPage() {
                           Laddar feed...
                         </div>
                       ) : (
-                        feed?.map((post: any) => {
+                        sortedFeed.map((post: any) => {
                           const isLiked = likedPosts.has(post.id);
                           const isExpanded = expandedPosts.has(post.id);
                           const ts = tagStyle(post.tag);
                           return (
                             <div
                               key={post.id}
-                              className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden"
+                              className={`nc-glass rounded-[1.5rem] overflow-hidden ${
+                                post.is_pinned ? 'ring-1 ring-[#ffe0d4]' : ''
+                              }`}
                             >
                               <div className="p-5">
                                 <div className="flex items-center gap-3 mb-3">
@@ -1420,9 +1615,14 @@ export default function DashboardPage() {
                                   />
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <p className="text-sm font-black text-zinc-900">
+                                      <p className="text-sm font-black text-[#2c3340]">
                                         {post.user_name}
                                       </p>
+                                      {post.is_pinned && (
+                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#fff4f0] px-1.5 py-0.5 rounded-full">
+                                          <Pin size={9} /> Fäst
+                                        </span>
+                                      )}
                                       {post.tag && (
                                         <span
                                           className={`flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${ts.color}`}
@@ -1458,10 +1658,10 @@ export default function DashboardPage() {
                                     />
                                   </div>
                                 )}
-                                <div className="flex items-center gap-1 pt-3 border-t border-zinc-50">
+                                <div className="flex items-center gap-1 pt-3 border-t border-zinc-50 flex-wrap">
                                   <button
                                     onClick={() => likeMutation.mutate(post.id)}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${isLiked ? 'bg-red-50 text-red-500' : 'text-zinc-400 hover:bg-zinc-50 hover:text-red-400'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isLiked ? 'bg-red-50 text-red-500' : 'text-zinc-400 hover:bg-zinc-50 hover:text-red-400'}`}
                                   >
                                     <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
                                     {Number(post.like_count) + (isLiked ? 1 : 0)}
@@ -1474,11 +1674,29 @@ export default function DashboardPage() {
                                         return n;
                                       })
                                     }
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${isExpanded ? 'bg-blue-50 text-blue-600' : 'text-zinc-400 hover:bg-zinc-50 hover:text-blue-400'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isExpanded ? 'bg-blue-50 text-blue-600' : 'text-zinc-400 hover:bg-zinc-50 hover:text-blue-400'}`}
                                   >
                                     <MessageSquare size={14} />
                                     {post.comment_count}{' '}
                                     {post.comment_count === 1 ? 'kommentar' : 'kommentarer'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={pinPostMutation.isPending}
+                                    onClick={() =>
+                                      pinPostMutation.mutate({
+                                        post_id: post.id,
+                                        action: post.is_pinned ? 'unpin' : 'pin',
+                                      })
+                                    }
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] disabled:opacity-50 ${
+                                      post.is_pinned
+                                        ? 'text-[var(--nc-coral)] bg-[#fff4f0] hover:bg-[#ffe8e1]'
+                                        : 'text-zinc-400 hover:bg-zinc-50 hover:text-[var(--nc-coral)]'
+                                    }`}
+                                  >
+                                    <Pin size={14} />
+                                    {post.is_pinned ? 'Ta bort fästning' : 'Fäst'}
                                   </button>
                                   {Number(post.like_count) >= 3 && (
                                     <span className="ml-auto flex items-center gap-1 text-[10px] font-black text-orange-400 bg-orange-50 px-2 py-1 rounded-lg">
@@ -1513,7 +1731,7 @@ export default function DashboardPage() {
                           <p className="text-sm text-white/70">Toppmedlemmar rankas efter poäng</p>
                         </div>
                       </div>
-                      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden divide-y divide-zinc-50">
+                      <div className="nc-glass rounded-[1.5rem] overflow-hidden divide-y divide-zinc-50">
                         {leaderboard?.map((member: any, idx: number) => {
                           const lvl = getLevel(member.points);
                           const LIcon = lvl.icon;
@@ -1540,7 +1758,7 @@ export default function DashboardPage() {
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <p className="text-sm font-black text-zinc-900 truncate">
+                                  <p className="text-sm font-black text-[#2c3340] truncate">
                                     {member.name}
                                   </p>
                                   {isMe && (
@@ -1559,7 +1777,7 @@ export default function DashboardPage() {
                                   </span>
                                 </div>
                               </div>
-                              <p className="text-lg font-black text-zinc-900">{member.points}</p>
+                              <p className="text-lg font-black text-[#2c3340]">{member.points}</p>
                             </div>
                           );
                         })}
@@ -1569,7 +1787,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
+                  <div className="nc-glass rounded-[1.5rem] p-5">
                     <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-4">
                       Din profil
                     </h3>
@@ -1581,7 +1799,7 @@ export default function DashboardPage() {
                         size={48}
                       />
                       <div>
-                        <p className="text-sm font-black text-zinc-900">{session.user.name}</p>
+                        <p className="text-sm font-black text-[#2c3340]">{session.user.name}</p>
                         <p className="text-xs font-black" style={{ color: LEVELS[0].color }}>
                           Nivå 1 · Brons
                         </p>
@@ -1594,7 +1812,7 @@ export default function DashboardPage() {
                         { label: 'Poäng', val: '0' },
                       ].map((s) => (
                         <div key={s.label} className="bg-zinc-50 rounded-xl p-2">
-                          <p className="text-base font-black text-zinc-900">{s.val}</p>
+                          <p className="text-base font-black text-[#2c3340]">{s.val}</p>
                           <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
                             {s.label}
                           </p>
@@ -1602,7 +1820,7 @@ export default function DashboardPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
+                  <div className="nc-glass rounded-[1.5rem] p-5">
                     <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-3">
                       Regler
                     </h3>
@@ -1618,7 +1836,7 @@ export default function DashboardPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
+                  <div className="nc-glass rounded-[1.5rem] p-5">
                     <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                       <Gift size={11} className="text-green-500" /> Ref &amp; Earn
                     </h3>
@@ -1640,7 +1858,7 @@ export default function DashboardPage() {
                           setRefLinkCopied(true);
                           setTimeout(() => setRefLinkCopied(false), 2200);
                         }}
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${refLinkCopied ? 'bg-green-100 text-green-600' : 'bg-zinc-900 text-white hover:bg-black'}`}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${refLinkCopied ? 'bg-green-100 text-green-600' : 'bg-[var(--nc-coral)] text-white hover:opacity-90'}`}
                       >
                         {refLinkCopied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
                       </button>
@@ -1653,10 +1871,10 @@ export default function DashboardPage() {
             {activeTab === 'events' && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-black text-zinc-900">Upcoming Events</h2>
+                  <h2 className="text-2xl font-black text-[#2c3340]">Upcoming Events</h2>
                   <Link
                     href="/events"
-                    className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all"
+                    className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-black transition-all"
                   >
                     <Calendar size={13} /> Alla Events
                   </Link>
@@ -1671,7 +1889,7 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={event.id}
-                          className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden hover:shadow-lg transition-all"
+                          className="nc-glass rounded-[1.5rem] overflow-hidden hover:shadow-lg transition-all"
                         >
                           <div
                             className={`h-44 relative flex items-center justify-center ${isLive ? 'bg-red-950' : 'bg-gradient-to-br from-indigo-950 to-zinc-900'}`}
@@ -1701,7 +1919,7 @@ export default function DashboardPage() {
                             >
                               {formatEventDate(event.start_time)}
                             </p>
-                            <h3 className="text-base font-black text-zinc-900 leading-snug mb-2">
+                            <h3 className="text-base font-black text-[#2c3340] leading-snug mb-2">
                               {event.title}
                             </h3>
                             <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2 mb-4">
@@ -1710,7 +1928,7 @@ export default function DashboardPage() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => rsvpMutation.mutate(event.id)}
-                                className={`flex-1 h-10 rounded-xl text-xs font-black transition-all active:scale-95 ${hasRsvpd ? 'bg-green-100 text-green-700' : 'bg-zinc-900 text-white shadow-sm'}`}
+                                className={`flex-1 h-10 rounded-xl text-xs font-black transition-all active:scale-95 ${hasRsvpd ? 'bg-green-100 text-green-700' : 'bg-[var(--nc-coral)] text-white shadow-sm'}`}
                               >
                                 {hasRsvpd ? '✓ OSA Bekräftad' : 'OSA / Attending'}
                               </button>
@@ -1732,156 +1950,20 @@ export default function DashboardPage() {
               </div>
             )}
 
+            {activeTab === 'store' && (
+              <StoreView
+                communityId={comm?.id != null ? Number(comm.id) : null}
+                communityName={comm?.name ?? null}
+              />
+            )}
+
             {activeTab === 'classroom' && (
               <div>
-                {isClassroomLoading ? (
-                  <div className="text-center py-16 text-zinc-400 text-sm">Laddar kurser...</div>
-                ) : activeCourse ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-4">
-                      <div className="bg-black rounded-2xl overflow-hidden aspect-video relative">
-                        {activeLesson?.video_url ? (
-                          <>
-                            <iframe
-                              key={activeLesson.id}
-                              ref={audioIframeRef}
-                              src={
-                                activeLesson.video_url.includes('?')
-                                  ? `${activeLesson.video_url}&enablejsapi=1`
-                                  : `${activeLesson.video_url}?enablejsapi=1`
-                              }
-                              className="w-full h-full"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              style={{ opacity: audioMode ? 0 : 1, transition: 'opacity 0.3s' }}
-                            />
-                            {audioMode && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 via-blue-950 to-indigo-950">
-                                <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-                                  <Headphones size={28} className="text-white" />
-                                </div>
-                                <p className="text-white font-black text-sm text-center px-6">
-                                  {activeLesson?.title}
-                                </p>
-                                <p className="text-white/50 text-xs mt-1">{activeCourse?.title}</p>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-700">
-                            <PlayCircle size={64} strokeWidth={1} />
-                          </div>
-                        )}
-                      </div>
-                      <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-1">
-                              {activeCourse.title}
-                            </p>
-                            <h2 className="text-xl font-black text-zinc-900">
-                              {activeLesson?.title ?? 'Välj en lektion'}
-                            </h2>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {activeLesson?.video_url && (
-                              <button
-                                onClick={() => setAudioMode((v) => !v)}
-                                className={`flex items-center gap-1.5 text-xs font-black px-3 py-2 rounded-xl transition-all ${audioMode ? 'bg-blue-900 text-blue-300' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
-                              >
-                                <Headphones size={13} />
-                                {audioMode ? 'Video' : 'Audio'}
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                if (activeLesson)
-                                  setCompletedLessons((prev) => {
-                                    const n = new Set(prev);
-                                    n.has(activeLesson.id)
-                                      ? n.delete(activeLesson.id)
-                                      : n.add(activeLesson.id);
-                                    return n;
-                                  });
-                              }}
-                              className={`flex items-center gap-2 text-xs font-black px-3 py-2 rounded-xl transition-all ${activeLesson && completedLessons.has(activeLesson.id) ? 'bg-green-100 text-green-700' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
-                            >
-                              <CheckCircle2 size={14} />
-                              {activeLesson && completedLessons.has(activeLesson.id)
-                                ? 'Klar!'
-                                : 'Markera klar'}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="mt-5">
-                          <div className="flex justify-between items-center text-xs font-black text-zinc-400 uppercase tracking-widest mb-2">
-                            <span>Kursframsteg</span>
-                            <span className="text-blue-500">{progressPct}% Klart</span>
-                          </div>
-                          <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700"
-                              style={{ width: `${progressPct}%` }}
-                            />
-                          </div>
-                        </div>
-                        <button className="flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-zinc-700 transition-colors px-3 py-2 rounded-xl hover:bg-zinc-50 mt-4">
-                          <Download size={13} /> PDF Guide
-                        </button>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
-                      <div className="p-4 border-b border-zinc-50">
-                        <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest">
-                          Lektioner
-                        </h3>
-                        <p className="text-sm font-black text-zinc-900 mt-0.5">
-                          {activeCourse.lessons?.length} lektioner
-                        </p>
-                      </div>
-                      <div className="divide-y divide-zinc-50">
-                        {activeCourse.lessons?.map((lesson: any, idx: number) => {
-                          const isDone = completedLessons.has(lesson.id);
-                          const isActive = activeLesson?.id === lesson.id;
-                          return (
-                            <button
-                              key={lesson.id}
-                              onClick={() => setActiveLesson(lesson)}
-                              className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-all ${isActive ? 'bg-blue-50' : 'hover:bg-zinc-50'}`}
-                            >
-                              <div
-                                className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-black ${isDone ? 'bg-green-100 text-green-600' : isActive ? 'bg-blue-100 text-blue-600' : 'bg-zinc-100 text-zinc-400'}`}
-                              >
-                                {isDone ? <CheckCircle2 size={14} /> : idx + 1}
-                              </div>
-                              <p
-                                className={`text-xs font-bold flex-1 truncate ${isActive ? 'text-blue-700' : 'text-zinc-700'}`}
-                              >
-                                {lesson.title}
-                              </p>
-                              {isActive && (
-                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full flex-shrink-0" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-16 text-zinc-400 text-sm">
-                    Inga kurser tillgängliga
-                  </div>
-                )}
-
-                {audioMode && activeLesson && (
-                  <AudioMiniPlayer
-                    lessonTitle={activeLesson.title}
-                    courseName={activeCourse?.title ?? ''}
-                    iframeRef={audioIframeRef}
-                    onClose={() => setAudioMode(false)}
-                  />
-                )}
+                <ClassroomView
+                  communityId={comm?.id != null ? Number(comm.id) : null}
+                  communitySlug={comm?.slug ?? null}
+                  communityName={comm?.name ?? null}
+                />
 
                 <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3">
                   {showMemberChat && (
@@ -1889,7 +1971,7 @@ export default function DashboardPage() {
                       className="w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden"
                       style={{ height: 490 }}
                     >
-                      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 flex-shrink-0">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[var(--nc-coral)] flex-shrink-0">
                         <div className="flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
                             <Sparkles size={14} className="text-white" />
@@ -1986,7 +2068,7 @@ export default function DashboardPage() {
                   )}
                   <button
                     onClick={() => setShowMemberChat((v) => !v)}
-                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#ff9a82] to-[#ff7a5c] shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95"
                     style={{ boxShadow: '0 8px 32px rgba(99,102,241,0.4)' }}
                   >
                     {showMemberChat ? (
@@ -1998,21 +2080,20 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
-          </div>
-        )}
+        </div>
       </div>
     );
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F4F4F6] font-plus-jakarta-sans">
-      {/* Left Sidebar (desktop) */}
-      <aside className="hidden lg:flex flex-col items-center w-16 bg-zinc-900 fixed left-0 top-0 bottom-0 z-30 py-4 gap-2">
+    <div className="nc-app nc-app-shell flex min-h-screen">
+      {/* Left Sidebar (desktop) — soft glass */}
+      <aside className="hidden lg:flex flex-col items-center w-[4.5rem] nc-glass fixed left-3 top-3 bottom-3 z-30 py-4 gap-2 rounded-[1.75rem]">
         <Link
           href="/"
-          className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-3 hover:bg-white/20 transition-colors"
+          className="w-10 h-10 rounded-full bg-[var(--nc-coral)] flex items-center justify-center mb-3 shadow-sm hover:opacity-90 transition-opacity"
         >
-          <span className="text-white font-black text-xs">NC</span>
+          <span className="text-white font-display font-extrabold text-xs">N</span>
         </Link>
         <SidebarIcon
           icon={Home}
@@ -2037,8 +2118,8 @@ export default function DashboardPage() {
         />
         {joinedCommunities.length > 0 && (
           <>
-            <div className="w-8 h-px bg-white/15 my-1" />
-            <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">
+            <div className="w-8 h-px bg-[#e8ecf2] my-1" />
+            <p className="text-[8px] font-extrabold text-[#94a0b0] uppercase tracking-widest mb-1">
               Mina
             </p>
           </>
@@ -2055,18 +2136,18 @@ export default function DashboardPage() {
                   setSidebarView('community');
                   setActiveTab('community');
                 }}
-                className={`relative w-10 h-10 rounded-2xl overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 ${isActive ? 'border-white shadow-lg' : 'border-transparent hover:border-white/40'}`}
-                style={{ background: c.cover_color ?? '#1e1b4b' }}
+                className={`relative w-10 h-10 rounded-2xl overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 ${isActive ? 'border-[var(--nc-coral)] shadow-md' : 'border-transparent hover:border-[#ffd8cc]'}`}
+                style={{ background: c.cover_color ?? '#ffd8cc' }}
               >
                 {c.creator_image ? (
                   <img src={c.creator_image} alt={c.name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white font-black text-sm">
+                  <div className="w-full h-full flex items-center justify-center text-white font-extrabold text-sm">
                     {c.name[0]}
                   </div>
                 )}
                 {isActive && (
-                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
+                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-6 bg-[var(--nc-coral)] rounded-r-full" />
                 )}
               </button>
             );
@@ -2074,7 +2155,7 @@ export default function DashboardPage() {
           <button
             title="Hitta fler"
             onClick={() => setSidebarView('search')}
-            className="w-10 h-10 rounded-2xl border-2 border-dashed border-white/20 flex items-center justify-center text-white/30 hover:text-white/60 hover:border-white/40 transition-all flex-shrink-0"
+            className="w-10 h-10 rounded-2xl border-2 border-dashed border-[#d5dce8] flex items-center justify-center text-[#94a0b0] hover:text-[var(--nc-coral)] hover:border-[var(--nc-coral)] transition-all flex-shrink-0"
           >
             <Plus size={16} />
           </button>
@@ -2084,95 +2165,15 @@ export default function DashboardPage() {
             authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } })
           }
           title="Logga ut"
-          className="w-10 h-10 rounded-2xl text-white/30 hover:text-white/70 hover:bg-white/10 flex items-center justify-center transition-colors mt-2"
+          className="w-10 h-10 rounded-2xl text-[#94a0b0] hover:text-[#2c3340] hover:bg-white/70 flex items-center justify-center transition-colors mt-2"
         >
           <LogOut size={16} />
         </button>
       </aside>
 
       {/* Main area */}
-      <div className="flex-1 lg:ml-16 flex flex-col min-h-screen">
-        <header className="bg-white border-b border-zinc-100 sticky top-0 z-20">
-          <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 lg:hidden">
-              <Link
-                href="/"
-                className="w-8 h-8 rounded-xl bg-zinc-900 flex items-center justify-center flex-shrink-0"
-              >
-                <span className="text-white font-black text-xs">NC</span>
-              </Link>
-              {selectedCommunity && sidebarView === 'community' ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setSidebarView('home');
-                      setSelectedCommunity(null);
-                    }}
-                    className="text-zinc-400 hover:text-zinc-700 transition-colors"
-                  >
-                    <ArrowLeft size={16} />
-                  </button>
-                  <span className="font-black text-zinc-900 text-sm truncate">
-                    {selectedCommunity.name}
-                  </span>
-                </div>
-              ) : (
-                <span className="font-black text-zinc-900 text-sm">
-                  {sidebarView === 'search'
-                    ? 'Sök Communities'
-                    : sidebarView === 'profile'
-                      ? 'Profil'
-                      : 'Dashboard'}
-                </span>
-              )}
-            </div>
-            <div className="hidden lg:block">
-              <span className="font-black text-zinc-900 text-sm">
-                {sidebarView === 'community' && selectedCommunity
-                  ? selectedCommunity.name
-                  : sidebarView === 'search'
-                    ? 'Sök Communities'
-                    : sidebarView === 'profile'
-                      ? 'Profil & Inställningar'
-                      : 'Dashboard'}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 lg:hidden overflow-x-auto max-w-[180px]">
-                {joinedCommunities.slice(0, 4).map((c: any) => (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      setSelectedCommunity(c);
-                      setSidebarView('community');
-                      setActiveTab('community');
-                    }}
-                    className={`w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${selectedCommunity?.id === c.id && sidebarView === 'community' ? 'border-zinc-900' : 'border-transparent'}`}
-                    style={{ background: c.cover_color ?? '#1e1b4b' }}
-                  >
-                    {c.creator_image ? (
-                      <img
-                        src={c.creator_image}
-                        alt={c.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-white font-black text-xs">{c.name[0]}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <LevelAvatar
-                name={session.user.name}
-                image={session.user.image}
-                points={0}
-                size={32}
-              />
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1">
+      <div className="relative z-10 flex-1 lg:ml-[5.25rem] flex flex-col min-h-screen">
+        <main className="flex-1 relative z-10 pt-3 lg:pt-4">
           {sidebarView === 'home' && renderPlatformHome()}
           {sidebarView === 'search' && renderSearch()}
           {sidebarView === 'profile' && renderProfile()}
@@ -2181,8 +2182,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-zinc-100 z-20">
-        <div className="flex items-center justify-around h-14 px-2">
+      <nav className="fixed bottom-3 left-3 right-3 lg:hidden z-20">
+        <div className="nc-glass rounded-full flex items-center justify-around h-14 px-2">
           {[
             { view: 'home' as SidebarView, icon: Home, label: 'Hem' },
             { view: 'search' as SidebarView, icon: Search, label: 'Sök' },
@@ -2203,10 +2204,10 @@ export default function DashboardPage() {
                   if (view !== 'community') setSelectedCommunity(null);
                 })
               }
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all ${sidebarView === view ? 'text-zinc-900' : 'text-zinc-400'}`}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-full transition-all ${sidebarView === view ? 'text-[var(--nc-coral)]' : 'text-[#94a0b0]'}`}
             >
               <Icon size={20} />
-              <span className="text-[9px] font-black">{label}</span>
+              <span className="text-[9px] font-extrabold">{label}</span>
             </button>
           ))}
         </div>
@@ -2218,13 +2219,13 @@ export default function DashboardPage() {
           className="fixed inset-0 z-40 lg:hidden"
           onClick={() => setMobileCommunitiesOpen(false)}
         >
-          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-[#2c3340]/30 backdrop-blur-sm" />
           <div
-            className="absolute bottom-14 left-0 right-0 bg-white rounded-t-3xl p-4 pt-3"
+            className="absolute bottom-20 left-3 right-3 nc-glass rounded-[1.75rem] p-4 pt-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto mb-4" />
-            <p className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-3">
+            <div className="w-10 h-1 bg-[#d5dce8] rounded-full mx-auto mb-4" />
+            <p className="text-xs font-extrabold text-[#94a0b0] uppercase tracking-widest mb-3">
               Mina Communities
             </p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -2256,7 +2257,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-black text-zinc-900">{c.name}</p>
+                    <p className="text-sm font-black text-[#2c3340]">{c.name}</p>
                     <p className="text-xs text-zinc-400">
                       {c.member_count.toLocaleString('sv-SE')} members
                     </p>

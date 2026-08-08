@@ -106,7 +106,7 @@ export default function AudioMiniPlayer({
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 font-plus-jakarta-sans"
+      className="fixed bottom-0 left-0 right-0 z-40 "
       style={{
         background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)',
         borderTop: '1px solid rgba(99,102,241,0.25)',

@@ -1,0 +1,318 @@
+/** Rich demo content so feed / classroom / events look live without DATABASE_URL. */
+
+function daysFromNow(days: number, hour = 18): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  d.setHours(hour, 0, 0, 0);
+  return d.toISOString();
+}
+
+function hoursAgo(hours: number): string {
+  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+}
+
+export const MOCK_POSTS = [
+  {
+    id: 9001,
+    user_id: 'ebba-demo',
+    user_name: 'Ebba Brobeck',
+    user_image: null,
+    content:
+      'Välkommen till Ebba Creator Lab! 🎉 Här delar vi wins, feedback och veckans challenge. Droppa din nisch i kommentarerna.',
+    tag: 'Welcome',
+    image_url: null,
+    is_pinned: true,
+    pinned_at: hoursAgo(1),
+    created_at: hoursAgo(2),
+    like_count: 24,
+    comment_count: 8,
+  },
+  {
+    id: 9002,
+    user_id: 'seed-1',
+    user_name: 'Emma Lindqvist',
+    user_image: null,
+    content:
+      'Delar mitt Swish-checkout-flöde från igår — 3 köp på under 10 minuter. Tipset: lägg order bump direkt under CTA:n.',
+    tag: 'Wins',
+    image_url: null,
+    is_pinned: false,
+    pinned_at: null,
+    created_at: hoursAgo(5),
+    like_count: 41,
+    comment_count: 12,
+  },
+  {
+    id: 9003,
+    user_id: 'seed-2',
+    user_name: 'Marcus Björk',
+    user_image: null,
+    content:
+      'Fråga: hur prissätter ni er första digitala produkt? Jag ligger på 499 SEK men funderar på 299 för snabbare konvertering.',
+    tag: 'Question',
+    image_url: null,
+    is_pinned: false,
+    pinned_at: null,
+    created_at: hoursAgo(9),
+    like_count: 15,
+    comment_count: 19,
+  },
+  {
+    id: 9004,
+    user_id: 'seed-3',
+    user_name: 'Astrid Karlsson',
+    user_image: null,
+    content:
+      'Live-recap från gårdagens session: 3 hooks som funkade i Reels + CapCut-templates ligger nu i Classroom → Modul 2.',
+    tag: 'Resources',
+    image_url: null,
+    is_pinned: false,
+    pinned_at: null,
+    created_at: hoursAgo(20),
+    like_count: 67,
+    comment_count: 14,
+  },
+  {
+    id: 9005,
+    user_id: 'ebba-demo',
+    user_name: 'Ebba Brobeck',
+    user_image: null,
+    content:
+      'Ebba Live Studio: på torsdag kör vi “Sälj med Swish live”. OSA via Events-fliken — platserna tar slut fort ⚡',
+    tag: 'Announcement',
+    image_url: null,
+    is_pinned: true,
+    pinned_at: hoursAgo(20),
+    created_at: hoursAgo(28),
+    like_count: 33,
+    comment_count: 6,
+  },
+  {
+    id: 9006,
+    user_id: 'seed-5',
+    user_name: 'Linn Petersson',
+    user_image: null,
+    content:
+      'Klar med lektion 3 i Creator Bootcamp. AI-copilot-tipset sparade mig typ 2 timmar på e-postsekvensen 🙌',
+    tag: 'Classroom',
+    image_url: null,
+    is_pinned: false,
+    pinned_at: null,
+    created_at: hoursAgo(36),
+    like_count: 29,
+    comment_count: 5,
+  },
+];
+
+export const MOCK_COURSES = [
+  {
+    id: 501,
+    title: 'Creator Bootcamp — Från idé till första krona',
+    description: '6 lektioner: nisch, erbjudande, Swish-checkout och launch.',
+    category: 'Marknadsföring',
+    community_id: 101,
+    cover_image:
+      'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&q=80',
+    is_published: true,
+    sort_order: 1,
+    lessons: [
+      {
+        id: 601,
+        course_id: 501,
+        title: 'Hitta din nisch på 48 timmar',
+        description: 'Positionering och målgrupp för nordiska kreatörer.',
+        video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        order: 1,
+        duration_sec: 720,
+      },
+      {
+        id: 602,
+        course_id: 501,
+        title: 'Bygg ditt erbjudande',
+        description: 'Prispaket, order bumps och 1-click upsells.',
+        video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        order: 2,
+        duration_sec: 840,
+      },
+      {
+        id: 603,
+        course_id: 501,
+        title: 'Swish-checkout på 10 sekunder',
+        description: 'Sätt upp betalning utan Stripe-krångel.',
+        video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        order: 3,
+        duration_sec: 600,
+      },
+      {
+        id: 604,
+        course_id: 501,
+        title: 'Launch-plan & contentkalender',
+        description: '7-dagars plan för att fylla communityt.',
+        video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        order: 4,
+        duration_sec: 900,
+      },
+    ],
+  },
+  {
+    id: 502,
+    title: 'Live Studio Mastery',
+    description: 'Hur du kör engagerande lives, OSA och replay-funnels.',
+    category: 'Live & Events',
+    community_id: 102,
+    cover_image:
+      'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&q=80',
+    is_published: true,
+    sort_order: 2,
+    lessons: [
+      {
+        id: 611,
+        course_id: 502,
+        title: 'Förbered din live på 30 min',
+        description: 'Manus, tech-check och CTA.',
+        video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        order: 1,
+        duration_sec: 540,
+      },
+      {
+        id: 612,
+        course_id: 502,
+        title: 'Håll chatten het',
+        description: 'Engagemangs-hack under sändning.',
+        video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        order: 2,
+        duration_sec: 660,
+      },
+      {
+        id: 613,
+        course_id: 502,
+        title: 'Efter live: replay & upsell',
+        description: 'Konvertera tittare till medlemmar.',
+        video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        order: 3,
+        duration_sec: 780,
+      },
+    ],
+  },
+];
+
+export const MOCK_EVENTS = [
+  {
+    id: 701,
+    title: 'Sälj med Swish — Live Workshop',
+    description:
+      'Hands-on workshop: bygg ett erbjudande live och ta emot första Swish-betalningen samma kväll.',
+    start_time: daysFromNow(2, 18),
+    end_time: daysFromNow(2, 19),
+    stream_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    image_url: null,
+    cover_color: '#0f766e',
+    speaker_name: 'Ebba Brobeck',
+    speaker_bio: 'Grundare · Nordic Creator',
+    speaker_image: null,
+    category: 'Workshop',
+    attendee_count: 86,
+    top_attendees: [
+      { name: 'Emma Lindqvist', image: null },
+      { name: 'Marcus Björk', image: null },
+      { name: 'Astrid Karlsson', image: null },
+    ],
+  },
+  {
+    id: 702,
+    title: 'CapCut Creator Bootcamp — Kickoff',
+    description: 'Kickoff för nya medlemmar i Creator Lab. Templates, hooks och veckans challenge.',
+    start_time: daysFromNow(5, 12),
+    end_time: daysFromNow(5, 13),
+    stream_url: null,
+    image_url: null,
+    cover_color: '#0369a1',
+    speaker_name: 'Astrid Karlsson',
+    speaker_bio: 'Content lead',
+    speaker_image: null,
+    category: 'Webinar',
+    attendee_count: 54,
+    top_attendees: [
+      { name: 'Linn Petersson', image: null },
+      { name: 'Johan Holm', image: null },
+    ],
+  },
+  {
+    id: 703,
+    title: 'Office Hours: Moms & Fortnox',
+    description: 'Öppen Q&A om svensk moms, kvitton och Fortnox-flöden för kreatörer.',
+    start_time: daysFromNow(9, 17),
+    end_time: daysFromNow(9, 18),
+    stream_url: null,
+    image_url: null,
+    cover_color: '#b45309',
+    speaker_name: 'Erik Nyström',
+    speaker_bio: 'Ekonomi-coach',
+    speaker_image: null,
+    category: 'Q&A',
+    attendee_count: 31,
+    top_attendees: [{ name: 'Sara Magnusson', image: null }],
+  },
+];
+
+export { MOCK_PRODUCTS } from '@/lib/mock-store';
+
+export const MOCK_COMMENTS: Record<number, Array<Record<string, unknown>>> = {
+  9001: [
+    {
+      id: 9101,
+      post_id: 9001,
+      user_id: 'seed-1',
+      user_name: 'Emma Lindqvist',
+      content: 'Så kul att vara här! Min nisch: personligt varumärke för coaches.',
+      parent_id: null,
+      media_url: null,
+      media_type: null,
+      is_pinned: false,
+      pinned_at: null,
+      created_at: hoursAgo(1),
+    },
+    {
+      id: 9104,
+      post_id: 9001,
+      user_id: 'ebba-demo',
+      user_name: 'Ebba Brobeck',
+      content: 'Välkommen Emma — lägg gärna upp din bio i tråden!',
+      parent_id: 9101,
+      media_url: null,
+      media_type: null,
+      is_pinned: false,
+      pinned_at: null,
+      created_at: hoursAgo(0.5),
+    },
+    {
+      id: 9102,
+      post_id: 9001,
+      user_id: 'seed-2',
+      user_name: 'Marcus Björk',
+      content: 'Nisch: AI-verktyg för småföretag 👋',
+      parent_id: null,
+      media_url:
+        'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=640&q=80',
+      media_type: 'image/jpeg',
+      is_pinned: true,
+      pinned_at: hoursAgo(1),
+      created_at: hoursAgo(1.5),
+    },
+  ],
+  9003: [
+    {
+      id: 9103,
+      post_id: 9003,
+      user_id: 'ebba-demo',
+      user_name: 'Ebba Brobeck',
+      content: 'Testa 299 med bump till 499 — ofta högre AOV utan att tappa konvertering.',
+      parent_id: null,
+      media_url: null,
+      media_type: null,
+      is_pinned: true,
+      pinned_at: hoursAgo(7),
+      created_at: hoursAgo(8),
+    },
+  ],
+};
