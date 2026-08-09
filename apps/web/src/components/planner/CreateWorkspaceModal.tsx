@@ -78,10 +78,10 @@ export default function CreateWorkspaceModal({
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader className="text-left">
           <DialogTitle className="font-black text-[#2c3340]">
-            Skapa ny Team-yta / Varumärke
+            Create new Team Workspace / Brand
           </DialogTitle>
           <DialogDescription className="text-xs text-zinc-500 font-medium">
-            Skapa en workspace för ett varumärke eller team med egna kanaler och innehåll.
+            Create a workspace for a brand or team with its own channels and content.
           </DialogDescription>
         </DialogHeader>
 
@@ -145,7 +145,7 @@ export default function CreateWorkspaceModal({
             ) : (
               <Plus size={14} />
             )}
-            Skapa & aktivera
+            Create & activate
           </Button>
         </div>
       </DialogContent>

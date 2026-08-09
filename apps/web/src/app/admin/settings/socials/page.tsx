@@ -5,15 +5,19 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import SocialAccountsPanel from '@/components/planner/SocialAccountsPanel';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLocale } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 export default function AdminSocialSettingsPage() {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
+  const { locale } = useLocale();
 
   if (isPending) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-400 text-sm">
-        Laddar…
+        {t('loading', locale)}
       </div>
     );
   }
@@ -34,14 +38,15 @@ export default function AdminSocialSettingsPage() {
           </Link>
           <div className="flex-1 min-w-0">
             <h1 className="text-sm sm:text-base font-black text-[#2c3340] truncate">
-              Sociala konton
+              {t('socialAccounts', locale)}
             </h1>
           </div>
+          <LanguageSwitcher />
           <Link
             href="/planner"
             className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-zinc-600 bg-zinc-50 hover:bg-zinc-100"
           >
-            <CalendarDays size={14} /> Planner
+            <CalendarDays size={14} /> {t('adminContentPlanner', locale)}
           </Link>
         </div>
       </header>

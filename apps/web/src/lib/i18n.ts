@@ -1,11 +1,13 @@
-export type Locale = 'sv' | 'no' | 'da' | 'fi' | 'en';
+import { EXTRA_BY_LOCALE, type ExtraKey } from '@/lib/i18n-extra';
+
+export type Locale = 'en' | 'sv' | 'no' | 'da' | 'fi';
 
 export const LOCALES: { code: Locale; label: string; flag: string }[] = [
+  { code: 'en', label: 'English', flag: '🇺🇸' },
   { code: 'sv', label: 'Svenska', flag: '🇸🇪' },
   { code: 'no', label: 'Norsk', flag: '🇳🇴' },
   { code: 'da', label: 'Dansk', flag: '🇩🇰' },
   { code: 'fi', label: 'Suomi', flag: '🇫🇮' },
-  { code: 'en', label: 'English', flag: '🇬🇧' },
 ];
 
 export type TranslationKey =
@@ -393,11 +395,14 @@ export type TranslationKey =
   | 'leaderboard'
   | 'membersOnly'
   | 'loginOrJoin'
-  | 'divider';
+  | 'divider'
+  | ExtraKey;
 
+type CoreKey = Exclude<TranslationKey, ExtraKey>;
+type CoreDict = Record<CoreKey, string>;
 type Dict = Record<TranslationKey, string>;
 
-const sv: Dict = {
+const sv: CoreDict = {
   findCommunity: 'Hitta Community',
   logIn: 'Logga In',
   getStarted: 'Kom igång',
@@ -769,7 +774,7 @@ const sv: Dict = {
   divider: 'Avdelare',
 };
 
-const en: Dict = {
+const en: CoreDict = {
   findCommunity: 'Find Community',
   logIn: 'Log In',
   getStarted: 'Get Started',
@@ -1142,11 +1147,11 @@ const en: Dict = {
 };
 
 // Helper: derive no/da/fi from sv with overrides
-function derive(base: Dict, overrides: Partial<Dict>): Dict {
+function derive(base: CoreDict, overrides: Partial<CoreDict>): CoreDict {
   return { ...base, ...overrides };
 }
 
-const no: Dict = derive(sv, {
+const no: CoreDict = derive(sv, {
   findCommunity: 'Finn Community',
   logIn: 'Logg Inn',
   getStarted: 'Kom i gang',
@@ -1501,7 +1506,7 @@ const no: Dict = derive(sv, {
   divider: 'Skillelinje',
 });
 
-const da: Dict = derive(sv, {
+const da: CoreDict = derive(sv, {
   findCommunity: 'Find Community',
   logIn: 'Log Ind',
   getStarted: 'Kom i gang',
@@ -1857,7 +1862,7 @@ const da: Dict = derive(sv, {
   divider: 'Skillelinje',
 });
 
-const fi: Dict = derive(sv, {
+const fi: CoreDict = derive(sv, {
   findCommunity: 'Löydä yhteisö',
   logIn: 'Kirjaudu',
   getStarted: 'Aloita',
@@ -2218,10 +2223,20 @@ const fi: Dict = derive(sv, {
   divider: 'Erotin',
 });
 
-const translations: Record<Locale, Dict> = { sv, en, no, da, fi };
-
-export function t(key: TranslationKey, locale: Locale): string {
-  return translations[locale]?.[key] ?? translations.sv[key] ?? key;
+function withExtras(base: CoreDict, locale: Locale): Dict {
+  return { ...base, ...EXTRA_BY_LOCALE[locale] };
 }
 
-export const DEFAULT_LOCALE: Locale = 'sv';
+const translations: Record<Locale, Dict> = {
+  en: withExtras(en, 'en'),
+  sv: withExtras(sv, 'sv'),
+  no: withExtras(no, 'no'),
+  da: withExtras(da, 'da'),
+  fi: withExtras(fi, 'fi'),
+};
+
+export function t(key: TranslationKey, locale: Locale): string {
+  return translations[locale]?.[key] ?? translations.en[key] ?? key;
+}
+
+export const DEFAULT_LOCALE: Locale = 'en';

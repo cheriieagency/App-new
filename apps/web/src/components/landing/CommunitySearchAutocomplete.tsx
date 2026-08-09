@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 export type SearchableCommunity = {
   id: number;
@@ -41,9 +43,11 @@ export function CommunitySearchAutocomplete({
   onChange,
   communities,
   onSelectCommunity,
-  placeholder = 'Sök communities, ämnen, kreatörer...',
+  placeholder,
   isLoading = false,
 }: CommunitySearchAutocompleteProps) {
+  const { locale } = useLanguage();
+  const resolvedPlaceholder = placeholder || t('searchPlaceholder', locale);
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -86,7 +90,7 @@ export function CommunitySearchAutocomplete({
   return (
     <div ref={rootRef} className="relative w-full max-w-xl">
       <label className="sr-only" htmlFor={listId}>
-        Sök communities
+        {t('searchCommunitiesHeading', locale)}
       </label>
       <div className="relative">
         <Search
@@ -101,9 +105,9 @@ export function CommunitySearchAutocomplete({
           aria-expanded={showDropdown}
           aria-controls={`${listId}-listbox`}
           aria-autocomplete="list"
-          aria-label="Sök communities"
+          aria-label={t('searchCommunitiesHeading', locale)}
           autoComplete="off"
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
@@ -128,7 +132,7 @@ export function CommunitySearchAutocomplete({
         {value.length > 0 && (
           <button
             type="button"
-            aria-label="Rensa sökning"
+            aria-label={t('clearFilter', locale)}
             onClick={() => {
               onChange('');
               setOpen(false);
@@ -147,12 +151,12 @@ export function CommunitySearchAutocomplete({
           className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200/80"
         >
           {isLoading && suggestions.length === 0 && (
-            <p className="px-4 py-3 text-sm font-medium text-zinc-500">Söker communities…</p>
+            <p className="px-4 py-3 text-sm font-medium text-zinc-500">{t('loading', locale)}</p>
           )}
 
           {!isLoading && suggestions.length === 0 && (
             <p className="px-4 py-3 text-sm font-medium text-zinc-500">
-              Inga träffar för &quot;{value.trim()}&quot;
+              {t('noResults', locale)} &quot;{value.trim()}&quot;
             </p>
           )}
 

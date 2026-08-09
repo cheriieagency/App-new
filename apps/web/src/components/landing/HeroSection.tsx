@@ -3,32 +3,35 @@
 import Link from 'next/link';
 import { ArrowRight, BookOpen, Play, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
-
-const PRODUCTS = [
-  {
-    title: 'Masterclass · Nisch & Målgrupp',
-    meta: 'Kurs · 8 lektioner',
-    price: '1 499 SEK',
-    tone: '#0d9488',
-    icon: BookOpen,
-  },
-  {
-    title: 'Swish & Sälj Live',
-    meta: 'Event · 13 aug',
-    price: 'Gratis',
-    tone: '#0284c7',
-    icon: Play,
-  },
-  {
-    title: 'Creator Mentorship',
-    meta: '1:1 · Månadsvis',
-    price: '2 990 SEK',
-    tone: '#ea580c',
-    icon: Sparkles,
-  },
-];
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 function PhoneStorefront() {
+  const { locale } = useLanguage();
+  const products = [
+    {
+      title: 'Masterclass · Niche & Audience',
+      meta: `Course · 8 ${t('coursesLabel', locale)}`,
+      price: '1 499 SEK',
+      tone: '#0d9488',
+      icon: BookOpen,
+    },
+    {
+      title: 'Swish & Sell Live',
+      meta: 'Event · Aug 13',
+      price: t('freeLabelShort', locale),
+      tone: '#0284c7',
+      icon: Play,
+    },
+    {
+      title: 'Creator Mentorship',
+      meta: '1:1 · Monthly',
+      price: '2 990 SEK',
+      tone: '#ea580c',
+      icon: Sparkles,
+    },
+  ];
+
   return (
     <div className="relative mx-auto w-[280px] sm:w-[300px]">
       <div
@@ -66,22 +69,22 @@ function PhoneStorefront() {
                 Sofia Bergström
               </p>
               <p className="text-[11px] text-[#5b6472] font-medium mt-1.5 leading-snug">
-                Nordic Creator · Kurser, community & live
+                Nordic Creator · Courses, community & live
               </p>
             </div>
 
             <div className="flex justify-center gap-4 mb-4 text-[10px] font-semibold text-[#5b6472]">
               <span>
                 <strong className="block text-[#2c3340] text-sm font-extrabold">48.2K</strong>
-                följare
+                {t('followersLabel', locale)}
               </span>
               <span>
                 <strong className="block text-[#2c3340] text-sm font-extrabold">1 340</strong>
-                medlemmar
+                {t('members', locale).toLowerCase()}
               </span>
               <span>
                 <strong className="block text-[#2c3340] text-sm font-extrabold">12</strong>
-                kurser
+                {t('coursesLabel', locale)}
               </span>
             </div>
 
@@ -89,14 +92,14 @@ function PhoneStorefront() {
               className="w-full min-h-10 rounded-full text-white text-xs font-extrabold flex items-center justify-center mb-4"
               style={{ background: 'var(--nc-coral)' }}
             >
-              Gå till Memberportal
+              {t('goToMemberPortal', locale)}
             </div>
 
             <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#94a0b0] mb-2">
-              Produkter
+              {t('productsLabel', locale)}
             </p>
             <div className="space-y-2">
-              {PRODUCTS.map((product, i) => {
+              {products.map((product, i) => {
                 const Icon = product.icon;
                 return (
                   <motion.div
@@ -133,9 +136,10 @@ function PhoneStorefront() {
 }
 
 export function HeroSection() {
+  const { locale } = useLanguage();
+
   return (
     <section className="relative min-h-[100svh] overflow-hidden pt-14">
-      {/* Soft wash background */}
       <div className="absolute inset-0 bg-[#f7f9fc]" />
       <div
         className="nc-blob w-[28rem] h-[28rem] -top-20 -left-16 opacity-90"
@@ -157,10 +161,23 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="font-display font-extrabold text-[#2c3340] text-2xl sm:text-3xl tracking-tight mb-5"
+              className="font-display font-extrabold text-[#2c3340] text-2xl sm:text-3xl tracking-tight mb-4"
             >
               Nordic Creator
             </motion.p>
+
+            <motion.span
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.04 }}
+              className="inline-flex items-center min-h-9 px-3.5 rounded-full text-[11px] font-extrabold uppercase tracking-[0.12em] mb-5"
+              style={{
+                background: 'var(--nc-coral-soft)',
+                color: 'var(--nc-coral)',
+              }}
+            >
+              {t('landingHeroBadge', locale)}
+            </motion.span>
 
             <motion.h1
               initial={{ opacity: 0, y: 14 }}
@@ -168,17 +185,38 @@ export function HeroSection() {
               transition={{ duration: 0.5, delay: 0.05 }}
               className="font-display font-extrabold text-[#2c3340] text-[2rem] sm:text-5xl lg:text-[3.15rem] leading-[1.08] tracking-tight mb-5"
             >
-              Allt-i-ett för nordiska kreatörer
+              {t('landingHeroHeadline', locale)}
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-base sm:text-lg text-[#5b6472] leading-relaxed max-w-md mx-auto lg:mx-0 mb-9"
+              className="text-base sm:text-lg text-[#5b6472] leading-relaxed max-w-md mx-auto lg:mx-0 mb-7"
             >
-              Sälj, bygg community och ta betalt med Swish – utan att jonglera fem dyra appar.
+              {t('landingHeroSub', locale)}
             </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.14 }}
+              className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-8"
+            >
+              {[
+                t('trustPillSwish', locale),
+                t('trustPillVat', locale),
+                t('trustPillAi', locale),
+                t('trustPillSocial', locale),
+              ].map((pill) => (
+                <span
+                  key={pill}
+                  className="inline-flex items-center min-h-9 px-3 rounded-full bg-white/80 border border-white text-[11px] font-bold text-[#2c3340]"
+                >
+                  {pill}
+                </span>
+              ))}
+            </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 14 }}
@@ -194,7 +232,7 @@ export function HeroSection() {
                   boxShadow: '0 14px 36px -12px rgba(155,138,251,0.55)',
                 }}
               >
-                Skapa gratis community <ArrowRight size={15} />
+                {t('landingCtaStartFree', locale)} <ArrowRight size={15} />
               </Link>
               <button
                 type="button"
@@ -203,7 +241,7 @@ export function HeroSection() {
                 }
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-full nc-glass text-[#2c3340] font-bold text-sm hover:bg-white/70 transition-all active:scale-[0.98]"
               >
-                Utforska communities
+                {t('landingCtaExplore', locale)}
               </button>
             </motion.div>
           </div>

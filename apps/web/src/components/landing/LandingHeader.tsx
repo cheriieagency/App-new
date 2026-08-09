@@ -1,37 +1,27 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, ChevronDown } from 'lucide-react';
-import { LOCALES, t } from '@/lib/i18n';
-import { useLocale } from '@/lib/locale-context';
+import { ArrowRight } from 'lucide-react';
+import { t } from '@/lib/i18n';
+import { useLanguage } from '@/lib/locale-context';
 import { LoginModal } from '@/components/landing/LoginModal';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 type LandingHeaderProps = {
   isLoggedIn: boolean;
 };
 
 export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
-  const { locale, setLocale } = useLocale();
-  const [langOpen, setLangOpen] = useState(false);
+  const { locale } = useLanguage();
   const [loginOpen, setLoginOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
-  const currentLocale = LOCALES.find((l) => l.code === locale) ?? LOCALES[0];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   return (
@@ -62,7 +52,7 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
               }
               className="text-sm font-bold text-[#5b6472] hover:text-[#2c3340] transition-colors hidden sm:block min-h-11 px-2"
             >
-              Priser
+              {t('pricing', locale)}
             </button>
             <button
               type="button"
@@ -74,41 +64,7 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
               {t('findCommunity', locale)}
             </button>
 
-            <div ref={langRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setLangOpen((v) => !v)}
-                className="flex items-center gap-1.5 min-h-11 px-3 rounded-full nc-glass text-xs font-bold text-[#5b6472] hover:bg-white/70 transition-all"
-              >
-                <span>{currentLocale.flag}</span>
-                <span className="hidden sm:inline uppercase">{currentLocale.code}</span>
-                <ChevronDown
-                  size={11}
-                  className={`opacity-60 transition-transform ${langOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {langOpen && (
-                <div className="absolute right-0 top-full mt-1.5 nc-glass rounded-2xl overflow-hidden z-50 min-w-[160px]">
-                  {LOCALES.map((l) => (
-                    <button
-                      key={l.code}
-                      type="button"
-                      onClick={() => {
-                        setLocale(l.code);
-                        setLangOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 min-h-11 text-sm font-bold transition-colors hover:bg-white/50 ${
-                        locale === l.code ? 'text-[#2c3340] bg-white/40' : 'text-[#5b6472]'
-                      }`}
-                    >
-                      <span className="text-base">{l.flag}</span>
-                      <span className="flex-1 text-left">{l.label}</span>
-                      {locale === l.code && <Check size={13} className="text-[#2c3340]" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <LanguageSwitcher className="[&>button]:bg-white/70 [&>button]:border [&>button]:border-white/80" />
 
             {isLoggedIn ? (
               <Link
@@ -125,7 +81,7 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
                   onClick={() => setLoginOpen(true)}
                   className="text-sm font-bold text-[#5b6472] hover:text-[#2c3340] transition-colors min-h-11 px-3 rounded-full hover:bg-white/50"
                 >
-                  Logga in
+                  {t('signIn', locale)}
                 </button>
                 <Link
                   href="/account/signup"

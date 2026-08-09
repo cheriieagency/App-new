@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,6 +16,9 @@ import {
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import PlannerKanbanBoard from '@/components/planner/PlannerKanbanBoard';
 import PlannerTableView from '@/components/planner/PlannerTableView';
 import ContentCalendar from '@/components/planner/ContentCalendar';
@@ -41,8 +44,12 @@ export default function ContentPlannerShell() {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { locale } = useLocale();
 
-  const [workspaceId, setWorkspaceId] = useState('ws-nordic');
+  const [workspaceId, setWorkspaceId] = useState(() => {
+    if (typeof window === 'undefined') return '101';
+    return localStorage.getItem('nc_active_workspace_id') || '101';
+  });
   const [view, setView] = useState<ViewMode>('board');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
   const [search, setSearch] = useState('');
@@ -63,9 +70,34 @@ export default function ContentPlannerShell() {
   });
 
   const workspaces = wsData?.workspaces ?? [];
+
+  // Sync with Admin global workspace (localStorage) when workspaces load.
+  useEffect(() => {
+    if (!workspaces.length) return;
+    const storedId = localStorage.getItem('nc_active_workspace_id');
+    const storedName = localStorage.getItem('nc_active_workspace_name');
+    const byId = storedId ? workspaces.find((w) => w.id === storedId) : null;
+    const byName = storedName
+      ? workspaces.find((w) => w.name === storedName)
+      : null;
+    const match = byId || byName;
+    if (match && match.id !== workspaceId) setWorkspaceId(match.id);
+  }, [workspaces]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const persistWorkspace = (ws: BrandWorkspace) => {
+    setWorkspaceId(ws.id);
+    try {
+      localStorage.setItem('nc_active_workspace_id', ws.id);
+      localStorage.setItem('nc_active_workspace_name', ws.name);
+      localStorage.setItem('nc_active_workspace_handle', ws.handle);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const activeWorkspace =
     workspaces.find((w) => w.id === workspaceId) || workspaces[0] || null;
-  const project = activeWorkspace?.name ?? 'Nordic Creator Launch';
+  const project = activeWorkspace?.name ?? 'Ebba Creator Lab';
 
   const { data, isLoading } = useQuery<{ posts: PlannerPost[] }>({
     queryKey: ['planner-posts', project],
@@ -198,7 +230,7 @@ export default function ContentPlannerShell() {
             <WorkspaceSelector
               workspaces={workspaces}
               activeId={activeWorkspace?.id ?? workspaceId}
-              onSelect={(ws) => setWorkspaceId(ws.id)}
+              onSelect={(ws) => persistWorkspace(ws)}
               onCreateNew={() => setCreateWsOpen(true)}
             />
 
@@ -210,7 +242,7 @@ export default function ContentPlannerShell() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Sök inlägg…"
+                placeholder={t('searchPosts', locale)}
                 className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-[var(--nc-coral)] focus:bg-white"
               />
             </div>
@@ -244,11 +276,13 @@ export default function ContentPlannerShell() {
               {(teamAvatars[0]?.name?.[0] ?? 'T')}
             </button>
 
+              <LanguageSwitcher className="hidden sm:block" />
+
             <Link
               href="/admin/settings/socials"
               className="hidden md:inline-flex h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-zinc-600 bg-zinc-50 hover:bg-zinc-100 items-center gap-1.5"
             >
-              <Settings2 size={14} /> Konton
+              <Settings2 size={14} /> {t('accounts', locale)}
             </Link>
 
             <Button
@@ -257,7 +291,7 @@ export default function ContentPlannerShell() {
               className="h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-extrabold gap-1.5 px-3 sm:px-4"
             >
               <Plus size={15} />
-              <span className="hidden sm:inline">Skapa Inlägg</span>
+              <span className="hidden sm:inline">{t('createPost', locale)}</span>
             </Button>
           </div>
 
@@ -265,10 +299,10 @@ export default function ContentPlannerShell() {
             <div className="flex gap-1 p-1 rounded-xl bg-zinc-100 w-fit overflow-x-auto scrollbar-none max-w-full">
               {(
                 [
-                  { key: 'board' as const, label: 'Progress', icon: Columns3 },
-                  { key: 'calendar' as const, label: 'Kalender', icon: CalendarDays },
-                  { key: 'table' as const, label: 'Tabell', icon: LayoutList },
-                  { key: 'copilot' as const, label: 'AI Copilot', icon: Sparkles },
+                  { key: 'board' as const, label: t('boardKanban', locale), icon: Columns3 },
+                  { key: 'calendar' as const, label: t('calendarTab', locale), icon: CalendarDays },
+                  { key: 'table' as const, label: t('tableTab', locale), icon: LayoutList },
+                  { key: 'copilot' as const, label: t('aiCopilot', locale), icon: Sparkles },
                 ] as const
               ).map(({ key, label, icon: Icon }) => (
                 <button
@@ -298,7 +332,7 @@ export default function ContentPlannerShell() {
               <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
                 {(
                   [
-                    { key: 'all' as const, label: 'Alla', color: '#71717a' },
+                    { key: 'all' as const, label: t('allPlatforms', locale), color: '#71717a' },
                     ...(['instagram', 'tiktok', 'linkedin', 'youtube'] as SocialPlatform[]).map(
                       (p) => ({
                         key: p as PlatformFilter,
@@ -384,7 +418,7 @@ export default function ContentPlannerShell() {
         onOpenChange={setCreateWsOpen}
         onCreated={(ws) => {
           queryClient.invalidateQueries({ queryKey: ['planner-workspaces'] });
-          setWorkspaceId(ws.id);
+          persistWorkspace(ws);
         }}
       />
     </div>

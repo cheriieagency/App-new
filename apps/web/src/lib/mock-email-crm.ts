@@ -305,9 +305,8 @@ export function listEmailSubscribers(opts?: {
 }) {
   let list = allSubscribers();
   if (opts?.community_id) {
-    list = list.filter(
-      (s) => s.community_id === opts.community_id || s.community_id == null
-    );
+    // Strict brand scope — only contacts acquired via this workspace.
+    list = list.filter((s) => s.community_id === opts.community_id);
   }
   if (opts?.tag && opts.tag !== 'all') {
     const tag = opts.tag.toLowerCase();
@@ -453,9 +452,15 @@ export function getMockEmailCrmPayload(opts?: {
 }) {
   const subscribers = listEmailSubscribers(opts);
   const broadcasts = listEmailBroadcasts();
-  const stats = getEmailCrmStats();
+  const global = getEmailCrmStats();
+  // Scope headline stats to the active brand when community_id is set.
+  const total_subscribers = opts?.community_id
+    ? subscribers.length
+    : global.total_subscribers;
   return {
-    ...stats,
+    ...global,
+    total_subscribers,
+    average_open_rate: global.average_open_rate,
     subscribers,
     broadcasts,
     audiences: AUDIENCE_OPTIONS,

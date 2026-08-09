@@ -11,7 +11,7 @@ export default function AdminPlannerPage() {
   }, [router]);
   return (
     <div className="min-h-screen flex items-center justify-center text-sm text-zinc-400">
-      Öppnar Content Planner…
+      Opening Content Planner…
     </div>
   );
 }

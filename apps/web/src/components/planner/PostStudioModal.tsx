@@ -42,6 +42,16 @@ import {
   type SocialPlatform,
   type WorkflowStatus,
 } from '@/lib/mock-content-planner';
+import { useLocale } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
+
+const WORKFLOW_LABEL_KEYS: Record<WorkflowStatus, TranslationKey> = {
+  IDEA: 'workflowIdeas',
+  IN_PROGRESS: 'workflowInProduction',
+  READY: 'workflowReview',
+  SCHEDULED: 'workflowScheduled',
+  PUBLISHED: 'workflowPublished',
+};
 
 const EMOJIS = ['🔥', '✨', '🙌', '💡', '🚀', '❤️', '👍', '🎯', '✅', '😊'];
 
@@ -85,6 +95,7 @@ export default function PostStudioModal({
   workspaces: BrandWorkspace[];
   onSaved: () => void;
 }) {
+  const { locale } = useLocale();
   const [leftTab, setLeftTab] = useState<'media' | 'preview'>('media');
   const [rightTab, setRightTab] = useState<'private' | 'public'>('private');
   /** Mobile app layout: one pane at a time. Desktop keeps 3 columns. */
@@ -278,8 +289,8 @@ export default function PostStudioModal({
       <div className="px-3 pt-3 pb-2 flex gap-1 flex-shrink-0">
         {(
           [
-            { key: 'media' as const, label: 'Media' },
-            { key: 'preview' as const, label: 'Live Preview' },
+            { key: 'media' as const, label: t('studioMedia', locale) },
+            { key: 'preview' as const, label: t('livePreview', locale) },
           ] as const
         ).map(({ key, label }) => (
           <button
@@ -318,12 +329,12 @@ export default function PostStudioModal({
     <div className="h-full overflow-y-auto p-4 space-y-4">
       <div>
         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-          Post Title
+          {t('postTitle', locale)}
         </label>
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Vad handlar inlägget om?"
+          placeholder={t('postTitle', locale)}
           className="h-11 rounded-xl border-zinc-200 font-extrabold text-[#2c3340]"
         />
       </div>
@@ -331,7 +342,7 @@ export default function PostStudioModal({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-            Status
+            {t('studioStatus', locale)}
           </label>
           <select
             value={workflow}
@@ -340,14 +351,14 @@ export default function PostStudioModal({
           >
             {WORKFLOW_COLUMNS.map((c) => (
               <option key={c.key} value={c.key}>
-                {c.emoji} {c.label}
+                {c.emoji} {t(WORKFLOW_LABEL_KEYS[c.key], locale)}
               </option>
             ))}
           </select>
         </div>
         <div>
           <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-            Team-yta / Varumärke
+            {t('teamWorkspaceBrand', locale)}
           </label>
           <select
             value={project}
@@ -365,7 +376,7 @@ export default function PostStudioModal({
 
       <div>
         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
-          Assignees
+          {t('studioAssignees', locale)}
         </p>
         <div className="flex flex-wrap gap-2">
           {PLANNER_TEAM.map((a) => {
@@ -417,7 +428,7 @@ export default function PostStudioModal({
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
         <div>
           <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-            Schedule
+            {t('studioScheduleDate', locale)}
           </label>
           <input
             type="datetime-local"
@@ -435,7 +446,7 @@ export default function PostStudioModal({
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-            Caption
+            {t('studioCaption', locale)}
           </label>
           <button
             type="button"
@@ -473,7 +484,7 @@ export default function PostStudioModal({
 
       <div>
         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
-          Subtasks
+          {t('studioSubtasks', locale)}
         </p>
         <div className="space-y-1.5 mb-2">
           {subtasks.map((task) => (
@@ -568,7 +579,7 @@ export default function PostStudioModal({
       <div className="flex-1 overflow-y-auto px-4 pb-3 space-y-4">
         <div>
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
-            Activity
+            {t('studioActivityLog', locale)}
           </p>
           <ul className="space-y-2.5">
             {filteredActivity.length === 0 && (
@@ -781,9 +792,9 @@ export default function PostStudioModal({
           <nav className="flex-shrink-0 grid grid-cols-3 border-t border-zinc-100 bg-white pb-[env(safe-area-inset-bottom)]">
             {(
               [
-                { key: 'details' as const, label: 'Innehåll', icon: FileText },
-                { key: 'media' as const, label: 'Media', icon: ImageIcon },
-                { key: 'team' as const, label: 'Team', icon: MessageCircle },
+                { key: 'details' as const, label: t('contentTab', locale), icon: FileText },
+                { key: 'media' as const, label: t('studioMedia', locale), icon: ImageIcon },
+                { key: 'team' as const, label: t('teamTab', locale), icon: MessageCircle },
               ] as const
             ).map(({ key, label, icon: Icon }) => (
               <button

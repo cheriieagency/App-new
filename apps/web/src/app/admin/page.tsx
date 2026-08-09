@@ -63,15 +63,25 @@ import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
 import CommunityAdminPanel from '@/components/admin/CommunityAdminPanel';
-import {
-  getMockCommunityAdminPayload,
-  managedCommunityAsWorkspace,
-  MOCK_MANAGED_COMMUNITIES,
-} from '@/lib/mock-community-admin';
+import { getMockCommunityAdminPayload } from '@/lib/mock-community-admin';
 import EmailAdminPanel from '@/components/admin/EmailAdminPanel';
 import WorkspaceSelector from '@/components/planner/WorkspaceSelector';
 import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
-import type { BrandWorkspace } from '@/lib/mock-content-planner';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import type { WorkspaceBioBlock } from '@/lib/mock-workspace-profiles';
+import { useAdminNav } from '@/components/admin/AdminNavContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import LaterAnalyticsPanel from '@/components/admin/LaterAnalyticsPanel';
+import AdminSettingsPanel from '@/components/admin/AdminSettingsPanel';
+import SocialInboxPanel from '@/components/admin/SocialInboxPanel';
+import MediaLibraryPanel from '@/components/admin/MediaLibraryPanel';
+import {
+  LATER_THEME_PRESETS,
+  LATER_BIO_FONTS,
+  applyLaterPreset,
+  getLaterFontFamily,
+  getLaterGoogleFontsHref,
+} from '@/components/admin/laterBioThemes';
 import {
   appendUtmParams,
   buildTrackedShortUrl,
@@ -96,7 +106,7 @@ import {
   type SocialBrandId,
 } from '@/components/icons/SocialBrandIcons';
 
-type AdminTab = 'analytics' | 'community' | 'email' | 'biobuilder';
+type BioSubTab = 'blocks' | 'design' | 'analytics' | 'settings';
 
 type CommunityInitialSub = 'overview' | 'event' | 'broadcast';
 
@@ -256,7 +266,7 @@ const LINK_BLOCK_TYPES = [
     emoji: '🎓',
     color: '#9b8afb',
     defaultTitle: 'Online Kurs',
-    defaultSubtitle: '12 lektioner · Börja idag',
+    defaultSubtitle: '12 lessons · Start today',
     category: 'links' as const,
   },
   {
@@ -273,17 +283,17 @@ const LINK_BLOCK_TYPES = [
     label: 'Community',
     emoji: '🏠',
     color: '#F59E0B',
-    defaultTitle: 'Gå med i Community',
-    defaultSubtitle: 'Gratis & öppet',
+    defaultTitle: 'Join the Community',
+    defaultSubtitle: 'Free & open',
     category: 'links' as const,
   },
   {
     type: 'link' as const,
-    label: 'Länk',
+    label: 'Link',
     emoji: '🔗',
     color: '#6B7280',
-    defaultTitle: 'Extern länk',
-    defaultSubtitle: 'Klicka för mer info',
+    defaultTitle: 'External link',
+    defaultSubtitle: 'Tap for more info',
     category: 'links' as const,
   },
   {
@@ -303,7 +313,7 @@ const STORE_BLOCK_TYPE = {
   emoji: '🛒',
   color: '#9b8afb',
   defaultTitle: 'Ny produkt',
-  defaultSubtitle: 'Länk till extern butik',
+  defaultSubtitle: 'Link to external store',
   category: 'store' as const,
   defaultDestination: 'https://',
 };
@@ -427,10 +437,10 @@ function nextId() {
 const CHAT_NAMES = ['Emma L.', 'Lars B.', 'Astrid K.', 'Marcus J.', 'Sofia R.', 'Björn H.'];
 const CHAT_MSGS = [
   '🔥 Fantastiskt!',
-  'Tack för tipsen!',
+  'Thanks for the tips!',
   'Kan du repetera?',
   '💯 Toppen!',
-  'Var köper jag kursen?',
+  'Where do I buy the course?',
   'Genialt! 🙌',
 ];
 
@@ -647,8 +657,8 @@ function MobilePreview({
               {activeBlocks.length === 0 ? (
                 <p className="text-[7px] px-0.5 pt-1" style={{ color: theme.mutedColor }}>
                   {previewTab === 'store'
-                    ? 'Inga store-produkter ännu'
-                    : 'Inga länkar ännu'}
+                    ? 'No store products yet'
+                    : 'No links yet'}
                 </p>
               ) : (
                 activeBlocks.map((block) => (
@@ -857,7 +867,7 @@ function BioDragBlock({
                   className="w-full text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--nc-coral)]"
                 />
                 <p className="text-[9px] text-zinc-400 font-medium break-all">
-                  UTM: {utmDestination || 'Lägg till en produkt-URL'}
+                  UTM: {utmDestination || 'Add a product URL'}
                 </p>
               </>
             )}
@@ -904,7 +914,7 @@ function BioDragBlock({
               type="button"
               onClick={() => void copyUtm()}
               className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${utmCopied ? 'bg-green-100 text-green-600' : 'bg-[#f2eeff] text-[var(--nc-coral)] hover:bg-[#f2eeff]'}`}
-              title="Kopiera UTM-länk"
+              title="Copy UTM link"
             >
               {utmCopied ? <Check size={11} /> : <Copy size={11} />}
             </button>
@@ -1037,7 +1047,7 @@ function BioDragBlock({
                     onClick={() => onUpdate(index, { icon_url: null })}
                     className="text-[11px] font-bold text-zinc-400 hover:text-red-500 transition-colors"
                   >
-                    Ta bort bild (använd emoji)
+                    Remove image (use emoji)
                   </button>
                 )}
               </div>
@@ -1156,14 +1166,14 @@ function SocialLinksEditor({
     <div>
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-          <GlobeIcon size={12} /> Sociala Medier-länkar
+          <GlobeIcon size={12} /> Social media links
         </h4>
         {!adding && (
           <button
             onClick={() => setAdding(true)}
             className="flex items-center gap-1.5 h-7 px-3 rounded-xl bg-blue-100 text-blue-600 text-[11px] font-black hover:bg-blue-200 transition-colors"
           >
-            <Plus size={11} /> Lägg till länk
+            <Plus size={11} /> Add link
           </button>
         )}
       </div>
@@ -1171,8 +1181,8 @@ function SocialLinksEditor({
         {links.length === 0 && !adding && (
           <div className="text-center py-5 text-zinc-300">
             <GlobeIcon size={20} className="mx-auto mb-1.5" />
-            <p className="text-xs font-bold">Inga sociala medielänkar ännu</p>
-            <p className="text-[10px]">Lägg till din första länk</p>
+            <p className="text-xs font-bold">No social links yet</p>
+            <p className="text-[10px]">Add your first link</p>
           </div>
         )}
         {links.map((link, i) => {
@@ -1215,7 +1225,7 @@ function SocialLinksEditor({
         <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 space-y-3">
           <div>
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-              Välj plattform
+              Choose platform
             </label>
             <div className="grid grid-cols-4 gap-1.5">
               {SOCIAL_PLATFORMS.map((p) => {
@@ -1247,7 +1257,7 @@ function SocialLinksEditor({
           </div>
           <div>
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-              URL eller användarnamn
+              URL or username
             </label>
             <input
               value={newUrl}
@@ -1268,7 +1278,7 @@ function SocialLinksEditor({
               disabled={!newUrl.trim()}
               className="flex-1 h-9 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-extrabold disabled:opacity-40 transition-all flex items-center justify-center gap-1.5"
             >
-              <Plus size={12} /> Lägg till
+              <Plus size={12} /> Add
             </button>
             <button
               onClick={() => {
@@ -1292,50 +1302,39 @@ export default function AdminPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { locale } = useLocale();
-  const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
+  const {
+    activeWorkspace,
+    activeWorkspaceId,
+    setActiveWorkspaceId,
+    brandWorkspaces,
+    updateActiveBio,
+    refreshWorkspaces,
+  } = useWorkspace();
+  const adminCommunityId = activeWorkspace.community.community_id;
+  const { section, setSection } = useAdminNav();
   const [communityInitialSub, setCommunityInitialSub] =
     useState<CommunityInitialSub>('overview');
   const [bioTheme, setBioTheme] = useState<BioTheme>(DEFAULT_BIO_THEME);
+  const [bioSubTab, setBioSubTab] = useState<BioSubTab>('blocks');
+  const [showAllThemes, setShowAllThemes] = useState(false);
+  const [bgMode, setBgMode] = useState<'color' | 'image'>('color');
   const [saved, setSaved] = useState('');
   const [adminSearch, setAdminSearch] = useState('');
-  const [adminCommunityId, setAdminCommunityId] = useState(
-    MOCK_MANAGED_COMMUNITIES[0]?.id ?? 101
-  );
   const [createWsOpen, setCreateWsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+  const bioHydratingRef = useRef(false);
 
-  // Team workspaces / brand profiles for the admin header switcher.
-  const { data: adminWsData } = useQuery<{ workspaces: BrandWorkspace[] }>({
-    queryKey: ['admin-workspaces'],
-    queryFn: async () => {
-      const r = await fetch('/api/admin/workspaces');
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
-    },
-    enabled: !!session,
-  });
-  const adminWorkspaces =
-    adminWsData?.workspaces ??
-    MOCK_MANAGED_COMMUNITIES.map(managedCommunityAsWorkspace);
-
-  // Deep-link support: /admin?tab=email (and /admin/email redirect)
-  // Legacy event/broadcast/content tabs now live under Community.
+  // Deep-link support for community sub-views.
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get('tab');
     if (!raw) return;
     if (raw === 'content' || raw === 'event') {
-      setActiveTab('community');
       setCommunityInitialSub('event');
       return;
     }
     if (raw === 'broadcast') {
-      setActiveTab('community');
       setCommunityInitialSub('broadcast');
-      return;
-    }
-    if (['analytics', 'community', 'email', 'biobuilder'].includes(raw)) {
-      setActiveTab(raw as AdminTab);
-      if (raw === 'community') setCommunityInitialSub('overview');
     }
   }, []);
 
@@ -1406,8 +1405,8 @@ export default function AdminPage() {
       id: '4',
       type: 'community',
       category: 'links',
-      title: 'Gå med i Community',
-      subtitle: 'Gratis & öppet',
+      title: 'Join the Community',
+      subtitle: 'Free & open',
       emoji: '🏠',
       color: '#F59E0B',
       visible: true,
@@ -1460,7 +1459,7 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'upsert',
-        title: 'Live Sändning',
+        title: 'Live Broadcast',
         creator_name: 'Creator',
         is_live: false,
       }),
@@ -1610,7 +1609,7 @@ export default function AdminPage() {
   });
   const { data: bioData } = useQuery({
     queryKey: ['bio'],
-    enabled: !!session && activeTab === 'biobuilder',
+    enabled: !!session && section === 'biobuilder',
     queryFn: async () => {
       const r = await fetch('/api/admin/bio');
       if (!r.ok) throw new Error('Failed');
@@ -1618,21 +1617,66 @@ export default function AdminPage() {
     },
   });
 
+  // Hydrate Bio Builder from the active Team Workspace / Brand Profile.
   useEffect(() => {
-    if (bioData) {
-      if (bioData.blocks?.length) {
-        setBlocks(
-          bioData.blocks.map((b: Partial<BioBlock> & { id: string }) => normalizeBioBlock(b))
-        );
-      }
-      if (bioData.handle) setBioHandle(bioData.handle);
-      if (bioData.display_name) setBioDisplayName(bioData.display_name);
-      if (bioData.bio_text) setBioBioText(bioData.bio_text);
-      if (bioData.avatar_url) setBioAvatarUrl(bioData.avatar_url);
-      if (bioData.social_links?.length) setSocialLinks(bioData.social_links);
-      if (bioData.theme) setBioTheme(normalizeBioTheme(bioData.theme));
+    bioHydratingRef.current = true;
+    const bio = activeWorkspace.bio;
+    setBlocks(
+      bio.blocks.map((b) =>
+        normalizeBioBlock(b as Partial<BioBlock> & { id: string })
+      )
+    );
+    setBioHandle(bio.handle.replace(/^@/, ''));
+    setBioDisplayName(bio.display_name);
+    setBioBioText(bio.bio_text);
+    setBioAvatarUrl(bio.profile_photo || '');
+    setBioTheme(normalizeBioTheme(bio.theme));
+    const t = window.setTimeout(() => {
+      bioHydratingRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [activeWorkspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist Bio edits into the global workspace profile (instant tab sync).
+  useEffect(() => {
+    if (bioHydratingRef.current) return;
+    const themeLabel =
+      BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)?.label ||
+      activeWorkspace.bio.theme_label;
+    updateActiveBio({
+      profile_photo: bioAvatarUrl || null,
+      display_name: bioDisplayName,
+      handle: bioHandle.replace(/^@/, ''),
+      bio_text: bioBioText,
+      theme: bioTheme,
+      theme_label: themeLabel,
+      blocks: blocks as WorkspaceBioBlock[],
+    });
+  }, [
+    blocks,
+    bioHandle,
+    bioDisplayName,
+    bioBioText,
+    bioAvatarUrl,
+    bioTheme,
+    updateActiveBio,
+  ]);
+
+  // Legacy API bio load only fills empty fields when workspace bio is blank.
+  useEffect(() => {
+    if (!bioData || activeWorkspace.bio.blocks.length > 0) return;
+    if (bioData.blocks?.length) {
+      setBlocks(
+        bioData.blocks.map((b: Partial<BioBlock> & { id: string }) => normalizeBioBlock(b))
+      );
     }
-  }, [bioData]);
+    if (bioData.handle) setBioHandle(bioData.handle);
+    if (bioData.display_name) setBioDisplayName(bioData.display_name);
+    if (bioData.bio_text) setBioBioText(bioData.bio_text);
+    if (bioData.avatar_url) setBioAvatarUrl(bioData.avatar_url);
+    if (bioData.social_links?.length) setSocialLinks(bioData.social_links);
+    if (bioData.theme) setBioTheme(normalizeBioTheme(bioData.theme));
+  }, [bioData, activeWorkspace.bio.blocks.length]);
 
   // Mutations
   const addEventMutation = useMutation({
@@ -1723,14 +1767,17 @@ export default function AdminPage() {
 
   const exportEmails = () => {
     if (typeof document === 'undefined') return;
-    if (!stats?.emails?.length) return;
+    const rows = activeWorkspace.analytics.recent_emails.length
+      ? activeWorkspace.analytics.recent_emails
+      : (stats?.emails ?? []);
+    if (!rows.length) return;
     const csv = ['Email,Name,Joined']
-      .concat(stats.emails.map((e: any) => `${e.email},${e.name},${e.created_at}`))
+      .concat(rows.map((e: any) => `${e.email},${e.name},${e.created_at}`))
       .join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'nordic-creator-members.csv';
+    a.download = `${activeWorkspace.name.replace(/\s+/g, '-').toLowerCase()}-members.csv`;
     a.click();
   };
 
@@ -1755,16 +1802,14 @@ export default function AdminPage() {
   const syncPublicLive = useCallback(
     async (action: 'start' | 'stop' | 'update', viewerCount?: number) => {
       if (!streamKey || streamKey.includes('xxxxxxxx')) return;
-      const communityName =
-        adminWorkspaces.find((w) => w.id === String(adminCommunityId))?.name ??
-        null;
+      const communityName = activeWorkspace.name;
       try {
         await fetch(`/api/live/${encodeURIComponent(streamKey)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action,
-            title: liveTitle || 'Live Sändning',
+            title: liveTitle || 'Live Broadcast',
             creator_name: session?.user?.name || 'Creator',
             community_name: communityName,
             viewer_count: viewerCount,
@@ -1774,7 +1819,7 @@ export default function AdminPage() {
         /* non-blocking demo sync */
       }
     },
-    [streamKey, liveTitle, session?.user?.name, adminCommunityId, adminWorkspaces]
+    [streamKey, liveTitle, session?.user?.name, activeWorkspace.name]
   );
 
   const startBroadcast = useCallback(() => {
@@ -1836,362 +1881,132 @@ export default function AdminPage() {
     }
   };
 
-  const TABS: { key: AdminTab; label: string; icon: React.ElementType }[] = [
-    { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { key: 'community', label: t('community', locale), icon: Users },
-    { key: 'email', label: 'E-post', icon: Mail },
-    { key: 'biobuilder', label: 'Bio Builder', icon: Smartphone },
+  const BIO_SUB_TABS: { key: BioSubTab; label: string }[] = [
+    { key: 'blocks', label: 'Blocks' },
+    { key: 'design', label: 'Design' },
+    { key: 'analytics', label: 'Analytics' },
+    { key: 'settings', label: 'Settings' },
   ];
 
+  const visibleThemes = showAllThemes
+    ? LATER_THEME_PRESETS
+    : LATER_THEME_PRESETS.slice(0, 4);
+
   return (
-    <div className="nc-app nc-app-shell min-h-screen">
-      {/* ── Skool-style top bar + sub-nav ── */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-zinc-100">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6">
-          <div className="h-14 sm:h-16 flex items-center gap-3 sm:gap-4">
-            {/* Left: Team Workspace / Brand Profile switcher (same UX as Content Planner) */}
-            <div className="flex-shrink-0 min-w-0">
-              <WorkspaceSelector
-                workspaces={adminWorkspaces}
-                activeId={String(adminCommunityId)}
-                onSelect={(ws) => {
-                  const nextId = Number(ws.id);
-                  if (!Number.isNaN(nextId)) setAdminCommunityId(nextId);
-                }}
-                onCreateNew={() => setCreateWsOpen(true)}
+    <div className="min-h-screen bg-[#f3f4f6]">
+      {/* Compact top bar — Later aesthetic (sidebar owns primary nav) */}
+      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-zinc-200/80">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-3">
+          <div className="md:hidden flex-shrink-0 min-w-0 max-w-[46%]">
+            <WorkspaceSelector
+              workspaces={brandWorkspaces}
+              activeId={activeWorkspaceId}
+              onSelect={(ws) => setActiveWorkspaceId(ws.id)}
+              onCreateNew={() => setCreateWsOpen(true)}
+            />
+          </div>
+          <div className="flex-1 flex justify-center min-w-0">
+            <div className="relative w-full max-w-md">
+              <Search
+                size={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
+              />
+              <input
+                value={adminSearch}
+                onChange={(e) => setAdminSearch(e.target.value)}
+                placeholder="Search admin…"
+                className="w-full h-11 min-h-[44px] rounded-full bg-zinc-100 border border-transparent focus:border-zinc-200 focus:bg-white pl-10 pr-4 text-sm font-medium text-[#1f2430] placeholder:text-zinc-400 focus:outline-none transition-colors"
               />
             </div>
-
-            {/* Center: global search */}
-            <div className="flex-1 flex justify-center min-w-0">
-              <div className="relative w-full max-w-md">
-                <Search
-                  size={15}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
-                />
-                <input
-                  value={adminSearch}
-                  onChange={(e) => setAdminSearch(e.target.value)}
-                  placeholder="Sök medlemmar, innehåll, e-post..."
-                  className="w-full h-11 min-h-[44px] rounded-full bg-zinc-100 border border-transparent focus:border-zinc-200 focus:bg-white pl-10 pr-4 text-sm font-medium text-[#2c3340] placeholder:text-zinc-400 focus:outline-none transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* Right: notifications + AI + avatar */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowCreatorAI(true)}
-                className="hidden sm:inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-full bg-[var(--nc-coral)] text-white text-xs font-extrabold hover:opacity-90"
-              >
-                <Sparkles size={13} /> AI
-              </button>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setNotifOpen((v) => !v)}
-                  className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center text-zinc-600 relative"
-                  aria-label="Notiser"
-                >
-                  <Bell size={16} />
-                  <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[var(--nc-coral)]" />
-                </button>
-                {notifOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-zinc-100 rounded-2xl shadow-xl z-40 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-zinc-50">
-                      <p className="text-xs font-black text-[#2c3340]">Notiser</p>
-                    </div>
-                    {[
-                      '3 nya medlemmar i Creator Lab',
-                      'E-boksköp: Creator Starter Pack',
-                      'Broadcast öppningsrate 62%',
-                    ].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setNotifOpen(false)}
-                        className="w-full text-left px-4 py-3 text-xs font-medium text-zinc-600 hover:bg-zinc-50 border-b border-zinc-50 last:border-0"
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => router.push('/dashboard')}
-                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-zinc-100 hover:bg-zinc-200 hidden sm:flex items-center justify-center text-zinc-600"
-                title={t('dashboard', locale)}
-              >
-                <Home size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } })
-                }
-                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border-2 border-white shadow-sm bg-[var(--nc-coral)] flex items-center justify-center text-white text-xs font-black"
-                title={session.user.name}
-              >
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  (session.user.name?.[0] ?? 'U')
-                )}
-              </button>
-            </div>
           </div>
-
-          {/* Sub-menu tabs */}
-          <nav className="flex items-center gap-1 overflow-x-auto scrollbar-none -mb-px">
-            {TABS.map(({ key, label, icon: Icon }) => {
-              const active = activeTab === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(key);
-                    if (key === 'community') setCommunityInitialSub('overview');
-                  }}
-                  className={`relative flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 sm:px-4 text-[11px] sm:text-xs font-extrabold whitespace-nowrap transition-colors flex-shrink-0 ${
-                    active
-                      ? 'text-[#2c3340]'
-                      : 'text-zinc-400 hover:text-zinc-700'
-                  }`}
-                >
-                  <Icon size={13} />
-                  {label}
-                  {key === 'community' && isLive && (
-                    <span
-                      className="w-1.5 h-1.5 bg-red-500 rounded-full"
-                      style={{ animation: 'livePulse 1s ease-in-out infinite' }}
-                    />
-                  )}
-                  {active && (
-                    <span className="absolute left-2 right-2 bottom-0 h-0.5 rounded-full bg-[#2c3340]" />
-                  )}
-                </button>
-              );
-            })}
-            <Link
-              href="/planner"
-              className="relative flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 sm:px-4 text-[11px] sm:text-xs font-extrabold whitespace-nowrap transition-colors flex-shrink-0 text-zinc-400 hover:text-zinc-700"
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <LanguageSwitcher />
+            <button
+              type="button"
+              onClick={() => setShowCreatorAI(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-full bg-[#1f2430] text-white text-xs font-extrabold hover:opacity-90"
             >
-              <CalendarDays size={13} />
-              Planner
-            </Link>
-          </nav>
+              <Sparkles size={13} /> AI
+            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setNotifOpen((v) => !v)}
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center text-zinc-600 relative"
+                aria-label="Notifications"
+              >
+                <Bell size={16} />
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#7c6cf0]" />
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-zinc-100 rounded-2xl shadow-xl z-40 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-zinc-50">
+                    <p className="text-xs font-black text-[#1f2430]">Notifications</p>
+                  </div>
+                  {[
+                    '3 new members in Creator Lab',
+                    'E-book purchase: Creator Starter Pack',
+                    'Broadcast open rate 62%',
+                  ].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNotifOpen(false)}
+                      className="w-full text-left px-4 py-3 text-xs font-medium text-zinc-600 hover:bg-zinc-50 border-b border-zinc-50 last:border-0"
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard')}
+              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-zinc-100 hover:bg-zinc-200 hidden sm:flex items-center justify-center text-zinc-600"
+              title="Dashboard"
+            >
+              <Home size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } })
+              }
+              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border-2 border-white shadow-sm bg-[#7c6cf0] flex items-center justify-center text-white text-xs font-black"
+              title={session.user.name}
+            >
+              {session.user.image ? (
+                <img src={session.user.image} alt="" className="w-full h-full object-cover" />
+              ) : (
+                (session.user.name?.[0] ?? 'U')
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-16">
-        {/* ── ANALYTICS ── */}
-        {activeTab === 'analytics' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                {
-                  label: t('totalRevenue', locale),
-                  value: `${stats?.revenue ?? 0} SEK`,
-                  icon: TrendingUp,
-                  color: '#10B981',
-                },
-                {
-                  label: t('activeMembers', locale),
-                  value: stats?.members ?? 0,
-                  icon: Users,
-                  color: '#3B82F6',
-                },
-                {
-                  label: t('eventRsvps', locale),
-                  value: stats?.rsvps ?? 0,
-                  icon: Calendar,
-                  color: '#9b8afb',
-                },
-                {
-                  label: 'Produkter',
-                  value: stats?.products ?? 0,
-                  icon: ShoppingBag,
-                  color: '#F59E0B',
-                },
-              ].map((s) => {
-                const Icon = s.icon;
-                return (
-                  <div
-                    key={s.label}
-                    className="nc-glass rounded-[1.5rem] p-5"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                        {s.label}
-                      </p>
-                      <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center"
-                        style={{ background: `${s.color}18` }}
-                      >
-                        <Icon size={14} style={{ color: s.color }} />
-                      </div>
-                    </div>
-                    <p className="text-2xl font-black text-[#2c3340]">{s.value}</p>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="nc-glass rounded-[1.5rem] p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="text-sm font-black text-[#2c3340]">
-                    {t('revenueOverview', locale)}
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">{t('last7days', locale)}</p>
-                </div>
-                <p className="text-xs text-green-500 font-black">{t('vsLastWeek', locale)}</p>
-              </div>
-              <div className="flex items-end gap-2 h-28">
-                {[40, 65, 45, 80, 60, 90, 75].map((h, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className="w-full rounded-lg"
-                      style={{
-                        height: `${h}%`,
-                        background: 'linear-gradient(180deg, #818CF8, #6366F1)',
-                      }}
-                    />
-                    <span className="text-[9px] font-bold text-zinc-400">
-                      {['M', 'T', 'O', 'T', 'F', 'L', 'S'][i]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bio Store UTM tracking */}
-            <div className="nc-glass rounded-[1.5rem] overflow-hidden">
-              <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-zinc-50">
-                <div>
-                  <h3 className="text-sm font-black text-[#2c3340] flex items-center gap-2">
-                    <ShoppingBag size={14} className="text-[var(--nc-coral)]" />
-                    Bio Store — UTM-klick
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    {(stats?.utm_total_clicks as number | undefined) ?? 0} klick totalt · spårade
-                    via unika UTM-länkar
-                  </p>
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#f2eeff] px-2.5 py-1 rounded-full">
-                  utm_medium=bio_store
-                </span>
-              </div>
-              <div className="divide-y divide-zinc-50">
-                {((stats?.utm_links as UtmClickStat[] | undefined) ?? []).length === 0 ? (
-                  <div className="py-10 text-center text-sm text-zinc-400">
-                    Lägg till store-produkter i Bio Builder för att se UTM-statistik.
-                  </div>
-                ) : (
-                  ((stats?.utm_links as UtmClickStat[]) ?? []).map((row) => {
-                    const maxClicks = Math.max(
-                      1,
-                      ...(((stats?.utm_links as UtmClickStat[]) ?? []).map((r) => r.clicks) || [1])
-                    );
-                    const pct = Math.round((row.clicks / maxClicks) * 100);
-                    return (
-                      <div
-                        key={row.slug}
-                        className="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-black text-[#2c3340] truncate">{row.title}</p>
-                          <p className="text-[11px] font-mono text-zinc-400 truncate">
-                            /r/{row.slug}
-                          </p>
-                          <div className="mt-2 h-1.5 bg-zinc-100 rounded-full overflow-hidden max-w-xs">
-                            <div
-                              className="h-full rounded-full bg-[var(--nc-coral)]"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 flex-shrink-0">
-                          <div className="text-right">
-                            <p className="text-lg font-black text-[#2c3340] tabular-nums">
-                              {row.clicks}
-                            </p>
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase">
-                              klick
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-black text-[#2c3340] tabular-nums">
-                              {row.unique}
-                            </p>
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase">
-                              unika
-                            </p>
-                          </div>
-                          <a
-                            href={row.tracked_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="h-11 min-h-[44px] px-3 rounded-xl bg-zinc-50 hover:bg-[#f2eeff] text-xs font-extrabold text-zinc-600 hover:text-[var(--nc-coral)] inline-flex items-center gap-1.5 transition-colors"
-                          >
-                            <LinkIcon size={12} /> Öppna
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div className="nc-glass rounded-[1.5rem] overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-50">
-                <div>
-                  <h3 className="text-sm font-black text-[#2c3340]">{t('emailList', locale)}</h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    {stats?.members ?? 0} {t('registered', locale)}
-                  </p>
-                </div>
-                <Button
-                  onClick={exportEmails}
-                  size="sm"
-                  className="rounded-full bg-[var(--nc-coral)] text-white font-bold flex items-center gap-2 h-8 text-xs"
-                >
-                  <Download size={12} /> {t('exportCsv', locale)}
-                </Button>
-              </div>
-              <div className="divide-y divide-zinc-50">
-                {(stats?.emails ?? []).slice(0, 8).map((e: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3 px-6 py-3">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-sm font-black text-[var(--nc-coral)] flex-shrink-0">
-                      {e.name?.[0] ?? '?'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-[#2c3340] truncate">{e.name}</p>
-                      <p className="text-xs text-zinc-400 truncate">{e.email}</p>
-                    </div>
-                    <p className="text-xs text-zinc-300 flex-shrink-0">
-                      {e.created_at?.slice(0, 10)}
-                    </p>
-                  </div>
-                ))}
-                {!stats?.emails?.length && (
-                  <div className="py-10 text-center text-sm text-zinc-400">Inga members ännu</div>
-                )}
-              </div>
-            </div>
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-16">
+        {section === 'analytics' && <LaterAnalyticsPanel />}
+        {section === 'media' && <MediaLibraryPanel />}
+        {section === 'inbox' && <SocialInboxPanel />}
+        {section === 'settings' && <AdminSettingsPanel />}
+        {section === 'calendar' && (
+          <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center space-y-3">
+            <CalendarDays className="mx-auto text-zinc-400" size={28} />
+            <h2 className="text-lg font-black text-[#1f2430]">Calendar / Planner</h2>
+            <p className="text-sm text-zinc-500">Open the full Content Planner to schedule posts.</p>
+            <Link
+              href="/planner"
+              className="inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-[#1f2430] text-white text-xs font-extrabold"
+            >
+              Open Planner
+            </Link>
           </div>
         )}
 
         {/* ── COMMUNITY (includes Event + Sänd Live) ── */}
-        {activeTab === 'community' && (
+        {section === 'community' && (
           <CommunityAdminPanel
             initialSubTab={communityInitialSub}
             isLive={isLive}
@@ -2240,9 +2055,9 @@ export default function AdminPage() {
                   ) : (
                     <>
                       <ImageIcon size={22} className="text-zinc-300" />
-                      <span className="text-xs font-bold text-zinc-500">Lägg till headerbild</span>
+                      <span className="text-xs font-bold text-zinc-500">Add header image</span>
                       <span className="text-[10px] text-zinc-400 font-medium">
-                        Visas högst upp på eventet
+                        Shown at the top of the event
                       </span>
                     </>
                   )}
@@ -2285,7 +2100,7 @@ export default function AdminPage() {
                     {(
                       [
                         { key: 'online' as const, label: 'Online', icon: Monitor },
-                        { key: 'in_person' as const, label: 'På plats', icon: MapPin },
+                        { key: 'in_person' as const, label: 'In person', icon: MapPin },
                       ] as const
                     ).map(({ key, label, icon: Icon }) => {
                       const active = eventForm.location_type === key;
@@ -2372,7 +2187,7 @@ export default function AdminPage() {
                 {eventForm.audience === 'selected' && (
                   <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 max-h-44 overflow-y-auto space-y-1">
                     <p className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wide mb-2">
-                      Välj medlemmar
+                      Select members
                     </p>
                     {getMockCommunityAdminPayload(adminCommunityId).members.map((m) => {
                       const checked = eventForm.invited_member_ids.includes(m.id);
@@ -2406,7 +2221,7 @@ export default function AdminPage() {
 
                 {eventForm.audience === 'invite_only' && (
                   <p className="text-xs text-zinc-400 font-medium -mt-1">
-                    Endast personer du skickar en personlig inbjudan till kan se och anmäla sig.
+                    Only people you personally invite can see and RSVP.
                   </p>
                 )}
 
@@ -2448,7 +2263,7 @@ export default function AdminPage() {
                   <Calendar size={14} className="text-[var(--nc-coral)]" /> Planerade events
                 </h3>
                 <p className="text-xs text-zinc-400 font-medium mb-4">
-                  Kommande events som syns för medlemmar.
+                  Upcoming events visible to members.
                 </p>
                 {plannedEvents.length === 0 ? (
                   <p className="text-sm text-zinc-400 font-medium py-6 text-center">
@@ -2496,7 +2311,7 @@ export default function AdminPage() {
                             </p>
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                               <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-500 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
-                                {ev.location_type === 'in_person' ? 'På plats' : 'Online'}
+                                {ev.location_type === 'in_person' ? 'In person' : 'Online'}
                               </span>
                               <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-500 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
                                 {ev.audience === 'invite_only'
@@ -2532,7 +2347,7 @@ export default function AdminPage() {
                 </p>
                 {previousEvents.length === 0 ? (
                   <p className="text-sm text-zinc-400 font-medium py-6 text-center">
-                    Inga tidigare events ännu.
+                    No past events yet.
                   </p>
                 ) : (
                   <ul className="space-y-2">
@@ -2571,7 +2386,7 @@ export default function AdminPage() {
                             </p>
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                               <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-400 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
-                                {ev.location_type === 'in_person' ? 'På plats' : 'Online'}
+                                {ev.location_type === 'in_person' ? 'In person' : 'Online'}
                               </span>
                               <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-400 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
                                 {ev.audience === 'invite_only'
@@ -2613,7 +2428,7 @@ export default function AdminPage() {
                           style={{ animation: 'livePulse 1s ease-in-out infinite' }}
                         />
                       </div>
-                      <p className="text-lg font-black">{liveTitle || 'Live Sändning'}</p>
+                      <p className="text-lg font-black">{liveTitle || 'Live Broadcast'}</p>
                       <div className="flex items-center justify-center gap-2 mt-2">
                         <span className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-extrabold px-3 py-1 rounded-full">
                           <div
@@ -2696,7 +2511,7 @@ export default function AdminPage() {
                           setTimeout(() => setKeyCopied(false), 2000);
                         }}
                         className={`h-11 min-h-[44px] px-3 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${keyCopied ? 'bg-green-100 text-green-600' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'}`}
-                        title="Kopiera länk"
+                        title="Copy link"
                       >
                         {keyCopied ? <Check size={13} /> : <Share2 size={13} />}
                       </button>
@@ -2705,14 +2520,14 @@ export default function AdminPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="h-11 min-h-[44px] px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center flex-shrink-0"
-                        title="Öppna live-sida"
+                        title="Open live page"
                       >
                         <ExternalLink size={13} />
                       </a>
                     </div>
                     <p className="text-[11px] text-zinc-400 font-medium mt-1.5">
-                      Dela länken med vem som helst — funkar även utanför communityn. Ingen
-                      inloggning krävs för att titta.
+                      Share the link with anyone — works outside the community. No
+                      login required to watch.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -2802,512 +2617,451 @@ export default function AdminPage() {
         )}
 
         {/* ── EMAIL CRM ── */}
-        {activeTab === 'email' && <EmailAdminPanel />}
+        {section === 'email' && <EmailAdminPanel />}
 
-        {/* ── BIO BUILDER ── */}
-        {activeTab === 'biobuilder' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
-              {/* Redigera profil */}
-              <div className="nc-glass rounded-[1.5rem] p-6">
-                <h3 className="text-sm font-black text-[#2c3340] mb-5 flex items-center gap-2">
-                  <Settings size={14} className="text-zinc-500" /> {t('editProfile', locale)}
-                </h3>
-                <div className="mb-5 pb-5 border-b border-zinc-50">
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-3">
-                    {t('profilePhoto', locale)}
-                  </label>
-                  <AvatarUploader avatarUrl={bioAvatarUrl} onUpdate={setBioAvatarUrl} />
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                      {t('displayName', locale)}
-                    </label>
-                    <Input
-                      value={bioDisplayName}
-                      onChange={(e) => setBioDisplayName(e.target.value)}
-                      placeholder={session.user.name}
-                      className="rounded-xl border-zinc-200 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                      {t('handleLabel', locale)}
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-sm">
-                        @
-                      </span>
-                      <Input
-                        value={bioHandle}
-                        onChange={(e) =>
-                          setBioHandle(e.target.value.toLowerCase().replace(/\s/g, ''))
-                        }
-                        placeholder="creator"
-                        className="rounded-xl border-zinc-200 pl-7 text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                    {t('bioLabel', locale)}
-                  </label>
-                  <Textarea
-                    value={bioBioText}
-                    onChange={(e) => setBioBioText(e.target.value)}
-                    placeholder="Beskriv dig kortfattat..."
-                    className="rounded-xl border-zinc-200 resize-none min-h-[60px] text-sm"
-                  />
-                </div>
+
+        {/* ── BIO BUILDER — Later-style 4 sub-tabs ── */}
+        {section === 'biobuilder' && (
+          <div className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
+                  Bio Builder · {activeWorkspace.name}
+                </p>
+                <h1 className="text-xl sm:text-2xl font-black text-[#1f2430] tracking-tight">
+                  Link in Bio
+                </h1>
+                <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                  {activeWorkspace.handle} · Blocks, Design, Analytics & Settings
+                </p>
               </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => saveBioMutation.mutate()}
+                  disabled={saveBioMutation.isPending}
+                  className={`h-11 min-h-[44px] px-4 rounded-xl text-xs font-extrabold inline-flex items-center gap-1.5 ${
+                    bioSaved ? 'bg-emerald-600 text-white' : 'bg-[#1f2430] text-white'
+                  }`}
+                >
+                  {bioSaved ? <><Check size={13} /> Saved</> : <><Save size={13} /> Save bio</>}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview((v) => !v)}
+                  className="h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 inline-flex items-center gap-1.5"
+                >
+                  {showPreview ? <EyeOff size={13} /> : <Eye size={13} />} Preview
+                </button>
+              </div>
+            </div>
 
-              {/* Välj tema + anpassning */}
-              <div className="nc-glass rounded-[1.5rem] p-6 space-y-5">
-                <div>
-                  <h3 className="text-sm font-black text-[#2c3340] mb-1 flex items-center gap-2">
-                    <Palette size={14} /> {t('chooseTheme', locale)}
-                  </h3>
-                  <p className="text-xs text-zinc-400 font-medium">
-                    Välj ett preset eller finjustera färger, typografi och knappar.
-                  </p>
-                </div>
+            {/* Sub-tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none border-b border-zinc-200">
+              {BIO_SUB_TABS.map(({ key, label }) => {
+                const active = bioSubTab === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setBioSubTab(key)}
+                    className={`relative h-11 min-h-[44px] px-4 text-xs font-extrabold whitespace-nowrap transition-colors ${
+                      active ? 'text-[#1f2430]' : 'text-zinc-400 hover:text-zinc-700'
+                    }`}
+                  >
+                    {label}
+                    {active && (
+                      <span className="absolute left-2 right-2 bottom-0 h-0.5 rounded-full bg-[#1f2430]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {BIO_THEME_PRESETS.map((theme) => {
-                    const active = bioTheme.presetId === theme.presetId;
-                    return (
-                      <button
-                        key={theme.presetId}
-                        type="button"
-                        onClick={() => setBioTheme(applyBioPreset(theme.presetId))}
-                        className={`p-3.5 rounded-2xl border-2 text-left transition-all min-h-[44px] ${
-                          active
-                            ? 'border-[var(--nc-coral)] shadow-md'
-                            : 'border-zinc-100 hover:border-zinc-200'
-                        }`}
-                        style={{ background: theme.bg }}
-                      >
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <div
-                            className="w-6 h-6 rounded-md"
-                            style={{ background: theme.buttonBg }}
-                          />
-                          <div
-                            className="w-6 h-6 rounded-md border border-black/5"
-                            style={{ background: theme.accent }}
-                          />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2 space-y-4">
+                {bioSubTab === 'blocks' && (
+                  <>
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-sm font-black text-[#1f2430]">Active blocks</h3>
+                          <p className="text-xs text-zinc-500">Buttons, products, e-books & social links. Drag to reorder.</p>
                         </div>
-                        <p
-                          className="text-xs font-extrabold"
-                          style={{
-                            color: theme.nameColor,
-                            fontFamily: getBioFontFamily(theme.fontId),
-                          }}
+                        <button
+                          type="button"
+                          onClick={() => setAddDrawerOpen(true)}
+                          className="h-11 min-h-[44px] px-3 rounded-xl bg-[#1f2430] text-white text-xs font-extrabold inline-flex items-center gap-1.5"
                         >
-                          {theme.label}
-                        </p>
-                        <p className="text-[10px]" style={{ color: theme.mutedColor }}>
-                          {theme.desc}
-                        </p>
-                        {active && (
-                          <div className="mt-1.5 flex items-center gap-1 text-[10px] font-black text-[var(--nc-coral)]">
-                            <Check size={10} /> Aktivt
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                          <Plus size={13} /> Add Link / Product
+                        </button>
+                      </div>
 
-                {bioTheme.presetId === 'custom' && (
-                  <p className="text-[11px] font-bold text-[var(--nc-coral)] -mt-2">
-                    Anpassat tema — dina manuella val används.
-                  </p>
+                      <SocialLinksEditor links={socialLinks} onChange={setSocialLinks} />
+
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
+                        Links & lead magnets
+                      </p>
+                      <div className="space-y-2" onDragEnd={handleDrop}>
+                        {blocks.map((block, i) =>
+                          block.category === 'store' ? null : (
+                            <BioDragBlock
+                              key={block.id}
+                              block={block}
+                              index={i}
+                              dragging={dragIndex}
+                              handle={bioHandle}
+                              onDragStart={handleDragStart}
+                              onDragOver={handleDragOver}
+                              onDrop={handleDrop}
+                              onUpdate={updateBlock}
+                              onDelete={deleteBlock}
+                              onToggle={toggleBlock}
+                            />
+                          )
+                        )}
+                      </div>
+                      {blocks.filter((b) => b.category !== 'store').length === 0 && (
+                        <p className="text-sm font-bold text-zinc-400 text-center py-6">No links yet</p>
+                      )}
+
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 pt-2">
+                        Store products
+                      </p>
+                      <div className="space-y-2" onDragEnd={handleDrop}>
+                        {blocks.map((block, i) =>
+                          block.category === 'store' ? (
+                            <BioDragBlock
+                              key={block.id}
+                              block={block}
+                              index={i}
+                              dragging={dragIndex}
+                              handle={bioHandle}
+                              onDragStart={handleDragStart}
+                              onDragOver={handleDragOver}
+                              onDrop={handleDrop}
+                              onUpdate={updateBlock}
+                              onDelete={deleteBlock}
+                              onToggle={toggleBlock}
+                            />
+                          ) : null
+                        )}
+                      </div>
+                      {blocks.filter((b) => b.category === 'store').length === 0 && (
+                        <p className="text-sm font-bold text-zinc-400 text-center py-6">No store products yet</p>
+                      )}
+                    </div>
+
+                    {addDrawerOpen && (
+                      <>
+                        <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setAddDrawerOpen(false)} />
+                        <div className="fixed right-0 top-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl p-5 overflow-y-auto">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-black text-[#1f2430]">Add Link / Product</h3>
+                            <button type="button" onClick={() => setAddDrawerOpen(false)} className="h-11 w-11 rounded-xl hover:bg-zinc-100 inline-flex items-center justify-center">
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Links</p>
+                          <div className="space-y-1 mb-5">
+                            {LINK_BLOCK_TYPES.map((bt) => (
+                              <button
+                                key={bt.type}
+                                type="button"
+                                onClick={() => {
+                                  addLinkBlock(bt.type);
+                                  setAddDrawerOpen(false);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-xs font-bold text-zinc-700 hover:bg-zinc-50 min-h-[44px] text-left"
+                              >
+                                <span>{bt.emoji}</span> {bt.label}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Products</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              addStoreProduct();
+                              setAddDrawerOpen(false);
+                            }}
+                            className="w-full h-11 min-h-[44px] rounded-xl bg-[#1f2430] text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5"
+                          >
+                            <ShoppingBag size={13} /> Add Product
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
                 )}
 
-                <div className="border-t border-zinc-100 pt-5 space-y-4">
-                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400">
-                    Färger
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <ThemeColorField
-                      label="Bakgrund"
-                      value={bioTheme.bg}
-                      onChange={(v) => patchBioTheme('bg', v)}
-                    />
-                    <ThemeColorField
-                      label="Accent"
-                      value={bioTheme.accent}
-                      onChange={(v) => patchBioTheme('accent', v)}
-                    />
-                    <ThemeColorField
-                      label="Knappfärg"
-                      value={bioTheme.buttonBg}
-                      onChange={(v) => patchBioTheme('buttonBg', v)}
-                    />
-                    <ThemeColorField
-                      label="Knapptext"
-                      value={bioTheme.buttonText}
-                      onChange={(v) => patchBioTheme('buttonText', v)}
-                    />
-                    <ThemeColorField
-                      label="Knappkant"
-                      value={bioTheme.buttonBorder}
-                      onChange={(v) => patchBioTheme('buttonBorder', v)}
-                    />
-                    <ThemeColorField
-                      label="Namnfärg"
-                      value={bioTheme.nameColor}
-                      onChange={(v) => patchBioTheme('nameColor', v)}
-                    />
-                    <ThemeColorField
-                      label="Sekundär text"
-                      value={bioTheme.mutedColor}
-                      onChange={(v) => patchBioTheme('mutedColor', v)}
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t border-zinc-100 pt-5 space-y-3">
-                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400">
-                    Typografi
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {BIO_FONTS.map((font) => {
-                      const active = bioTheme.fontId === font.id;
-                      return (
+                {bioSubTab === 'design' && (
+                  <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div>
+                          <h3 className="text-sm font-black text-[#1f2430]">Themes</h3>
+                          <p className="text-xs text-zinc-500">Preset selector</p>
+                        </div>
                         <button
-                          key={font.id}
                           type="button"
-                          onClick={() => {
-                            const href = getBioGoogleFontsHref(font.id);
+                          onClick={() => setShowAllThemes((v) => !v)}
+                          className="h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 text-xs font-extrabold text-zinc-600"
+                        >
+                          {showAllThemes ? 'Show fewer' : 'Show all themes'}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {visibleThemes.map((theme) => {
+                          const active = bioTheme.presetId === theme.presetId;
+                          return (
+                            <button
+                              key={theme.presetId}
+                              type="button"
+                              onClick={() => setBioTheme(applyLaterPreset(theme.presetId))}
+                              className={`p-3 rounded-2xl border-2 text-left min-h-[44px] transition-all ${
+                                active ? 'border-[#7c6cf0] shadow-sm' : 'border-zinc-100 hover:border-zinc-200'
+                              }`}
+                              style={{ background: theme.bg }}
+                            >
+                              <div className="flex gap-1 mb-2">
+                                <span className="w-5 h-5 rounded-md" style={{ background: theme.buttonBg }} />
+                                <span className="w-5 h-5 rounded-md border border-black/5" style={{ background: theme.accent }} />
+                              </div>
+                              <p className="text-xs font-extrabold" style={{ color: theme.nameColor }}>{theme.label}</p>
+                              <p className="text-[10px]" style={{ color: theme.mutedColor }}>{theme.desc}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="border-t border-zinc-100 pt-5 space-y-4">
+                      <h3 className="text-sm font-black text-[#1f2430]">Page Customization</h3>
+                      <div>
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Background</p>
+                        <div className="inline-flex p-1 rounded-full bg-zinc-100 mb-3">
+                          {(['color', 'image'] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setBgMode(mode)}
+                              className={`h-10 min-h-[40px] px-4 rounded-full text-xs font-extrabold capitalize ${
+                                bgMode === mode ? 'bg-white text-[#1f2430] shadow-sm' : 'text-zinc-500'
+                              }`}
+                            >
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
+                        {bgMode === 'color' ? (
+                          <ThemeColorField label="Background color" value={bioTheme.bg} onChange={(v) => patchBioTheme('bg', v)} />
+                        ) : (
+                          <p className="text-xs text-zinc-500 font-medium rounded-xl border border-dashed border-zinc-200 p-4">
+                            Image backgrounds coming soon — use a solid color for now.
+                          </p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <ThemeColorField label="Text and Icon color" value={bioTheme.nameColor} onChange={(v) => patchBioTheme('nameColor', v)} />
+                        <ThemeColorField label="Muted text" value={bioTheme.mutedColor} onChange={(v) => patchBioTheme('mutedColor', v)} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Font</p>
+                        <select
+                          value={bioTheme.fontId}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            const href = getLaterGoogleFontsHref(id) || getBioGoogleFontsHref(id);
                             if (href && typeof document !== 'undefined') {
-                              const id = `bio-font-${font.id}`;
-                              if (!document.getElementById(id)) {
+                              const elId = `bio-font-${id}`;
+                              if (!document.getElementById(elId)) {
                                 const link = document.createElement('link');
-                                link.id = id;
+                                link.id = elId;
                                 link.rel = 'stylesheet';
                                 link.href = href;
                                 document.head.appendChild(link);
                               }
                             }
-                            patchBioTheme('fontId', font.id);
+                            patchBioTheme('fontId', id);
                           }}
-                          className={`h-14 min-h-[44px] rounded-xl border px-3 text-left transition-colors ${
-                            active
-                              ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)]'
-                              : 'border-zinc-100 bg-zinc-50 hover:border-zinc-200'
-                          }`}
+                          className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-[#1f2430]"
                         >
-                          <span
-                            className="block text-sm font-bold text-[#2c3340] truncate"
-                            style={{ fontFamily: font.family }}
-                          >
-                            {font.label}
-                          </span>
-                          <span
-                            className="block text-[10px] text-zinc-400 truncate"
-                            style={{ fontFamily: font.family }}
-                          >
-                            Aa Bb Cc
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="border-t border-zinc-100 pt-5 space-y-4">
-                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-zinc-400">
-                    Knappar
-                  </p>
-                  <div>
-                    <p className="text-[10px] font-bold text-zinc-400 mb-2">Stil</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(
-                        [
-                          { key: 'filled' as const, label: 'Fylld' },
-                          { key: 'soft' as const, label: 'Mjuk' },
-                          { key: 'outline' as const, label: 'Kontur' },
-                        ] as const
-                      ).map(({ key, label }) => (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => patchBioTheme('buttonStyle', key)}
-                          className={`h-11 min-h-[44px] rounded-xl border text-xs font-bold transition-colors ${
-                            bioTheme.buttonStyle === key
-                              ? 'border-[var(--nc-coral)] text-[#2c3340] bg-white'
-                              : 'border-zinc-100 bg-zinc-50 text-zinc-500'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-zinc-400 mb-2">Hörn</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(
-                        [
-                          { key: 'sharp' as const, label: 'Skarpa' },
-                          { key: 'rounded' as const, label: 'Runda' },
-                          { key: 'pill' as const, label: 'Pill' },
-                        ] as const
-                      ).map(({ key, label }) => (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => patchBioTheme('buttonRadius', key)}
-                          className={`h-11 min-h-[44px] rounded-xl border text-xs font-bold transition-colors ${
-                            bioTheme.buttonRadius === key
-                              ? 'border-[var(--nc-coral)] text-[#2c3340] bg-white'
-                              : 'border-zinc-100 bg-zinc-50 text-zinc-500'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-zinc-400 mb-2">Skugga</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(
-                        [
-                          { key: 'none' as const, label: 'Ingen' },
-                          { key: 'soft' as const, label: 'Mjuk' },
-                          { key: 'strong' as const, label: 'Stark' },
-                        ] as const
-                      ).map(({ key, label }) => (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => patchBioTheme('buttonShadow', key)}
-                          className={`h-11 min-h-[44px] rounded-xl border text-xs font-bold transition-colors ${
-                            bioTheme.buttonShadow === key
-                              ? 'border-[var(--nc-coral)] text-[#2c3340] bg-white'
-                              : 'border-zinc-100 bg-zinc-50 text-zinc-500'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <Button
-                  type="button"
-                  className="w-full rounded-full bg-[var(--nc-coral)] text-white font-black h-11 min-h-[44px]"
-                  onClick={() => {
-                    saveBioMutation.mutate();
-                    setSaved('theme');
-                    setTimeout(() => setSaved(''), 2000);
-                  }}
-                >
-                  {saved === 'theme' ? t('themeSaved', locale) : t('applyTheme', locale)}
-                </Button>
-              </div>
-
-              {/* Social links card */}
-              <div className="nc-glass rounded-[1.5rem] p-6">
-                <SocialLinksEditor links={socialLinks} onChange={setSocialLinks} />
-              </div>
-
-              {/* Links category */}
-              <div className="nc-glass rounded-[1.5rem] p-6">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-black text-[#2c3340] flex items-center gap-2">
-                    <LinkIcon size={14} className="text-zinc-400" /> Links
-                  </h3>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setAddBlockOpen((v) => !v)}
-                      className="flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl bg-indigo-100 text-[var(--nc-coral)] text-xs font-extrabold hover:bg-indigo-200 transition-colors"
-                    >
-                      <Plus size={12} /> {t('addBlock', locale)}{' '}
-                      <ChevronDown
-                        size={11}
-                        className={`transition-transform ${addBlockOpen ? 'rotate-180' : ''}`}
-                      />
-                    </button>
-                    {addBlockOpen && (
-                      <div className="absolute right-0 top-full mt-1 bg-white border border-zinc-100 rounded-2xl shadow-xl overflow-hidden z-10 min-w-[160px]">
-                        {LINK_BLOCK_TYPES.map((bt) => (
-                          <button
-                            key={bt.type}
-                            type="button"
-                            onClick={() => addLinkBlock(bt.type)}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-zinc-700 hover:bg-zinc-50 transition-colors text-left min-h-[44px]"
-                          >
-                            <span>{bt.emoji}</span> {bt.label}
-                          </button>
-                        ))}
+                          {LATER_BIO_FONTS.map((f) => (
+                            <option key={f.id} value={f.id}>{f.label}</option>
+                          ))}
+                          {BIO_FONTS.map((f) => (
+                            <option key={f.id} value={f.id}>{f.label}</option>
+                          ))}
+                        </select>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="border-t border-zinc-100 pt-5 space-y-4">
+                      <h3 className="text-sm font-black text-[#1f2430]">Block Design</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <ThemeColorField label="Block background" value={bioTheme.buttonBg} onChange={(v) => patchBioTheme('buttonBg', v)} />
+                        <ThemeColorField label="Text color inside blocks" value={bioTheme.buttonText} onChange={(v) => patchBioTheme('buttonText', v)} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Corner style</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {([
+                            { key: 'rounded' as const, label: 'Round Corners' },
+                            { key: 'sharp' as const, label: 'Sharp' },
+                            { key: 'pill' as const, label: 'Pill' },
+                          ]).map(({ key, label }) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => patchBioTheme('buttonRadius', key)}
+                              className={`h-11 min-h-[44px] rounded-xl border text-xs font-bold ${
+                                bioTheme.buttonRadius === key
+                                  ? 'border-[#7c6cf0] bg-[#f8f6ff] text-[#1f2430]'
+                                  : 'border-zinc-100 bg-zinc-50 text-zinc-500'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        className="w-full rounded-xl bg-[#1f2430] text-white font-black h-11 min-h-[44px]"
+                        onClick={() => {
+                          saveBioMutation.mutate();
+                          setSaved('theme');
+                          setTimeout(() => setSaved(''), 2000);
+                        }}
+                      >
+                        {saved === 'theme' ? 'Theme saved' : 'Apply theme'}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs text-zinc-400 mb-3">
-                  Bio-knappar och länkar till community, kurser och lead magnets.
-                </p>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">
-                  {t('dragToReorder', locale)}
-                </p>
-                <div className="space-y-2" onDragEnd={handleDrop}>
-                  {blocks.map((block, i) =>
-                    block.category === 'store' ? null : (
-                      <BioDragBlock
-                        key={block.id}
-                        block={block}
-                        index={i}
-                        dragging={dragIndex}
-                        handle={bioHandle}
-                        onDragStart={handleDragStart}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                        onUpdate={updateBlock}
-                        onDelete={deleteBlock}
-                        onToggle={toggleBlock}
-                      />
-                    )
-                  )}
-                </div>
-                {blocks.filter((b) => b.category !== 'store').length === 0 && (
-                  <div className="text-center py-8 text-zinc-300">
-                    <LinkIcon size={22} className="mx-auto mb-2" />
-                    <p className="text-sm font-bold">Inga links ännu</p>
+                )}
+
+                {bioSubTab === 'analytics' && (
+                  <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden">
+                    <div className="px-5 py-4 border-b border-zinc-100">
+                      <h3 className="text-sm font-black text-[#1f2430]">Bio Store UTM clicks</h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Link performance & top converting products · {activeWorkspace.analytics.utm_total_clicks} clicks
+                      </p>
+                    </div>
+                    <div className="divide-y divide-zinc-100">
+                      {activeWorkspace.analytics.utm_links.length === 0 ? (
+                        <p className="py-10 text-center text-sm text-zinc-400">
+                          Add store products in Blocks to see UTM breakdown.
+                        </p>
+                      ) : (
+                        activeWorkspace.analytics.utm_links.map((row) => (
+                          <div key={row.slug} className="px-5 py-4 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-black text-[#1f2430] truncate">{row.title}</p>
+                              <p className="text-[11px] font-mono text-zinc-400 truncate">/r/{row.slug}</p>
+                            </div>
+                            <div className="flex items-center gap-4 flex-shrink-0">
+                              <div className="text-right">
+                                <p className="text-lg font-black tabular-nums">{row.clicks}</p>
+                                <p className="text-[10px] font-bold uppercase text-zinc-400">Clicks</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-black tabular-nums">{row.unique}</p>
+                                <p className="text-[10px] font-bold uppercase text-zinc-400">Unique</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {bioSubTab === 'settings' && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+                      <h3 className="text-sm font-black text-[#1f2430] mb-1">UTM Tracking for Google Analytics</h3>
+                      <p className="text-xs text-zinc-500 font-medium mb-4">
+                        Add custom UTM parameters to your links to track clicks and conversions.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setBioSubTab('analytics')}
+                        className="h-11 min-h-[44px] px-4 rounded-xl bg-[#1f2430] text-white text-xs font-extrabold"
+                      >
+                        Manage UTM Tracking
+                      </button>
+                    </div>
+
+                    <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-4">
+                      <h3 className="text-sm font-black text-[#1f2430]">Profile</h3>
+                      <div className="mb-2">
+                        <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-2">
+                          Profile photo
+                        </label>
+                        <AvatarUploader avatarUrl={bioAvatarUrl} onUpdate={setBioAvatarUrl} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+                            Display name
+                          </label>
+                          <Input value={bioDisplayName} onChange={(e) => setBioDisplayName(e.target.value)} className="rounded-xl border-zinc-200 text-sm" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+                            Handle
+                          </label>
+                          <Input
+                            value={bioHandle}
+                            onChange={(e) => setBioHandle(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                            className="rounded-xl border-zinc-200 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+                          Bio
+                        </label>
+                        <Textarea
+                          value={bioBioText}
+                          onChange={(e) => setBioBioText(e.target.value)}
+                          placeholder="Short bio…"
+                          className="rounded-xl border-zinc-200 resize-none min-h-[60px] text-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Store category — external products with UTM tracking */}
-              <div className="nc-glass rounded-[1.5rem] p-6">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-black text-[#2c3340] flex items-center gap-2">
-                    <ShoppingBag size={14} className="text-[var(--nc-coral)]" /> Store
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={addStoreProduct}
-                    className="flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl bg-[var(--nc-coral)] text-white text-xs font-extrabold hover:opacity-90 transition-opacity"
-                  >
-                    <Plus size={12} /> Lägg till produkt
-                  </button>
-                </div>
-                <p className="text-xs text-zinc-400 mb-3">
-                  Produkter från andra webbplatser. Varje produkt får en unik UTM-länk som
-                  spåras under Analytics.
-                </p>
-                <div className="space-y-2" onDragEnd={handleDrop}>
-                  {blocks.map((block, i) =>
-                    block.category === 'store' ? (
-                      <BioDragBlock
-                        key={block.id}
-                        block={block}
-                        index={i}
-                        dragging={dragIndex}
-                        handle={bioHandle}
-                        onDragStart={handleDragStart}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                        onUpdate={updateBlock}
-                        onDelete={deleteBlock}
-                        onToggle={toggleBlock}
-                      />
-                    ) : null
-                  )}
-                </div>
-                {blocks.filter((b) => b.category === 'store').length === 0 && (
-                  <div className="text-center py-8 text-zinc-300">
-                    <ShoppingBag size={22} className="mx-auto mb-2" />
-                    <p className="text-sm font-bold">Inga store-produkter ännu</p>
+              <div className="lg:sticky lg:top-24 lg:self-start h-fit">
+                {showPreview ? (
+                  <div className="rounded-2xl border border-zinc-200 bg-white p-5 max-h-[calc(100vh-8rem)] overflow-y-auto">
+                    <h3 className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Smartphone size={12} /> Live preview
+                    </h3>
+                    <MobilePreview
+                      blocks={blocks}
+                      handle={bioHandle}
+                      displayName={bioDisplayName}
+                      bioText={bioBioText}
+                      avatarUrl={bioAvatarUrl}
+                      socialLinks={socialLinks}
+                      theme={bioTheme}
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-10 text-center">
+                    <Eye size={24} className="text-zinc-300 mx-auto mb-2" />
+                    <p className="text-sm text-zinc-400 font-bold">Preview hidden</p>
+                    <button type="button" onClick={() => setShowPreview(true)} className="mt-2 text-xs font-bold text-[#7c6cf0] hover:underline">
+                      Show preview
+                    </button>
                   </div>
                 )}
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <button
-                  onClick={() => saveBioMutation.mutate()}
-                  disabled={saveBioMutation.isPending}
-                  className={`flex items-center gap-2 h-11 px-6 rounded-xl font-black text-sm transition-all disabled:opacity-60 ${bioSaved ? 'bg-green-600 text-white' : 'bg-[var(--nc-coral)] hover:opacity-90 text-white'}`}
-                >
-                  {bioSaved ? (
-                    <>
-                      <Check size={14} /> {t('savedBio', locale)}
-                    </>
-                  ) : (
-                    <>
-                      <Save size={14} /> {t('saveBio', locale)}
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(
-                      `${window.location.origin}/@${bioHandle || 'creator'}`
-                    );
-                    setBioLinkCopied(true);
-                    setTimeout(() => setBioLinkCopied(false), 2500);
-                  }}
-                  className={`flex items-center gap-2 h-11 px-5 rounded-xl font-black text-sm border transition-all ${bioLinkCopied ? 'bg-green-50 border-green-200 text-green-600' : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50'}`}
-                >
-                  {bioLinkCopied ? (
-                    <>
-                      <Check size={14} /> {t('linkCopied', locale)}
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={14} /> {t('copyLink', locale)}
-                    </>
-                  )}
-                </button>
-                <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-xl px-3 h-11 text-xs font-mono text-zinc-400">
-                  <LinkIcon size={10} className="text-zinc-300" /> app.se/@{bioHandle || 'creator'}
-                </div>
-                <button
-                  onClick={() => setShowPreview((v) => !v)}
-                  className={`h-11 px-4 rounded-xl border text-xs font-extrabold transition-colors flex items-center gap-2 ${showPreview ? 'border-indigo-200 bg-indigo-50 text-[var(--nc-coral)]' : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50'}`}
-                >
-                  {showPreview ? <EyeOff size={13} /> : <Eye size={13} />} {t('preview', locale)}
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile preview — sticks under the admin header while scrolling */}
-            <div className="lg:sticky lg:top-28 lg:self-start lg:z-20 h-fit">
-              {showPreview ? (
-                <div className="nc-glass rounded-[1.5rem] p-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
-                  <h3 className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Smartphone size={12} /> {t('livePreview', locale)}
-                  </h3>
-                  <MobilePreview
-                    blocks={blocks}
-                    handle={bioHandle}
-                    displayName={bioDisplayName}
-                    bioText={bioBioText}
-                    avatarUrl={bioAvatarUrl}
-                    socialLinks={socialLinks}
-                    theme={bioTheme}
-                  />
-                </div>
-              ) : (
-                <div className="bg-zinc-50 border border-dashed border-zinc-200 rounded-2xl p-10 text-center">
-                  <Eye size={24} className="text-zinc-300 mx-auto mb-2" />
-                  <p className="text-sm text-zinc-400 font-bold">{t('previewHidden', locale)}</p>
-                  <button
-                    onClick={() => setShowPreview(true)}
-                    className="mt-2 text-xs font-bold text-indigo-500 hover:underline"
-                  >
-                    {t('showPreview', locale)}
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -3454,9 +3208,11 @@ export default function AdminPage() {
         onOpenChange={setCreateWsOpen}
         createUrl="/api/admin/workspaces"
         onCreated={(ws) => {
+          refreshWorkspaces();
+          setActiveWorkspaceId(ws.id);
           queryClient.invalidateQueries({ queryKey: ['admin-workspaces'] });
-          const nextId = Number(ws.id);
-          if (!Number.isNaN(nextId)) setAdminCommunityId(nextId);
+          queryClient.invalidateQueries({ queryKey: ['admin-community'] });
+          queryClient.invalidateQueries({ queryKey: ['admin-email'] });
         }}
       />
 

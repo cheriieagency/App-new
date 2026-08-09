@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * Landing login portal — modal with Medlem vs Kreatör/Admin tabs.
+ * Landing login portal — modal with Member vs Creator/Admin tabs.
  * Auth contract mirrors /account/signin: <form onSubmit> + preventDefault +
  * authClient.signIn.email + window.location.href redirect.
  */
 
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Crown, Users } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
@@ -20,6 +20,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
+import {
+  clearRememberedAuth,
+  hasRememberedAuth,
+  loadRememberedAuth,
+  saveRememberedAuth,
+} from '@/lib/remember-auth';
 
 type Role = 'member' | 'creator';
 
@@ -29,14 +37,24 @@ type LoginModalProps = {
 };
 
 export function LoginModal({ open, onOpenChange }: LoginModalProps) {
+  const { locale } = useLanguage();
   const [role, setRole] = useState<Role>('member');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Creator lands in admin; members return to home / member dashboard entry.
   const callbackUrl = role === 'creator' ? '/admin' : '/dashboard';
+
+  useEffect(() => {
+    if (!open) return;
+    const saved = loadRememberedAuth();
+    if (!saved) return;
+    setEmail(saved.email);
+    setPassword(saved.password);
+    setRemember(true);
+  }, [open]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -50,16 +68,22 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
       });
 
       if (signInError) {
-        setError(formatAuthError(signInError, 'Inloggningen misslyckades'));
+        setError(formatAuthError(signInError, t('signInFailed', locale)));
         setLoading(false);
         return;
+      }
+
+      if (remember) {
+        saveRememberedAuth(email, password);
+      } else if (hasRememberedAuth()) {
+        clearRememberedAuth();
       }
 
       if (typeof window !== 'undefined') {
         window.location.href = callbackUrl;
       }
     } catch (err) {
-      setError(formatAuthError(err, 'Inloggningen misslyckades'));
+      setError(formatAuthError(err, t('signInFailed', locale)));
       setLoading(false);
     }
   };
@@ -73,11 +97,11 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
               <span className="text-white font-display font-extrabold text-xs">N</span>
             </div>
             <DialogTitle className="text-base font-black text-zinc-900">
-              Logga in
+              {t('loginPortalTitle', locale)}
             </DialogTitle>
           </div>
           <DialogDescription className="text-sm text-zinc-500 font-medium">
-            Välj hur du vill logga in på Nordic Creator.
+            {t('loginPortalSub', locale)}
           </DialogDescription>
         </DialogHeader>
 
@@ -96,22 +120,22 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                 className="flex-1 min-h-11 gap-2 rounded-xl text-xs font-black data-[state=active]:bg-[var(--nc-coral)] data-[state=active]:text-white"
               >
                 <Users size={14} />
-                Logga in som Medlem
+                {t('loginAsMember', locale)}
               </TabsTrigger>
               <TabsTrigger
                 value="creator"
                 className="flex-1 min-h-11 gap-2 rounded-xl text-xs font-black data-[state=active]:bg-[var(--nc-coral)] data-[state=active]:text-white"
               >
                 <Crown size={14} />
-                Kreatör / Admin
+                {t('loginAsCreatorAdmin', locale)}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="member" className="mt-0">
-              <RoleBadge role="member" />
+              <RoleBadge role="member" label={t('dashboard', locale)} />
             </TabsContent>
             <TabsContent value="creator" className="mt-0">
-              <RoleBadge role="creator" />
+              <RoleBadge role="creator" label={t('creatorAdmin', locale)} />
             </TabsContent>
           </Tabs>
 
@@ -122,19 +146,19 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
             className="mt-4 flex flex-col gap-3.5"
           >
             <label className="flex flex-col gap-1.5 text-xs font-black text-zinc-500 uppercase tracking-wider">
-              E-postadress
+              {t('emailAddress', locale)}
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="namn@example.com"
+                placeholder="name@example.com"
                 className="min-h-11 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all placeholder:text-zinc-300"
               />
             </label>
 
             <label className="flex flex-col gap-1.5 text-xs font-black text-zinc-500 uppercase tracking-wider">
-              Lösenord
+              {t('password', locale)}
               <input
                 type="password"
                 required
@@ -143,6 +167,16 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                 placeholder="••••••••"
                 className="min-h-11 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all placeholder:text-zinc-300"
               />
+            </label>
+
+            <label className="inline-flex items-center gap-2 min-h-11 text-sm font-bold text-zinc-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="rounded border-zinc-300"
+              />
+              {t('rememberMe', locale)}
             </label>
 
             {error && (
@@ -156,23 +190,19 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
               disabled={loading}
               className="min-h-12 rounded-xl text-sm font-black text-white bg-[var(--nc-coral)] hover:opacity-90 transition-all active:scale-95 disabled:opacity-60"
             >
-              {loading
-                ? 'Loggar in…'
-                : role === 'creator'
-                  ? 'Logga in som Kreatör →'
-                  : 'Logga in →'}
+              {loading ? t('signingIn', locale) : t('signIn', locale)}
             </button>
 
             <SocialSignInButtons callbackUrl={callbackUrl} />
 
             <p className="text-center text-sm text-zinc-400">
-              Inget konto?{' '}
+              {t('noAccount', locale)}{' '}
               <Link
                 href={`/account/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`}
                 className="font-black text-zinc-900 hover:underline transition-colors"
                 onClick={() => onOpenChange(false)}
               >
-                Skapa konto
+                {t('signUp', locale)}
               </Link>
             </p>
           </form>
@@ -182,17 +212,10 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
   );
 }
 
-function RoleBadge({ role }: { role: Role }) {
-  if (role === 'creator') {
-    return (
-      <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-xs font-bold text-zinc-700">
-        <Crown size={13} /> Loggar in till Creator Admin Center
-      </div>
-    );
-  }
+function RoleBadge({ role, label }: { role: Role; label: string }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-xs font-bold text-zinc-700">
-      <Users size={13} /> Loggar in till Member Dashboard
+      {role === 'creator' ? <Crown size={13} /> : <Users size={13} />} {label}
     </div>
   );
 }

@@ -38,6 +38,7 @@ import type {
   EmailSubscriber,
 } from '@/lib/mock-email-crm';
 import { AUDIENCE_OPTIONS, getBroadcastAnalytics } from '@/lib/mock-email-crm';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 type EmailResponse = {
   total_subscribers: number;
@@ -106,13 +107,13 @@ function EmailPreview({
       <div className="px-3 py-2 border-b border-zinc-200 bg-white flex items-center gap-2">
         <Eye size={12} className="text-zinc-400" />
         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-          Förhandsvisning
+          Preview
         </p>
       </div>
       <div className="p-4 bg-white m-2 rounded-xl shadow-sm">
-        <p className="text-[10px] font-bold text-zinc-400 mb-1">Ämne</p>
+        <p className="text-[10px] font-bold text-zinc-400 mb-1">Subject</p>
         <p className="text-sm font-black text-[#2c3340] mb-3">
-          {subject.trim() || '(Ingen ämnesrad)'}
+          {subject.trim() || '(No subject)'}
         </p>
         <div className="h-px bg-zinc-100 mb-3" />
         {imagePlacement === 'top' && ImageBlock}
@@ -134,6 +135,8 @@ function EmailPreview({
 export default function EmailAdminPanel() {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useWorkspace();
+  const workspaceCommunityId = activeWorkspace.community.community_id;
   const [tag, setTag] = useState('all');
   const [q, setQ] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
@@ -142,7 +145,7 @@ export default function EmailAdminPanel() {
   );
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState(
-    'Hej {first_name}!\n\nVi har något nytt till dig i communityn.\n\nHälsningar'
+    'Hi {first_name}!\n\nWe have something new for you in the community.\n\nBest'
   );
   const [audience, setAudience] = useState('all');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -153,12 +156,14 @@ export default function EmailAdminPanel() {
   const [upload, { loading: uploading }] = useUpload();
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // Subscribers filtered to the active brand / team-yta storefront & webinars.
   const { data, isLoading } = useQuery<EmailResponse>({
-    queryKey: ['admin-email', tag, q],
+    queryKey: ['admin-email', tag, q, workspaceCommunityId],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (tag && tag !== 'all') params.set('tag', tag);
       if (q.trim()) params.set('q', q.trim());
+      params.set('community_id', String(workspaceCommunityId));
       const r = await fetch(`/api/admin/email?${params.toString()}`);
       if (!r.ok) throw new Error('Failed');
       return r.json();
@@ -167,7 +172,7 @@ export default function EmailAdminPanel() {
 
   const handleImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      setFlash('Endast bildfiler stöds');
+      setFlash('Only image files are supported');
       setTimeout(() => setFlash(''), 2000);
       return;
     }
@@ -258,25 +263,25 @@ export default function EmailAdminPanel() {
   const stats = useMemo(
     () => [
       {
-        label: 'Total Subscribers',
-        value: data?.total_subscribers ?? 0,
+        label: t('totalSubscribers', locale),
+        value: data?.total_subscribers ?? activeWorkspace.email.total_subscribers,
         icon: Users,
         color: '#3B82F6',
       },
       {
-        label: 'Average Open Rate',
-        value: `${data?.average_open_rate ?? 0}%`,
+        label: t('averageOpenRate', locale),
+        value: `${data?.average_open_rate ?? activeWorkspace.email.average_open_rate}%`,
         icon: Percent,
         color: '#10B981',
       },
       {
-        label: 'Broadcasts Sent',
-        value: data?.total_broadcasts ?? 0,
+        label: t('broadcastsSent', locale),
+        value: data?.total_broadcasts ?? activeWorkspace.email.broadcasts_sent,
         icon: Send,
         color: '#9b8afb',
       },
     ],
-    [data]
+    [data, activeWorkspace.email, locale]
   );
 
   if (isLoading) {
@@ -293,10 +298,10 @@ export default function EmailAdminPanel() {
         <div>
           <h2 className="text-xl font-black text-[#2c3340] flex items-center gap-2">
             <Mail size={18} className="text-[var(--nc-coral)]" />
-            E-post & CRM
+            {t('emailCrmTitle', locale)}
           </h2>
           <p className="text-sm text-zinc-500 mt-1">
-            Automatisk lista från community-medlemmar, köp och webinarer.
+            {activeWorkspace.name} ({activeWorkspace.handle}) — {t('workspaceScopedData', locale)}
           </p>
         </div>
         <button
@@ -304,7 +309,7 @@ export default function EmailAdminPanel() {
           onClick={() => setComposerOpen(true)}
           className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-5 rounded-xl bg-[var(--nc-coral)] text-white text-sm font-black hover:opacity-90"
         >
-          <Plus size={14} /> Skapa E-postutskick
+          <Plus size={14} /> {t('createEmailBroadcast', locale).replace(/^\+\s*/, '')}
         </button>
       </div>
 
@@ -335,9 +340,11 @@ export default function EmailAdminPanel() {
       <div className="nc-glass rounded-[1.5rem] overflow-hidden">
         <div className="px-4 sm:px-5 py-4 border-b border-zinc-50 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-sm font-black text-[#2c3340]">Subscriber Directory</h3>
+            <h3 className="text-sm font-black text-[#2c3340]">
+              {t('subscriberDirectory', locale)}
+            </h3>
             <p className="text-xs text-zinc-400 mt-0.5">
-              {subscribers.length} kontakter
+              {subscribers.length} {t('members', locale).toLowerCase()}
               {data?.demo ? ' · Demo' : ''}
             </p>
           </div>
@@ -350,7 +357,7 @@ export default function EmailAdminPanel() {
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Sök namn eller e-post..."
+                placeholder={t('searchNameOrEmail', locale)}
                 className="pl-9 h-11 min-h-[44px] rounded-xl bg-zinc-50 border-zinc-100 text-sm w-full sm:w-56"
               />
             </div>
@@ -366,7 +373,7 @@ export default function EmailAdminPanel() {
               >
                 {tags.map((tg) => (
                   <option key={tg} value={tg === 'all' ? 'all' : tg}>
-                    {tg === 'all' ? 'Alla taggar' : tg}
+                    {tg === 'all' ? t('allTags', locale) : tg}
                   </option>
                 ))}
               </select>
@@ -376,7 +383,7 @@ export default function EmailAdminPanel() {
               onClick={exportCsv}
               className="h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] text-white font-bold text-xs gap-1.5"
             >
-              <Download size={12} /> Exportera CSV
+              <Download size={12} /> {t('exportCsv', locale)}
             </Button>
           </div>
         </div>
@@ -385,17 +392,17 @@ export default function EmailAdminPanel() {
           <table className="w-full text-left min-w-[640px]">
             <thead>
               <tr className="border-b border-zinc-50 text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                <th className="px-5 py-3 font-black">Medlem</th>
-                <th className="px-3 py-3 font-black">E-post</th>
-                <th className="px-3 py-3 font-black">Källa</th>
-                <th className="px-5 py-3 font-black text-right">Prenumererat</th>
+                <th className="px-5 py-3 font-black">{t('memberCol', locale)}</th>
+                <th className="px-3 py-3 font-black">{t('email', locale)}</th>
+                <th className="px-3 py-3 font-black">{t('sourceCol', locale)}</th>
+                <th className="px-5 py-3 font-black text-right">{t('subscribedDate', locale)}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
               {subscribers.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-5 py-12 text-center text-sm text-zinc-400">
-                    Inga prenumeranter matchar filtret
+                    No subscribers match this filter
                   </td>
                 </tr>
               ) : (
@@ -439,12 +446,12 @@ export default function EmailAdminPanel() {
         <div className="px-5 py-4 border-b border-zinc-50">
           <h3 className="text-sm font-black text-[#2c3340]">Skickade utskick</h3>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Historik med öppnings- och klickstatistik — klicka för mer data
+            History with open & click stats — click for details
           </p>
         </div>
         <div className="divide-y divide-zinc-50">
           {broadcasts.filter((b) => b.status === 'sent').length === 0 ? (
-            <div className="py-10 text-center text-sm text-zinc-400">Inga utskick ännu</div>
+            <div className="py-10 text-center text-sm text-zinc-400">No broadcasts yet</div>
           ) : (
             broadcasts
               .filter((b) => b.status === 'sent')
@@ -517,7 +524,7 @@ export default function EmailAdminPanel() {
               <div className="grid grid-cols-2 gap-2">
                 {[
                   {
-                    label: 'Öppningsfrekvens',
+                    label: 'Open rate',
                     value: `${analytics.open_rate}%`,
                     sub: `${analytics.unique_opens} unika`,
                     icon: Eye,
@@ -531,7 +538,7 @@ export default function EmailAdminPanel() {
                   {
                     label: 'Click-to-open',
                     value: `${analytics.ctor}%`,
-                    sub: 'Av öppnade',
+                    sub: 'Of opened',
                     icon: Percent,
                   },
                   {
@@ -572,7 +579,7 @@ export default function EmailAdminPanel() {
                         tone: 'bg-emerald-500',
                       },
                       {
-                        label: 'Öppningar (totalt)',
+                        label: 'Opens (total)',
                         value: analytics.opens,
                         tone: 'bg-sky-500',
                       },
@@ -627,7 +634,7 @@ export default function EmailAdminPanel() {
               {/* Opens over time */}
               <div className="rounded-2xl border border-zinc-100 p-4">
                 <h4 className="text-xs font-black text-[#2c3340] mb-3">
-                  Öppningar efter utskick
+                  Opens after send
                 </h4>
                 <div className="flex items-end gap-1 h-28">
                   {analytics.opens_by_hour.map((h) => (
@@ -635,7 +642,7 @@ export default function EmailAdminPanel() {
                       <div
                         className="w-full rounded-t-md bg-[var(--nc-coral)]/80 min-h-[4px]"
                         style={{ height: `${(h.opens / maxHourOpens) * 100}%` }}
-                        title={`${h.opens} öppningar`}
+                        title={`${h.opens} opens`}
                       />
                       <span className="text-[8px] font-bold text-zinc-400">{h.label}</span>
                     </div>
@@ -669,7 +676,7 @@ export default function EmailAdminPanel() {
               {/* Top links */}
               <div className="rounded-2xl border border-zinc-100 p-4">
                 <h4 className="text-xs font-black text-[#2c3340] mb-3 flex items-center gap-1.5">
-                  <Link2 size={13} className="text-zinc-400" /> Mest klickade länkar
+                  <Link2 size={13} className="text-zinc-400" /> Top clicked links
                 </h4>
                 <ul className="space-y-2">
                   {analytics.top_links.map((link) => (
@@ -705,9 +712,11 @@ export default function EmailAdminPanel() {
           <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
               <div>
-                <h3 className="text-sm font-black text-[#2c3340]">Skapa E-postutskick</h3>
+                <h3 className="text-sm font-black text-[#2c3340]">
+                  {t('createEmailBroadcast', locale).replace(/^\+\s*/, '')}
+                </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Använd {'{first_name}'} för personligt tilltal
+                  {'{first_name}'} merge tag
                 </p>
               </div>
               <button
@@ -722,18 +731,18 @@ export default function EmailAdminPanel() {
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
               <div>
                 <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-                  Ämnesrad
+                  {t('subjectLine', locale)}
                 </label>
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="T.ex. Ny lektion ute i Classroom"
+                  placeholder="e.g. New lesson in Classroom"
                   className="h-11 rounded-xl"
                 />
               </div>
               <div>
                 <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-                  Mottagare
+                  {t('recipients', locale)}
                 </label>
                 <select
                   value={audience}
@@ -763,7 +772,7 @@ export default function EmailAdminPanel() {
                     ) : (
                       <ImageIcon size={12} />
                     )}
-                    Lägg till bild
+                    Add image
                   </button>
                 </div>
 
@@ -831,7 +840,7 @@ export default function EmailAdminPanel() {
                       >
                         {slotDragOver === slot && (
                           <p className="text-[10px] font-black text-[var(--nc-coral)]">
-                            Släpp bilden här
+                            Drop image here
                           </p>
                         )}
                       </div>
@@ -886,10 +895,10 @@ export default function EmailAdminPanel() {
                           />
                           <p className="px-3 py-2 text-[10px] font-bold text-[#6b5bb8]">
                             {slot === 'top'
-                              ? 'Bild överst i mejlet'
+                              ? 'Image at top of email'
                               : slot === 'middle'
-                                ? 'Bild mitt i mejlet (efter första stycket)'
-                                : 'Bild längst ner i mejlet'}
+                                ? 'Image mid-email (after first paragraph)'
+                                : 'Image at bottom of email'}
                           </p>
                         </div>
                       )}
@@ -919,7 +928,7 @@ export default function EmailAdminPanel() {
                         <Upload size={18} />
                       )}
                       <span className="text-[11px] font-extrabold">
-                        Dra &amp; släpp bild, eller klicka för att välja
+                        Drag &amp; drop an image, or click to choose
                       </span>
                     </button>
                   )}
@@ -953,7 +962,7 @@ export default function EmailAdminPanel() {
                 ) : (
                   <Mail size={14} />
                 )}
-                Skicka provmejl
+                {t('sendTestEmail', locale)}
               </button>
               <button
                 type="button"
@@ -966,7 +975,7 @@ export default function EmailAdminPanel() {
                 ) : (
                   <Send size={14} />
                 )}
-                Skicka utskick nu
+                {t('sendBroadcastNow', locale)}
               </button>
             </div>
           </div>

@@ -48,6 +48,8 @@ import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
 import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
 import useUpload from '@/utils/useUpload';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 import {
   CommunitySearchAutocomplete,
   type SearchableCommunity,
@@ -522,6 +524,7 @@ export default function DashboardPage() {
   const { data: session, isPending: isAuthPending } = authClient.useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { locale } = useLanguage();
 
   const [sidebarView, setSidebarView] = useState<SidebarView>('home');
   const [selectedCommunity, setSelectedCommunity] = useState<any>(null);
@@ -1025,36 +1028,34 @@ export default function DashboardPage() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
       <div className="mb-8">
         <h1 className="text-2xl font-black text-[#2c3340]">
-          Hej, {session.user.name.split(' ')[0]}! 👋
+          {t('hi', locale)}, {session.user.name.split(' ')[0]}! 👋
         </h1>
-        <p className="text-zinc-500 text-sm mt-1">
-          Välkommen tillbaka till Nordic Creator-plattformen.
-        </p>
+        <p className="text-zinc-500 text-sm mt-1">{t('dashboardSub', locale)}</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
           {
-            label: 'Gick med',
+            label: t('joined', locale),
             value: joinedCommunities.length,
             sub: 'communities',
             color: '#3B82F6',
           },
           {
-            label: 'Inlägg',
+            label: t('posts', locale),
             value: (feed as any[])?.length ?? 0,
-            sub: 'i feeden',
+            sub: t('inFeed', locale),
             color: '#10B981',
           },
           {
-            label: 'Events',
+            label: t('eventsAndWebinars', locale).split(' ')[0] || 'Events',
             value: (events as any[])?.length ?? 0,
-            sub: 'kommande',
+            sub: t('upcoming', locale),
             color: '#8B5CF6',
           },
           {
-            label: 'Kurser',
+            label: t('courses', locale),
             value: (classroom as any[])?.length ?? 0,
-            sub: 'tillgängliga',
+            sub: t('available', locale),
             color: '#F59E0B',
           },
         ].map((s) => (
@@ -1072,7 +1073,7 @@ export default function DashboardPage() {
       </div>
       <div className="mb-8">
         <h2 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-4">
-          Mina Communities
+          {t('myCommunities', locale)}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {joinedCommunities.map((c: any) => (
@@ -1120,7 +1121,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-sm font-black text-zinc-500 group-hover:text-zinc-700">
-                Hitta fler communities
+                {t('findMore', locale)}
               </p>
               <p className="text-xs text-zinc-400">Utforska plattformen</p>
             </div>
@@ -1129,7 +1130,7 @@ export default function DashboardPage() {
       </div>
       <div>
         <h2 className="text-sm font-black text-zinc-400 uppercase tracking-widest mb-4">
-          Senaste från dina communities
+          {t('latestFromCommunities', locale)}
         </h2>
         {isFeedLoading ? (
           <div className="text-center py-12 text-zinc-400 text-sm">Laddar feed...</div>
@@ -1233,7 +1234,7 @@ export default function DashboardPage() {
                       }}
                       className="ml-auto flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-[var(--nc-coral)] transition-colors min-h-[44px]"
                     >
-                      Öppna community <ChevronRight size={12} />
+                      {t('openCommunity', locale)} <ChevronRight size={12} />
                     </button>
                   </div>
                   {isExpanded && <CommentsSection postId={post.id} session={session} />}
@@ -1249,8 +1250,8 @@ export default function DashboardPage() {
   // ── Search View ──────────────────────────────────────────────────────────
   const renderSearch = () => (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
-      <h1 className="text-2xl font-black text-[#2c3340] mb-2">Sök Communities</h1>
-      <p className="text-zinc-500 text-sm mb-6">Hitta communities som matchar dina intressen</p>
+      <h1 className="text-2xl font-black text-[#2c3340] mb-2">{t('searchCommunities', locale)}</h1>
+      <p className="text-zinc-500 text-sm mb-6">{t('searchCommSub', locale)}</p>
       <div className="relative z-20 mb-6 max-w-xl">
         <CommunitySearchAutocomplete
           value={communitySearch}
@@ -1258,12 +1259,12 @@ export default function DashboardPage() {
           communities={communities}
           onSelectCommunity={handleSelectCommunitySearch}
           isLoading={isCommunitiesLoading && !apiCommunities}
-          placeholder="Sök communities, ämnen, kreatörer..."
+          placeholder={t('searchPlaceholder', locale)}
         />
       </div>
       <div className="flex items-center justify-between mb-4">
         <span className="text-xs font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">
-          {filteredCommunities.length} st
+          {filteredCommunities.length}
         </span>
         {communitySearch && (
           <button
@@ -1271,7 +1272,7 @@ export default function DashboardPage() {
             onClick={() => setCommunitySearch('')}
             className="text-xs font-bold text-zinc-600 hover:text-[#2c3340] transition-colors min-h-11 px-2"
           >
-            Rensa filter
+            {t('clearFilter', locale)}
           </button>
         )}
       </div>
@@ -1337,14 +1338,14 @@ export default function DashboardPage() {
       {filteredCommunities.length === 0 && (
         <div className="text-center py-16">
           <p className="text-zinc-500 font-bold">
-            Inga communities hittades för &quot;{communitySearch}&quot;
+            {t('noResults', locale)} &quot;{communitySearch}&quot;
           </p>
           <button
             type="button"
             onClick={() => setCommunitySearch('')}
             className="mt-3 text-sm text-[#2c3340] font-bold hover:underline min-h-11"
           >
-            Visa alla communities
+            {t('showAll', locale)}
           </button>
         </div>
       )}
@@ -1354,7 +1355,7 @@ export default function DashboardPage() {
   // ── Profile View ─────────────────────────────────────────────────────────
   const renderProfile = () => (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
-      <h1 className="text-2xl font-black text-[#2c3340] mb-6">Profil & Inställningar</h1>
+      <h1 className="text-2xl font-black text-[#2c3340] mb-6">{t('profileAndSettings', locale)}</h1>
       <div className="nc-glass rounded-[1.5rem] p-6 mb-4">
         <div className="flex items-center gap-4 mb-6">
           <LevelAvatar name={session.user.name} image={session.user.image} points={0} size={56} />
@@ -1364,7 +1365,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-1 mt-1">
               <Medal size={12} style={{ color: LEVELS[0].color }} />
               <span className="text-xs font-black" style={{ color: LEVELS[0].color }}>
-                Nivå 1 · Brons
+                {t('levelBronze', locale)}
               </span>
             </div>
           </div>
@@ -1389,7 +1390,7 @@ export default function DashboardPage() {
           }
           className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-zinc-200 text-zinc-600 text-sm font-bold hover:bg-zinc-50 transition-colors"
         >
-          <LogOut size={14} /> Logga ut
+          <LogOut size={14} /> {t('signOut', locale)}
         </button>
       </div>
       {referral && (
@@ -1472,7 +1473,7 @@ export default function DashboardPage() {
                       if (next) setSelectedCommunity(next);
                     }}
                     className="appearance-none h-11 min-h-[44px] max-w-[130px] sm:max-w-[220px] pl-1.5 pr-6 bg-transparent text-sm font-black text-[#2c3340] truncate focus:outline-none cursor-pointer"
-                    aria-label="Välj community"
+                    aria-label={t('chooseCommunity', locale)}
                   >
                     {(joinedForSelect.length ? joinedForSelect : [comm].filter(Boolean)).map(
                       (c: any) => (
@@ -1499,7 +1500,7 @@ export default function DashboardPage() {
                   <input
                     value={communitySearch}
                     onChange={(e) => setCommunitySearch(e.target.value)}
-                    placeholder="Sök i communityn..."
+                    placeholder={t('searchCommPlaceholder', locale)}
                     className="w-full h-11 min-h-[44px] rounded-full bg-zinc-100 border border-transparent focus:border-zinc-200 focus:bg-white pl-10 pr-4 text-sm font-medium text-[#2c3340] placeholder:text-zinc-400 focus:outline-none"
                   />
                 </div>
@@ -1593,7 +1594,7 @@ export default function DashboardPage() {
                             />
                             <div className="flex-1 space-y-3">
                               <Textarea
-                                placeholder="Dela något med communityn... 🇸🇪"
+                                placeholder={t('communityPlaceholder', locale)}
                                 className="min-h-[90px] bg-zinc-50 border-zinc-100 resize-none rounded-xl text-sm focus:border-blue-200 focus:ring-blue-100"
                                 value={newPost}
                                 onChange={(e) => setNewPost(e.target.value)}
@@ -1881,7 +1882,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="text-sm font-black text-[#2c3340]">{session.user.name}</p>
                         <p className="text-xs font-black" style={{ color: LEVELS[0].color }}>
-                          Nivå 1 · Brons
+                          {t('levelBronze', locale)}
                         </p>
                       </div>
                     </div>
@@ -2010,14 +2011,14 @@ export default function DashboardPage() {
                                 onClick={() => rsvpMutation.mutate(event.id)}
                                 className={`flex-1 h-10 rounded-xl text-xs font-black transition-all active:scale-95 ${hasRsvpd ? 'bg-green-100 text-green-700' : 'bg-[var(--nc-coral)] text-white shadow-sm'}`}
                               >
-                                {hasRsvpd ? '✓ OSA Bekräftad' : 'OSA / Attending'}
+                                {hasRsvpd ? `✓ ${t('rsvpConfirmed', locale)}` : t('rsvp', locale)}
                               </button>
                               {isLive && (
                                 <button
                                   onClick={() => setLiveEvent(event)}
                                   className="flex-1 h-10 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black flex items-center justify-center gap-1.5 transition-all"
                                 >
-                                  <Radio size={12} /> Gå med Live
+                                  <Radio size={12} /> {t('joinLive', locale)}
                                 </button>
                               )}
                             </div>
@@ -2177,7 +2178,7 @@ export default function DashboardPage() {
         </Link>
         <SidebarIcon
           icon={Home}
-          label="Dashboard"
+          label={t('dashboard', locale)}
           active={sidebarView === 'home'}
           onClick={() => {
             setSidebarView('home');
@@ -2186,13 +2187,13 @@ export default function DashboardPage() {
         />
         <SidebarIcon
           icon={Search}
-          label="Sök Communities"
+          label={t('searchCommunities', locale)}
           active={sidebarView === 'search'}
           onClick={() => setSidebarView('search')}
         />
         <SidebarIcon
           icon={User}
-          label="Profil & Inställningar"
+          label={t('profileAndSettings', locale)}
           active={sidebarView === 'profile'}
           onClick={() => setSidebarView('profile')}
         />
@@ -2200,7 +2201,7 @@ export default function DashboardPage() {
           <>
             <div className="w-8 h-px bg-[#e8ecf2] my-1" />
             <p className="text-[8px] font-extrabold text-[#94a0b0] uppercase tracking-widest mb-1">
-              Mina
+              {t('mineLabel', locale)}
             </p>
           </>
         )}
@@ -2233,7 +2234,7 @@ export default function DashboardPage() {
             );
           })}
           <button
-            title="Hitta fler"
+            title={t('findMore', locale)}
             onClick={() => setSidebarView('search')}
             className="w-10 h-10 rounded-2xl border-2 border-dashed border-[#d5dce8] flex items-center justify-center text-[#94a0b0] hover:text-[var(--nc-coral)] hover:border-[var(--nc-coral)] transition-all flex-shrink-0"
           >
@@ -2244,7 +2245,7 @@ export default function DashboardPage() {
           onClick={() =>
             authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } })
           }
-          title="Logga ut"
+          title={t('signOut', locale)}
           className="w-10 h-10 rounded-2xl text-[#94a0b0] hover:text-[#2c3340] hover:bg-white/70 flex items-center justify-center transition-colors mt-2"
         >
           <LogOut size={16} />
@@ -2265,15 +2266,15 @@ export default function DashboardPage() {
       <nav className="fixed bottom-3 left-3 right-3 lg:hidden z-20">
         <div className="nc-glass rounded-full flex items-center justify-around h-14 px-2">
           {[
-            { view: 'home' as SidebarView, icon: Home, label: 'Hem' },
-            { view: 'search' as SidebarView, icon: Search, label: 'Sök' },
+            { view: 'home' as SidebarView, icon: Home, label: t('home', locale) },
+            { view: 'search' as SidebarView, icon: Search, label: t('search', locale) },
             {
               view: 'community' as SidebarView,
               icon: Users,
-              label: 'Communities',
+              label: t('allCommunities', locale),
               action: () => setMobileCommunitiesOpen(!mobileCommunitiesOpen),
             },
-            { view: 'profile' as SidebarView, icon: User, label: 'Profil' },
+            { view: 'profile' as SidebarView, icon: User, label: t('profile', locale) },
           ].map(({ view, icon: Icon, label, action }) => (
             <button
               key={view}
@@ -2306,7 +2307,7 @@ export default function DashboardPage() {
           >
             <div className="w-10 h-1 bg-[#d5dce8] rounded-full mx-auto mb-4" />
             <p className="text-xs font-extrabold text-[#94a0b0] uppercase tracking-widest mb-3">
-              Mina Communities
+              {t('myCommunities', locale)}
             </p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {joinedCommunities.map((c: any) => (
@@ -2357,7 +2358,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center">
                   <Plus size={18} className="text-zinc-500" />
                 </div>
-                <p className="text-sm font-bold text-zinc-500">Hitta fler communities</p>
+                <p className="text-sm font-bold text-zinc-500">{t('findMore', locale)}</p>
               </button>
             </div>
           </div>

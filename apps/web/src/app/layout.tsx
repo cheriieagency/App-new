@@ -5,7 +5,8 @@ import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: 'Nordic Creator Community',
-  description: 'Allt-i-ett plattform för nordiska kreatörer – community, kurser och live events.',
+  description:
+    'All-in-one Nordic creator platform — community, link-in-bio, social planner, analytics, events and Swish payments.',
   icons: {
     icon: '/favicon.png',
   },
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="sv">
+    <html lang="en">
       <head>
         <link
           rel="stylesheet"

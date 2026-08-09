@@ -14,6 +14,15 @@ import {
   type ConnectedSocialAccount,
   type SocialPlatform,
 } from '@/lib/mock-content-planner';
+import { useLocale } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
+
+const CONNECT_KEYS: Record<SocialPlatform, TranslationKey> = {
+  instagram: 'connectInstagramBusiness',
+  tiktok: 'connectTikTokBusiness',
+  linkedin: 'connectLinkedIn',
+  youtube: 'connectYouTube',
+};
 
 const ICONS = {
   instagram: InstagramIcon,
@@ -25,6 +34,7 @@ const ICONS = {
 const ORDER: SocialPlatform[] = ['instagram', 'tiktok', 'linkedin', 'youtube'];
 
 export default function SocialAccountsPanel() {
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery<{ accounts: ConnectedSocialAccount[]; demo?: boolean }>({
@@ -70,10 +80,11 @@ export default function SocialAccountsPanel() {
   return (
     <div className="space-y-4">
       <div className="nc-glass rounded-[1.5rem] p-5 sm:p-6">
-        <h2 className="text-lg font-black text-[#2c3340] mb-1">Kopplade konton</h2>
+        <h2 className="text-lg font-black text-[#2c3340] mb-1">
+          {t('connectedAccounts', locale)}
+        </h2>
         <p className="text-sm text-zinc-500 font-medium mb-5">
-          Koppla dina sociala konton för schemaläggning och cross-posting. Demo-läge simulerar
-          OAuth.
+          {t('socialAccountsHint', locale)}
         </p>
         {data?.demo && (
           <span className="inline-flex text-[10px] font-black uppercase tracking-wide text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full mb-4">
@@ -117,10 +128,10 @@ export default function SocialAccountsPanel() {
                       >
                         {connected ? (
                           <>
-                            <CheckCircle2 size={10} /> Kopplad
+                            <CheckCircle2 size={10} /> {t('statusConnected', locale)}
                           </>
                         ) : (
-                          'Ej kopplad'
+                          t('statusNotConnected', locale)
                         )}
                       </span>
                     </div>
@@ -144,16 +155,15 @@ export default function SocialAccountsPanel() {
                           </p>
                           {platform === 'youtube' && acc.subscriber_count != null && (
                             <p className="text-[11px] font-extrabold text-red-600 mt-0.5">
-                              {acc.subscriber_count.toLocaleString('sv-SE')} prenumeranter
+                              {acc.subscriber_count.toLocaleString(locale === 'en' ? 'en-GB' : 'sv-SE')}{' '}
+                              {t('subscribersLabel', locale)}
                             </p>
                           )}
                         </div>
                       </div>
                     ) : (
                       <p className="text-xs text-zinc-400 font-medium mt-2">
-                        {platform === 'youtube'
-                          ? 'Koppla med Google OAuth för att publicera Shorts & videos.'
-                          : 'Ingen aktiv koppling ännu.'}
+                        {t('statusNotConnected', locale)}
                       </p>
                     )}
                   </div>
@@ -172,7 +182,7 @@ export default function SocialAccountsPanel() {
                     ) : (
                       <Link2Off size={14} />
                     )}
-                    Koppla från
+                    {t('disconnect', locale)}
                   </Button>
                 ) : (
                   <Button
@@ -181,18 +191,13 @@ export default function SocialAccountsPanel() {
                     onClick={() => toggle.mutate({ platform, connect: true })}
                     className="h-11 min-h-[44px] rounded-xl font-extrabold gap-2 text-white"
                     style={{ background: meta.color }}
-                    title={
-                      platform === 'youtube'
-                        ? 'Triggar Google OAuth (demo)'
-                        : undefined
-                    }
                   >
                     {pending ? (
                       <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
                     ) : (
                       <Unplug size={14} />
                     )}
-                    {meta.connectLabel}
+                    {t(CONNECT_KEYS[platform], locale)}
                   </Button>
                 )}
               </div>

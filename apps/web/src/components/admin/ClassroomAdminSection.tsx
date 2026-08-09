@@ -38,7 +38,7 @@ type ClassroomResponse = {
 const EMPTY_FORM = {
   title: '',
   description: '',
-  category: 'Marknadsföring',
+  category: 'Marketing',
   cover_image: '' as string,
   video_url: '',
   pdf_url: '' as string,
@@ -111,7 +111,7 @@ export default function ClassroomAdminSection({
             id: Number(res.id ?? Date.now()),
             title: String(variables.title ?? ''),
             description: (variables.description as string) || null,
-            category: String(variables.category || 'Allmänt'),
+            category: String(variables.category || 'General'),
             community_id: communityId ?? null,
             cover_image: (variables.cover_image as string) || null,
             video_url: (variables.video_url as string) || null,
@@ -536,7 +536,7 @@ export default function ClassroomAdminSection({
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <p className="text-sm font-black text-[#2c3340]">{course.title}</p>
                       <span className="text-[9px] font-black uppercase tracking-wide bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded-full">
-                        {course.category || 'Allmänt'}
+                        {course.category || 'General'}
                       </span>
                       <span
                         className={`text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full ${

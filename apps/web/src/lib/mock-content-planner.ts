@@ -164,6 +164,24 @@ let workspaceSeq = 10;
 
 const brandWorkspaces: BrandWorkspace[] = [
   {
+    id: '101',
+    name: 'Ebba Creator Lab',
+    handle: '@ebbacreator',
+    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-creator-lab',
+    color: '#0f766e',
+    channels: ['instagram', 'tiktok', 'linkedin', 'youtube'],
+    created_at: new Date(now - 90 * day).toISOString(),
+  },
+  {
+    id: '102',
+    name: 'Ebba Live Studio',
+    handle: '@ebbalive',
+    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-live-studio',
+    color: '#0369a1',
+    channels: ['instagram', 'linkedin', 'youtube'],
+    created_at: new Date(now - 60 * day).toISOString(),
+  },
+  {
     id: 'ws-nordic',
     name: 'Nordic Creator Launch',
     handle: '@nordiccreator',
@@ -256,7 +274,7 @@ const teamMembers: PlannerTeamMember[] = [
     name: 'Ebba',
     email: 'ebbabrobeck@test.se',
     role: 'owner',
-    project: 'Nordic Creator Launch',
+    project: 'Ebba Creator Lab',
     avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ebba',
     planner_access: true,
     status: 'active',
@@ -267,7 +285,7 @@ const teamMembers: PlannerTeamMember[] = [
     name: 'Alex',
     email: 'alex@nordiccreator.app',
     role: 'editor',
-    project: 'Nordic Creator Launch',
+    project: 'Ebba Creator Lab',
     avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
     planner_access: true,
     status: 'active',
@@ -289,7 +307,7 @@ const teamMembers: PlannerTeamMember[] = [
     name: 'Sara',
     email: 'sara@nordiccreator.app',
     role: 'approver',
-    project: 'Evergreen Content',
+    project: 'Ebba Live Studio',
     avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sara',
     planner_access: true,
     status: 'active',
@@ -417,35 +435,35 @@ export const WORKFLOW_COLUMNS: {
 }[] = [
   {
     key: 'IDEA',
-    label: 'Idéer',
+    label: 'Ideas',
     emoji: '💡',
     color: '#F59E0B',
     badge: 'bg-amber-50 text-amber-700',
   },
   {
     key: 'IN_PROGRESS',
-    label: 'I Produktion',
+    label: 'In Production',
     emoji: '📝',
     color: '#6366F1',
     badge: 'bg-indigo-50 text-indigo-700',
   },
   {
     key: 'READY',
-    label: 'Granskning',
+    label: 'Review',
     emoji: '👀',
     color: '#8B5CF6',
     badge: 'bg-violet-50 text-violet-700',
   },
   {
     key: 'SCHEDULED',
-    label: 'Schemalagda',
+    label: 'Scheduled',
     emoji: '📅',
     color: '#0EA5E9',
     badge: 'bg-sky-50 text-sky-700',
   },
   {
     key: 'PUBLISHED',
-    label: 'Publicerade',
+    label: 'Published',
     emoji: '🚀',
     color: '#10B981',
     badge: 'bg-emerald-50 text-emerald-700',
@@ -523,7 +541,7 @@ const posts: PlannerPost[] = [
       },
     ],
     idea_title: '3 misstag i e-handel',
-    project: 'Nordic Creator Launch',
+    project: 'Ebba Creator Lab',
     assignees: [PLANNER_TEAM[0], PLANNER_TEAM[1]],
     subtasks: [
       { id: 'st-1', title: 'Skriv hook', done: true },
@@ -576,7 +594,7 @@ const posts: PlannerPost[] = [
       },
     ],
     idea_title: 'Community som konverterar',
-    project: 'Nordic Creator Launch',
+    project: 'Ebba Creator Lab',
     assignees: [PLANNER_TEAM[2]],
     subtasks: [
       { id: 'st-5', title: 'Draft LinkedIn text', done: true },
@@ -692,7 +710,7 @@ const posts: PlannerPost[] = [
       category: 'Education',
       tags: ['contentcreator', 'productivity', 'shorts'],
     },
-    project: 'Evergreen Content',
+    project: 'Ebba Live Studio',
     assignees: [PLANNER_TEAM[3]],
     subtasks: [
       { id: 'st-14', title: 'Script', done: true },
@@ -1122,22 +1140,22 @@ export const PLATFORM_META: Record<
   instagram: {
     label: 'Instagram',
     color: '#E1306C',
-    connectLabel: 'Koppla Instagram Business',
+    connectLabel: 'Connect Instagram Business',
   },
   tiktok: {
     label: 'TikTok',
     color: '#010101',
-    connectLabel: 'Koppla TikTok Business',
+    connectLabel: 'Connect TikTok Business',
   },
   linkedin: {
     label: 'LinkedIn',
     color: '#0A66C2',
-    connectLabel: 'Koppla LinkedIn Profil / Sida',
+    connectLabel: 'Connect LinkedIn Profile / Page',
   },
   youtube: {
     label: 'YouTube',
     color: '#FF0000',
-    connectLabel: 'Koppla YouTube Channel',
+    connectLabel: 'Connect YouTube Channel',
   },
 };
 

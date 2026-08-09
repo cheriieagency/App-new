@@ -1,32 +1,36 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { Banknote, Layers, ShieldCheck, Smartphone } from 'lucide-react';
-
-const STEPS = [
-  {
-    icon: Layers,
-    title: 'Ett system istället för fem',
-    copy: 'Butik, community, kurser och events — samma login, samma varumärke.',
-  },
-  {
-    icon: Banknote,
-    title: 'Swish & Vipps inbyggt',
-    copy: 'Nordiska köpare betalar på sekunder. Du slipper Stripe-moms-krångel.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'BankID & svensk bokföring',
-    copy: 'Rätt moms, Fortnox-kvitton och trygg inloggning från dag ett.',
-  },
-  {
-    icon: Smartphone,
-    title: 'Ser ut som din butik',
-    copy: 'Link-in-bio-storefront som Stan — men byggd för nordiska kreatörer.',
-  },
-];
+import { X, Check } from 'lucide-react';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 export function ComparisonSection() {
+  const { locale } = useLanguage();
+
+  const rows = [
+    {
+      metric: t('metricMonthlyCost', locale),
+      old: '~$99–180 / mo',
+      neu: 'From $0 / mo',
+    },
+    {
+      metric: t('metricPaymentMethods', locale),
+      old: 'Stripe only',
+      neu: 'Swish · Vipps · Cards',
+    },
+    {
+      metric: t('metricNordicVat', locale),
+      old: 'Manual / messy',
+      neu: 'Auto Fortnox & VAT',
+    },
+    {
+      metric: t('metricSocialStack', locale),
+      old: 'Later + Linktree + Skool',
+      neu: t('metricSocialStackNew', locale),
+    },
+  ];
+
   return (
     <section className="relative py-20 sm:py-28 overflow-hidden">
       <div
@@ -40,44 +44,68 @@ export function ComparisonSection() {
             className="text-xs font-extrabold uppercase tracking-[0.16em] mb-3"
             style={{ color: 'var(--nc-coral)' }}
           >
-            Varför Nordic Creator
+            {t('whyChooseUs', locale)}
           </p>
           <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#2c3340] tracking-tight leading-tight">
-            Sluta betala för en app-hög. Börja sälja på ett ställe.
+            {t('whyChooseUsHeadline', locale)}
           </h2>
-          <p className="mt-4 text-[#5b6472] font-medium text-base sm:text-lg leading-relaxed">
-            Det gamla sättet: Stan + Skool + Zoom + Stripe. Det nya: en plattform med Swish,
-            community och kurser — utan splittrad ekonomi.
-          </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-4 sm:gap-5">
-          {STEPS.map((step, i) => {
-            const Icon = step.icon;
-            return (
-              <motion.div
-                key={step.title}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.4, delay: i * 0.05 }}
-                className="nc-glass rounded-[1.75rem] p-6 flex gap-4"
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-5 mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.4 }}
+            className="nc-glass rounded-[1.75rem] p-6 sm:p-7"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-8 h-8 rounded-xl bg-zinc-100 flex items-center justify-center">
+                <X size={14} className="text-zinc-500" />
+              </span>
+              <h3 className="font-display font-extrabold text-lg text-[#2c3340]">
+                {t('whyOldWay', locale)}
+              </h3>
+            </div>
+            <p className="text-sm font-bold text-[#5b6472] mb-5">{t('whyOldWayStack', locale)}</p>
+            <ul className="space-y-3">
+              {rows.map((row) => (
+                <li key={row.metric} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-semibold text-[#94a0b0]">{row.metric}</span>
+                  <span className="font-extrabold text-[#2c3340] text-right">{row.old}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.4, delay: 0.06 }}
+            className="nc-glass rounded-[1.75rem] p-6 sm:p-7 border border-[color-mix(in_srgb,var(--nc-coral)_25%,transparent)]"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span
+                className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ background: 'var(--nc-coral-soft)' }}
               >
-                <div
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--nc-coral-soft)' }}
-                >
-                  <Icon size={18} style={{ color: 'var(--nc-coral)' }} />
-                </div>
-                <div>
-                  <h3 className="font-display font-bold text-lg text-[#2c3340] mb-1.5">
-                    {step.title}
-                  </h3>
-                  <p className="text-[#5b6472] font-medium leading-relaxed">{step.copy}</p>
-                </div>
-              </motion.div>
-            );
-          })}
+                <Check size={14} style={{ color: 'var(--nc-coral)' }} />
+              </span>
+              <h3 className="font-display font-extrabold text-lg text-[#2c3340]">
+                {t('whyNewWay', locale)}
+              </h3>
+            </div>
+            <p className="text-sm font-bold text-[#5b6472] mb-5">{t('whyNewWayStack', locale)}</p>
+            <ul className="space-y-3">
+              {rows.map((row) => (
+                <li key={row.metric} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-semibold text-[#94a0b0]">{row.metric}</span>
+                  <span className="font-extrabold text-[#2c3340] text-right">{row.neu}</span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
         </div>
       </div>
     </section>

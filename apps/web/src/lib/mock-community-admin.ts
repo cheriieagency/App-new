@@ -6,6 +6,7 @@ import {
   applyPostPinOverride,
 } from '@/lib/demo-pin-state';
 import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner';
+import { createWorkspaceProfile } from '@/lib/mock-workspace-profiles';
 
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -151,6 +152,14 @@ export function createManagedCommunity(input: {
         : ['instagram', 'tiktok', 'linkedin'],
   };
   MOCK_MANAGED_COMMUNITIES.push(community);
+  // Keep global Admin workspace profiles in sync with new team-ytor.
+  createWorkspaceProfile({
+    id: String(community.id),
+    name: community.name,
+    handle: community.handle,
+    channels: community.channels,
+    color: community.cover_color,
+  });
   return { ...community, channels: [...community.channels] };
 }
 

@@ -10,12 +10,15 @@ import { LandingHeader } from '@/components/landing/LandingHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
+import { PlatformSuiteSection } from '@/components/landing/PlatformSuiteSection';
 import { RoiCalculator } from '@/components/landing/RoiCalculator';
 import { ShowcaseSection } from '@/components/landing/ShowcaseSection';
 import { FaqSection } from '@/components/landing/FaqSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import type { SearchableCommunity } from '@/components/landing/CommunitySearchAutocomplete';
 import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 function filterCommunities(list: SearchableCommunity[], query: string): SearchableCommunity[] {
   const q = query.trim().toLowerCase();
@@ -32,6 +35,7 @@ function filterCommunities(list: SearchableCommunity[], query: string): Searchab
 export default function PlatformHome() {
   const { data: session } = authClient.useSession();
   const router = useRouter();
+  const { locale } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
@@ -92,6 +96,7 @@ export default function PlatformHome() {
       <HeroSection />
       <ComparisonSection />
       <FeaturesSection />
+      <PlatformSuiteSection />
       <RoiCalculator />
       <PricingSection />
       <ShowcaseSection
@@ -125,10 +130,10 @@ export default function PlatformHome() {
         />
         <div className="relative max-w-2xl mx-auto px-4 sm:px-6 nc-glass rounded-[2rem] py-12 px-6 sm:px-10">
           <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#2c3340] mb-4 leading-tight tracking-tight">
-            Redo att samla allt på ett ställe?
+            {t('landingReadyHeadline', locale)}
           </h2>
           <p className="text-[#5b6472] mb-9 text-lg font-medium">
-            Swish, AI och nordisk bokföring — inbyggt från start.
+            {t('landingReadySub', locale)}
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link
@@ -139,7 +144,7 @@ export default function PlatformHome() {
                 boxShadow: '0 14px 32px -12px rgba(155,138,251,0.5)',
               }}
             >
-              Skapa gratis community <ArrowRight size={14} />
+              {t('landingCtaStartFree', locale)} <ArrowRight size={14} />
             </Link>
             <button
               type="button"
@@ -148,7 +153,7 @@ export default function PlatformHome() {
               }
               className="flex items-center gap-2 min-h-12 px-8 rounded-full bg-white/70 border border-white text-[#2c3340] font-bold text-sm hover:bg-white transition-all"
             >
-              Utforska communities
+              {t('landingCtaExplore', locale)}
             </button>
           </div>
         </div>
@@ -170,13 +175,13 @@ export default function PlatformHome() {
               href="/account/signin"
               className="hover:text-[#2c3340] transition-colors min-h-11 inline-flex items-center"
             >
-              Logga in
+              {t('signIn', locale)}
             </Link>
             <Link
               href="/account/signup"
               className="hover:text-[#2c3340] transition-colors min-h-11 inline-flex items-center"
             >
-              Skapa konto
+              {t('signUp', locale)}
             </Link>
           </div>
         </div>

@@ -15,20 +15,39 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { type FormEvent, Suspense, useState } from "react";
+import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { SocialSignInButtons } from "@/components/SocialSignInButtons";
 import { authClient } from "@/lib/auth-client";
 import { isDemoAuthUiEnabled } from "@/lib/auth-env";
 import { formatAuthError } from "@/lib/auth-error";
+import { useLanguage } from "@/lib/locale-context";
+import { t } from "@/lib/i18n";
+import {
+	clearRememberedAuth,
+	hasRememberedAuth,
+	loadRememberedAuth,
+	saveRememberedAuth,
+} from "@/lib/remember-auth";
 
 function SignUpForm() {
 	const searchParams = useSearchParams();
+	const { locale } = useLanguage();
 	const callbackUrl = searchParams.get("callbackUrl") || "/";
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [rememberMe, setRememberMe] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const demoMode = isDemoAuthUiEnabled();
+
+	// Prefill email/password when Remember Me was used previously.
+	useEffect(() => {
+		const saved = loadRememberedAuth();
+		if (!saved) return;
+		setEmail(saved.email);
+		setPassword(saved.password);
+		setRememberMe(true);
+	}, []);
 
 	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -52,6 +71,12 @@ function SignUpForm() {
 				return;
 			}
 
+			if (rememberMe) {
+				saveRememberedAuth(email, password);
+			} else if (hasRememberedAuth()) {
+				clearRememberedAuth();
+			}
+
 			if (typeof window !== "undefined") {
 				window.location.href = callbackUrl;
 			} else {
@@ -73,37 +98,48 @@ function SignUpForm() {
 				}}
 				className="nc-glass flex w-full max-w-[400px] flex-col gap-4 rounded-[1.5rem] p-7 relative z-10"
 			>
-				<h1 className="font-display text-2xl font-extrabold text-[#2c3340]">Create account</h1>
+				<h1 className="font-display text-2xl font-extrabold text-[#2c3340]">{t('createAccount', locale)}</h1>
 
 				{demoMode && (
 					<div className="rounded-[8px] border border-amber-300 bg-amber-50 p-[10px] text-[13px] text-amber-900">
-						<strong>Demo-läge:</strong> Supabase-miljövariabler saknas eller är
-						placeholders. Registrering körs mot in-memory auth för lokal test —
-						konton sparas inte permanent.
+						Demo mode: Supabase env missing/placeholder — signup uses in-memory auth for local testing.
 					</div>
 				)}
 
 				<label className="flex flex-col gap-[4px] text-[14px]">
-					Email
+					{t('emailAddress', locale)}
 					<input
 						type="email"
 						required
+						name="email"
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
+						autoComplete="email"
 						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff]"
 					/>
 				</label>
 
 				<label className="flex flex-col gap-[4px] text-[14px]">
-					Password
+					{t('password', locale)}
 					<input
 						type="password"
 						required
 						minLength={8}
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
+						autoComplete="new-password"
 						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff]"
 					/>
+				</label>
+
+				<label className="inline-flex items-center gap-2.5 min-h-[44px] text-sm font-bold text-zinc-600 cursor-pointer select-none">
+					<input
+						type="checkbox"
+						checked={rememberMe}
+						onChange={(e) => setRememberMe(e.target.checked)}
+						className="h-4 w-4 rounded border-zinc-300 text-[var(--nc-coral)] focus:ring-[var(--nc-coral)]"
+					/>
+					{t('rememberMe', locale)}
 				</label>
 
 				{error && (
@@ -117,7 +153,7 @@ function SignUpForm() {
 					disabled={loading}
 					className="rounded-full bg-[var(--nc-coral)] p-3 text-[16px] font-extrabold text-white disabled:opacity-50 hover:opacity-90 transition-all"
 				>
-					{loading ? "Creating account…" : "Sign Up"}
+					{loading ? t('loading', locale) : t('signUp', locale)}
 				</button>
 
 				<SocialSignInButtons callbackUrl={callbackUrl} />
@@ -126,7 +162,7 @@ function SignUpForm() {
 					href={`/account/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
 					className="text-center text-[14px] text-[var(--nc-coral)] hover:opacity-80"
 				>
-					Already have an account? Sign in
+					{t('alreadyHaveAccount', locale)} {t('signInHere', locale)}
 				</a>
 			</form>
 		</main>

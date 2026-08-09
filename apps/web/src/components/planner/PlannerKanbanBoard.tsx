@@ -9,6 +9,16 @@ import {
   type WorkflowStatus,
 } from '@/lib/mock-content-planner';
 import { PlatformIcon } from '@/components/planner/PlatformBadge';
+import { useLocale } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
+
+const WORKFLOW_LABEL_KEYS: Record<WorkflowStatus, TranslationKey> = {
+  IDEA: 'workflowIdeas',
+  IN_PROGRESS: 'workflowInProduction',
+  READY: 'workflowReview',
+  SCHEDULED: 'workflowScheduled',
+  PUBLISHED: 'workflowPublished',
+};
 
 function formatShortDate(iso: string | null) {
   if (!iso) return null;
@@ -118,6 +128,7 @@ export default function PlannerKanbanBoard({
   onOpen: (post: PlannerPost) => void;
   onMove: (id: string, workflow: WorkflowStatus) => void;
 }) {
+  const { locale } = useLocale();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<WorkflowStatus | null>(null);
 
@@ -126,6 +137,7 @@ export default function PlannerKanbanBoard({
       {WORKFLOW_COLUMNS.map((col) => {
         const columnPosts = posts.filter((p) => p.workflow === col.key);
         const isOver = overCol === col.key;
+        const colLabel = t(WORKFLOW_LABEL_KEYS[col.key], locale);
         return (
           <div
             key={col.key}
@@ -151,7 +163,7 @@ export default function PlannerKanbanBoard({
           >
             <div className="flex items-center gap-2 mb-3 px-0.5">
               <span className="text-base">{col.emoji}</span>
-              <h3 className="text-sm font-black text-[#2c3340] flex-1">{col.label}</h3>
+              <h3 className="text-sm font-black text-[#2c3340] flex-1">{colLabel}</h3>
               <span
                 className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${col.badge}`}
               >
@@ -172,7 +184,7 @@ export default function PlannerKanbanBoard({
               ))}
               {columnPosts.length === 0 && (
                 <p className="text-xs text-zinc-400 font-medium text-center py-8">
-                  Dra hit kort
+                  —
                 </p>
               )}
             </div>

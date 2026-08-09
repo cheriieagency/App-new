@@ -3,79 +3,84 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
+  BarChart3,
   Bot,
   CalendarDays,
+  Link2,
+  Mail,
   MessageSquare,
   Receipt,
-  ShoppingBag,
+  Tag,
 } from 'lucide-react';
+import { useLanguage } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
 
-const FEATURES = [
+const FEATURE_DEFS: {
+  id: string;
+  icon: typeof Link2;
+  titleKey: TranslationKey;
+  summaryKey: TranslationKey;
+}[] = [
   {
-    id: 'store',
-    icon: ShoppingBag,
-    title: 'Link-in-Bio Storefront',
-    summary: 'Swish-checkout, order bumps och 1-click upsells i en mobilbutik.',
-    details: [
-      'Swish-checkout under 10 sekunder',
-      'Order bumps i kassan',
-      '1-click upsells efter köp',
-      'Mobiloptimerad butiksyta',
-    ],
+    id: 'bio',
+    icon: Link2,
+    titleKey: 'featureStoreTitle',
+    summaryKey: 'featureStoreSummary',
+  },
+  {
+    id: 'planner',
+    icon: CalendarDays,
+    titleKey: 'featurePlannerTitle',
+    summaryKey: 'featurePlannerSummary',
+  },
+  {
+    id: 'analytics',
+    icon: BarChart3,
+    titleKey: 'featureAnalyticsTitle',
+    summaryKey: 'featureAnalyticsSummary',
+  },
+  {
+    id: 'tagging',
+    icon: Tag,
+    titleKey: 'featureTaggingTitle',
+    summaryKey: 'featureTaggingSummary',
   },
   {
     id: 'community',
     icon: MessageSquare,
-    title: 'Community & gamification',
-    summary: 'Feed, XP, nivåer och topplistor som håller medlemmar kvar.',
-    details: [
-      'Inlägg och diskussioner',
-      'XP, nivåer och badges',
-      'Topplistor',
-      'Medlemsroller',
-    ],
+    titleKey: 'featureCommunityTitle',
+    summaryKey: 'featureCommunitySummary',
   },
   {
     id: 'events',
     icon: CalendarDays,
-    title: 'Live & events',
-    summary: 'Schemalägg, OSA, nedräkning och realtidschatt i samma app.',
-    details: [
-      'OSA och liveschema',
-      'Nedräkning till start',
-      'Kalendersynk',
-      'Chatt under live',
-    ],
+    titleKey: 'featureEventsTitle',
+    summaryKey: 'featureEventsSummary',
+  },
+  {
+    id: 'email',
+    icon: Mail,
+    titleKey: 'featureEmailTitle',
+    summaryKey: 'featureEmailSummary',
   },
   {
     id: 'ai',
     icon: Bot,
-    title: 'AI Copilot Suite',
-    summary: 'Creator AI, Member AI och Business Manager — inbyggda.',
-    details: [
-      'Kursinnehåll med Creator AI',
-      'Elevstöd med Member AI',
-      'Tillväxttips från Business Manager',
-      'Alltid i appen',
-    ],
+    titleKey: 'featureAiTitle',
+    summaryKey: 'featureAiSummary',
   },
   {
     id: 'finance',
     icon: Receipt,
-    title: 'Nordisk ekonomi',
-    summary: 'Rätt moms, Fortnox-kvitton och BankID från start.',
-    details: [
-      'Moms 6% / 25%',
-      'Fortnox-kvitton',
-      'BankID-inloggning',
-      'Byggt för Norden',
-    ],
+    titleKey: 'featureFinanceTitle',
+    summaryKey: 'featureFinanceSummary',
   },
 ];
 
 export function FeaturesSection() {
-  const [activeId, setActiveId] = useState(FEATURES[0].id);
-  const active = FEATURES.find((f) => f.id === activeId) ?? FEATURES[0];
+  const { locale } = useLanguage();
+  const [activeId, setActiveId] = useState(FEATURE_DEFS[0].id);
+  const active = FEATURE_DEFS.find((f) => f.id === activeId) ?? FEATURE_DEFS[0];
   const ActiveIcon = active.icon;
 
   return (
@@ -95,19 +100,19 @@ export function FeaturesSection() {
             className="text-xs font-extrabold uppercase tracking-[0.16em] mb-3"
             style={{ color: 'var(--nc-coral)' }}
           >
-            Plattformen
+            {t('featuresEyebrow', locale)}
           </p>
           <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#2c3340] tracking-tight">
-            Vad appen erbjuder
+            {t('featuresHeadline', locale)}
           </h2>
           <p className="mt-4 text-[#5b6472] font-medium text-base sm:text-lg leading-relaxed">
-            En yta för att sälja, engagera och undervisa — inte fem flikar med olika logotyper.
+            {t('featuresSub', locale)}
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-6 lg:gap-8 items-start">
-          <div className="nc-glass rounded-[1.75rem] p-2 space-y-1">
-            {FEATURES.map((feature) => {
+        <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-6 lg:gap-8 items-start">
+          <div className="nc-glass rounded-[1.75rem] p-2 space-y-1 max-h-[28rem] overflow-y-auto">
+            {FEATURE_DEFS.map((feature) => {
               const Icon = feature.icon;
               const isActive = feature.id === activeId;
               return (
@@ -134,10 +139,10 @@ export function FeaturesSection() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-display font-bold text-sm sm:text-base text-[#2c3340]">
-                      {feature.title}
+                      {t(feature.titleKey, locale)}
                     </p>
-                    <p className="text-sm font-medium mt-0.5 leading-snug text-[#5b6472]">
-                      {feature.summary}
+                    <p className="text-sm font-medium mt-0.5 leading-snug text-[#5b6472] line-clamp-2">
+                      {t(feature.summaryKey, locale)}
                     </p>
                   </div>
                 </button>
@@ -152,7 +157,7 @@ export function FeaturesSection() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.25 }}
-              className="nc-glass rounded-[1.75rem] p-7 sm:p-9 relative overflow-hidden"
+              className="nc-glass rounded-[1.75rem] p-7 sm:p-9 relative overflow-hidden lg:sticky lg:top-24"
             >
               <div
                 className="nc-blob w-48 h-48 -top-10 -right-10 opacity-80"
@@ -167,24 +172,12 @@ export function FeaturesSection() {
                     <ActiveIcon size={22} style={{ color: 'var(--nc-coral)' }} />
                   </div>
                   <h3 className="font-display font-extrabold text-xl text-[#2c3340]">
-                    {active.title}
+                    {t(active.titleKey, locale)}
                   </h3>
                 </div>
-                <p className="text-[#5b6472] font-medium mb-6 leading-relaxed">{active.summary}</p>
-                <ul className="space-y-3">
-                  {active.details.map((detail) => (
-                    <li
-                      key={detail}
-                      className="flex items-center gap-3 text-sm font-semibold text-[#2c3340] rounded-2xl bg-white/60 px-3.5 py-2.5"
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ background: 'var(--nc-coral)' }}
-                      />
-                      {detail}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-[#5b6472] font-medium mb-2 leading-relaxed text-base">
+                  {t(active.summaryKey, locale)}
+                </p>
               </div>
             </motion.div>
           </AnimatePresence>

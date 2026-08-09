@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { useState } from 'react';
 import { LocaleProvider } from '@/lib/locale-context';
+import { GlobalLanguageMenu } from '@/components/GlobalLanguageMenu';
 
 // Create a client that persists across re-renders
 function makeQueryClient() {
@@ -40,6 +41,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
         {children}
+        <GlobalLanguageMenu />
         <Toaster position="bottom-right" />
       </LocaleProvider>
     </QueryClientProvider>

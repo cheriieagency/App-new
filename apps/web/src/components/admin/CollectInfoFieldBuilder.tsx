@@ -269,7 +269,7 @@ export default function CollectInfoFieldBuilder({
               onChange={(e) =>
                 onOrderBumpChange({ ...orderBump, title: e.target.value })
               }
-              placeholder="⚡ Lägg till arbetsbok för +49 kr"
+              placeholder="⚡ Add workbook for +49 SEK"
               className="h-10 rounded-lg text-xs"
             />
             <Input

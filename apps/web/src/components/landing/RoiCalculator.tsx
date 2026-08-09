@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 const FOLLOWER_MIN = 1000;
 const FOLLOWER_MAX = 50000;
@@ -15,21 +17,34 @@ const CONVERSION_MIN = 0.5;
 const CONVERSION_MAX = 10;
 const CONVERSION_STEP = 0.5;
 
-function formatSek(value: number) {
-  return value.toLocaleString('sv-SE');
+function formatNum(value: number, locale: string) {
+  return value.toLocaleString(locale === 'en' ? 'en-US' : 'sv-SE');
 }
 
-function formatPct(value: number) {
-  return Number.isInteger(value) ? `${value}%` : `${value.toLocaleString('sv-SE')}%`;
+function formatPct(value: number, locale: string) {
+  return Number.isInteger(value)
+    ? `${value}%`
+    : `${value.toLocaleString(locale === 'en' ? 'en-US' : 'sv-SE')}%`;
 }
 
 export function RoiCalculator() {
+  const { locale } = useLanguage();
   const [followers, setFollowers] = useState(10000);
   const [price, setPrice] = useState(299);
   const [conversionPct, setConversionPct] = useState(2);
 
   const payingMembers = Math.round(followers * (conversionPct / 100));
   const monthlyIncome = payingMembers * price;
+  // Present USD-style estimate for the hero earn line (~10 SEK ≈ $1 demo rate).
+  const usdEstimate = Math.round(monthlyIncome / 10);
+
+  const earnLine = t('roiEarnLine', locale)
+    .replace('{pct}', String(conversionPct))
+    .replace('{amount}', formatNum(usdEstimate, locale));
+
+  const membersLine = t('roiPayingMembers', locale)
+    .replace('{count}', formatNum(payingMembers, locale))
+    .replace('{price}', formatNum(price, locale));
 
   return (
     <section className="relative py-20 sm:py-28 overflow-hidden">
@@ -46,22 +61,23 @@ export function RoiCalculator() {
                 className="text-xs font-extrabold uppercase tracking-[0.16em] mb-3"
                 style={{ color: 'var(--nc-coral)' }}
               >
-                Potential
+                {t('roiEyebrow', locale)}
               </p>
               <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#2c3340] tracking-tight mb-3">
-                Räkna på din potential
+                {t('roiHeadline', locale)}
               </h2>
               <p className="text-[#5b6472] font-medium mb-10 leading-relaxed max-w-md">
-                Dra i reglagen och välj konvertering. 1–3% är realistiskt för en engagerad
-                creator-publik.
+                {t('roiSub', locale)}
               </p>
 
               <div className="space-y-9">
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-bold text-[#2c3340]">Följare</label>
+                    <label className="text-sm font-bold text-[#2c3340]">
+                      {t('roiFollowers', locale)}
+                    </label>
                     <span className="text-sm font-extrabold text-[#2c3340] rounded-full bg-white/70 px-3 py-1">
-                      {formatSek(followers)}
+                      {formatNum(followers, locale)}
                     </span>
                   </div>
                   <Slider
@@ -73,16 +89,18 @@ export function RoiCalculator() {
                     className="py-2 [&_[data-slot=slider-range]]:bg-[var(--nc-coral)] [&_[data-slot=slider-thumb]]:border-[var(--nc-coral)]"
                   />
                   <div className="flex justify-between text-[11px] font-bold text-[#94a0b0] mt-2">
-                    <span>{formatSek(FOLLOWER_MIN)}</span>
-                    <span>{formatSek(FOLLOWER_MAX)}</span>
+                    <span>{formatNum(FOLLOWER_MIN, locale)}</span>
+                    <span>{formatNum(FOLLOWER_MAX, locale)}</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-bold text-[#2c3340]">Månadspris</label>
+                    <label className="text-sm font-bold text-[#2c3340]">
+                      {t('roiMonthlyPrice', locale)}
+                    </label>
                     <span className="text-sm font-extrabold text-[#2c3340] rounded-full bg-white/70 px-3 py-1">
-                      {formatSek(price)} SEK
+                      {formatNum(price, locale)} SEK
                     </span>
                   </div>
                   <Slider
@@ -101,9 +119,11 @@ export function RoiCalculator() {
 
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-bold text-[#2c3340]">Konvertering</label>
+                    <label className="text-sm font-bold text-[#2c3340]">
+                      {t('roiConversion', locale)}
+                    </label>
                     <span className="text-sm font-extrabold text-[#2c3340] rounded-full bg-white/70 px-3 py-1">
-                      {formatPct(conversionPct)}
+                      {formatPct(conversionPct, locale)}
                     </span>
                   </div>
                   <Slider
@@ -115,8 +135,8 @@ export function RoiCalculator() {
                     className="py-2 [&_[data-slot=slider-range]]:bg-[var(--nc-coral)] [&_[data-slot=slider-thumb]]:border-[var(--nc-coral)]"
                   />
                   <div className="flex justify-between text-[11px] font-bold text-[#94a0b0] mt-2">
-                    <span>{formatPct(CONVERSION_MIN)}</span>
-                    <span>{formatPct(CONVERSION_MAX)}</span>
+                    <span>{formatPct(CONVERSION_MIN, locale)}</span>
+                    <span>{formatPct(CONVERSION_MAX, locale)}</span>
                   </div>
                 </div>
               </div>
@@ -130,15 +150,17 @@ export function RoiCalculator() {
               }}
             >
               <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#5b6472] mb-4">
-                Uppskattad månadsintäkt
+                {t('roiEstimatedRevenue', locale)}
               </p>
               <p className="font-display font-extrabold text-4xl sm:text-5xl tracking-tight text-[#2c3340] mb-4">
-                {formatSek(monthlyIncome)}
-                <span className="text-lg font-bold text-[#5b6472] ml-1">kr/mån</span>
+                {formatNum(monthlyIncome, locale)}
+                <span className="text-lg font-bold text-[#5b6472] ml-1">SEK/mo</span>
+              </p>
+              <p className="text-[#2c3340] font-extrabold leading-relaxed mb-3 max-w-sm">
+                {earnLine}
               </p>
               <p className="text-[#5b6472] font-medium leading-relaxed mb-8 max-w-sm">
-                Ca {formatSek(payingMembers)} betalande medlemmar à {formatSek(price)} SEK vid{' '}
-                {formatPct(conversionPct)} konvertering.
+                {membersLine}
               </p>
               <Link
                 href="/account/signup"
@@ -148,7 +170,7 @@ export function RoiCalculator() {
                   boxShadow: '0 12px 28px -10px rgba(155,138,251,0.5)',
                 }}
               >
-                Skapa gratis community <ArrowRight size={14} />
+                {t('landingCtaStartFree', locale)} <ArrowRight size={14} />
               </Link>
             </div>
           </div>

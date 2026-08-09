@@ -10,6 +10,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 type Billing = 'monthly' | 'yearly';
 
@@ -20,33 +22,33 @@ const PLANS = [
     id: 'starter',
     name: 'Starter',
     monthly: 0,
-    blurb: 'Kom igång gratis och testa plattformen.',
-    cta: 'Skapa gratis community',
+    blurb: 'Get started free and try the platform.',
+    cta: 'Start free community',
     href: '/account/signup',
     featured: false,
     features: [
       '1 community',
-      'Upp till 25 medlemmar',
-      'Bas-feed & events',
-      'Swish-checkout (demo)',
-      'E-postsupport',
+      'Up to 25 members',
+      'Basic feed & events',
+      'Swish checkout (demo)',
+      'Email support',
     ],
   },
   {
     id: 'creator',
     name: 'Creator',
     monthly: 199,
-    blurb: 'Allt du behöver för att sälja och bygga community.',
-    cta: 'Välj Creator',
+    blurb: 'Everything you need to sell and build community.',
+    cta: 'Choose Creator',
     href: '/account/signup',
     featured: true,
     features: [
-      'Obegränsade medlemmar',
+      'Unlimited members',
       'Store + 1-tap checkout',
-      'Classroom & kurser',
+      'Classroom & courses',
       'Events + live RSVP',
-      'Bio Builder med UTM',
-      'E-post CRM & utskick',
+      'Bio Builder with UTM',
+      'Email CRM & broadcasts',
       'Swish & Vipps',
       'AI Copilot',
     ],
@@ -55,18 +57,18 @@ const PLANS = [
     id: 'pro',
     name: 'Pro',
     monthly: 499,
-    blurb: 'För team och creators som skalar allvarligt.',
-    cta: 'Välj Pro',
+    blurb: 'For teams and creators scaling seriously.',
+    cta: 'Choose Pro',
     href: '/account/signup',
     featured: false,
     features: [
-      'Allt i Creator',
-      'Flera communities',
-      'Prioriterad support',
-      'Avancerad analytics',
+      'Everything in Creator',
+      'Multiple communities',
+      'Priority support',
+      'Advanced analytics',
       'Custom domains',
-      'Team-roles & mods',
-      'Fortnox-export',
+      'Team roles & mods',
+      'Fortnox export',
       'White-label bio',
     ],
   },
@@ -75,49 +77,49 @@ const PLANS = [
 const COMPARISON_ROWS = [
   {
     label: 'Stan Store (approx.)',
-    usa: '~290 SEK/mån',
-    nordic: 'Ingår',
+    usa: '~290 SEK/mo',
+    nordic: 'Included',
   },
   {
     label: 'Skool community',
-    usa: '~1 050 SEK/mån',
-    nordic: 'Ingår',
+    usa: '~1 050 SEK/mo',
+    nordic: 'Included',
   },
   {
-    label: 'Stripe / moms-krångel',
-    usa: 'Extra tid & avgifter',
-    nordic: 'Swish + svensk moms',
+    label: 'Stripe / VAT hassle',
+    usa: 'Extra time & fees',
+    nordic: 'Swish + Swedish VAT',
   },
   {
-    label: 'Kursplattform',
-    usa: 'Separat verktyg',
-    nordic: 'Classroom ingår',
+    label: 'Course platform',
+    usa: 'Separate tool',
+    nordic: 'Classroom included',
   },
   {
-    label: 'Totalt typiskt stack',
-    usa: '~1 340+ SEK/mån',
-    nordic: '199 SEK/mån',
+    label: 'Typical total stack',
+    usa: '~1 340+ SEK/mo',
+    nordic: '199 SEK/mo',
   },
 ] as const;
 
 const PRICING_FAQ = [
   {
     id: 'swish',
-    question: 'Kan jag ta betalt med Swish?',
+    question: 'Can I accept Swish payments?',
     answer:
-      'Ja. Nordic Creator är byggt för nordiska köpare — Swish och Vipps sitter i checkouten. Medlemmar betalar på sekunder utan att lämna din butik.',
+      'Yes. Nordic Creator is built for Nordic buyers — Swish and Vipps sit in checkout. Members pay in seconds without leaving your store.',
   },
   {
     id: 'payouts',
-    question: 'När får jag ut pengarna (payouts)?',
+    question: 'When do I get paid out?',
     answer:
-      'Intäkter samlas på ditt creator-konto och kan betalas ut till ditt svenska bankkonto enligt plattformens payout-schema. Du ser status, belopp och historik under Analytics.',
+      'Revenue lands on your creator account and pays out to your bank on the platform schedule. Track status, amounts, and history in Analytics.',
   },
   {
     id: 'trial',
-    question: 'Finns det gratis trial?',
+    question: 'Is there a free trial?',
     answer:
-      'Starter är gratis för alltid med grundfunktioner. Creator och Pro kan startas direkt — du kan uppgradera när du är redo att sälja på riktigt. Ingen bindningstid.',
+      'Starter is free forever with core features. Creator and Pro can start anytime — upgrade when you are ready to sell. No long lock-in.',
   },
 ] as const;
 
@@ -128,12 +130,13 @@ function displayPrice(monthly: number, billing: Billing) {
 }
 
 export function PricingSection() {
+  const { locale } = useLanguage();
   const [billing, setBilling] = useState<Billing>('monthly');
 
   const savingsNote = useMemo(() => {
     const creatorYearly = Math.round(199 * 12 * (1 - YEARLY_DISCOUNT));
     const creatorMonthlyYear = 199 * 12;
-    return `Spara ${creatorMonthlyYear - creatorYearly} SEK/år på Creator`;
+    return `Save ${creatorMonthlyYear - creatorYearly} SEK/year on Creator`;
   }, []);
 
   return (
@@ -153,13 +156,13 @@ export function PricingSection() {
             className="text-xs font-extrabold uppercase tracking-[0.16em] mb-3"
             style={{ color: 'var(--nc-coral)' }}
           >
-            Priser
+            {t('pricing', locale)}
           </p>
           <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#2c3340] tracking-tight leading-tight">
-            En plattform. Ett pris. Inga USA-avgifter.
+            One platform. One price. No US tool stack fees.
           </h2>
           <p className="mt-4 text-[#5b6472] font-medium text-base sm:text-lg leading-relaxed">
-            Välj planen som matchar var du är — uppgradera när du växer.
+            Pick the plan that matches where you are — upgrade as you grow.
           </p>
         </div>
 
@@ -168,8 +171,8 @@ export function PricingSection() {
           <div className="inline-flex items-center p-1 rounded-full bg-white/70 border border-white shadow-sm">
             {(
               [
-                { key: 'monthly' as const, label: 'Månadsvis' },
-                { key: 'yearly' as const, label: 'Årsvis' },
+                { key: 'monthly' as const, label: 'Monthly' },
+                { key: 'yearly' as const, label: 'Yearly' },
               ] as const
             ).map(({ key, label }) => {
               const active = billing === key;
@@ -191,7 +194,7 @@ export function PricingSection() {
             })}
           </div>
           <p className="text-xs font-bold text-[#5b6472]">
-            Årsvis: spara 17% · {savingsNote}
+            Yearly: save 17% · {savingsNote}
           </p>
         </div>
 
@@ -222,7 +225,7 @@ export function PricingSection() {
                     className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide text-white px-3 py-1.5 rounded-full whitespace-nowrap"
                     style={{ background: 'var(--nc-coral)' }}
                   >
-                    ⚡ Mest populär
+                    ⚡ Most popular
                   </span>
                 )}
 
@@ -241,17 +244,17 @@ export function PricingSection() {
                       {price}
                     </span>
                     <span className="text-sm font-bold text-[#5b6472] mb-1.5">
-                      SEK/mån
+                      SEK/mo
                     </span>
                   </div>
                   {billing === 'yearly' && plan.monthly > 0 && (
                     <p className="text-[11px] font-bold text-[#94a0b0] mt-1">
-                      Faktureras {Math.round(price * 12)} SEK/år · ord. {plan.monthly} SEK/mån
+                      Billed {Math.round(price * 12)} SEK/year · was {plan.monthly} SEK/mo
                     </p>
                   )}
                   {plan.monthly === 0 && (
                     <p className="text-[11px] font-bold text-[#94a0b0] mt-1">
-                      Gratis för alltid
+                      Free forever
                     </p>
                   )}
                 </div>
@@ -299,17 +302,17 @@ export function PricingSection() {
         <div className="mb-16">
           <div className="max-w-2xl mb-6">
             <h3 className="font-display font-extrabold text-2xl sm:text-3xl text-[#2c3340] tracking-tight">
-              Spara jämfört med USA-stacken
+              Save vs the US tool stack
             </h3>
             <p className="mt-2 text-[#5b6472] font-medium">
-              Stan Store + Skool kostar ofta mer — och du saknar fortfarande Swish och svensk moms.
+              Stan Store + Skool often costs more — and you still miss Swish and Swedish VAT.
             </p>
           </div>
 
           <div className="nc-glass rounded-[1.75rem] overflow-hidden">
             <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-2 px-4 sm:px-6 py-3 border-b border-white/60 text-[10px] sm:text-xs font-extrabold uppercase tracking-wide text-[#94a0b0]">
-              <span>Verktyg</span>
-              <span>USA-stack</span>
+              <span>Tool</span>
+              <span>US stack</span>
               <span style={{ color: 'var(--nc-coral)' }}>Nordic Creator</span>
             </div>
             {COMPARISON_ROWS.map((row) => (
@@ -336,7 +339,7 @@ export function PricingSection() {
             ))}
           </div>
           <p className="mt-3 text-xs font-bold text-[#94a0b0]">
-            Ungefärliga USA-priser omräknade till SEK. Faktiska valutakurser varierar.
+            Approximate US prices converted to SEK. FX rates vary.
           </p>
         </div>
 
@@ -344,10 +347,10 @@ export function PricingSection() {
         <div className="max-w-3xl mx-auto">
           <div className="mb-6 text-center">
             <h3 className="font-display font-extrabold text-2xl sm:text-3xl text-[#2c3340] tracking-tight">
-              Frågor om priser & betalning
+              Pricing & payment questions
             </h3>
             <p className="mt-2 text-[#5b6472] font-medium text-sm">
-              Swish, utbetalningar och hur du kommer igång.
+              Swish, payouts, and how to get started.
             </p>
           </div>
           <div className="nc-glass rounded-[1.75rem] px-4 sm:px-6">

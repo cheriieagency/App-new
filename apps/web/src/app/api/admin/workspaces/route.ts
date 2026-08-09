@@ -4,12 +4,21 @@ import {
   managedCommunityAsWorkspace,
 } from '@/lib/mock-community-admin';
 import type { SocialPlatform } from '@/lib/mock-content-planner';
+import {
+  listWorkspaceProfiles,
+  profileAsBrandWorkspace,
+} from '@/lib/mock-workspace-profiles';
 
 export async function GET() {
   const communities = listManagedCommunities();
+  const profiles = listWorkspaceProfiles();
   return Response.json({
-    workspaces: communities.map(managedCommunityAsWorkspace),
+    workspaces:
+      profiles.length > 0
+        ? profiles.map(profileAsBrandWorkspace)
+        : communities.map(managedCommunityAsWorkspace),
     communities,
+    profiles,
     demo: true,
   });
 }

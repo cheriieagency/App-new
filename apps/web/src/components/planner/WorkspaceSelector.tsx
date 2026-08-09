@@ -101,7 +101,7 @@ export default function WorkspaceSelector({
       >
         <div className="p-3 border-b border-zinc-100">
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-0.5">
-            Team-ytor / Varumärken
+            Team Workspaces / Brands
           </p>
           <div className="relative">
             <Search
@@ -111,7 +111,7 @@ export default function WorkspaceSelector({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Sök varumärke…"
+              placeholder="Search brand…"
               className="w-full h-10 min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-[var(--nc-coral)] focus:bg-white"
             />
           </div>
@@ -161,7 +161,7 @@ export default function WorkspaceSelector({
           })}
           {filtered.length === 0 && (
             <p className="text-xs text-zinc-400 font-medium text-center py-6">
-              Inga varumärken matchar.
+              No brands match.
             </p>
           )}
         </div>
@@ -175,7 +175,7 @@ export default function WorkspaceSelector({
             }}
             className="w-full h-11 min-h-[44px] rounded-xl text-xs font-extrabold text-[var(--nc-coral)] hover:bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)] inline-flex items-center justify-center gap-1.5"
           >
-            <Plus size={14} /> Skapa Ny Team-yta / Varumärke
+            <Plus size={14} /> Create New Team Workspace / Brand
           </button>
         </div>
       </PopoverContent>

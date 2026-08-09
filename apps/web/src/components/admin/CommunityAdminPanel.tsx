@@ -41,6 +41,7 @@ import type {
   CommunityAdminPost,
   ManagedCommunity,
 } from '@/lib/mock-community-admin';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 export type CommunitySubTab =
   | 'overview'
@@ -82,7 +83,7 @@ function roleBadgeClass(role: string) {
 function formatRelative(iso: string, locale: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const hours = Math.floor(diff / (60 * 60 * 1000));
-  if (hours < 1) return locale === 'en' ? 'Just now' : 'Nyss';
+  if (hours < 1) return t('justNow', locale as Parameters<typeof t>[1]);
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   return `${days}d`;
@@ -499,8 +500,10 @@ export default function CommunityAdminPanel({
 }) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const { activeWorkspace, setActiveWorkspaceId } = useWorkspace();
   const [subTab, setSubTab] = useState<CommunitySubTab>(initialSubTab);
-  const [communityId, setCommunityId] = useState<number | undefined>(undefined);
+  // Community scope follows the global Team Workspace / Brand Profile.
+  const communityId = activeWorkspace.community.community_id;
   const [memberSearch, setMemberSearch] = useState('');
   const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
 
@@ -510,17 +513,16 @@ export default function CommunityAdminPanel({
   }, [initialSubTab]);
 
   const { data, isLoading, isError } = useQuery<CommunityAdminResponse>({
-    queryKey: ['admin-community', communityId ?? 'default'],
+    queryKey: ['admin-community', communityId],
     queryFn: async () => {
-      const qs = communityId ? `?community_id=${communityId}` : '';
+      const qs = `?community_id=${communityId}`;
       const r = await fetch(`/api/admin/community${qs}`);
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
   });
 
-  // Keep local selector in sync when API returns the default community.
-  const selectedId = communityId ?? data?.community?.id;
+  const selectedId = communityId;
 
   const mutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
@@ -535,7 +537,7 @@ export default function CommunityAdminPanel({
     onSuccess: (_res, variables) => {
       // Optimistic cache update so demo mode feels instant.
       queryClient.setQueryData<CommunityAdminResponse>(
-        ['admin-community', communityId ?? 'default'],
+        ['admin-community', communityId],
         (prev) => {
           if (!prev) return prev;
           const action = String(variables.action);
@@ -669,9 +671,9 @@ export default function CommunityAdminPanel({
     { key: 'members', label: t('members', locale), icon: Users },
     { key: 'classroom', label: t('classroom', locale), icon: GraduationCap },
     { key: 'store', label: t('store', locale), icon: ShoppingBag },
-    { key: 'feed', label: t('communityFeed', locale), icon: MessageCircle },
-    { key: 'event', label: 'Event', icon: Calendar },
-    { key: 'broadcast', label: 'Sänd Live', icon: Radio },
+    { key: 'feed', label: t('postsAndComments', locale), icon: MessageCircle },
+    { key: 'event', label: t('events', locale), icon: Calendar },
+    { key: 'broadcast', label: t('goLive', locale), icon: Radio },
   ];
 
   // Event / Live don't depend on community API — keep them reachable while loading.
@@ -741,12 +743,13 @@ export default function CommunityAdminPanel({
           </div>
           <div className="flex-1 min-w-0">
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-              {t('selectCommunity', locale)}
+              {t('chooseCommunity', locale)}
             </label>
             <select
               value={selectedId ?? ''}
-              onChange={(e) => setCommunityId(Number(e.target.value))}
+              onChange={(e) => setActiveWorkspaceId(String(e.target.value))}
               className="w-full sm:max-w-xs h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-extrabold text-[#2c3340] focus:outline-none focus:border-[var(--nc-coral)]"
+              aria-label={t('chooseCommunity', locale)}
             >
               {communities.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -1109,7 +1112,7 @@ export default function CommunityAdminPanel({
       {/* Event (moved from top-level admin tab) */}
       {subTab === 'event' && (eventPanel ?? null)}
 
-      {/* Sänd Live (moved from top-level admin tab) */}
+      {/* Go Live (moved from top-level admin tab) */}
       {subTab === 'broadcast' && (broadcastPanel ?? null)}
 
       {/* Posts & comments */}
@@ -1215,7 +1218,7 @@ export default function CommunityAdminPanel({
                   {open && (
                     <AdminPostComments
                       post={post}
-                      communityQueryKey={['admin-community', communityId ?? 'default']}
+                      communityQueryKey={['admin-community', communityId]}
                       deletePending={mutation.isPending}
                       onDeleteComment={(commentId) =>
                         mutation.mutate({
