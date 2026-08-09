@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +12,7 @@ import {
   BarChart3,
   Users,
   Calendar,
+  CalendarDays,
   ShoppingBag,
   Download,
   Plus,
@@ -53,6 +55,8 @@ import {
   UserCheck,
   ImageIcon,
   Loader2,
+  ExternalLink,
+  Share2,
 } from 'lucide-react';
 import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
 import { useLocale } from '@/lib/locale-context';
@@ -86,13 +90,9 @@ import {
   type SocialBrandId,
 } from '@/components/icons/SocialBrandIcons';
 
-type AdminTab =
-  | 'analytics'
-  | 'event'
-  | 'community'
-  | 'email'
-  | 'broadcast'
-  | 'biobuilder';
+type AdminTab = 'analytics' | 'community' | 'email' | 'biobuilder';
+
+type CommunityInitialSub = 'overview' | 'event' | 'broadcast';
 
 type BioCategory = 'links' | 'store';
 
@@ -1287,6 +1287,8 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const { locale } = useLocale();
   const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
+  const [communityInitialSub, setCommunityInitialSub] =
+    useState<CommunityInitialSub>('overview');
   const [bioTheme, setBioTheme] = useState<BioTheme>(DEFAULT_BIO_THEME);
   const [saved, setSaved] = useState('');
   const [adminSearch, setAdminSearch] = useState('');
@@ -1296,15 +1298,23 @@ export default function AdminPage() {
   const [notifOpen, setNotifOpen] = useState(false);
 
   // Deep-link support: /admin?tab=email (and /admin/email redirect)
+  // Legacy event/broadcast/content tabs now live under Community.
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get('tab');
-    // Legacy ?tab=content maps to the renamed Event tab.
-    const tab = (raw === 'content' ? 'event' : raw) as AdminTab | null;
-    if (
-      tab &&
-      ['analytics', 'event', 'community', 'email', 'broadcast', 'biobuilder'].includes(tab)
-    ) {
-      setActiveTab(tab);
+    if (!raw) return;
+    if (raw === 'content' || raw === 'event') {
+      setActiveTab('community');
+      setCommunityInitialSub('event');
+      return;
+    }
+    if (raw === 'broadcast') {
+      setActiveTab('community');
+      setCommunityInitialSub('broadcast');
+      return;
+    }
+    if (['analytics', 'community', 'email', 'biobuilder'].includes(raw)) {
+      setActiveTab(raw as AdminTab);
+      if (raw === 'community') setCommunityInitialSub('overview');
     }
   }, []);
 
@@ -1335,6 +1345,7 @@ export default function AdminPage() {
   const [liveChat, setLiveChat] = useState<{ name: string; msg: string }[]>([]);
   const [chatMsg, setChatMsg] = useState('');
   const [keyCopied, setKeyCopied] = useState(false);
+  const [liveOrigin, setLiveOrigin] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
 
   // Bio builder
@@ -1419,7 +1430,20 @@ export default function AdminPage() {
   // Set stream key once on mount using stable uid (no Math.random / Date.now in render path)
   useEffect(() => {
     const safe = uid.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'nclivekey';
-    setStreamKey(`nc-live-${safe}`);
+    const key = `nc-live-${safe}`;
+    setStreamKey(key);
+    setLiveOrigin(window.location.origin);
+    // Register a public session so the share link resolves before Start Live.
+    void fetch(`/api/live/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'upsert',
+        title: 'Live Sändning',
+        creator_name: 'Creator',
+        is_live: false,
+      }),
+    }).catch(() => undefined);
   }, [uid]);
 
   // Keep demo UTM redirect registry in sync with Store products.
@@ -1707,12 +1731,49 @@ export default function AdminPage() {
     }
   };
 
+  const syncPublicLive = useCallback(
+    async (action: 'start' | 'stop' | 'update', viewerCount?: number) => {
+      if (!streamKey || streamKey.includes('xxxxxxxx')) return;
+      const communityName =
+        MOCK_MANAGED_COMMUNITIES.find((c) => c.id === adminCommunityId)?.name ??
+        null;
+      try {
+        await fetch(`/api/live/${encodeURIComponent(streamKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action,
+            title: liveTitle || 'Live Sändning',
+            creator_name: session?.user?.name || 'Creator',
+            community_name: communityName,
+            viewer_count: viewerCount,
+          }),
+        });
+      } catch {
+        /* non-blocking demo sync */
+      }
+    },
+    [streamKey, liveTitle, session?.user?.name, adminCommunityId]
+  );
+
   const startBroadcast = useCallback(() => {
     setAttendeeCount(28);
     setLiveChat([]);
     chatTickRef.current = 0;
     setIsLive(true);
-  }, []);
+    void syncPublicLive('start', 28);
+  }, [syncPublicLive]);
+
+  const endBroadcast = useCallback(() => {
+    setIsLive(false);
+    void syncPublicLive('stop');
+  }, [syncPublicLive]);
+
+  // Keep public live page title / viewers in sync while broadcasting.
+  useEffect(() => {
+    if (!isLive || !streamKey || streamKey.includes('xxxxxxxx')) return;
+    void syncPublicLive('update', attendeeCount);
+  }, [isLive, liveTitle, attendeeCount, streamKey, syncPublicLive]);
 
   if (isPending)
     return (
@@ -1760,10 +1821,8 @@ export default function AdminPage() {
 
   const TABS: { key: AdminTab; label: string; icon: React.ElementType }[] = [
     { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { key: 'event', label: 'Event', icon: Calendar },
     { key: 'community', label: t('community', locale), icon: Users },
     { key: 'email', label: 'E-post', icon: Mail },
-    { key: 'broadcast', label: 'Sänd Live', icon: Radio },
     { key: 'biobuilder', label: 'Bio Builder', icon: Smartphone },
   ];
 
@@ -1897,7 +1956,10 @@ export default function AdminPage() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setActiveTab(key)}
+                  onClick={() => {
+                    setActiveTab(key);
+                    if (key === 'community') setCommunityInitialSub('overview');
+                  }}
                   className={`relative flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 sm:px-4 text-[11px] sm:text-xs font-extrabold whitespace-nowrap transition-colors flex-shrink-0 ${
                     active
                       ? 'text-[#2c3340]'
@@ -1906,7 +1968,7 @@ export default function AdminPage() {
                 >
                   <Icon size={13} />
                   {label}
-                  {key === 'broadcast' && isLive && (
+                  {key === 'community' && isLive && (
                     <span
                       className="w-1.5 h-1.5 bg-red-500 rounded-full"
                       style={{ animation: 'livePulse 1s ease-in-out infinite' }}
@@ -1918,6 +1980,13 @@ export default function AdminPage() {
                 </button>
               );
             })}
+            <Link
+              href="/admin/planner"
+              className="relative flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 sm:px-4 text-[11px] sm:text-xs font-extrabold whitespace-nowrap transition-colors flex-shrink-0 text-zinc-400 hover:text-zinc-700"
+            >
+              <CalendarDays size={13} />
+              Planner
+            </Link>
           </nav>
         </div>
       </header>
@@ -2121,8 +2190,12 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ── EVENT ── */}
-        {activeTab === 'event' && (
+        {/* ── COMMUNITY (includes Event + Sänd Live) ── */}
+        {activeTab === 'community' && (
+          <CommunityAdminPanel
+            initialSubTab={communityInitialSub}
+            isLive={isLive}
+            eventPanel={
           <div className="space-y-5">
             <div className="nc-glass rounded-[1.5rem] p-6 max-w-2xl">
               <h3 className="text-sm font-black text-[#2c3340] mb-4 flex items-center gap-2">
@@ -2525,16 +2598,8 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* ── COMMUNITY ── */}
-        {activeTab === 'community' && <CommunityAdminPanel />}
-
-        {/* ── EMAIL CRM ── */}
-        {activeTab === 'email' && <EmailAdminPanel />}
-
-        {/* ── BROADCAST STUDIO ── */}
-        {activeTab === 'broadcast' && (
+            }
+            broadcastPanel={
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-[var(--nc-coral)] rounded-2xl overflow-hidden">
@@ -2581,11 +2646,8 @@ export default function AdminPage() {
                   <div className="flex-1" />
                   <button
                     onClick={() => {
-                      if (isLive) {
-                        setIsLive(false);
-                      } else {
-                        startBroadcast();
-                      }
+                      if (isLive) endBroadcast();
+                      else startBroadcast();
                     }}
                     className={`flex items-center gap-2 h-10 px-5 rounded-xl font-black text-sm transition-all ${isLive ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
                   >
@@ -2612,25 +2674,46 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                      {t('streamKeyLabel', locale)}
+                      {t('streamKeyLabel', locale)} (dela publikt)
                     </label>
                     <div className="flex gap-2">
                       <Input
-                        value={streamKey}
+                        value={
+                          liveOrigin
+                            ? `${liveOrigin}/live/${streamKey}`
+                            : `/live/${streamKey}`
+                        }
                         readOnly
-                        className="rounded-xl border-zinc-200 font-mono text-xs bg-zinc-50 flex-1"
+                        onFocus={(e) => e.currentTarget.select()}
+                        className="rounded-xl border-zinc-200 font-mono text-xs bg-zinc-50 flex-1 cursor-text"
                       />
                       <button
+                        type="button"
                         onClick={async () => {
-                          await navigator.clipboard.writeText(streamKey);
+                          const url = `${liveOrigin || window.location.origin}/live/${streamKey}`;
+                          await navigator.clipboard.writeText(url);
                           setKeyCopied(true);
                           setTimeout(() => setKeyCopied(false), 2000);
                         }}
-                        className={`h-10 px-3 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${keyCopied ? 'bg-green-100 text-green-600' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'}`}
+                        className={`h-11 min-h-[44px] px-3 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${keyCopied ? 'bg-green-100 text-green-600' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'}`}
+                        title="Kopiera länk"
                       >
-                        {keyCopied ? <Check size={13} /> : <Copy size={13} />}
+                        {keyCopied ? <Check size={13} /> : <Share2 size={13} />}
                       </button>
+                      <a
+                        href={`/live/${streamKey}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-11 min-h-[44px] px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center flex-shrink-0"
+                        title="Öppna live-sida"
+                      >
+                        <ExternalLink size={13} />
+                      </a>
                     </div>
+                    <p className="text-[11px] text-zinc-400 font-medium mt-1.5">
+                      Dela länken med vem som helst — funkar även utanför communityn. Ingen
+                      inloggning krävs för att titta.
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-zinc-50 rounded-xl p-4 text-center">
@@ -2714,7 +2797,12 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+            }
+          />
         )}
+
+        {/* ── EMAIL CRM ── */}
+        {activeTab === 'email' && <EmailAdminPanel />}
 
         {/* ── BIO BUILDER ── */}
         {activeTab === 'biobuilder' && (

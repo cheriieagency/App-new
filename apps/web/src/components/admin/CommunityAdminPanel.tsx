@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -27,6 +27,8 @@ import {
   GraduationCap,
   Pin,
   ShoppingBag,
+  Calendar,
+  Radio,
 } from 'lucide-react';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
@@ -40,7 +42,14 @@ import type {
   ManagedCommunity,
 } from '@/lib/mock-community-admin';
 
-type CommunitySubTab = 'overview' | 'members' | 'classroom' | 'store' | 'feed';
+export type CommunitySubTab =
+  | 'overview'
+  | 'members'
+  | 'classroom'
+  | 'store'
+  | 'feed'
+  | 'event'
+  | 'broadcast';
 
 type CommunityAdminResponse = {
   communities: ManagedCommunity[];
@@ -477,13 +486,28 @@ function AdminPostComments({
   );
 }
 
-export default function CommunityAdminPanel() {
+export default function CommunityAdminPanel({
+  eventPanel,
+  broadcastPanel,
+  initialSubTab = 'overview',
+  isLive = false,
+}: {
+  eventPanel?: ReactNode;
+  broadcastPanel?: ReactNode;
+  initialSubTab?: CommunitySubTab;
+  isLive?: boolean;
+}) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const [subTab, setSubTab] = useState<CommunitySubTab>('overview');
+  const [subTab, setSubTab] = useState<CommunitySubTab>(initialSubTab);
   const [communityId, setCommunityId] = useState<number | undefined>(undefined);
   const [memberSearch, setMemberSearch] = useState('');
   const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
+
+  // Honor deep-links / parent tab remaps (e.g. ?tab=event → community/event).
+  useEffect(() => {
+    setSubTab(initialSubTab);
+  }, [initialSubTab]);
 
   const { data, isLoading, isError } = useQuery<CommunityAdminResponse>({
     queryKey: ['admin-community', communityId ?? 'default'],
@@ -646,7 +670,45 @@ export default function CommunityAdminPanel() {
     { key: 'classroom', label: t('classroom', locale), icon: GraduationCap },
     { key: 'store', label: t('store', locale), icon: ShoppingBag },
     { key: 'feed', label: t('communityFeed', locale), icon: MessageCircle },
+    { key: 'event', label: 'Event', icon: Calendar },
+    { key: 'broadcast', label: 'Sänd Live', icon: Radio },
   ];
+
+  // Event / Live don't depend on community API — keep them reachable while loading.
+  if ((isLoading || isError || !data) && (subTab === 'event' || subTab === 'broadcast')) {
+    return (
+      <div className="space-y-5">
+        <div className="nc-glass rounded-[1.5rem] p-4 sm:p-5">
+          <div className="flex gap-1 overflow-x-auto scrollbar-none -mx-1 px-1">
+            {SUB_TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSubTab(key)}
+                className={`flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all flex-shrink-0 ${
+                  subTab === key
+                    ? 'bg-[var(--nc-coral)] text-white shadow-sm'
+                    : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-[#2c3340]'
+                }`}
+              >
+                <Icon size={13} /> {label}
+                {key === 'broadcast' && isLive && (
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      subTab === key ? 'bg-white' : 'bg-red-500'
+                    }`}
+                    style={{ animation: 'livePulse 1s ease-in-out infinite' }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+        {subTab === 'event' && (eventPanel ?? null)}
+        {subTab === 'broadcast' && (broadcastPanel ?? null)}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -713,6 +775,14 @@ export default function CommunityAdminPanel() {
               }`}
             >
               <Icon size={13} /> {label}
+              {key === 'broadcast' && isLive && (
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    subTab === key ? 'bg-white' : 'bg-red-500'
+                  }`}
+                  style={{ animation: 'livePulse 1s ease-in-out infinite' }}
+                />
+              )}
             </button>
           ))}
         </div>
@@ -1035,6 +1105,12 @@ export default function CommunityAdminPanel() {
 
       {/* Store — products & services */}
       {subTab === 'store' && <StoreAdminSection communityId={selectedId} />}
+
+      {/* Event (moved from top-level admin tab) */}
+      {subTab === 'event' && (eventPanel ?? null)}
+
+      {/* Sänd Live (moved from top-level admin tab) */}
+      {subTab === 'broadcast' && (broadcastPanel ?? null)}
 
       {/* Posts & comments */}
       {subTab === 'feed' && (
