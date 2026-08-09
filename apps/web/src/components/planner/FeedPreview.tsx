@@ -49,10 +49,14 @@ function InstagramPreview({
   username,
   caption,
   items,
+  brandAvatar,
+  brandColor,
 }: {
   username: string;
   caption: string;
   items: PlannerMediaItem[];
+  brandAvatar?: string | null;
+  brandColor?: string;
 }) {
   const [slide, setSlide] = useState(0);
   const current = items[slide] ?? items[0];
@@ -63,8 +67,17 @@ function InstagramPreview({
     <div className="bg-white rounded-2xl overflow-hidden border border-zinc-200 shadow-sm max-w-[320px] mx-auto">
       <div className="flex items-center gap-2.5 px-3 h-12 border-b border-zinc-100">
         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-[2px]">
-          <div className="w-full h-full rounded-full bg-white p-[1px]">
-            <div className="w-full h-full rounded-full bg-zinc-200" />
+          <div className="w-full h-full rounded-full bg-white p-[1px] overflow-hidden">
+            {brandAvatar ? (
+              <img src={brandAvatar} alt="" className="w-full h-full object-cover rounded-full" />
+            ) : (
+              <div
+                className="w-full h-full rounded-full flex items-center justify-center text-[10px] font-black text-white"
+                style={{ background: brandColor || '#E11D48' }}
+              >
+                {username.replace('@', '')[0]?.toUpperCase() || 'B'}
+              </div>
+            )}
           </div>
         </div>
         <p className="text-xs font-extrabold text-[#262626] flex-1 truncate">{username}</p>
@@ -167,11 +180,15 @@ function LinkedInPreview({
   headline,
   caption,
   items,
+  brandAvatar,
+  brandColor,
 }: {
   name: string;
   headline: string;
   caption: string;
   items: PlannerMediaItem[];
+  brandAvatar?: string | null;
+  brandColor?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const preview = caption.length > 160 && !expanded ? `${caption.slice(0, 160)}…` : caption;
@@ -180,7 +197,20 @@ function LinkedInPreview({
   return (
     <div className="bg-white rounded-xl border border-zinc-200 shadow-sm max-w-[360px] mx-auto overflow-hidden">
       <div className="p-3 flex items-start gap-2.5">
-        <div className="w-10 h-10 rounded-full bg-[#0A66C2]/15 flex-shrink-0" />
+        {brandAvatar ? (
+          <img
+            src={brandAvatar}
+            alt=""
+            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
+          <div
+            className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-black"
+            style={{ background: brandColor || '#0A66C2' }}
+          >
+            {name[0]}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <p className="text-sm font-extrabold text-[#191919] truncate">{name}</p>
           <p className="text-[11px] text-zinc-500 truncate">{headline}</p>
@@ -345,6 +375,8 @@ export default function FeedPreview({
   youtube,
   username = '@nordic.creator',
   displayName = 'Nordic Creator',
+  brandAvatar = null,
+  brandColor,
 }: {
   caption: string;
   mediaItems: PlannerMediaItem[];
@@ -352,6 +384,8 @@ export default function FeedPreview({
   youtube?: YoutubeMeta | null;
   username?: string;
   displayName?: string;
+  brandAvatar?: string | null;
+  brandColor?: string;
 }) {
   const tabs = useMemo(() => {
     const all: { key: PreviewTab; label: string }[] = [
@@ -393,7 +427,13 @@ export default function FeedPreview({
 
       <div className="min-h-[280px]">
         {active === 'instagram' && (
-          <InstagramPreview username={username} caption={caption} items={mediaItems} />
+          <InstagramPreview
+            username={username}
+            caption={caption}
+            items={mediaItems}
+            brandAvatar={brandAvatar}
+            brandColor={brandColor}
+          />
         )}
         {active === 'tiktok' && (
           <TikTokPreview username={username} caption={caption} items={mediaItems} />
@@ -401,9 +441,11 @@ export default function FeedPreview({
         {active === 'linkedin' && (
           <LinkedInPreview
             name={displayName}
-            headline="Creator · Nordic Creator Platform"
+            headline={`${displayName} · Brand page`}
             caption={caption}
             items={mediaItems}
+            brandAvatar={brandAvatar}
+            brandColor={brandColor}
           />
         )}
         {active === 'youtube' && (

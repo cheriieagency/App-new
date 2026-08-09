@@ -5,10 +5,13 @@ import {
   applyCommentPinOverride,
   applyPostPinOverride,
 } from '@/lib/demo-pin-state';
+import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner';
 
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
+
+let managedCommunitySeq = 200;
 
 export type CommunityAdminMember = {
   id: string;
@@ -59,6 +62,11 @@ export type ManagedCommunity = {
   cover_color: string;
   member_count: number;
   is_published: boolean;
+  /** Brand / social handle shown in workspace switcher. */
+  handle: string;
+  avatar_url: string | null;
+  /** Connected social channels for this team workspace. */
+  channels: SocialPlatform[];
 };
 
 export const MOCK_MANAGED_COMMUNITIES: ManagedCommunity[] = [
@@ -71,6 +79,9 @@ export const MOCK_MANAGED_COMMUNITIES: ManagedCommunity[] = [
     cover_color: '#0f766e',
     member_count: 48,
     is_published: true,
+    handle: '@ebbacreator',
+    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-creator-lab',
+    channels: ['instagram', 'tiktok', 'linkedin', 'youtube'],
   },
   {
     id: 102,
@@ -81,8 +92,67 @@ export const MOCK_MANAGED_COMMUNITIES: ManagedCommunity[] = [
     cover_color: '#0369a1',
     member_count: 32,
     is_published: true,
+    handle: '@ebbalive',
+    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-live-studio',
+    channels: ['instagram', 'linkedin', 'youtube'],
   },
 ];
+
+/** Map a managed community to the planner workspace shape for the shared selector. */
+export function managedCommunityAsWorkspace(c: ManagedCommunity): BrandWorkspace {
+  return {
+    id: String(c.id),
+    name: c.name,
+    handle: c.handle,
+    avatar_url: c.avatar_url,
+    color: c.cover_color,
+    channels: [...c.channels],
+    created_at: new Date().toISOString(),
+  };
+}
+
+export function listManagedCommunities(): ManagedCommunity[] {
+  return MOCK_MANAGED_COMMUNITIES.map((c) => ({
+    ...c,
+    channels: [...c.channels],
+  }));
+}
+
+export function createManagedCommunity(input: {
+  name: string;
+  handle?: string;
+  channels?: SocialPlatform[];
+  cover_color?: string;
+}): ManagedCommunity {
+  const name = input.name.trim() || 'Ny Team-yta';
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9åäö\s-]/gi, '')
+    .trim()
+    .replace(/\s+/g, '-');
+  let handle = (input.handle ?? '').trim() || `@${slug.replace(/-/g, '')}`;
+  if (!handle.startsWith('@')) handle = `@${handle.replace(/^@/, '')}`;
+  const colors = ['#0f766e', '#0369a1', '#E11D48', '#4F46E5', '#EA580C'];
+  const id = ++managedCommunitySeq;
+  const community: ManagedCommunity = {
+    id,
+    name,
+    slug: slug || `workspace-${id}`,
+    description: 'Ny team-yta / varumärke.',
+    category: 'Övrigt',
+    cover_color: input.cover_color || colors[id % colors.length],
+    member_count: 1,
+    is_published: true,
+    handle,
+    avatar_url: `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(name)}`,
+    channels:
+      input.channels && input.channels.length > 0
+        ? input.channels
+        : ['instagram', 'tiktok', 'linkedin'],
+  };
+  MOCK_MANAGED_COMMUNITIES.push(community);
+  return { ...community, channels: [...community.channels] };
+}
 
 const MOCK_MEMBERS_101: CommunityAdminMember[] = [
   {

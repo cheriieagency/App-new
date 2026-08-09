@@ -32,10 +32,12 @@ function postDate(post: PlannerPost): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function statusDot(status: PlannerPost['status']) {
-  if (status === 'published') return 'bg-emerald-500';
-  if (status === 'scheduled') return 'bg-[var(--nc-coral)]';
-  return 'bg-zinc-300';
+function statusDot(post: PlannerPost) {
+  if (post.workflow === 'PUBLISHED' || post.status === 'published') return 'bg-emerald-500';
+  if (post.workflow === 'SCHEDULED' || post.status === 'scheduled') return 'bg-sky-500';
+  if (post.workflow === 'READY') return 'bg-violet-500';
+  if (post.workflow === 'IN_PROGRESS') return 'bg-indigo-500';
+  return 'bg-amber-400';
 }
 
 export default function ContentCalendar({
@@ -178,7 +180,7 @@ export default function ContentCalendar({
                     className="w-full rounded-lg bg-zinc-50 border border-zinc-100 px-1.5 py-1 hover:border-zinc-200"
                   >
                     <div className="flex items-center gap-1 mb-0.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${statusDot(post.status)}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${statusDot(post)}`} />
                       <div className="flex -space-x-1">
                         {post.platforms.slice(0, 3).map((p) => (
                           <span key={p} className="scale-75 origin-left">
@@ -188,7 +190,7 @@ export default function ContentCalendar({
                       </div>
                     </div>
                     <p className="text-[10px] font-bold text-[#2c3340] truncate leading-tight">
-                      {post.idea_title || post.caption.split('\n')[0]}
+                      {post.title || post.idea_title || post.caption.split('\n')[0]}
                     </p>
                   </div>
                 ))}

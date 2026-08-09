@@ -122,6 +122,12 @@ export default function PlannerDashboard() {
             <h1 className="text-sm sm:text-base font-black text-[#2c3340] truncate">
               Content Planner
             </h1>
+            <Link
+              href="/planner"
+              className="text-[11px] font-extrabold text-[var(--nc-coral)]"
+            >
+              Öppna Board / Kalender / Tabell →
+            </Link>
           </div>
           <Link
             href="/admin/settings/socials"
@@ -229,7 +235,7 @@ export default function PlannerDashboard() {
                         className="w-full text-left rounded-xl border border-zinc-100 bg-zinc-50 hover:bg-white p-3 transition-colors"
                       >
                         <p className="text-sm font-bold text-[#2c3340] truncate mb-1">
-                          {post.idea_title || post.caption.split('\n')[0]}
+                          {post.title || post.idea_title || post.caption.split('\n')[0]}
                         </p>
                         <p className="text-[11px] text-zinc-500 font-medium mb-2">
                           {post.scheduled_at

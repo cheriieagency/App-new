@@ -38,7 +38,7 @@ export default function AdminSocialSettingsPage() {
             </h1>
           </div>
           <Link
-            href="/admin/planner"
+            href="/planner"
             className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-zinc-600 bg-zinc-50 hover:bg-zinc-100"
           >
             <CalendarDays size={14} /> Planner

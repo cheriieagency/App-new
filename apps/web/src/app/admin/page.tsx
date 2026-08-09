@@ -63,9 +63,15 @@ import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
 import CommunityAdminPanel from '@/components/admin/CommunityAdminPanel';
-import { getMockCommunityAdminPayload } from '@/lib/mock-community-admin';
+import {
+  getMockCommunityAdminPayload,
+  managedCommunityAsWorkspace,
+  MOCK_MANAGED_COMMUNITIES,
+} from '@/lib/mock-community-admin';
 import EmailAdminPanel from '@/components/admin/EmailAdminPanel';
-import { MOCK_MANAGED_COMMUNITIES } from '@/lib/mock-community-admin';
+import WorkspaceSelector from '@/components/planner/WorkspaceSelector';
+import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
+import type { BrandWorkspace } from '@/lib/mock-content-planner';
 import {
   appendUtmParams,
   buildTrackedShortUrl,
@@ -1295,7 +1301,22 @@ export default function AdminPage() {
   const [adminCommunityId, setAdminCommunityId] = useState(
     MOCK_MANAGED_COMMUNITIES[0]?.id ?? 101
   );
+  const [createWsOpen, setCreateWsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+
+  // Team workspaces / brand profiles for the admin header switcher.
+  const { data: adminWsData } = useQuery<{ workspaces: BrandWorkspace[] }>({
+    queryKey: ['admin-workspaces'],
+    queryFn: async () => {
+      const r = await fetch('/api/admin/workspaces');
+      if (!r.ok) throw new Error('Failed');
+      return r.json();
+    },
+    enabled: !!session,
+  });
+  const adminWorkspaces =
+    adminWsData?.workspaces ??
+    MOCK_MANAGED_COMMUNITIES.map(managedCommunityAsWorkspace);
 
   // Deep-link support: /admin?tab=email (and /admin/email redirect)
   // Legacy event/broadcast/content tabs now live under Community.
@@ -1735,7 +1756,7 @@ export default function AdminPage() {
     async (action: 'start' | 'stop' | 'update', viewerCount?: number) => {
       if (!streamKey || streamKey.includes('xxxxxxxx')) return;
       const communityName =
-        MOCK_MANAGED_COMMUNITIES.find((c) => c.id === adminCommunityId)?.name ??
+        adminWorkspaces.find((w) => w.id === String(adminCommunityId))?.name ??
         null;
       try {
         await fetch(`/api/live/${encodeURIComponent(streamKey)}`, {
@@ -1753,7 +1774,7 @@ export default function AdminPage() {
         /* non-blocking demo sync */
       }
     },
-    [streamKey, liveTitle, session?.user?.name, adminCommunityId]
+    [streamKey, liveTitle, session?.user?.name, adminCommunityId, adminWorkspaces]
   );
 
   const startBroadcast = useCallback(() => {
@@ -1785,10 +1806,6 @@ export default function AdminPage() {
     router.push('/account/signin');
     return null;
   }
-
-  const selectedAdminCommunity =
-    MOCK_MANAGED_COMMUNITIES.find((c) => c.id === adminCommunityId) ??
-    MOCK_MANAGED_COMMUNITIES[0];
 
   const now = Date.now();
   const plannedEvents = (Array.isArray(events) ? events : [])
@@ -1832,34 +1849,17 @@ export default function AdminPage() {
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-zinc-100">
         <div className="max-w-7xl mx-auto px-3 sm:px-6">
           <div className="h-14 sm:h-16 flex items-center gap-3 sm:gap-4">
-            {/* Left: community logo + selector */}
-            <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
-              <div
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0"
-                style={{
-                  background: selectedAdminCommunity?.cover_color || 'var(--nc-coral)',
+            {/* Left: Team Workspace / Brand Profile switcher (same UX as Content Planner) */}
+            <div className="flex-shrink-0 min-w-0">
+              <WorkspaceSelector
+                workspaces={adminWorkspaces}
+                activeId={String(adminCommunityId)}
+                onSelect={(ws) => {
+                  const nextId = Number(ws.id);
+                  if (!Number.isNaN(nextId)) setAdminCommunityId(nextId);
                 }}
-              >
-                {selectedAdminCommunity?.name?.[0] ?? 'N'}
-              </div>
-              <div className="relative min-w-0">
-                <select
-                  value={adminCommunityId}
-                  onChange={(e) => setAdminCommunityId(Number(e.target.value))}
-                  className="appearance-none h-11 min-h-[44px] max-w-[140px] sm:max-w-[200px] pl-2 pr-7 bg-transparent text-sm font-black text-[#2c3340] truncate focus:outline-none cursor-pointer"
-                  aria-label="Välj community"
-                >
-                  {MOCK_MANAGED_COMMUNITIES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={14}
-                  className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-zinc-400"
-                />
-              </div>
+                onCreateNew={() => setCreateWsOpen(true)}
+              />
             </div>
 
             {/* Center: global search */}
@@ -1981,7 +1981,7 @@ export default function AdminPage() {
               );
             })}
             <Link
-              href="/admin/planner"
+              href="/planner"
               className="relative flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 sm:px-4 text-[11px] sm:text-xs font-extrabold whitespace-nowrap transition-colors flex-shrink-0 text-zinc-400 hover:text-zinc-700"
             >
               <CalendarDays size={13} />
@@ -3448,6 +3448,17 @@ export default function AdminPage() {
           </div>
         </>
       )}
+
+      <CreateWorkspaceModal
+        open={createWsOpen}
+        onOpenChange={setCreateWsOpen}
+        createUrl="/api/admin/workspaces"
+        onCreated={(ws) => {
+          queryClient.invalidateQueries({ queryKey: ['admin-workspaces'] });
+          const nextId = Number(ws.id);
+          if (!Number.isNaN(nextId)) setAdminCommunityId(nextId);
+        }}
+      />
 
       <style jsx global>{`
         @keyframes livePulse {

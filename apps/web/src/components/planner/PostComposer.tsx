@@ -181,9 +181,16 @@ export default function PostComposer({
       const payload: Record<string, unknown> = {
         action: 'upsert',
         id: initial?.id || undefined,
+        title: ideaTitle || caption.split('\n')[0].slice(0, 60) || 'Nytt inlägg',
         caption,
         platforms,
         status,
+        workflow:
+          status === 'published'
+            ? 'PUBLISHED'
+            : status === 'scheduled'
+              ? 'SCHEDULED'
+              : 'IN_PROGRESS',
         media_items: mediaItems,
         idea_title: ideaTitle,
         youtube: hasYoutube
