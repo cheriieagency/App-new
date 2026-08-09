@@ -10,7 +10,7 @@ import {
   Mail,
   MessageSquare,
   Receipt,
-  Tag,
+  Video,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
@@ -20,60 +20,63 @@ const FEATURE_DEFS: {
   icon: typeof Link2;
   titleKey: TranslationKey;
   summaryKey: TranslationKey;
+  accent: string;
 }[] = [
   {
     id: 'bio',
     icon: Link2,
     titleKey: 'featureStoreTitle',
     summaryKey: 'featureStoreSummary',
+    accent: 'from-indigo-500 to-purple-500',
   },
   {
     id: 'planner',
     icon: CalendarDays,
     titleKey: 'featurePlannerTitle',
     summaryKey: 'featurePlannerSummary',
+    accent: 'from-pink-500 to-rose-500',
   },
   {
     id: 'analytics',
     icon: BarChart3,
     titleKey: 'featureAnalyticsTitle',
     summaryKey: 'featureAnalyticsSummary',
-  },
-  {
-    id: 'tagging',
-    icon: Tag,
-    titleKey: 'featureTaggingTitle',
-    summaryKey: 'featureTaggingSummary',
+    accent: 'from-violet-500 to-indigo-500',
   },
   {
     id: 'community',
     icon: MessageSquare,
     titleKey: 'featureCommunityTitle',
     summaryKey: 'featureCommunitySummary',
+    accent: 'from-emerald-500 to-teal-500',
   },
   {
     id: 'events',
-    icon: CalendarDays,
+    icon: Video,
     titleKey: 'featureEventsTitle',
     summaryKey: 'featureEventsSummary',
+    accent: 'from-sky-500 to-blue-500',
   },
   {
     id: 'email',
     icon: Mail,
     titleKey: 'featureEmailTitle',
     summaryKey: 'featureEmailSummary',
+    accent: 'from-amber-500 to-orange-500',
   },
   {
     id: 'ai',
     icon: Bot,
     titleKey: 'featureAiTitle',
     summaryKey: 'featureAiSummary',
+    accent: 'from-fuchsia-500 to-pink-500',
   },
   {
     id: 'finance',
     icon: Receipt,
     titleKey: 'featureFinanceTitle',
     summaryKey: 'featureFinanceSummary',
+    accent: 'from-slate-600 to-slate-800',
   },
 ];
 
@@ -84,103 +87,116 @@ export function FeaturesSection() {
   const ActiveIcon = active.icon;
 
   return (
-    <section className="relative py-20 sm:py-28 overflow-hidden">
+    <section
+      id="features"
+      className="relative py-20 sm:py-28 overflow-hidden bg-gradient-to-b from-slate-50 via-indigo-50/20 to-slate-50"
+    >
       <div
-        className="nc-blob w-[28rem] h-[28rem] -left-20 top-20 opacity-70"
-        style={{ background: 'var(--nc-sky)' }}
+        className="absolute -top-16 -right-20 w-[28rem] h-[28rem] rounded-full bg-indigo-400/10 blur-3xl pointer-events-none"
+        aria-hidden
       />
       <div
-        className="nc-blob w-80 h-80 right-0 bottom-10 opacity-60"
-        style={{ background: 'var(--nc-blush)' }}
+        className="absolute bottom-0 -left-16 w-80 h-80 rounded-full bg-pink-400/10 blur-3xl pointer-events-none"
+        aria-hidden
       />
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="max-w-2xl mb-12">
-          <p
-            className="text-xs font-extrabold uppercase tracking-[0.16em] mb-3"
-            style={{ color: 'var(--nc-coral)' }}
-          >
+        <div className="max-w-2xl mx-auto text-center mb-10 sm:mb-12">
+          <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-indigo-600 mb-3">
             {t('featuresEyebrow', locale)}
           </p>
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#2c3340] tracking-tight">
+          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight">
             {t('featuresHeadline', locale)}
           </h2>
-          <p className="mt-4 text-[#5b6472] font-medium text-base sm:text-lg leading-relaxed">
+          <p className="mt-4 text-slate-600 font-medium text-base sm:text-lg leading-relaxed">
             {t('featuresSub', locale)}
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-6 lg:gap-8 items-start">
-          <div className="nc-glass rounded-[1.75rem] p-2 space-y-1 max-h-[28rem] overflow-y-auto">
-            {FEATURE_DEFS.map((feature) => {
-              const Icon = feature.icon;
-              const isActive = feature.id === activeId;
-              return (
-                <button
-                  key={feature.id}
-                  type="button"
-                  onClick={() => setActiveId(feature.id)}
-                  className={`w-full text-left flex items-start gap-3.5 px-3.5 py-3.5 rounded-[1.25rem] transition-all min-h-14 ${
-                    isActive
-                      ? 'bg-white/90 text-[#2c3340] shadow-sm'
-                      : 'text-[#5b6472] hover:bg-white/40'
-                  }`}
-                >
-                  <div
-                    className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 mt-0.5"
-                    style={{
-                      background: isActive ? 'var(--nc-coral-soft)' : 'rgba(255,255,255,0.5)',
-                    }}
-                  >
-                    <Icon
-                      size={16}
-                      style={{ color: isActive ? 'var(--nc-coral)' : '#94a0b0' }}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-display font-bold text-sm sm:text-base text-[#2c3340]">
-                      {t(feature.titleKey, locale)}
-                    </p>
-                    <p className="text-sm font-medium mt-0.5 leading-snug text-[#5b6472] line-clamp-2">
-                      {t(feature.summaryKey, locale)}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={active.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.25 }}
-              className="nc-glass rounded-[1.75rem] p-7 sm:p-9 relative overflow-hidden lg:sticky lg:top-24"
+        <div className="max-w-5xl mx-auto bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-3xl shadow-xl overflow-hidden">
+          <div className="grid lg:grid-cols-[0.95fr_1.05fr] items-stretch">
+            {/* Feature list */}
+            <nav
+              aria-label="Platform features"
+              className="p-2 sm:p-3 space-y-1 max-h-[28rem] overflow-y-auto border-b lg:border-b-0 lg:border-r border-slate-200/80"
             >
-              <div
-                className="nc-blob w-48 h-48 -top-10 -right-10 opacity-80"
-                style={{ background: 'var(--nc-coral-soft)' }}
-              />
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-5">
-                  <div
-                    className="w-12 h-12 rounded-[1.1rem] flex items-center justify-center"
-                    style={{ background: 'var(--nc-coral-soft)' }}
+              {FEATURE_DEFS.map((feature) => {
+                const Icon = feature.icon;
+                const isActive = feature.id === activeId;
+                return (
+                  <button
+                    key={feature.id}
+                    type="button"
+                    onClick={() => setActiveId(feature.id)}
+                    className={`w-full text-left flex items-start gap-3.5 px-3.5 py-3.5 rounded-2xl transition-all min-h-[44px] ${
+                      isActive
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
                   >
-                    <ActiveIcon size={22} style={{ color: 'var(--nc-coral)' }} />
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        isActive
+                          ? `bg-gradient-to-br ${feature.accent} text-white`
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      <Icon size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <p
+                        className={`font-display font-bold text-sm sm:text-base ${
+                          isActive ? 'text-white' : 'text-slate-900'
+                        }`}
+                      >
+                        {t(feature.titleKey, locale)}
+                      </p>
+                      <p
+                        className={`text-sm font-medium mt-0.5 leading-snug line-clamp-2 ${
+                          isActive ? 'text-slate-300' : 'text-slate-500'
+                        }`}
+                      >
+                        {t(feature.summaryKey, locale)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Active feature detail */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={active.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
+                className="relative p-7 sm:p-9 lg:sticky lg:top-24 min-h-[280px] flex flex-col justify-center overflow-hidden"
+              >
+                <div
+                  className={`absolute -top-16 -right-16 w-56 h-56 rounded-full bg-gradient-to-br ${active.accent} opacity-15 blur-3xl pointer-events-none`}
+                  aria-hidden
+                />
+                <div className="relative">
+                  <div
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 text-white shadow-lg bg-gradient-to-br ${active.accent}`}
+                  >
+                    <ActiveIcon size={24} />
                   </div>
-                  <h3 className="font-display font-extrabold text-xl text-[#2c3340]">
+                  <h3 className="font-display font-extrabold text-xl sm:text-2xl text-slate-900 mb-3">
                     {t(active.titleKey, locale)}
                   </h3>
+                  <p className="text-slate-600 font-medium leading-relaxed text-base sm:text-lg">
+                    {t(active.summaryKey, locale)}
+                  </p>
+                  <div className="mt-6 inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-indigo-600 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-full">
+                    Built for Nordic creators
+                  </div>
                 </div>
-                <p className="text-[#5b6472] font-medium mb-2 leading-relaxed text-base">
-                  {t(active.summaryKey, locale)}
-                </p>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </section>

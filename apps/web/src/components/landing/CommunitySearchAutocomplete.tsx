@@ -35,6 +35,17 @@ function matchesQuery(c: SearchableCommunity, q: string): boolean {
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
+  // Map filter aliases so Marketing matches Marknadsföring, etc.
+  const aliases: Record<string, string[]> = {
+    marketing: ['marketing', 'marknads'],
+    health: ['health', 'hälsa', 'fitness'],
+    finance: ['finance', 'ekonomi', 'e-com', 'ecom', 'e-handel', 'ehandel'],
+    coaching: ['coaching', 'coach'],
+    tech: ['tech', 'design'],
+  };
+  if (aliases[q]) {
+    return aliases[q].some((a) => haystack.includes(a));
+  }
   return haystack.includes(q);
 }
 
@@ -50,6 +61,7 @@ export function CommunitySearchAutocomplete({
   const resolvedPlaceholder = placeholder || t('searchPlaceholder', locale);
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
 
@@ -71,6 +83,11 @@ export function CommunitySearchAutocomplete({
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        inputRef.current?.focus();
+        setOpen(true);
+      }
     };
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
@@ -88,24 +105,25 @@ export function CommunitySearchAutocomplete({
   };
 
   return (
-    <div ref={rootRef} className="relative w-full max-w-xl">
+    <div ref={rootRef} className="relative w-full max-w-2xl">
       <label className="sr-only" htmlFor={listId}>
-        {t('searchCommunitiesHeading', locale)}
+        Search communities
       </label>
       <div className="relative">
         <Search
           size={16}
-          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
           aria-hidden
         />
         <input
+          ref={inputRef}
           id={listId}
           type="search"
           role="combobox"
           aria-expanded={showDropdown}
           aria-controls={`${listId}-listbox`}
           aria-autocomplete="list"
-          aria-label={t('searchCommunitiesHeading', locale)}
+          aria-label="Search communities"
           autoComplete="off"
           placeholder={resolvedPlaceholder}
           value={value}
@@ -127,20 +145,24 @@ export function CommunitySearchAutocomplete({
               selectAt(highlight);
             }
           }}
-          className="w-full min-h-12 pl-11 pr-11 rounded-2xl bg-white border border-zinc-200 text-sm font-medium text-zinc-900 placeholder:text-zinc-400 shadow-sm outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all"
+          className="w-full min-h-12 pl-11 pr-20 rounded-2xl bg-white/90 backdrop-blur-md border border-slate-200/90 text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
         />
-        {value.length > 0 && (
+        {value.length > 0 ? (
           <button
             type="button"
-            aria-label={t('clearFilter', locale)}
+            aria-label="Clear search"
             onClick={() => {
               onChange('');
               setOpen(false);
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <X size={16} />
           </button>
+        ) : (
+          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400">
+            ⌘K
+          </kbd>
         )}
       </div>
 
@@ -148,21 +170,22 @@ export function CommunitySearchAutocomplete({
         <div
           id={`${listId}-listbox`}
           role="listbox"
-          className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200/80"
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 backdrop-blur-xl shadow-xl shadow-slate-200/80"
         >
           {isLoading && suggestions.length === 0 && (
-            <p className="px-4 py-3 text-sm font-medium text-zinc-500">{t('loading', locale)}</p>
+            <p className="px-4 py-3 text-sm font-medium text-slate-500">Loading…</p>
           )}
 
           {!isLoading && suggestions.length === 0 && (
-            <p className="px-4 py-3 text-sm font-medium text-zinc-500">
-              {t('noResults', locale)} &quot;{value.trim()}&quot;
+            <p className="px-4 py-3 text-sm font-medium text-slate-500">
+              No results for “{value.trim()}”
             </p>
           )}
 
           <ul className="max-h-80 overflow-y-auto py-1">
             {suggestions.map((community, index) => {
               const active = index === highlight;
+              const price = community.monthly_price ?? community.price ?? 199;
               return (
                 <li key={community.id} role="option" aria-selected={active}>
                   <button
@@ -170,12 +193,11 @@ export function CommunitySearchAutocomplete({
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => selectAt(index)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 min-h-14 text-left transition-colors ${
-                      active ? 'bg-zinc-100' : 'hover:bg-zinc-50'
+                      active ? 'bg-indigo-50' : 'hover:bg-slate-50'
                     }`}
                   >
                     <div
-                      className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-zinc-100"
-                      style={{ backgroundColor: community.cover_color ?? '#0f1f1c' }}
+                      className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-slate-100 bg-gradient-to-br from-indigo-500 to-pink-500"
                     >
                       {community.creator_image ? (
                         <img
@@ -190,16 +212,16 @@ export function CommunitySearchAutocomplete({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-zinc-900 truncate">{community.name}</p>
+                      <p className="text-sm font-extrabold text-slate-900 truncate">
+                        {community.name}
+                      </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
                           #{community.category || 'Community'}
                         </span>
-                        {community.creator_name && (
-                          <span className="text-[11px] font-medium text-zinc-400 truncate">
-                            {community.creator_name}
-                          </span>
-                        )}
+                        <span className="text-[11px] font-bold text-slate-400">
+                          {price.toLocaleString('sv-SE')} SEK/mo
+                        </span>
                       </div>
                     </div>
                   </button>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 import { t } from '@/lib/i18n';
 import { useLanguage } from '@/lib/locale-context';
 import { LoginModal } from '@/components/landing/LoginModal';
@@ -11,6 +10,10 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 type LandingHeaderProps = {
   isLoggedIn: boolean;
 };
+
+function scrollToId(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+}
 
 export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
   const { locale } = useLanguage();
@@ -28,71 +31,79 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-          scrolled ? 'nc-glass border-b border-white/60' : 'bg-transparent border-b border-transparent'
+          scrolled
+            ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/70 shadow-sm'
+            : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 min-h-11">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
-              style={{ background: 'var(--nc-coral)' }}
-            >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          {/* Left — brand */}
+          <Link href="/" className="flex items-center gap-2.5 min-h-11 shrink-0">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md shadow-indigo-600/25 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
               <span className="text-white font-display font-extrabold text-xs">N</span>
             </div>
-            <span className="font-display font-extrabold text-sm hidden sm:block text-[#2c3340]">
+            <span className="font-display font-extrabold text-sm text-slate-900 hidden sm:block">
               Nordic Creator
             </span>
           </Link>
 
-          <nav className="flex items-center gap-2 sm:gap-3">
+          {/* Middle — primary nav */}
+          <nav
+            className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2"
+            aria-label="Primary"
+          >
             <button
               type="button"
-              onClick={() =>
-                document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })
-              }
-              className="text-sm font-bold text-[#5b6472] hover:text-[#2c3340] transition-colors hidden sm:block min-h-11 px-2"
+              onClick={() => scrollToId('features')}
+              className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
             >
-              {t('pricing', locale)}
+              Features
             </button>
             <button
               type="button"
-              onClick={() =>
-                document.getElementById('communities')?.scrollIntoView({ behavior: 'smooth' })
-              }
-              className="text-sm font-bold text-[#5b6472] hover:text-[#2c3340] transition-colors hidden sm:block min-h-11 px-2"
+              onClick={() => scrollToId('pricing')}
+              className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
             >
-              {t('findCommunity', locale)}
+              Pricing
             </button>
+            <button
+              type="button"
+              onClick={() => scrollToId('communities')}
+              className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
+            >
+              Explore Communities
+            </button>
+          </nav>
 
-            <LanguageSwitcher className="[&>button]:bg-white/70 [&>button]:border [&>button]:border-white/80" />
+          {/* Right — locale + auth */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <LanguageSwitcher className="[&>button]:bg-white [&>button]:border [&>button]:border-slate-200 [&>button]:shadow-sm" />
 
             {isLoggedIn ? (
               <Link
                 href="/dashboard"
-                className="flex items-center gap-1.5 min-h-11 px-4 rounded-full text-sm font-extrabold text-white transition-all active:scale-95"
-                style={{ background: 'var(--nc-coral)' }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-1.5 min-h-11 transition-colors"
               >
-                {t('dashboard', locale)} <ArrowRight size={13} />
+                {t('dashboard', locale)} →
               </Link>
             ) : (
-              <div className="flex items-center gap-2">
+              <>
                 <button
                   type="button"
                   onClick={() => setLoginOpen(true)}
-                  className="text-sm font-bold text-[#5b6472] hover:text-[#2c3340] transition-colors min-h-11 px-3 rounded-full hover:bg-white/50"
+                  className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
                 >
-                  {t('signIn', locale)}
+                  Sign in
                 </button>
                 <Link
                   href="/account/signup"
-                  className="flex items-center gap-1.5 min-h-11 px-4 rounded-full text-sm font-extrabold text-white transition-all active:scale-95"
-                  style={{ background: 'var(--nc-coral)' }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-1.5 min-h-11 transition-colors"
                 >
-                  {t('getStarted', locale)}
+                  Get started →
                 </Link>
-              </div>
+              </>
             )}
-          </nav>
+          </div>
         </div>
       </header>
 

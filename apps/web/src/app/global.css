@@ -85,6 +85,10 @@
 }
 
 @theme inline {
+    /* font-sans → Plus Jakarta; font-inter / font-jakarta utilities also available */
+    --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-jakarta: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-inter: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
@@ -128,10 +132,17 @@
         @apply border-border;
     }
     body {
-        @apply bg-background text-foreground;
-        font-family: 'Outfit', system-ui, sans-serif;
+        @apply bg-background text-foreground font-sans antialiased;
         color: var(--nc-ink);
         background: var(--nc-paper);
+    }
+    h1,
+    h2,
+    h3 {
+        @apply font-extrabold tracking-tight;
+    }
+    h4 {
+        @apply font-bold tracking-tight;
     }
 }
 
@@ -146,7 +157,7 @@
     --nc-coral-soft: #f2eeff;
     --nc-sky: #d7ecff;
     --nc-mint: #d8f5ef;
-    font-family: 'Outfit', system-ui, sans-serif;
+    font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
     color: var(--nc-ink);
     background: var(--nc-paper);
 }
@@ -154,7 +165,7 @@
 .nc-landing .font-display,
 .nc-app .font-display,
 .font-display {
-    font-family: 'Nunito', 'Outfit', system-ui, sans-serif;
+    font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 .nc-glass {
@@ -165,6 +176,14 @@
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.85) inset,
       0 22px 60px -28px rgba(120, 140, 180, 0.35);
+}
+
+/* Landing hero floating callout cards */
+.glass-card {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    backdrop-filter: blur(18px) saturate(1.3);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
 }
 
 .nc-blob {

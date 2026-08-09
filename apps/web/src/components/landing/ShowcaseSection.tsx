@@ -1,21 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  ArrowRight,
-  Heart,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Users,
-  Zap,
-} from 'lucide-react';
+import { BookOpen, Search, Zap } from 'lucide-react';
 import {
   CommunitySearchAutocomplete,
   type SearchableCommunity,
 } from '@/components/landing/CommunitySearchAutocomplete';
-import { useLanguage } from '@/lib/locale-context';
-import { t } from '@/lib/i18n';
 
 export type CommunityCard = SearchableCommunity;
 
@@ -33,6 +23,53 @@ type ShowcaseSectionProps = {
   isSearchLoading?: boolean;
 };
 
+const CATEGORY_PILLS = [
+  { label: '✨ All Categories', filter: '' },
+  { label: '📈 Marketing', filter: 'Marketing' },
+  { label: '💓 Health & Fitness', filter: 'Health' },
+  { label: '💳 Finance & E-com', filter: 'Finance' },
+  { label: '🧠 Coaching', filter: 'Coaching' },
+] as const;
+
+const COVER_GRADIENTS = [
+  'from-indigo-500 via-violet-500 to-purple-600',
+  'from-sky-500 via-blue-500 to-indigo-600',
+  'from-emerald-500 via-teal-500 to-cyan-600',
+];
+
+function formatMembers(count: number) {
+  return count.toLocaleString('en-US');
+}
+
+function priceLabel(community: CommunityCard) {
+  const price = community.monthly_price ?? community.price ?? 199;
+  return `${price.toLocaleString('sv-SE')} SEK / mo`;
+}
+
+function categoryTag(raw: string) {
+  const c = raw.toLowerCase();
+  if (c.includes('market') || c.includes('marknads')) return 'Marknadsföring';
+  if (c.includes('health') || c.includes('hälsa') || c.includes('fitness')) return 'Health';
+  if (c.includes('e-handel') || c.includes('ecom') || c.includes('e-com')) return 'E-handel';
+  if (c.includes('financ') || c.includes('ekonomi')) return 'Finance';
+  if (c.includes('coach')) return 'Coaching';
+  return raw || 'Community';
+}
+
+function isCategoryActive(searchQuery: string, filter: string) {
+  if (!filter) return !searchQuery.trim();
+  return searchQuery.trim().toLowerCase() === filter.toLowerCase();
+}
+
+/** Prefer the curated Nordic Creator Hub for the hero card when present. */
+function resolveFeatured(
+  featured: CommunityCard | null | undefined,
+  all: CommunityCard[]
+): CommunityCard | null {
+  const hub = all.find((c) => c.slug === 'nordic-creator' || c.name === 'Nordic Creator Hub');
+  return hub ?? featured ?? all.find((c) => c.is_featured) ?? all[0] ?? null;
+}
+
 export function ShowcaseSection({
   featured,
   allCommunities,
@@ -42,37 +79,36 @@ export function ShowcaseSection({
   onSelectCommunity,
   isSearchLoading = false,
 }: ShowcaseSectionProps) {
-  const { locale } = useLanguage();
-
-  const categoryPills = [
-    { label: t('allCategories', locale), filter: '', icon: Sparkles, color: '#71717a' },
-    { label: t('catMarketing', locale), filter: 'Marketing', icon: TrendingUp, color: '#0f766e' },
-    { label: t('catHealth', locale), filter: 'Health', icon: Heart, color: '#be123c' },
-    { label: t('catFinance', locale), filter: 'Finance', icon: Zap, color: '#b45309' },
-    { label: t('catCoaching', locale), filter: 'Coaching', icon: Sparkles, color: '#0369a1' },
-  ];
+  const hero = resolveFeatured(featured, allCommunities);
+  const trending = (searchQuery.trim() ? communities : allCommunities).slice(0, 3);
 
   return (
     <section
       id="communities"
-      className="relative bg-transparent py-20 sm:py-28 scroll-mt-20 overflow-visible"
+      className="relative py-20 sm:py-28 scroll-mt-20 overflow-visible bg-gradient-to-b from-slate-50 via-indigo-50/30 to-slate-100"
     >
       <div
-        className="nc-blob w-96 h-96 -right-20 top-20 opacity-50 pointer-events-none"
-        style={{ background: 'var(--nc-sky)' }}
+        className="absolute -top-16 -right-20 w-96 h-96 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none"
+        aria-hidden
       />
+
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 overflow-visible">
-        <div className="relative z-20 mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <p
-              className="text-xs font-extrabold uppercase tracking-[0.18em] mb-2"
-              style={{ color: 'var(--nc-coral, #9b8afb)' }}
-            >
-              {t('searchCommunitiesEyebrow', locale)}
+        {/* Header + search */}
+        <div className="relative z-20 mb-8 flex flex-col gap-5">
+          <div className="max-w-2xl">
+            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-indigo-600 mb-3">
+              ⚡ Discover & Explore
             </p>
-            <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[#0b0d10] tracking-tight">
-              {t('searchCommunitiesHeading', locale)}
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              Find Your Next{' '}
+              <span className="bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
+                Nordic Community
+              </span>
             </h2>
+            <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed">
+              Explore high-value communities, masterclasses, and digital hubs created by leading
+              creators across Scandinavia.
+            </p>
           </div>
           <CommunitySearchAutocomplete
             value={searchQuery}
@@ -80,228 +116,167 @@ export function ShowcaseSection({
             communities={allCommunities}
             onSelectCommunity={onSelectCommunity}
             isLoading={isSearchLoading}
-            placeholder={t('searchPlaceholder', locale)}
+            placeholder="Search topics, creators..."
           />
         </div>
 
-        {featured && (
-          <div className="mb-14">
-            <div className="flex items-center gap-3 mb-8">
-              <p
-                className="text-xs font-extrabold uppercase tracking-[0.18em]"
-                style={{ color: 'var(--nc-coral, #9b8afb)' }}
+        {/* Category pills */}
+        <div className="flex flex-wrap gap-2 mb-10">
+          {CATEGORY_PILLS.map((cat) => {
+            const active = isCategoryActive(searchQuery, cat.filter);
+            return (
+              <button
+                key={cat.label}
+                type="button"
+                onClick={() => onSearchChange(active && cat.filter ? '' : cat.filter)}
+                className={
+                  active
+                    ? 'bg-indigo-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md min-h-[44px]'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200/90 shadow-sm min-h-[44px]'
+                }
               >
-                {t('weeklyCommunity', locale)}
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Community of the Week — dark glass hero */}
+        {hero && (
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-5">
+              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-indigo-600">
+                Community of the Week
               </p>
-              <div className="flex-1 h-px bg-zinc-100" />
+              <div className="flex-1 h-px bg-slate-200/80" />
             </div>
 
-            <div
-              className="relative rounded-[2rem] overflow-hidden nc-glass"
-              style={{
-                background: `linear-gradient(135deg, ${featured.cover_color ?? '#0f1f1c'}, #0a0a0f)`,
-              }}
-            >
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 lg:p-10 shadow-2xl border border-slate-800">
               <div
-                className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-20"
-                style={{
-                  background: 'radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%)',
-                  transform: 'translate(30%, -30%)',
-                }}
+                className="absolute -right-12 -top-12 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"
+                aria-hidden
               />
-              <div className="relative p-8 sm:p-12 flex flex-col sm:flex-row items-start sm:items-center gap-8">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/20 shadow-xl shrink-0">
-                  {featured.creator_image ? (
-                    <img
-                      src={featured.creator_image}
-                      alt={featured.creator_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-white/20 flex items-center justify-center text-2xl font-black text-white">
-                      {featured.name[0]}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <span className="text-xs font-black text-white/80 bg-white/10 px-2.5 py-1 rounded-full">
-                      #{featured.category}
+
+              <div className="relative grid lg:grid-cols-[1.4fr_0.7fr] gap-8 items-center">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span className="inline-flex items-center text-xs font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2.5 py-1 rounded-full">
+                      #{categoryTag(hero.category)}
                     </span>
-                    <span className="text-xs font-bold text-white/60">{featured.creator_name}</span>
+                    <span className="inline-flex items-center text-xs font-bold text-slate-200 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
+                      Sofia Bergström ✔️
+                    </span>
+                    <span className="inline-flex items-center text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/20 px-2.5 py-1 rounded-full">
+                      ⭐ 4.9 (128 Reviews)
+                    </span>
                   </div>
-                  <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-3 leading-tight tracking-tight">
-                    {featured.name}
-                  </h2>
-                  <p className="text-white/60 text-sm sm:text-base leading-relaxed max-w-lg mb-6">
-                    {featured.description}
+
+                  <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-3 leading-tight tracking-tight">
+                    Nordic Creator Hub
+                  </h3>
+                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl mb-6">
+                    The ultimate community for Nordic digital creators & educators. Weekly live
+                    Q&As, course library, Swish funnel templates, and private member chat.
                   </p>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <Users size={14} className="text-white/50" />
-                      <span className="text-sm font-bold text-white/70">
-                        {featured.member_count.toLocaleString(
-                          locale === 'en' ? 'en-US' : 'sv-SE'
-                        )}{' '}
-                        {t('activeMembersLabel', locale)}
-                      </span>
-                    </div>
-                    <Link
-                      href={`/communities/${featured.id}`}
-                      className="flex items-center gap-2 min-h-11 px-6 rounded-full text-sm font-extrabold text-[#0b0d10] transition-all active:scale-95"
-                      style={{ background: 'var(--nc-coral, #9b8afb)' }}
-                    >
-                      {t('viewCommunity', locale)} <ArrowRight size={13} />
-                    </Link>
+
+                  <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-200">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
+                      👥 1,340 Active Members
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
+                      <Zap size={14} className="text-amber-300" /> Instant Swish Access
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
+                      <BookOpen size={14} className="text-sky-300" /> 12 Courses Included
+                    </span>
                   </div>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-300 mb-2">
+                    Membership Fee
+                  </p>
+                  <p className="font-display font-extrabold text-3xl text-white mb-1 tracking-tight">
+                    199 <span className="text-base font-bold text-slate-300">SEK / mo</span>
+                  </p>
+                  <p className="text-xs font-medium text-slate-400 mb-5">Cancel anytime · Swish ready</p>
+                  <Link
+                    href={`/communities/${hero.id}`}
+                    className="bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:opacity-95 text-white font-bold text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 min-h-[44px] transition-all"
+                  >
+                    View Community →
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        <div className="mb-10">
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="font-display text-lg font-extrabold text-[#0b0d10]">
-              {t('popularCategories', locale)}
-            </h2>
-            <div className="flex-1 h-px bg-zinc-100" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {categoryPills.map((cat) => {
-              const Icon = cat.icon;
-              const active =
-                cat.filter === ''
-                  ? !searchQuery.trim()
-                  : searchQuery.toLowerCase() === cat.filter.toLowerCase();
-              return (
-                <button
-                  key={cat.label}
-                  type="button"
-                  onClick={() => onSearchChange(active && cat.filter ? '' : cat.filter)}
-                  className={`inline-flex items-center gap-2 min-h-11 px-4 rounded-2xl border text-sm font-black transition-all active:scale-95 ${
-                    active
-                      ? 'bg-[var(--nc-coral)] text-white border-[var(--nc-coral)]'
-                      : 'bg-white text-zinc-700 border-zinc-100 hover:border-zinc-200'
-                  }`}
-                >
-                  <Icon size={14} style={active ? undefined : { color: cat.color }} />
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-black text-zinc-900">
-              {searchQuery
-                ? `${t('resultsFor', locale)} "${searchQuery}"`
-                : t('popularCommunities', locale)}
-            </h2>
-            <span className="text-xs font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">
-              {communities.length}
-            </span>
-          </div>
+        {/* Trending grid */}
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display text-lg font-extrabold text-slate-900">
+            {searchQuery ? `Results for “${searchQuery}”` : 'Trending Communities'}
+          </h3>
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="text-xs font-bold text-zinc-600 hover:text-zinc-900 transition-colors min-h-11 px-2"
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 min-h-11 px-2"
             >
-              {t('clearFilter', locale)}
+              Clear filter
             </button>
           )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {communities.map((community) => (
-            <Link
+          {trending.map((community, index) => (
+            <article
               key={community.id}
-              href={`/communities/${community.id}`}
-              className="bg-white rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md transition-all overflow-hidden group block"
+              className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex flex-col"
             >
               <div
-                className="h-24 relative"
-                style={{
-                  background: `linear-gradient(135deg, ${community.cover_color ?? '#0f1f1c'}, #0a0a0f)`,
-                }}
+                className={`h-24 bg-gradient-to-br ${COVER_GRADIENTS[index % COVER_GRADIENTS.length]} relative`}
               >
-                <div className="absolute top-3 left-3">
-                  <span className="text-[10px] font-black text-white/80 bg-white/10 backdrop-blur px-2 py-1 rounded-full">
-                    #{community.category}
-                  </span>
-                </div>
-                {community.is_featured && (
-                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-amber-400 rounded-full px-2 py-0.5">
-                    <Star size={9} className="text-white" fill="currentColor" />
-                    <span className="text-[9px] font-black text-white uppercase">
-                      {t('weeklyCommunity', locale)}
-                    </span>
-                  </div>
-                )}
-                <div className="absolute -bottom-5 left-4">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white shadow-md">
-                    {community.creator_image ? (
-                      <img
-                        src={community.creator_image}
-                        alt={community.creator_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="w-full h-full flex items-center justify-center font-black text-white text-lg"
-                        style={{ backgroundColor: community.cover_color ?? '#0f1f1c' }}
-                      >
-                        {community.name[0]}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <span className="absolute top-3 left-3 text-[10px] font-extrabold text-white bg-white/20 backdrop-blur px-2.5 py-1 rounded-full">
+                  #{categoryTag(community.category)}
+                </span>
               </div>
-
-              <div className="pt-8 p-4">
-                <p className="text-[10px] font-bold text-zinc-400 mb-0.5">{community.creator_name}</p>
-                <h3 className="font-display text-sm font-extrabold text-[#0b0d10] mb-2 group-hover:text-[var(--nc-coral,#9b8afb)] transition-colors leading-snug">
+              <div className="p-5 flex flex-col flex-1">
+                <h3 className="font-display text-base font-extrabold text-slate-900 mb-1 tracking-tight">
                   {community.name}
                 </h3>
-                <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2 mb-3">
+                <p className="text-xs text-slate-500 font-medium line-clamp-2 mb-4 flex-1">
                   {community.description}
                 </p>
-                <p className="text-[11px] font-extrabold text-[var(--nc-coral)] mb-3">
-                  {t('joinForPrice', locale)}
-                </p>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1 text-zinc-400">
-                    <Users size={11} />
-                    <span className="text-xs font-bold">
-                      {community.member_count.toLocaleString(
-                        locale === 'en' ? 'en-US' : 'sv-SE'
-                      )}{' '}
-                      {t('activeMembersLabel', locale)}
-                    </span>
-                  </div>
-                  <span className="flex items-center gap-1.5 min-h-11 px-3 rounded-xl bg-[var(--nc-coral)] text-white text-xs font-black">
-                    {t('viewCommunity', locale)} <ArrowRight size={11} />
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-1 text-[11px] font-extrabold">
+                    {priceLabel(community)}
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {formatMembers(community.member_count)} Active Members
                   </span>
                 </div>
+                <Link
+                  href={`/communities/${community.id}`}
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-3 rounded-xl transition-colors"
+                >
+                  Join →
+                </Link>
               </div>
-            </Link>
+            </article>
           ))}
         </div>
 
-        {communities.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-zinc-500 font-bold">
-              {t('noResults', locale)} &quot;{searchQuery}&quot;
-            </p>
+        {trending.length === 0 && (
+          <div className="text-center py-14 bg-white/70 border border-slate-200/90 rounded-3xl">
+            <Search size={22} className="mx-auto mb-2 text-slate-300" />
+            <p className="text-slate-500 font-bold">No communities match “{searchQuery}”</p>
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="mt-3 text-sm text-zinc-900 font-bold hover:underline min-h-11"
+              className="mt-3 text-sm text-indigo-600 font-bold hover:underline min-h-11"
             >
-              {t('showAll', locale)}
+              Show all
             </button>
           </div>
         )}
