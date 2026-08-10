@@ -10,105 +10,102 @@ import {
   Import,
   Receipt,
   Shield,
+  Sparkles,
+  Users,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
+import { useLanguage } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
 
 type FaqCategory = 'all' | 'payments' | 'community' | 'vat' | 'workspace';
 
-type FaqItem = {
+type FaqItemDef = {
   id: string;
   category: Exclude<FaqCategory, 'all'>;
-  question: string;
-  answer: string;
+  qKey: TranslationKey;
+  aKey: TranslationKey;
   icon: LucideIcon;
-  badge: string;
+  iconWrap: string;
 };
 
-const FILTERS: { id: FaqCategory; label: string }[] = [
-  { id: 'all', label: '✨ All Questions' },
-  { id: 'payments', label: '💳 Payments & Swish' },
-  { id: 'community', label: '👥 Community & Migration' },
-  { id: 'vat', label: '🧾 VAT & Accounting' },
-  { id: 'workspace', label: '📱 Workspace & Domain' },
+const FILTERS: { id: FaqCategory; labelKey: TranslationKey; icon: LucideIcon }[] = [
+  { id: 'all', labelKey: 'faqFilterAll', icon: Sparkles },
+  { id: 'payments', labelKey: 'faqFilterPayments', icon: Wallet },
+  { id: 'community', labelKey: 'faqFilterCommunity', icon: Users },
+  { id: 'vat', labelKey: 'faqFilterVat', icon: Receipt },
+  { id: 'workspace', labelKey: 'faqFilterWorkspace', icon: Globe },
 ];
 
-const FAQ_ITEMS: FaqItem[] = [
+const FAQ_ITEMS: FaqItemDef[] = [
   {
     id: 'swish',
     category: 'payments',
-    question: 'How do 1-tap Swish & Vipps payments work?',
-    answer:
-      'Your members can buy digital products, masterclasses, or join memberships in under 10 seconds. When they click to purchase on mobile, the Swish or Vipps app opens automatically with the exact amount pre-filled. Once authenticated with Mobile BankID, the payment is confirmed instantly and access is granted.',
+    qKey: 'faqSwishQ',
+    aKey: 'faqSwishA',
     icon: Bolt,
-    badge: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    iconWrap: 'bg-[#FCE7F3] text-[#F472B6]',
   },
   {
     id: 'vat',
     category: 'vat',
-    question: 'How is Nordic VAT (6% / 25%) and accounting handled?',
-    answer:
-      'The platform automatically applies correct Nordic VAT rates depending on the item type (25% for courses/services, 6% for e-books). Automated PDF receipts are generated and emailed to your customers instantly. Export complete accounting reports directly to software like Fortnox or Visma in 1 click.',
+    qKey: 'faqVatQ',
+    aKey: 'faqVatA',
     icon: Receipt,
-    badge: 'bg-amber-50 text-amber-600 border-amber-100',
+    iconWrap: 'bg-emerald-50 text-[#10B981]',
   },
   {
     id: 'import',
     category: 'community',
-    question: 'Can I import my existing members from Facebook or other platforms?',
-    answer:
-      'Yes! You can import member email lists via CSV upload at any time. We also provide free 1:1 migration support for creators switching over 100+ active members. Imported members receive automated welcome emails with instant 1-click magic access links.',
+    qKey: 'faqImportQ',
+    aKey: 'faqImportA',
     icon: Import,
-    badge: 'bg-purple-50 text-purple-600 border-purple-100',
+    iconWrap: 'bg-[#E9D5FF]/50 text-[#2B2568]',
   },
   {
     id: 'payouts',
     category: 'payments',
-    question: 'When and how do I receive my earnings?',
-    answer:
-      'Earnings accumulate in your creator wallet balance in real time in SEK, NOK, or DKK. You can request manual payouts at any time or enable automated weekly bank transfers directly to your Nordic bank account via BankID authentication.',
+    qKey: 'faqPayoutQ',
+    aKey: 'faqPayoutA',
     icon: Wallet,
-    badge: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    iconWrap: 'bg-slate-100 text-slate-700',
   },
   {
     id: 'social-sets',
     category: 'workspace',
-    question: 'Can I manage multiple brand profiles or Social Sets?',
-    answer:
-      'Yes. You can create multiple Team Workspaces / Brand Profiles in your admin dashboard. Each workspace has its own Social Set profiles (Instagram, TikTok, LinkedIn, YouTube), content planner calendar, Kanban board, bio link storefront, and subscriber CRM.',
+    qKey: 'faqSocialQ',
+    aKey: 'faqSocialA',
     icon: CalendarDays,
-    badge: 'bg-pink-50 text-pink-600 border-pink-100',
+    iconWrap: 'bg-[#FCE7F3] text-[#F472B6]',
   },
   {
     id: 'domain',
     category: 'workspace',
-    question: 'Can I link my own custom domain (e.g., yourname.se)?',
-    answer:
-      'Absolutely! You can use our default short links or connect your own domain (e.g., hub.yourdomain.se) with automated SSL certificates included on Pro plans.',
+    qKey: 'faqDomainQ',
+    aKey: 'faqDomainA',
     icon: Globe,
-    badge: 'bg-cyan-50 text-cyan-600 border-cyan-100',
+    iconWrap: 'bg-[#E9D5FF]/50 text-[#2B2568]',
   },
   {
     id: 'business',
     category: 'vat',
-    question: 'Do I need a registered business to start selling?',
-    answer:
-      'No! You can launch as an individual creator or sole proprietor using Mobile BankID verification. As your digital product sales grow, you can seamlessly update your business profile details, VAT ID, or Swedish AB company information in your account settings.',
+    qKey: 'faqBusinessQ',
+    aKey: 'faqBusinessA',
     icon: Briefcase,
-    badge: 'bg-sky-50 text-sky-600 border-sky-100',
+    iconWrap: 'bg-slate-100 text-slate-700',
   },
   {
     id: 'trial',
     category: 'payments',
-    question: 'Is there a free trial or free forever plan?',
-    answer:
-      'Yes. We offer a Free Forever plan with 0 SEK monthly cost so you can build your bio storefront and community risk-free. For advanced features, you can start a 14-day free trial on the Creator or Pro plan. Cancel anytime with 1 click directly from your dashboard.',
+    qKey: 'faqTrialQ',
+    aKey: 'faqTrialA',
     icon: Shield,
-    badge: 'bg-rose-50 text-rose-600 border-rose-100',
+    iconWrap: 'bg-emerald-50 text-[#10B981]',
   },
 ];
 
 export function FaqSection() {
+  const { locale } = useLanguage();
   const [filter, setFilter] = useState<FaqCategory>('all');
   const [openId, setOpenId] = useState<string | null>('swish');
 
@@ -118,32 +115,30 @@ export function FaqSection() {
   );
 
   return (
-    <section className="relative py-20 sm:py-28 overflow-hidden bg-gradient-to-b from-slate-50 via-indigo-50/20 to-slate-50">
-      <div
-        className="absolute top-10 right-0 w-80 h-80 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none"
-        aria-hidden
-      />
-
+    <section
+      className="relative py-16 sm:py-24 overflow-hidden bg-[#FAFAFA]"
+      aria-labelledby="faq-heading"
+    >
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-500/10 border border-indigo-500/20 px-4 py-1.5 rounded-full mb-4">
-            ⚡ Help & Frequently Asked Questions
-          </div>
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight">
-            Got Questions? We&apos;ve Got{' '}
-            <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Answers
-            </span>
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
+            {t('faqEyebrow', locale)}
+          </p>
+          <h2
+            id="faq-heading"
+            className="font-outfit font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight leading-tight"
+          >
+            {t('faqHeadline', locale)}
           </h2>
-          <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed">
-            Everything you need to know about payments, Swish 1-tap checkout, Nordic VAT, community
-            migration, and workspace tools.
+          <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
+            {t('faqSub', locale)}
           </p>
         </div>
 
-        <div className="flex flex-nowrap justify-center items-center gap-1 mb-8 w-full">
+        <div className="flex flex-wrap justify-center items-center gap-2 mb-8">
           {FILTERS.map((tab) => {
             const active = filter === tab.id;
+            const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
@@ -154,11 +149,16 @@ export function FaqSection() {
                 }}
                 className={
                   active
-                    ? 'bg-indigo-600 text-white font-bold text-[9px] sm:text-[10px] px-1.5 sm:px-2.5 py-2 rounded-lg sm:rounded-xl shadow-md min-h-[40px] sm:min-h-[44px] whitespace-nowrap'
-                    : 'bg-white hover:bg-slate-100 text-slate-700 font-bold text-[9px] sm:text-[10px] px-1.5 sm:px-2.5 py-2 rounded-lg sm:rounded-xl border border-slate-200/90 shadow-sm min-h-[40px] sm:min-h-[44px] whitespace-nowrap'
+                    ? 'inline-flex items-center gap-1.5 bg-[#1a1848] text-white font-bold text-[10px] sm:text-xs px-3 py-2.5 rounded-xl shadow-sm min-h-[44px] whitespace-nowrap'
+                    : 'inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[10px] sm:text-xs px-3 py-2.5 rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] min-h-[44px] whitespace-nowrap'
                 }
               >
-                {tab.label}
+                <Icon
+                  size={13}
+                  className={active ? 'text-[#F472B6]' : 'text-slate-400'}
+                  aria-hidden
+                />
+                {t(tab.labelKey, locale)}
               </button>
             );
           })}
@@ -171,7 +171,11 @@ export function FaqSection() {
             return (
               <div
                 key={item.id}
-                className="bg-white/90 backdrop-blur-md border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 hover:border-indigo-300"
+                className={`bg-white border rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all duration-200 ${
+                  open
+                    ? 'border-[#F472B6]/50 shadow-md shadow-[#F472B6]/5'
+                    : 'border-slate-200/80 hover:border-slate-300/90'
+                }`}
               >
                 <button
                   type="button"
@@ -180,25 +184,25 @@ export function FaqSection() {
                   className="w-full flex items-center gap-3 px-4 sm:px-5 py-4 min-h-[56px] text-left"
                 >
                   <span
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${item.badge}`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.iconWrap}`}
                   >
                     <Icon size={18} aria-hidden />
                   </span>
-                  <span className="flex-1 font-display font-bold text-xs sm:text-sm text-slate-900 pr-2">
-                    {item.question}
+                  <span className="flex-1 font-outfit font-bold text-xs sm:text-sm text-slate-900 pr-2 tracking-tight">
+                    {t(item.qKey, locale)}
                   </span>
                   <ChevronDown
                     size={18}
                     className={`shrink-0 transition-transform duration-200 ${
-                      open ? 'rotate-180 text-indigo-600' : 'text-slate-400'
+                      open ? 'rotate-180 text-[#F472B6]' : 'text-slate-400'
                     }`}
                     aria-hidden
                   />
                 </button>
                 {open && (
                   <div className="px-4 sm:px-5 pb-5 pt-0">
-                    <p className="pl-[3.25rem] text-xs sm:text-[13px] text-slate-600 font-medium leading-relaxed">
-                      {item.answer}
+                    <p className="pl-[3.25rem] text-xs sm:text-[13px] text-slate-600 font-medium leading-relaxed font-display">
+                      {t(item.aKey, locale)}
                     </p>
                   </div>
                 )}
@@ -207,20 +211,20 @@ export function FaqSection() {
           })}
         </div>
 
-        <div className="bg-white/90 backdrop-blur-md border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col items-center text-center gap-4">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col items-center text-center gap-4">
           <div>
-            <p className="font-display font-extrabold text-lg text-slate-900">
-              Still have a question?
+            <p className="font-outfit font-extrabold text-lg text-slate-900 tracking-tight">
+              {t('faqStillQuestion', locale)}
             </p>
-            <p className="text-sm font-medium text-slate-600 mt-1">
-              Our Nordic creator support team is here to help you move over smoothly.
+            <p className="text-sm font-medium text-slate-600 mt-1 font-display">
+              {t('faqStillSub', locale)}
             </p>
           </div>
           <a
             href="mailto:support@nordiccreator.app"
-            className="inline-flex items-center justify-center min-h-[44px] bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:opacity-95 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-pink-500/20 transition-all"
+            className="inline-flex items-center justify-center min-h-[44px] bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#F472B6]/20 transition-all active:scale-[0.98]"
           >
-            Contact Support Team
+            {t('faqContactSupport', locale)}
           </a>
         </div>
       </div>

@@ -17,7 +17,7 @@ const CONVERSION_MAX = 10;
 const CONVERSION_STEP = 0.5;
 
 const sliderAccent =
-  'py-2 [&_[data-slot=slider-track]]:bg-slate-200 [&_[data-slot=slider-range]]:bg-indigo-600 [&_[data-slot=slider-thumb]]:border-indigo-600 [&_[data-slot=slider-thumb]]:bg-white';
+  'py-2 [&_[data-slot=slider-track]]:bg-slate-200 [&_[data-slot=slider-range]]:bg-[#F472B6] [&_[data-slot=slider-thumb]]:border-[#F472B6] [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-sm';
 
 function formatNum(value: number, locale: string) {
   return value.toLocaleString(locale === 'en' ? 'en-US' : 'sv-SE');
@@ -49,37 +49,35 @@ export function RoiCalculator() {
     .replace('{price}', formatNum(price, locale));
 
   return (
-    <section className="relative py-20 sm:py-28 overflow-hidden bg-gradient-to-b from-slate-50 via-indigo-50/30 to-slate-100">
-      <div
-        className="absolute -top-16 left-1/4 w-96 h-96 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none"
-        aria-hidden
-      />
-      <div
-        className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-pink-400/10 blur-3xl pointer-events-none"
-        aria-hidden
-      />
-
+    <section
+      id="roi"
+      className="relative py-16 sm:py-24 overflow-hidden bg-[#FAFAFA]"
+      aria-labelledby="roi-heading"
+    >
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-3xl shadow-xl p-7 sm:p-10 lg:p-12">
+        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-7 sm:p-10 lg:p-12">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
             <div>
-              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-indigo-600 mb-3">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
                 {t('roiEyebrow', locale)}
               </p>
-              <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight mb-3">
+              <h2
+                id="roi-heading"
+                className="font-outfit font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight mb-3 leading-tight"
+              >
                 {t('roiHeadline', locale)}
               </h2>
-              <p className="text-slate-600 font-medium mb-10 leading-relaxed max-w-md">
+              <p className="text-slate-600 font-medium mb-10 leading-relaxed max-w-md font-display">
                 {t('roiSub', locale)}
               </p>
 
               <div className="space-y-9">
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-bold text-slate-900">
+                  <div className="flex items-center justify-between mb-3 gap-3">
+                    <label className="text-sm font-bold text-slate-900 font-display">
                       {t('roiFollowers', locale)}
                     </label>
-                    <span className="text-sm font-extrabold text-indigo-700 rounded-full bg-indigo-50 border border-indigo-100 px-3 py-1">
+                    <span className="text-sm font-extrabold text-[#2B2568] rounded-full bg-[#E9D5FF]/50 border border-[#E9D5FF] px-3 py-1 font-mono tabular-nums">
                       {formatNum(followers, locale)}
                     </span>
                   </div>
@@ -91,18 +89,18 @@ export function RoiCalculator() {
                     onValueChange={(v) => setFollowers(v[0] ?? FOLLOWER_MIN)}
                     className={sliderAccent}
                   />
-                  <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-2">
+                  <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-2 font-mono">
                     <span>{formatNum(FOLLOWER_MIN, locale)}</span>
                     <span>{formatNum(FOLLOWER_MAX, locale)}</span>
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-bold text-slate-900">
+                  <div className="flex items-center justify-between mb-3 gap-3">
+                    <label className="text-sm font-bold text-slate-900 font-display">
                       {t('roiMonthlyPrice', locale)}
                     </label>
-                    <span className="text-sm font-extrabold text-indigo-700 rounded-full bg-indigo-50 border border-indigo-100 px-3 py-1">
+                    <span className="text-sm font-extrabold text-[#2B2568] rounded-full bg-[#E9D5FF]/50 border border-[#E9D5FF] px-3 py-1 font-mono tabular-nums">
                       {formatNum(price, locale)} SEK
                     </span>
                   </div>
@@ -114,18 +112,18 @@ export function RoiCalculator() {
                     onValueChange={(v) => setPrice(v[0] ?? PRICE_MIN)}
                     className={sliderAccent}
                   />
-                  <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-2">
+                  <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-2 font-mono">
                     <span>{PRICE_MIN} SEK</span>
                     <span>{PRICE_MAX} SEK</span>
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-bold text-slate-900">
+                  <div className="flex items-center justify-between mb-3 gap-3">
+                    <label className="text-sm font-bold text-slate-900 font-display">
                       {t('roiConversion', locale)}
                     </label>
-                    <span className="text-sm font-extrabold text-indigo-700 rounded-full bg-indigo-50 border border-indigo-100 px-3 py-1">
+                    <span className="text-sm font-extrabold text-[#2B2568] rounded-full bg-[#E9D5FF]/50 border border-[#E9D5FF] px-3 py-1 font-mono tabular-nums">
                       {formatPct(conversionPct, locale)}
                     </span>
                   </div>
@@ -137,7 +135,7 @@ export function RoiCalculator() {
                     onValueChange={(v) => setConversionPct(v[0] ?? CONVERSION_MIN)}
                     className={sliderAccent}
                   />
-                  <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-2">
+                  <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-2 font-mono">
                     <span>{formatPct(CONVERSION_MIN, locale)}</span>
                     <span>{formatPct(CONVERSION_MAX, locale)}</span>
                   </div>
@@ -145,28 +143,32 @@ export function RoiCalculator() {
               </div>
             </div>
 
-            <div className="relative rounded-3xl p-8 sm:p-10 overflow-hidden bg-gradient-to-br from-violet-100 via-purple-50 to-fuchsia-100 border border-purple-200/80 text-slate-900 shadow-lg shadow-purple-200/40">
+            <div className="relative rounded-2xl p-8 sm:p-10 overflow-hidden bg-[#0F172A] text-white border border-[#0F172A] shadow-[0_8px_40px_-12px_rgba(15,23,42,0.35)]">
               <div
-                className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-gradient-to-br from-violet-300/50 via-purple-300/40 to-pink-300/40 blur-3xl pointer-events-none"
+                className="absolute -top-20 -right-16 w-56 h-56 rounded-full pointer-events-none"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(244,114,182,0.28) 0%, transparent 68%)',
+                }}
                 aria-hidden
               />
               <div className="relative">
-                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-purple-600 mb-4">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-4">
                   {t('roiEstimatedRevenue', locale)}
                 </p>
-                <p className="font-display font-extrabold text-4xl sm:text-5xl tracking-tight text-slate-900 mb-4">
+                <p className="font-outfit font-extrabold text-4xl sm:text-5xl tracking-tight text-white mb-4 tabular-nums">
                   {formatNum(monthlyIncome, locale)}
-                  <span className="text-lg font-bold text-purple-500/80 ml-1">SEK/mo</span>
+                  <span className="text-lg font-bold text-slate-400 ml-1.5">SEK/mo</span>
                 </p>
-                <p className="text-slate-900 font-extrabold leading-relaxed mb-3 max-w-sm">
+                <p className="text-white font-extrabold leading-relaxed mb-3 max-w-sm font-display">
                   {earnLine}
                 </p>
-                <p className="text-slate-600 font-medium leading-relaxed mb-8 max-w-sm">
+                <p className="text-slate-400 font-medium leading-relaxed mb-8 max-w-sm font-display">
                   {membersLine}
                 </p>
                 <Link
                   href="/account/signup"
-                  className="inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 hover:opacity-95 shadow-lg shadow-purple-400/30 transition-all transform hover:-translate-y-0.5"
+                  className="inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-xl font-bold text-sm text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]"
                 >
                   {t('landingCtaStartFree', locale)}
                 </Link>

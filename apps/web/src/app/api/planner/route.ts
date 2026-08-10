@@ -3,6 +3,7 @@ import {
   deletePlannerPost,
   listPlannerPosts,
   movePlannerPost,
+  reschedulePlannerPost,
   upsertPlannerPost,
   type PlannerAssignee,
   type PlannerMediaItem,
@@ -36,6 +37,16 @@ export async function POST(request: Request) {
         body.workflow as WorkflowStatus,
         actor
       );
+      if (!post) return Response.json({ error: 'Not found' }, { status: 404 });
+      return Response.json({ post, posts: listPlannerPosts() });
+    }
+
+    if (action === 'reschedule') {
+      const scheduledAt = typeof body.scheduled_at === 'string' ? body.scheduled_at : '';
+      if (!scheduledAt) {
+        return Response.json({ error: 'scheduled_at required' }, { status: 400 });
+      }
+      const post = reschedulePlannerPost(String(body.id ?? ''), scheduledAt, actor);
       if (!post) return Response.json({ error: 'Not found' }, { status: 404 });
       return Response.json({ post, posts: listPlannerPosts() });
     }
@@ -107,6 +118,9 @@ export async function POST(request: Request) {
         youtube,
         idea_title: typeof body.idea_title === 'string' ? body.idea_title : undefined,
         project: typeof body.project === 'string' ? body.project : undefined,
+        campaigns: Array.isArray(body.campaigns)
+          ? (body.campaigns as string[]).filter((x) => typeof x === 'string')
+          : undefined,
         assignees: Array.isArray(body.assignees)
           ? (body.assignees as PlannerAssignee[])
           : undefined,

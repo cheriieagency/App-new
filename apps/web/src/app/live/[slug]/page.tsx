@@ -13,6 +13,8 @@ import {
   Video,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 type LiveSession = {
   slug: string;
@@ -31,6 +33,7 @@ export default function PublicLivePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
+  const { locale } = useLanguage();
   const { data: session } = authClient.useSession();
   const queryClient = useQueryClient();
   const [chatMsg, setChatMsg] = useState('');
@@ -99,7 +102,7 @@ export default function PublicLivePage({
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0b0f14] text-zinc-400 text-sm">
-        Laddar live…
+        {t('loading', locale)}
       </div>
     );
   }
@@ -122,7 +125,7 @@ export default function PublicLivePage({
             className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl bg-white/10 text-xs font-extrabold hover:bg-white/15"
           >
             {copied ? <Check size={13} /> : <Share2 size={13} />}
-            {copied ? 'Kopierad' : 'Dela länk'}
+            {copied ? t('copied', locale) : t('shareEvent', locale)}
           </button>
         </div>
       </header>
@@ -141,7 +144,7 @@ export default function PublicLivePage({
                     />
                   </div>
                   <p className="text-xl font-black">
-                    {live?.title || 'Live Sändning'}
+                    {live?.title || t('goLive', locale)}
                   </p>
                   <p className="text-sm text-zinc-400 mt-1">
                     {live?.creator_name}
@@ -156,7 +159,8 @@ export default function PublicLivePage({
                       LIVE
                     </span>
                     <span className="inline-flex items-center gap-1.5 bg-white/10 text-xs font-bold px-3 py-1 rounded-full">
-                      <Users size={11} /> {live?.viewer_count ?? 0} tittare
+                      <Users size={11} /> {live?.viewer_count ?? 0}{' '}
+                      {t('viewers', locale)}
                     </span>
                   </div>
                 </div>
@@ -167,7 +171,7 @@ export default function PublicLivePage({
                     {live?.title || 'Live'}
                   </p>
                   <p className="text-sm text-zinc-500 mt-1">
-                    Sändningen har inte startat ännu — behåll länken bokmärkt.
+                    {t('liveEventHint', locale)}
                   </p>
                 </div>
               )}
@@ -181,7 +185,7 @@ export default function PublicLivePage({
         <aside className="rounded-2xl border border-white/10 bg-white/[0.03] flex flex-col min-h-[420px] max-h-[70vh]">
           <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
             <Radio size={13} className={isLive ? 'text-red-400' : 'text-zinc-500'} />
-            <p className="text-sm font-black">Livechatt</p>
+            <p className="text-sm font-black">{t('liveChat', locale)}</p>
             {isLive && (
               <span className="ml-auto text-[10px] font-black text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full">
                 LIVE
@@ -192,12 +196,15 @@ export default function PublicLivePage({
           <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             {(live?.chat ?? []).length === 0 ? (
               <p className="text-sm text-zinc-500 text-center py-10">
-                {isLive ? 'Säg hej i chatten!' : 'Chatten öppnar när sändningen startar.'}
+                {isLive
+                  ? t('waitingMessages', locale)
+                  : t('chatOpensAtStart', locale)}
               </p>
             ) : (
               (live?.chat ?? []).map((m) => (
                 <div key={m.id} className="text-sm">
                   <span className="font-extrabold text-[var(--nc-coral)]">{m.name}</span>
+                  {/* Chat message bodies stay untranslated (user content). */}
                   <span className="text-zinc-300 ml-1.5">{m.msg}</span>
                 </div>
               ))
@@ -209,7 +216,7 @@ export default function PublicLivePage({
               <input
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                placeholder="Ditt namn"
+                placeholder={t('yourNamePlaceholder', locale)}
                 className="w-full h-11 min-h-[44px] rounded-xl bg-white/5 border border-white/10 px-3 text-sm focus:outline-none focus:border-[var(--nc-coral)]"
               />
             )}
@@ -221,7 +228,9 @@ export default function PublicLivePage({
                   if (e.key === 'Enter') void sendChat();
                 }}
                 disabled={!isLive}
-                placeholder={isLive ? 'Skriv ett meddelande…' : 'Väntar på live…'}
+                placeholder={
+                  isLive ? t('writeMessage', locale) : t('waitingForLive', locale)
+                }
                 className="flex-1 h-11 min-h-[44px] rounded-xl bg-white/5 border border-white/10 px-3 text-sm focus:outline-none focus:border-[var(--nc-coral)] disabled:opacity-40"
               />
               <button

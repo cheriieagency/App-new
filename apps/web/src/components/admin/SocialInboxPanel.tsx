@@ -3,6 +3,8 @@
 import { Inbox, MessageCircle } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
+import { useLocale } from '@/lib/locale-context';
+import { t, tf } from '@/lib/i18n';
 
 const THREADS = [
   {
@@ -29,20 +31,21 @@ const THREADS = [
 ];
 
 export default function SocialInboxPanel() {
+  const { locale } = useLocale();
   const { activeWorkspace } = useWorkspace();
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        eyebrow="Social Inbox"
-        title="Inkorg"
-        description={`DM & kommentarer · ${activeWorkspace.name}`}
+        eyebrow={t('socialInboxEyebrow', locale)}
+        title={t('socialInboxTitle', locale)}
+        description={tf('socialInboxSub', locale, { workspace: activeWorkspace.name })}
       />
 
       <div className={`${adminCardClass} overflow-hidden`}>
-        {THREADS.map((t) => (
+        {THREADS.map((thread) => (
           <button
-            key={t.id}
+            key={thread.id}
             type="button"
             className="w-full flex items-center gap-3 px-5 py-4 border-b border-slate-100 last:border-0 hover:bg-slate-50/80 text-left min-h-[56px] transition-colors"
           >
@@ -51,14 +54,14 @@ export default function SocialInboxPanel() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-900 truncate">{t.name}</p>
+                <p className="text-sm font-semibold text-slate-900 truncate">{thread.name}</p>
                 <span className="text-[11px] font-medium text-slate-400 flex-shrink-0">
-                  {t.time}
+                  {thread.time}
                 </span>
               </div>
-              <p className="text-sm text-slate-500 truncate">{t.preview}</p>
+              <p className="text-sm text-slate-500 truncate">{thread.preview}</p>
               <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mt-0.5">
-                {t.platform}
+                {thread.platform}
               </p>
             </div>
           </button>
@@ -66,7 +69,7 @@ export default function SocialInboxPanel() {
         {THREADS.length === 0 && (
           <div className="py-16 text-center text-slate-400">
             <Inbox size={28} className="mx-auto mb-2 opacity-40" />
-            <p className="text-sm font-semibold">Inbox zero</p>
+            <p className="text-sm font-semibold">{t('inboxZero', locale)}</p>
           </div>
         )}
       </div>

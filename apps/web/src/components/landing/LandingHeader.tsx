@@ -6,7 +6,8 @@ import { t } from '@/lib/i18n';
 import { useLanguage } from '@/lib/locale-context';
 import { LoginModal } from '@/components/landing/LoginModal';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { ClikdWordmark } from '@/components/brand/ClikdLogo';
+import { ClikdMark } from '@/components/brand/ClikdLogo';
+import { usePlatformRole } from '@/lib/use-platform-role';
 
 type LandingHeaderProps = {
   isLoggedIn: boolean;
@@ -20,9 +21,10 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
   const { locale } = useLanguage();
   const [loginOpen, setLoginOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { home, isCreator } = usePlatformRole();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
+    const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -31,75 +33,74 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
+        className={`sticky top-0 z-50 h-20 border-b px-6 sm:px-12 flex items-center justify-between transition-all duration-300 ${
           scrolled
-            ? 'bg-white/80 backdrop-blur-xl border-b border-slate-200/70 shadow-sm'
-            : 'bg-transparent border-b border-transparent'
+            ? 'bg-white/80 backdrop-blur-md border-slate-200/80 shadow-sm'
+            : 'bg-white/80 backdrop-blur-md border-slate-200/80'
         }`}
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-          {/* Left — brand */}
-          <Link href="/" className="shrink-0">
-            <ClikdWordmark showMark={false} textClassName="text-xl sm:text-2xl" className="gap-0 min-h-11" />
-          </Link>
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 min-h-11">
+          <ClikdMark size={36} className="rounded-xl" />
+          <span className="font-clikd-wordmark font-extrabold text-xl text-slate-900 tracking-tight">
+            clikd<span className="text-[#F472B6]">:</span>
+          </span>
+        </Link>
 
-          {/* Middle — primary nav */}
-          <nav
-            className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2"
-            aria-label="Primary"
+        <nav
+          className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2"
+          aria-label="Primary"
+        >
+          <button
+            type="button"
+            onClick={() => scrollToId('features')}
+            className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
           >
-            <button
-              type="button"
-              onClick={() => scrollToId('features')}
-              className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
-            >
-              Features
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToId('pricing')}
-              className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
-            >
-              Pricing
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToId('communities')}
-              className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
-            >
-              Explore Communities
-            </button>
-          </nav>
+            {t('navFeatures', locale)}
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToId('pricing')}
+            className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
+          >
+            {t('navPricing', locale)}
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToId('communities')}
+            className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
+          >
+            {t('navCommunities', locale)}
+          </button>
+        </nav>
 
-          {/* Right — locale + auth */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <LanguageSwitcher className="[&>button]:bg-white [&>button]:border [&>button]:border-slate-200 [&>button]:shadow-sm" />
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <LanguageSwitcher className="[&>button]:bg-white [&>button]:border [&>button]:border-slate-200 [&>button]:shadow-sm [&>button]:rounded-xl [&>button]:min-h-11" />
 
-            {isLoggedIn ? (
-              <Link
-                href="/dashboard"
-                className="bg-clikd-pink hover:brightness-95 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-pink-500/25 flex items-center gap-1.5 min-h-11 transition-all"
+          {isLoggedIn ? (
+            <Link
+              href={home}
+              className="bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 min-h-11 transition-colors"
+            >
+              {isCreator ? t('creatorAdmin', locale) : t('dashboard', locale)}
+            </Link>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setLoginOpen(true)}
+                className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
               >
-                {t('dashboard', locale)} →
-              </Link>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setLoginOpen(true)}
-                  className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
-                >
-                  Sign in
-                </button>
-                <Link
-                  href="/account/signup"
-                  className="bg-clikd-pink hover:brightness-95 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-pink-500/25 flex items-center gap-1.5 min-h-11 transition-all"
-                >
-                  Get started →
-                </Link>
-              </>
-            )}
-          </div>
+                {t('logInShort', locale)}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginOpen(true)}
+                className="bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 min-h-11 transition-colors"
+              >
+                {t('getStartedShort', locale)}
+              </button>
+            </>
+          )}
         </div>
       </header>
 

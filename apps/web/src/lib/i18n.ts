@@ -106,7 +106,6 @@ export type TranslationKey =
   | 'publish'
   | 'publishing'
   | 'communityPlaceholder'
-  | 'loadingFeed'
   | 'loadingEvents'
   | 'loadingCourses'
   | 'openingCommunity'
@@ -497,7 +496,6 @@ const sv: CoreDict = {
   publish: 'Publicera',
   publishing: 'Publicerar...',
   communityPlaceholder: 'Dela något med communityn...',
-  loadingFeed: 'Laddar feed...',
   loadingEvents: 'Laddar events...',
   loadingCourses: 'Laddar kurser...',
   openingCommunity: 'Öppnar community',
@@ -872,7 +870,6 @@ const en: CoreDict = {
   publish: 'Publish',
   publishing: 'Publishing...',
   communityPlaceholder: 'Share something with the community...',
-  loadingFeed: 'Loading feed...',
   loadingEvents: 'Loading events...',
   loadingCourses: 'Loading courses...',
   openingCommunity: 'Opening community',
@@ -1246,7 +1243,6 @@ const no: CoreDict = derive(sv, {
   publish: 'Publiser',
   publishing: 'Publiserer...',
   communityPlaceholder: 'Del noe med communityen...',
-  loadingFeed: 'Laster feed...',
   loadingEvents: 'Laster arrangementer...',
   loadingCourses: 'Laster kurs...',
   openingCommunity: 'Åpner community',
@@ -1617,7 +1613,6 @@ const da: CoreDict = derive(sv, {
   publish: 'Publicér',
   publishing: 'Publicerer...',
   communityPlaceholder: 'Del noget med communityen...',
-  loadingFeed: 'Indlæser feed...',
   loadingEvents: 'Indlæser events...',
   loadingCourses: 'Indlæser kurser...',
   openingCommunity: 'Åbner community',
@@ -1993,7 +1988,6 @@ const fi: CoreDict = derive(sv, {
   publish: 'Julkaise',
   publishing: 'Julkaistaan...',
   communityPlaceholder: 'Jaa jotain yhteisölle...',
-  loadingFeed: 'Ladataan syötettä...',
   loadingEvents: 'Ladataan tapahtumia...',
   loadingCourses: 'Ladataan kursseja...',
   openingCommunity: 'Avataan yhteisöä',

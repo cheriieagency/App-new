@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Check,
   FileText,
@@ -37,6 +38,7 @@ import {
   type PlannerAssignee,
   type PlannerComment,
   type PlannerMediaItem,
+  type CampaignLabel,
   type PlannerPost,
   type PlannerSubtask,
   type SocialPlatform,
@@ -87,6 +89,7 @@ export default function PostStudioModal({
   projectName,
   workspaces,
   defaultScheduledAt = null,
+  defaultCampaignIds,
   onSaved,
 }: {
   open: boolean;
@@ -96,9 +99,12 @@ export default function PostStudioModal({
   workspaces: BrandWorkspace[];
   /** When creating a new post from a calendar day, prefill schedule time. */
   defaultScheduledAt?: string | null;
+  /** Prefill project/campaign tags for new posts (e.g. opened from a Project view). */
+  defaultCampaignIds?: string[];
   onSaved: () => void;
 }) {
   const { locale } = useLocale();
+  const queryClient = useQueryClient();
   const [leftTab, setLeftTab] = useState<'media' | 'preview'>('media');
   const [rightTab, setRightTab] = useState<'private' | 'public'>('private');
   /** Mobile app layout: one pane at a time. Desktop keeps 3 columns. */
@@ -112,6 +118,7 @@ export default function PostStudioModal({
   const [scheduledAt, setScheduledAt] = useState('');
   const [autoPost, setAutoPost] = useState(false);
   const [assignees, setAssignees] = useState<PlannerAssignee[]>([]);
+  const [campaignIds, setCampaignIds] = useState<string[]>([]);
   const [subtasks, setSubtasks] = useState<PlannerSubtask[]>([]);
   const [mediaItems, setMediaItems] = useState<PlannerMediaItem[]>([]);
   const [newTask, setNewTask] = useState('');
@@ -132,6 +139,17 @@ export default function PostStudioModal({
     workspaces[0] ||
     null;
 
+  const { data: campaignsData } = useQuery<{ campaigns: CampaignLabel[] }>({
+    queryKey: ['planner-campaigns'],
+    queryFn: async () => {
+      const r = await fetch('/api/planner/campaigns');
+      if (!r.ok) throw new Error('Failed');
+      return r.json();
+    },
+    enabled: open,
+  });
+  const campaignLabels = campaignsData?.campaigns ?? [];
+
   useEffect(() => {
     if (!open) return;
     if (post) {
@@ -144,6 +162,7 @@ export default function PostStudioModal({
       setScheduledAt(toLocalInputValue(post.scheduled_at));
       setAutoPost(post.auto_post);
       setAssignees(post.assignees);
+      setCampaignIds(post.campaigns ?? []);
       setSubtasks(post.subtasks);
       setMediaItems(post.media_items ?? []);
       setLocalComments(post.comments ?? []);
@@ -158,6 +177,7 @@ export default function PostStudioModal({
       setScheduledAt(defaultScheduledAt ? toLocalInputValue(defaultScheduledAt) : '');
       setAutoPost(Boolean(defaultScheduledAt));
       setAssignees([PLANNER_TEAM[0]]);
+      setCampaignIds(defaultCampaignIds?.length ? [...defaultCampaignIds] : []);
       setSubtasks([]);
       setMediaItems([]);
       setLocalComments([]);
@@ -168,11 +188,17 @@ export default function PostStudioModal({
     setMobilePane('details');
     setComment('');
     setCommentImage(null);
-  }, [open, post, projectName, defaultScheduledAt]);
+  }, [open, post, projectName, defaultScheduledAt, defaultCampaignIds]);
 
   const togglePlatform = (p: SocialPlatform) => {
     setPlatforms((prev) =>
       prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    );
+  };
+
+  const toggleCampaign = (id: string) => {
+    setCampaignIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
@@ -217,6 +243,7 @@ export default function PostStudioModal({
           platforms,
           workflow: nextWorkflow,
           project,
+          campaigns: campaignIds,
           assignees,
           subtasks,
           media_items: mediaItems,
@@ -227,6 +254,8 @@ export default function PostStudioModal({
       });
       if (!r.ok) throw new Error('save failed');
       onSaved();
+      void queryClient.invalidateQueries({ queryKey: ['planner-campaign'] });
+      void queryClient.invalidateQueries({ queryKey: ['planner-campaigns'] });
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -402,6 +431,45 @@ export default function PostStudioModal({
             );
           })}
         </div>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">
+          {t('campaignLabels', locale)}
+        </p>
+        <p className="text-[11px] text-zinc-400 font-medium mb-2">
+          {t('campaignLabelsHint', locale)}
+        </p>
+        {campaignLabels.length === 0 ? (
+          <p className="text-xs text-zinc-400 font-medium">
+            {t('noProjectsYet', locale)}
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {campaignLabels.map((c) => {
+              const active = campaignIds.includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggleCampaign(c.id)}
+                  className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-full border text-xs font-extrabold transition-colors ${
+                    active
+                      ? 'border-slate-900 bg-slate-900 text-white'
+                      : 'border-zinc-100 bg-zinc-50 text-zinc-500 hover:border-zinc-200'
+                  }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: active ? '#F472B6' : c.color }}
+                  />
+                  {c.name}
+                  {active && <Check size={12} />}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div>
@@ -770,8 +838,8 @@ export default function PostStudioModal({
               <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
             ) : (
               <>
-                <span className="sm:hidden">Spara</span>
-                <span className="hidden sm:inline">Publicera / Spara</span>
+                <span className="sm:hidden">{t('save', locale)}</span>
+                <span className="hidden sm:inline">{t('publishOrSave', locale)}</span>
               </>
             )}
           </Button>

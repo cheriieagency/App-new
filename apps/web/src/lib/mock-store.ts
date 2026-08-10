@@ -36,6 +36,10 @@ export type StoreProduct = {
   collect_fields: CollectField[];
   /** Optional order bump upsell at checkout. */
   order_bump: OrderBump | null;
+  /** Purchase unlocks membership; buyer gets an automated community email. */
+  grants_community_access?: boolean;
+  /** Community the buyer is invited to when grants_community_access is true. */
+  access_community_id?: number | null;
 };
 
 export type { CollectField, OrderBump };
@@ -91,6 +95,8 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
     community_id: 101,
     is_published: true,
     created_at: daysAgo(12),
+    grants_community_access: true,
+    access_community_id: 101,
     order_bump: {
       enabled: true,
       title: '⚡ Lägg till arbetsbok för +49 kr',
@@ -149,6 +155,8 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
     community_id: 101,
     is_published: true,
     created_at: daysAgo(20),
+    grants_community_access: true,
+    access_community_id: 101,
   }),
   withCheckoutDefaults({
     id: 805,

@@ -7,11 +7,13 @@ import {
   type PlannerPost,
 } from '@/lib/mock-content-planner';
 import { PlatformBadge } from '@/components/planner/PlatformBadge';
+import { useLanguage } from '@/lib/locale-context';
+import { t, localeTag } from '@/lib/i18n';
 
-function formatDate(iso: string | null) {
+function formatDate(iso: string | null, locale: string) {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat('sv-SE', {
+    return new Intl.DateTimeFormat(locale, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -30,23 +32,26 @@ export default function PlannerTableView({
   posts: PlannerPost[];
   onOpen: (post: PlannerPost) => void;
 }) {
+  const { locale } = useLanguage();
+  const headers = [
+    t('titleAndMedia', locale),
+    t('studioStatus', locale),
+    t('platformsCol', locale),
+    t('studioScheduleDate', locale),
+    t('studioAssignees', locale),
+    t('studioSubtasks', locale),
+    '',
+  ];
+
   return (
     <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-left">
           <thead>
             <tr className="border-b border-slate-100">
-              {[
-                'Titel & Media',
-                'Status',
-                'Plattformar',
-                'Schemalagt',
-                'Ansvarig',
-                'Subtasks',
-                '',
-              ].map((h) => (
+              {headers.map((h, i) => (
                 <th
-                  key={h || 'actions'}
+                  key={h || `actions-${i}`}
                   className="px-5 py-3 text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400"
                 >
                   {h}
@@ -108,7 +113,7 @@ export default function PlannerTableView({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-xs font-bold text-zinc-600 whitespace-nowrap">
-                    {formatDate(post.scheduled_at)}
+                    {formatDate(post.scheduled_at, localeTag(locale))}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex -space-x-1.5">
@@ -134,7 +139,7 @@ export default function PlannerTableView({
                       onClick={() => onOpen(post)}
                       className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-[var(--nc-coral)] hover:bg-[color-mix(in_srgb,var(--nc-coral)_10%,white)]"
                     >
-                      <Pencil size={13} /> Quick Edit
+                      <Pencil size={13} /> {t('quickEdit', locale)}
                     </button>
                   </td>
                 </tr>
@@ -146,7 +151,7 @@ export default function PlannerTableView({
                   colSpan={7}
                   className="px-4 py-12 text-center text-sm text-zinc-400 font-medium"
                 >
-                  Inga inlägg matchar filtret.
+                  {t('noPostsMatchFilter', locale)}
                 </td>
               </tr>
             )}

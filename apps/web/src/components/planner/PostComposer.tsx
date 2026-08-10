@@ -35,6 +35,8 @@ import {
   type YoutubeMeta,
   type YoutubePrivacy,
 } from '@/lib/mock-content-planner';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 const EMOJIS = ['🔥', '✨', '🙌', '💡', '🚀', '❤️', '👇', '😊', '💪', '🎯', '📈', '✅'];
 
@@ -80,6 +82,7 @@ export default function PostComposer({
   defaultScheduledAt?: string | null;
   onSaved: () => void;
 }) {
+  const { locale } = useLanguage();
   const [caption, setCaption] = useState('');
   const [platforms, setPlatforms] = useState<SocialPlatform[]>(['instagram']);
   const [scheduledAt, setScheduledAt] = useState('');
@@ -181,7 +184,7 @@ export default function PostComposer({
       const payload: Record<string, unknown> = {
         action: 'upsert',
         id: initial?.id || undefined,
-        title: ideaTitle || caption.split('\n')[0].slice(0, 60) || 'Nytt inlägg',
+        title: ideaTitle || caption.split('\n')[0].slice(0, 60) || t('newPostDefault', locale),
         caption,
         platforms,
         status,
@@ -235,10 +238,10 @@ export default function PostComposer({
         <div className="p-5 sm:p-6 border-b border-zinc-100">
           <DialogHeader className="text-left">
             <DialogTitle className="text-[#2c3340] font-black">
-              {initial?.id ? 'Redigera inlägg' : 'Skapa / Schemalägg Inlägg'}
+              {initial?.id ? t('editPost', locale) : t('createSchedulePost', locale)}
             </DialogTitle>
             <DialogDescription className="text-xs text-zinc-500 font-medium">
-              Cross-posta till Instagram, TikTok, LinkedIn och YouTube — med live-förhandsvisning.
+              {t('crossPostDesc', locale)}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -250,7 +253,7 @@ export default function PostComposer({
             {/* Platforms */}
             <div>
               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
-                Cross-posting
+                {t('crossPosting', locale)}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {PLATFORM_OPTIONS.map(({ key, label }) => {
@@ -279,12 +282,12 @@ export default function PostComposer({
             {hasYoutube && (
               <div className="rounded-2xl border border-red-100 bg-red-50/40 p-4 space-y-3">
                 <p className="text-xs font-black text-[#2c3340] flex items-center gap-1.5">
-                  <YouTubeIcon size={14} className="text-red-600" /> YouTube-inställningar
+                  <YouTubeIcon size={14} className="text-red-600" /> {t('youtubeSettings', locale)}
                 </p>
 
                 <div>
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                    Video Title ({youtube.title.length}/100)
+                    {t('videoTitleLabel', locale)} ({youtube.title.length}/100)
                   </label>
                   <Input
                     value={youtube.title}
@@ -292,14 +295,14 @@ export default function PostComposer({
                     onChange={(e) =>
                       setYoutube((y) => ({ ...y, title: e.target.value.slice(0, 100) }))
                     }
-                    placeholder="Titel som syns på YouTube"
+                    placeholder={t('youtubeTitlePlaceholder', locale)}
                     className="rounded-xl border-zinc-200 h-11"
                   />
                 </div>
 
                 <div>
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                    Privacy Status
+                    {t('privacyStatus', locale)}
                   </label>
                   <select
                     value={youtube.privacy}
@@ -321,7 +324,7 @@ export default function PostComposer({
 
                 <label className="flex items-center justify-between gap-3 h-11 min-h-[44px] rounded-xl bg-white border border-zinc-100 px-3">
                   <span className="text-xs font-extrabold text-[#2c3340]">
-                    Publicera som YouTube Shorts
+                    {t('publishAsShorts', locale)}
                   </span>
                   <Switch
                     checked={youtube.is_shorts}
@@ -333,7 +336,7 @@ export default function PostComposer({
 
                 <div>
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                    Video Category
+                    {t('videoCategory', locale)}
                   </label>
                   <select
                     value={youtube.category}
@@ -352,16 +355,16 @@ export default function PostComposer({
 
                 <div>
                   <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-                    Tags
+                    {t('tagsLabel', locale)}
                   </label>
                   <Input
                     value={tagsInput}
                     onChange={(e) => setTagsInput(e.target.value)}
-                    placeholder="t.ex. shorts, tips, ehandel"
+                    placeholder={t('tagsPlaceholder', locale)}
                     className="rounded-xl border-zinc-200 h-11"
                   />
                   <p className="text-[11px] text-zinc-400 font-medium mt-1">
-                    Separera med komma
+                    {t('separateWithCommas', locale)}
                   </p>
                 </div>
               </div>
@@ -371,7 +374,7 @@ export default function PostComposer({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                  Caption
+                  {t('studioCaption', locale)}
                 </label>
                 <div className="flex items-center gap-1">
                   <button
@@ -379,7 +382,7 @@ export default function PostComposer({
                     onClick={() => setShowEmoji((v) => !v)}
                     className="h-10 min-h-[44px] px-2 rounded-lg text-zinc-500 hover:bg-zinc-100 inline-flex items-center gap-1 text-[11px] font-bold"
                   >
-                    <Smile size={14} /> Emoji
+                    <Smile size={14} /> {t('emojiBtn', locale)}
                   </button>
                   <button
                     type="button"
@@ -392,7 +395,7 @@ export default function PostComposer({
                     ) : (
                       <Sparkles size={13} />
                     )}
-                    Formulera om med AI
+                    {t('polishWithAi', locale)}
                   </button>
                 </div>
               </div>
@@ -413,7 +416,7 @@ export default function PostComposer({
               <Textarea
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                placeholder="Skriv din bildtext…"
+                placeholder={t('captionPlaceholder', locale)}
                 className="min-h-[120px] rounded-xl border-zinc-200 resize-none text-sm"
               />
             </div>
@@ -421,7 +424,7 @@ export default function PostComposer({
             {/* Schedule */}
             <div>
               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-                Datum &amp; tid
+                {t('dateAndTime', locale)}
               </label>
               <input
                 type="datetime-local"
@@ -445,7 +448,7 @@ export default function PostComposer({
                 onClick={() => void save('draft')}
                 className="h-11 min-h-[44px] rounded-xl font-extrabold gap-1.5"
               >
-                <FileText size={14} /> Spara utkast
+                <FileText size={14} /> {t('saveDraft', locale)}
               </Button>
               <Button
                 type="button"
@@ -458,7 +461,7 @@ export default function PostComposer({
                 onClick={() => void save('published')}
                 className="h-11 min-h-[44px] rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-extrabold gap-1.5"
               >
-                <Send size={14} /> Publicera nu
+                <Send size={14} /> {t('publishNow', locale)}
               </Button>
               <Button
                 type="button"
@@ -472,14 +475,14 @@ export default function PostComposer({
                 onClick={() => void save('scheduled')}
                 className="h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-extrabold gap-1.5"
               >
-                <CalendarClock size={14} /> Schemalägg
+                <CalendarClock size={14} /> {t('schedulePost', locale)}
               </Button>
             </div>
           </div>
 
           <div className="p-5 sm:p-6 bg-zinc-50/50">
             <FeedPreview
-              caption={caption || 'Din caption visas här…'}
+              caption={caption || t('captionPreviewPlaceholder', locale)}
               mediaItems={mediaItems}
               platforms={platforms}
               youtube={

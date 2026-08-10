@@ -6,6 +6,8 @@ import { authClient } from '@/lib/auth-client';
 import Link from 'next/link';
 import { format, parseISO, addDays } from 'date-fns';
 import { sv } from 'date-fns/locale';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 import {
   ArrowLeft,
   Send,
@@ -82,6 +84,7 @@ function icalDataUrl(event: any) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function BigCountdown({ startTime }: { startTime: string }) {
+  const { locale } = useLanguage();
   const [parts, setParts] = useState({ d: 0, h: 0, m: 0, s: 0, live: false, ready: false });
 
   useEffect(() => {
@@ -113,7 +116,7 @@ function BigCountdown({ startTime }: { startTime: string }) {
       <div className="flex items-center justify-center gap-3 py-2">
         <div className="w-3 h-3 bg-red-500 rounded-full liveBlip" />
         <span className="text-4xl sm:text-5xl font-black text-red-400 tracking-tighter">
-          LIVE NU
+          {t('liveNow', locale)}
         </span>
       </div>
     );
@@ -122,15 +125,15 @@ function BigCountdown({ startTime }: { startTime: string }) {
   const units =
     parts.d > 0
       ? [
-          { v: parts.d, l: 'DAGAR' },
-          { v: parts.h, l: 'TIMMAR' },
-          { v: parts.m, l: 'MIN' },
-          { v: parts.s, l: 'SEK' },
+          { v: parts.d, l: t('days', locale) },
+          { v: parts.h, l: t('hours', locale) },
+          { v: parts.m, l: t('mins', locale) },
+          { v: parts.s, l: t('sec', locale) },
         ]
       : [
-          { v: parts.h, l: 'TIMMAR' },
-          { v: parts.m, l: 'MIN' },
-          { v: parts.s, l: 'SEK' },
+          { v: parts.h, l: t('hours', locale) },
+          { v: parts.m, l: t('mins', locale) },
+          { v: parts.s, l: t('sec', locale) },
         ];
 
   return (
@@ -164,6 +167,7 @@ const QUICK_EMOJIS = ['🔥', '👏', '💡', '❤️', '🙌', '😮'];
 
 function LiveChat({ eventId, session }: { eventId: number; session: any }) {
   const queryClient = useQueryClient();
+  const { locale } = useLanguage();
   const [msg, setMsg] = useState('');
   const [emojiBar, setEmojiBar] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -218,7 +222,7 @@ function LiveChat({ eventId, session }: { eventId: number; session: any }) {
         {(messages as any[]).length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-12 gap-2">
             <MessageSquare size={28} className="text-zinc-700" />
-            <p className="text-zinc-500 text-xs font-medium">Chatten öppnar när eventet startar</p>
+            <p className="text-zinc-500 text-xs font-medium">{t('chatOpensAtStart', locale)}</p>
           </div>
         )}
         {(messages as any[]).map((m: any, i: number) => {
@@ -296,7 +300,7 @@ function LiveChat({ eventId, session }: { eventId: number; session: any }) {
                   handleSend();
                 }
               }}
-              placeholder="Skriv ett meddelande..."
+              placeholder={t('writeMessage', locale)}
               className="flex-1 h-9 rounded-xl bg-zinc-800 border border-zinc-700 text-white text-xs px-3 placeholder:text-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
             />
             <button
@@ -312,7 +316,7 @@ function LiveChat({ eventId, session }: { eventId: number; session: any }) {
             href="/account/signin"
             className="flex items-center justify-center gap-1.5 w-full py-2.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 border border-zinc-700 rounded-xl transition-colors hover:border-zinc-600"
           >
-            Logga in för att chatta →
+            {t('loginToChat', locale)}
           </Link>
         )}
       </div>
@@ -372,6 +376,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   const { data: session } = authClient.useSession();
   const queryClient = useQueryClient();
+  const { locale } = useLanguage();
 
   const [rsvpd, setRsvpd] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
@@ -451,7 +456,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-3 ">
         <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-        <p className="text-zinc-400 text-sm">Laddar event...</p>
+        <p className="text-zinc-400 text-sm">{t('loadingEvents', locale)}</p>
       </div>
     );
   }
@@ -459,12 +464,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   if (!event) {
     return (
       <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 ">
-        <p className="text-white text-lg font-black">Event hittades inte</p>
+        <p className="text-white text-lg font-black">{t('eventNotFound', locale)}</p>
         <Link
           href="/events"
           className="text-indigo-400 text-sm font-bold hover:text-indigo-300 transition-colors"
         >
-          ← Tillbaka till Events
+          {t('backToEvents', locale)}
         </Link>
       </div>
     );
@@ -473,21 +478,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const calendarOptions = [
     {
       emoji: '📅',
-      label: 'Google Kalender',
+      label: t('googleCal', locale),
       href: googleCalLink(event),
       target: '_blank',
       download: undefined,
     },
     {
       emoji: '🍎',
-      label: 'Apple iCal (.ics)',
+      label: t('appleCal', locale),
       href: icalDataUrl(event),
       target: undefined,
       download: `${event.title}.ics`,
     },
     {
       emoji: '📬',
-      label: 'Outlook Web',
+      label: t('outlookCal', locale),
       href: googleCalLink(event),
       target: '_blank',
       download: undefined,
@@ -536,7 +541,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               className="flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all border border-zinc-700"
             >
               <Share2 size={12} />
-              <span className="hidden sm:inline">{copied ? 'Kopierad!' : 'Dela'}</span>
+              <span className="hidden sm:inline">{copied ? t('copied', locale) : t('shareEvent', locale)}</span>
             </button>
             {/* Chat toggle (mobile) */}
             <button
@@ -556,10 +561,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             >
               {rsvpd ? (
                 <>
-                  <Check size={12} /> Anmäld
+                  <Check size={12} /> {t('rsvpConfirmed', locale)}
                 </>
               ) : (
-                'OSA / Jag kommer'
+                t('rsvp', locale)
               )}
             </button>
           </div>
@@ -587,7 +592,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                       <Play size={40} className="text-zinc-600" strokeWidth={1.5} />
                     </div>
                     <div className="text-center">
-                      <p className="text-white font-black text-lg">Stream startar snart</p>
+                      <p className="text-white font-black text-lg">{t('streamStartsSoon', locale)}</p>
                       <p className="text-zinc-500 text-sm mt-1">
                         Video-länk ej konfigurerad av admin
                       </p>
@@ -634,7 +639,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
               <div className="relative">
                 <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-6">
-                  Startar om
+                  {t('startsIn', locale)}
                 </p>
                 <BigCountdown startTime={event.start_time} />
                 <p className="text-sm text-white/40 mt-6 capitalize" suppressHydrationWarning>
@@ -725,10 +730,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               >
                 {rsvpd ? (
                   <>
-                    <Check size={15} /> Du är anmäld!
+                    <Check size={15} /> {t('rsvpConfirmed', locale)}
                   </>
                 ) : (
-                  'OSA / Jag kommer'
+                  t('rsvp', locale)
                 )}
               </button>
 
@@ -741,7 +746,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   >
                     <div className="flex items-center gap-2">
                       <CalendarPlus size={13} className="text-green-400" />
-                      Lägg till i kalender
+                      {t('addToCalendar', locale)}
                     </div>
                     <ChevronDown
                       size={13}
@@ -784,10 +789,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             />
             <Radio size={13} className={isLive ? 'text-red-400' : 'text-zinc-500'} />
             <span className="text-xs font-black uppercase tracking-widest text-zinc-200">
-              {isLive ? 'Live Chat' : 'Event Chat'}
+              {isLive ? t('liveChat', locale) : t('eventChat', locale)}
             </span>
             <span className="ml-auto text-[10px] text-zinc-600 font-medium">
-              {isLive ? 'Uppdateras var 3s' : 'Öppnar snart'}
+              {isLive ? t('updatesEvery3s', locale) : t('chatOpensAtStart', locale)}
             </span>
           </div>
 

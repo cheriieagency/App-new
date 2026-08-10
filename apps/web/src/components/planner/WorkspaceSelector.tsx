@@ -82,7 +82,7 @@ export default function WorkspaceSelector({
 
   if (!active) return null;
 
-  return (
+  const selector = (
     <Popover
       open={open}
       onOpenChange={(v) => {
@@ -123,27 +123,29 @@ export default function WorkspaceSelector({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[min(360px,92vw)] p-0 rounded-2xl overflow-hidden border-zinc-100 shadow-lg"
+        sideOffset={8}
+        className="w-[min(360px,92vw)] p-0 rounded-2xl overflow-hidden border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)]"
       >
-        <div className="p-3 border-b border-zinc-100">
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-0.5">
-            {t('teamWorkspacesBrands', locale)}
+        <div className="p-3.5 border-b border-slate-200/80 bg-[#FAFAFA]/80">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2.5 px-0.5">
+            {t(compact ? 'socialSpaces' : 'teamWorkspacesBrands', locale)}
           </p>
           <div className="relative">
             <Search
-              size={13}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+              size={14}
+              strokeWidth={1.75}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
             />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('searchBrand', locale)}
-              className="w-full h-10 min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-[var(--nc-coral)] focus:bg-white"
+              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200/90 bg-white pl-9 pr-3 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
             />
           </div>
         </div>
 
-        <div className="max-h-[320px] overflow-y-auto p-2 space-y-1">
+        <div className="max-h-[320px] overflow-y-auto p-2 space-y-0.5">
           {filtered.map((ws) => {
             const selected = ws.id === active.id;
             return (
@@ -155,24 +157,32 @@ export default function WorkspaceSelector({
                   setOpen(false);
                   setQuery('');
                 }}
-                className={`w-full text-left rounded-xl p-2.5 transition-colors ${
+                className={`w-full text-left rounded-2xl p-2.5 min-h-[44px] transition-colors ${
                   selected
-                    ? 'bg-[color-mix(in_srgb,var(--nc-coral)_10%,white)]'
-                    : 'hover:bg-zinc-50'
+                    ? 'bg-[#1a1848] text-white shadow-sm'
+                    : 'hover:bg-slate-50 text-slate-900'
                 }`}
               >
                 <div className="flex items-start gap-2.5">
-                  <BrandAvatar workspace={ws} size={40} />
+                  <BrandAvatar workspace={ws} size={36} round />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-extrabold text-[#2c3340] truncate">
+                      <p
+                        className={`text-[13px] font-semibold truncate tracking-tight ${
+                          selected ? 'text-white' : 'text-slate-800'
+                        }`}
+                      >
                         {ws.name}
                       </p>
                       {selected && (
-                        <Check size={14} className="text-[var(--nc-coral)] flex-shrink-0" />
+                        <Check size={14} className="text-[#F472B6] flex-shrink-0" strokeWidth={2.5} />
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-500 font-bold truncate">
+                    <p
+                      className={`text-[11px] font-medium truncate mt-0.5 ${
+                        selected ? 'text-white/65' : 'text-slate-500'
+                      }`}
+                    >
                       {workspaceChannelLabel(ws, accountWord(ws.channels.length))}
                     </p>
                     <div className="flex flex-wrap gap-1 mt-1.5">
@@ -186,26 +196,38 @@ export default function WorkspaceSelector({
             );
           })}
           {filtered.length === 0 && (
-            <p className="text-xs text-zinc-400 font-medium text-center py-6">
+            <p className="text-xs text-slate-400 font-medium text-center py-6">
               {t('noBrandsMatch', locale)}
             </p>
           )}
         </div>
 
-        <div className="p-2 border-t border-zinc-100">
+        <div className="p-2 border-t border-slate-200/80 bg-[#FAFAFA]/60">
           <button
             type="button"
             onClick={() => {
               setOpen(false);
               onCreateNew();
             }}
-            className="w-full h-11 min-h-[44px] rounded-xl text-xs font-extrabold text-[var(--nc-coral)] hover:bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)] inline-flex items-center justify-center gap-1.5"
+            className="w-full h-11 min-h-[44px] rounded-2xl text-[13px] font-semibold text-[#2B2568] hover:bg-[#E9D5FF]/50 hover:text-[#1a1848] inline-flex items-center justify-center gap-1.5 transition-colors"
           >
-            <Plus size={14} /> {t('createTeamWorkspace', locale)}
+            <Plus size={15} strokeWidth={2} className="text-[#F472B6]" />{' '}
+            {t('createTeamWorkspace', locale)}
           </button>
         </div>
       </PopoverContent>
     </Popover>
+  );
+
+  if (!compact) return selector;
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-0.5">
+        {t('socialSpaces', locale)}
+      </p>
+      {selector}
+    </div>
   );
 }
 

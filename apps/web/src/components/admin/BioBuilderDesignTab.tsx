@@ -22,7 +22,6 @@ import {
 } from '@/components/admin/laterBioThemes';
 import type {
   BioAvatarShape,
-  BioBgType,
   BioBlockVariant,
   BioButtonRadius,
   BioHoverEffect,
@@ -30,6 +29,8 @@ import type {
   BioTheme,
 } from '@/lib/bio-theme';
 import useUpload from '@/utils/useUpload';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 /** Device image uploader for cover / canvas background. */
 function ThemeImageUpload({
@@ -45,6 +46,7 @@ function ThemeImageUpload({
   onChange: (url: string | null) => void;
   previewClass?: string;
 }) {
+  const { locale } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const [upload, { loading }] = useUpload();
   const [preview, setPreview] = useState<string | null>(value);
@@ -96,7 +98,7 @@ function ThemeImageUpload({
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-zinc-400">
             <ImageIcon size={22} />
-            <span className="text-[10px] font-bold">No image yet</span>
+            <span className="text-[10px] font-bold">{t('noImageYet', locale)}</span>
           </div>
         )}
         {loading && (
@@ -125,7 +127,7 @@ function ThemeImageUpload({
           className="h-11 min-h-[44px] px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold inline-flex items-center gap-1.5 disabled:opacity-60"
         >
           <Upload size={14} />
-          {preview ? 'Replace image' : 'Upload from device'}
+          {preview ? t('replaceImage', locale) : t('uploadFromDevice', locale)}
         </button>
         {preview && (
           <button
@@ -138,14 +140,14 @@ function ThemeImageUpload({
             disabled={loading}
             className="h-11 min-h-[44px] px-3.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 text-xs font-extrabold inline-flex items-center gap-1.5 disabled:opacity-60"
           >
-            <Trash2 size={13} /> Remove
+            <Trash2 size={13} /> {t('remove', locale)}
           </button>
         )}
       </div>
       {error ? (
         <p className="text-[10px] font-bold text-red-500">{error}</p>
       ) : (
-        <p className="text-[10px] text-zinc-400 font-medium">JPG, PNG or WebP · Max 5 MB</p>
+        <p className="text-[10px] text-zinc-400 font-medium">{t('imageFormatHint', locale)}</p>
       )}
     </div>
   );
@@ -230,6 +232,7 @@ export default function BioBuilderDesignTab({
   onApply: () => void;
   saved: boolean;
 }) {
+  const { locale } = useLanguage();
   const ensureFont = (id: string) => {
     const href = getLaterGoogleFontsHref(id);
     if (!href || typeof document === 'undefined') return;
@@ -252,9 +255,9 @@ export default function BioBuilderDesignTab({
       <section className={cardClass}>
         <div>
           <h3 className="text-sm font-black text-[#1f2430] flex items-center gap-2">
-            <Sparkles size={14} className="text-indigo-500" /> Exclusive Themes
+            <Sparkles size={14} className="text-indigo-500" /> {t('exclusiveThemes', locale)}
           </h3>
-          <p className="text-xs text-zinc-500">Luxury preset selector with live swatches</p>
+          <p className="text-xs text-zinc-500">{t('exclusiveThemesSub', locale)}</p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           {LATER_THEME_PRESETS.map((preset) => {
@@ -310,12 +313,12 @@ export default function BioBuilderDesignTab({
 
       {/* Header & cover */}
       <section className={cardClass}>
-        <h3 className="text-sm font-black text-[#1f2430]">Header & Cover Banner</h3>
+        <h3 className="text-sm font-black text-[#1f2430]">{t('headerCoverBanner', locale)}</h3>
 
         <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5">
           <div>
-            <p className="text-xs font-bold text-[#1f2430]">HD Cover Photo</p>
-            <p className="text-[10px] text-zinc-500">Optional banner above avatar</p>
+            <p className="text-xs font-bold text-[#1f2430]">{t('hdCoverPhoto', locale)}</p>
+            <p className="text-[10px] text-zinc-500">{t('optionalBannerAbove', locale)}</p>
           </div>
           <button
             type="button"
@@ -336,8 +339,8 @@ export default function BioBuilderDesignTab({
 
         {theme.coverEnabled && (
           <ThemeImageUpload
-            label="Cover image"
-            hint="Upload a banner from your device"
+            label={t('coverImage', locale)}
+            hint={t('uploadBannerHint', locale)}
             value={theme.coverImageUrl}
             onChange={(url) => onPatch('coverImageUrl', url)}
             previewClass="h-20 max-w-[180px]"
@@ -346,22 +349,22 @@ export default function BioBuilderDesignTab({
 
         <div>
           <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
-            Avatar shape
+            {t('avatarShape', locale)}
           </p>
           <Segmented<BioAvatarShape>
             value={theme.avatarShape}
             onChange={(v) => onPatch('avatarShape', v)}
             options={[
-              { key: 'circle', label: 'Circle', icon: <Circle size={13} /> },
-              { key: 'squircle', label: 'Squircle', icon: <Square size={13} /> },
+              { key: 'circle', label: t('shapeCircle', locale), icon: <Circle size={13} /> },
+              { key: 'squircle', label: t('shapeSquircle', locale), icon: <Square size={13} /> },
             ]}
           />
         </div>
 
         <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5">
           <div>
-            <p className="text-xs font-bold text-[#1f2430]">Verified badge</p>
-            <p className="text-[10px] text-zinc-500">Indigo checkmark on avatar</p>
+            <p className="text-xs font-bold text-[#1f2430]">{t('verifiedBadge', locale)}</p>
+            <p className="text-[10px] text-zinc-500">{t('verifiedBadgeHint', locale)}</p>
           </div>
           <button
             type="button"
@@ -382,14 +385,14 @@ export default function BioBuilderDesignTab({
 
         <div>
           <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
-            Social icons layout
+            {t('socialIconsLayout', locale)}
           </p>
           <Segmented<BioSocialLayout>
             value={theme.socialLayout}
             onChange={(v) => onPatch('socialLayout', v)}
             options={[
-              { key: 'header', label: 'Header row' },
-              { key: 'dock', label: 'Bottom dock' },
+              { key: 'header', label: t('socialLayoutHeader', locale) },
+              { key: 'dock', label: t('socialLayoutDock', locale) },
             ]}
           />
         </div>
@@ -397,10 +400,10 @@ export default function BioBuilderDesignTab({
 
       {/* Canvas & background */}
       <section className={cardClass}>
-        <h3 className="text-sm font-black text-[#1f2430]">Canvas & Background</h3>
+        <h3 className="text-sm font-black text-[#1f2430]">{t('canvasBackground', locale)}</h3>
         <div>
           <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
-            Background type
+            {t('backgroundType', locale)}
           </p>
           <Segmented<'solid' | 'image' | 'liquid'>
             value={
@@ -417,9 +420,9 @@ export default function BioBuilderDesignTab({
               }
             }}
             options={[
-              { key: 'solid', label: 'Solid / Mesh', icon: <Layers size={13} /> },
-              { key: 'image', label: 'HD Image', icon: <ImageIcon size={13} /> },
-              { key: 'liquid', label: 'Liquid Gradient', icon: <Sparkles size={13} /> },
+              { key: 'solid', label: t('bgSolidMesh', locale), icon: <Layers size={13} /> },
+              { key: 'image', label: t('bgHdImage', locale), icon: <ImageIcon size={13} /> },
+              { key: 'liquid', label: t('bgLiquid', locale), icon: <Sparkles size={13} /> },
             ]}
           />
         </div>
@@ -429,8 +432,8 @@ export default function BioBuilderDesignTab({
             <div className="flex items-center gap-2">
               <Waves size={14} className="text-indigo-500" />
               <div>
-                <p className="text-xs font-bold text-[#1f2430]">Mesh gradient</p>
-                <p className="text-[10px] text-zinc-500">Layered color blobs on canvas</p>
+                <p className="text-xs font-bold text-[#1f2430]">{t('meshGradient', locale)}</p>
+                <p className="text-[10px] text-zinc-500">{t('meshGradientHint', locale)}</p>
               </div>
             </div>
             <button
@@ -452,7 +455,7 @@ export default function BioBuilderDesignTab({
         )}
 
         <ThemeColorField
-          label="Primary tint color"
+          label={t('primaryTintColor', locale)}
           value={theme.bgType === 'solid' ? theme.bg : theme.accent}
           onChange={(v) => {
             if (theme.bgType === 'solid') onPatch('bg', v);
@@ -462,8 +465,8 @@ export default function BioBuilderDesignTab({
 
         {theme.bgType === 'image' && (
           <ThemeImageUpload
-            label="Background image"
-            hint="Upload a full-canvas background from your device"
+            label={t('backgroundImage', locale)}
+            hint={t('uploadCanvasBgHint', locale)}
             value={theme.bgImageUrl}
             onChange={(url) => onPatch('bgImageUrl', url)}
             previewClass="h-28 max-w-[120px]"
@@ -472,12 +475,12 @@ export default function BioBuilderDesignTab({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <ThemeColorField
-            label="Text & icon color"
+            label={t('textIconColor', locale)}
             value={theme.nameColor}
             onChange={(v) => onPatch('nameColor', v)}
           />
           <ThemeColorField
-            label="Muted text"
+            label={t('mutedTextColor', locale)}
             value={theme.mutedColor}
             onChange={(v) => onPatch('mutedColor', v)}
           />
@@ -485,7 +488,7 @@ export default function BioBuilderDesignTab({
 
         <div>
           <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
-            Typography
+            {t('typographyLabel', locale)}
           </p>
           <select
             value={theme.fontId}
@@ -513,18 +516,18 @@ export default function BioBuilderDesignTab({
 
       {/* Block designs */}
       <section className={cardClass}>
-        <h3 className="text-sm font-black text-[#1f2430]">Exclusive Block Designs</h3>
+        <h3 className="text-sm font-black text-[#1f2430]">{t('exclusiveBlockDesigns', locale)}</h3>
         <div>
           <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
-            Block variant
+            {t('blockVariant', locale)}
           </p>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                { key: 'frosted' as const, label: 'Frosted Glass', hint: 'Blur + glass' },
-                { key: 'solid' as const, label: 'Solid Color', hint: 'Bold slate' },
-                { key: 'luxe' as const, label: 'Luxe Silk', hint: 'White card' },
-                { key: 'minimal' as const, label: 'Minimal Border', hint: 'Outline only' },
+                { key: 'frosted' as const, label: t('variantFrosted', locale), hint: 'Blur + glass' },
+                { key: 'solid' as const, label: t('variantSolid', locale), hint: 'Bold slate' },
+                { key: 'luxe' as const, label: t('variantLuxe', locale), hint: 'White card' },
+                { key: 'minimal' as const, label: t('variantMinimal', locale), hint: 'Outline only' },
               ] as { key: BioBlockVariant; label: string; hint: string }[]
             ).map((v) => (
               <button
@@ -552,12 +555,12 @@ export default function BioBuilderDesignTab({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <ThemeColorField
-            label="Block background"
+            label={t('blockBackground', locale)}
             value={theme.buttonBg.startsWith('#') ? theme.buttonBg : theme.accent}
             onChange={(v) => onPatch('buttonBg', v)}
           />
           <ThemeColorField
-            label="Block text"
+            label={t('blockTextColor', locale)}
             value={theme.buttonText.startsWith('#') ? theme.buttonText : '#FFFFFF'}
             onChange={(v) => onPatch('buttonText', v)}
           />
@@ -565,30 +568,30 @@ export default function BioBuilderDesignTab({
 
         <div>
           <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
-            Corner curvature
+            {t('cornerCurvature', locale)}
           </p>
           <Segmented<BioButtonRadius>
             value={theme.buttonRadius}
             onChange={(v) => onPatch('buttonRadius', v)}
             options={[
-              { key: 'rounded', label: 'Curved' },
-              { key: 'sharp', label: 'Sharp' },
-              { key: 'pill', label: 'Pill' },
+              { key: 'rounded', label: t('radiusCurved', locale) },
+              { key: 'sharp', label: t('radiusSharp', locale) },
+              { key: 'pill', label: t('radiusPill', locale) },
             ]}
           />
         </div>
 
         <div>
           <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
-            Hover effect
+            {t('hoverEffect', locale)}
           </p>
           <Segmented<BioHoverEffect>
             value={theme.hoverEffect}
             onChange={(v) => onPatch('hoverEffect', v)}
             options={[
-              { key: 'lift', label: 'Lift & glow' },
-              { key: 'shimmer', label: 'Border shimmer' },
-              { key: 'scale', label: 'Scale up' },
+              { key: 'lift', label: t('hoverLift', locale) },
+              { key: 'shimmer', label: t('hoverShimmer', locale) },
+              { key: 'scale', label: t('hoverScale', locale) },
             ]}
           />
         </div>
@@ -602,7 +605,7 @@ export default function BioBuilderDesignTab({
           className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black h-11 min-h-[44px] shadow-md shadow-indigo-600/20"
           onClick={onApply}
         >
-          {saved ? 'Theme saved ✓' : 'Apply theme'}
+          {saved ? t('themeSaved', locale) : t('applyTheme', locale)}
         </Button>
       </div>
     </div>

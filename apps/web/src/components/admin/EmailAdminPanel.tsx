@@ -27,6 +27,10 @@ import {
   Smartphone,
   Link2,
   BarChart3,
+  Zap,
+  Pause,
+  Play,
+  Pencil,
 } from 'lucide-react';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
@@ -34,10 +38,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import useUpload from '@/utils/useUpload';
 import type {
+  CommunityAutomationEmail,
+  EmailAutomation,
+  EmailAutomationTrigger,
   EmailBroadcast,
   EmailSubscriber,
 } from '@/lib/mock-email-crm';
-import { AUDIENCE_OPTIONS, getBroadcastAnalytics } from '@/lib/mock-email-crm';
+import {
+  AUTOMATION_TRIGGER_OPTIONS,
+  AUDIENCE_OPTIONS,
+  getBroadcastAnalytics,
+  listCommunityAutomationEmails,
+  listEmailAutomations,
+} from '@/lib/mock-email-crm';
 import { useWorkspace } from '@/context/WorkspaceContext';
 
 type EmailResponse = {
@@ -46,6 +59,8 @@ type EmailResponse = {
   total_broadcasts: number;
   subscribers: EmailSubscriber[];
   broadcasts: EmailBroadcast[];
+  automations?: EmailAutomation[];
+  community_emails?: CommunityAutomationEmail[];
   tags: string[];
   audiences: typeof AUDIENCE_OPTIONS;
   demo?: boolean;
@@ -155,6 +170,15 @@ export default function EmailAdminPanel() {
   const [flash, setFlash] = useState('');
   const [upload, { loading: uploading }] = useUpload();
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [automationEditorOpen, setAutomationEditorOpen] = useState(false);
+  const [editingAutomationId, setEditingAutomationId] = useState<string | null>(null);
+  const [autoName, setAutoName] = useState('');
+  const [autoDescription, setAutoDescription] = useState('');
+  const [autoTrigger, setAutoTrigger] =
+    useState<EmailAutomationTrigger>('purchase_community_access');
+  const [autoSubject, setAutoSubject] = useState('');
+  const [autoBody, setAutoBody] = useState('');
+  const [autoStatus, setAutoStatus] = useState<'active' | 'paused'>('active');
 
   // Subscribers filtered to the active brand / team-yta storefront & webinars.
   const { data, isLoading } = useQuery<EmailResponse>({
@@ -233,6 +257,15 @@ export default function EmailAdminPanel() {
 
   const subscribers = data?.subscribers ?? [];
   const broadcasts = data?.broadcasts ?? [];
+  // Community-scoped automations + sent emails (fallback if API omits them).
+  const automations = useMemo(() => {
+    if (data?.automations) return data.automations;
+    return listEmailAutomations({ community_id: workspaceCommunityId });
+  }, [data?.automations, workspaceCommunityId]);
+  const communityEmails = useMemo(() => {
+    if (data?.community_emails) return data.community_emails;
+    return listCommunityAutomationEmails({ community_id: workspaceCommunityId });
+  }, [data?.community_emails, workspaceCommunityId]);
   const tags = data?.tags ?? ['all'];
   const analytics = analyticsBroadcast
     ? getBroadcastAnalytics(analyticsBroadcast)
@@ -240,6 +273,89 @@ export default function EmailAdminPanel() {
   const maxHourOpens = analytics
     ? Math.max(...analytics.opens_by_hour.map((h) => h.opens), 1)
     : 1;
+
+  const openNewAutomation = () => {
+    const def = AUTOMATION_TRIGGER_OPTIONS[0];
+    setEditingAutomationId(null);
+    setAutoName(def.defaultName);
+    setAutoDescription('');
+    setAutoTrigger(def.value);
+    setAutoSubject(def.defaultSubject);
+    setAutoBody(def.defaultBody);
+    setAutoStatus('active');
+    setAutomationEditorOpen(true);
+  };
+
+  const openEditAutomation = (auto: EmailAutomation) => {
+    setEditingAutomationId(auto.id);
+    setAutoName(auto.name);
+    setAutoDescription(auto.description);
+    setAutoTrigger(auto.trigger);
+    setAutoSubject(auto.subject);
+    setAutoBody(auto.body || '');
+    setAutoStatus(auto.status);
+    setAutomationEditorOpen(true);
+  };
+
+  const applyTriggerDefaults = (trigger: EmailAutomationTrigger) => {
+    const def =
+      AUTOMATION_TRIGGER_OPTIONS.find((o) => o.value === trigger) ??
+      AUTOMATION_TRIGGER_OPTIONS[0];
+    setAutoTrigger(trigger);
+    // Only fill empty fields when switching trigger on a new automation.
+    if (!editingAutomationId) {
+      setAutoName(def.defaultName);
+      setAutoSubject(def.defaultSubject);
+      setAutoBody(def.defaultBody);
+    }
+  };
+
+  const toggleAutomation = useMutation({
+    mutationFn: async (input: { id: string; status: 'active' | 'paused' }) => {
+      const r = await fetch('/api/admin/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle_automation',
+          id: input.id,
+          status: input.status,
+        }),
+      });
+      if (!r.ok) throw new Error('Failed');
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-email'] });
+    },
+  });
+
+  const upsertAutomation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch('/api/admin/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'upsert_automation',
+          id: editingAutomationId ?? undefined,
+          name: autoName,
+          description: autoDescription,
+          trigger: autoTrigger,
+          subject: autoSubject,
+          body: autoBody,
+          status: autoStatus,
+          community_id: workspaceCommunityId,
+        }),
+      });
+      if (!r.ok) throw new Error('Failed');
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-email'] });
+      setAutomationEditorOpen(false);
+      setFlash(t('automationSaved', locale));
+      setTimeout(() => setFlash(''), 2200);
+    },
+  });
 
   const exportCsv = () => {
     const header = 'Name,Email,Source,Tags,Subscribed\n';
@@ -294,6 +410,11 @@ export default function EmailAdminPanel() {
 
   return (
     <div className="space-y-6">
+      {flash && !composerOpen && (
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold inline-flex items-center gap-2">
+          <CheckCircle2 size={14} /> {flash}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
@@ -339,6 +460,329 @@ export default function EmailAdminPanel() {
           );
         })}
       </div>
+
+      {/* Community emails — purchase unlocks + member automations */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+        <div className="px-4 sm:px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <Zap size={14} className="text-[#9089F0]" />
+              {t('emailAutomations', locale)}
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {t('emailAutomationsSub', locale)}
+              <span className="text-slate-300"> · </span>
+              {activeWorkspace.community.community_name}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg">
+              {communityEmails.length} {t('automationSent', locale).toLowerCase()}
+            </span>
+            <button
+              type="button"
+              onClick={openNewAutomation}
+              className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
+            >
+              <Plus size={13} /> {t('addAutomation', locale)}
+            </button>
+          </div>
+        </div>
+
+        {/* Active rules for this community */}
+        <div className="px-4 sm:px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400 mb-2">
+            {t('automationRules', locale)}
+          </p>
+          <div className="flex flex-col gap-2">
+            {automations.length === 0 ? (
+              <p className="text-xs text-slate-400 py-2">{t('noAutomationsYet', locale)}</p>
+            ) : (
+              automations.map((auto) => {
+                const active = auto.status === 'active';
+                return (
+                  <div
+                    key={auto.id}
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-bold text-slate-900 truncate">
+                          {auto.name}
+                        </p>
+                        <span
+                          className={`inline-flex text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md ${
+                            active
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {active
+                            ? t('automationActive', locale)
+                            : t('automationPaused', locale)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">
+                        {auto.trigger_label}
+                        <span className="mx-1 text-slate-300">·</span>
+                        {auto.subject}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 self-start sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => openEditAutomation(auto)}
+                        className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl text-[11px] font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <Pencil size={11} /> {t('editAutomation', locale)}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={toggleAutomation.isPending}
+                        onClick={() =>
+                          toggleAutomation.mutate({
+                            id: auto.id,
+                            status: active ? 'paused' : 'active',
+                          })
+                        }
+                        className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl text-[11px] font-semibold border transition-colors ${
+                          active
+                            ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            : 'bg-slate-900 text-white border-slate-900 hover:bg-slate-800'
+                        }`}
+                      >
+                        {active ? <Pause size={11} /> : <Play size={11} />}
+                        {active
+                          ? t('automationPause', locale)
+                          : t('automationResume', locale)}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Recent community automation emails */}
+        <div className="px-4 sm:px-5 py-3 border-b border-slate-50">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            {t('communityEmailsRecent', locale)}
+          </p>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {communityEmails.length === 0 ? (
+            <div className="py-10 text-center text-sm text-slate-400">
+              {t('communityEmailsEmpty', locale)}
+            </div>
+          ) : (
+            communityEmails.map((email) => {
+              const isPurchase = email.kind === 'purchase_access';
+              return (
+                <div
+                  key={email.id}
+                  className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3"
+                >
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div
+                      className={`w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        isPurchase
+                          ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
+                          : 'bg-emerald-50 text-emerald-700'
+                      }`}
+                    >
+                      <Mail size={15} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                        <span
+                          className={`inline-flex text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md ${
+                            isPurchase
+                              ? 'bg-[#E9D5FF]/80 text-[#1a1848]'
+                              : 'bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          {isPurchase
+                            ? t('purchaseAccessEmail', locale)
+                            : t('memberAutoEmail', locale)}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {formatDate(email.sent_at, locale)}
+                        </span>
+                      </div>
+                      <p className="text-sm font-black text-slate-900 truncate">
+                        {email.subject}
+                      </p>
+                      <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
+                        {email.recipient_name} · {email.recipient_email}
+                        {email.product_title ? (
+                          <>
+                            <span className="mx-1 text-slate-300">·</span>
+                            {email.product_title}
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Add / edit automation drawer */}
+      {automationEditorOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40"
+            onClick={() => setAutomationEditorOpen(false)}
+          />
+          <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-shrink-0">
+              <div>
+                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                  {t('emailAutomations', locale)}
+                </p>
+                <h3 className="text-sm font-black text-slate-900 mt-0.5">
+                  {editingAutomationId
+                    ? t('editAutomation', locale)
+                    : t('addAutomation', locale)}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAutomationEditorOpen(false)}
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-slate-100 inline-flex items-center justify-center"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+              <label className="block space-y-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
+                  {t('automationTrigger', locale)}
+                </span>
+                <select
+                  value={autoTrigger}
+                  onChange={(e) =>
+                    applyTriggerDefaults(e.target.value as EmailAutomationTrigger)
+                  }
+                  className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-slate-400"
+                >
+                  {AUTOMATION_TRIGGER_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
+                  {t('automationName', locale)}
+                </span>
+                <Input
+                  value={autoName}
+                  onChange={(e) => setAutoName(e.target.value)}
+                  className="h-11 min-h-[44px] rounded-xl bg-slate-50 border-slate-200"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
+                  {t('automationDescription', locale)}
+                </span>
+                <Input
+                  value={autoDescription}
+                  onChange={(e) => setAutoDescription(e.target.value)}
+                  placeholder={t('optionalLabel', locale)}
+                  className="h-11 min-h-[44px] rounded-xl bg-slate-50 border-slate-200"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
+                  {t('automationSubject', locale)}
+                </span>
+                <Input
+                  value={autoSubject}
+                  onChange={(e) => setAutoSubject(e.target.value)}
+                  className="h-11 min-h-[44px] rounded-xl bg-slate-50 border-slate-200"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
+                  {t('automationBody', locale)}
+                </span>
+                <textarea
+                  value={autoBody}
+                  onChange={(e) => setAutoBody(e.target.value)}
+                  rows={8}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-slate-400 resize-none min-h-[160px]"
+                />
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {t('mergeTagsHint', locale)}
+                </p>
+              </label>
+
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
+                  {t('statusLabel', locale)}
+                </span>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAutoStatus('active')}
+                    className={`h-11 min-h-[44px] px-3 rounded-xl text-xs font-semibold border transition-colors ${
+                      autoStatus === 'active'
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    {t('automationActive', locale)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAutoStatus('paused')}
+                    className={`h-11 min-h-[44px] px-3 rounded-xl text-xs font-semibold border transition-colors ${
+                      autoStatus === 'paused'
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    {t('automationPaused', locale)}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0">
+              <button
+                type="button"
+                disabled={
+                  !autoName.trim() ||
+                  !autoSubject.trim() ||
+                  !autoBody.trim() ||
+                  upsertAutomation.isPending
+                }
+                onClick={() => upsertAutomation.mutate()}
+                className="w-full h-11 min-h-[44px] rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              >
+                {upsertAutomation.isPending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <CheckCircle2 size={14} />
+                )}
+                {t('saveAutomation', locale)}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Directory */}
       <div className="nc-glass rounded-[1.5rem] overflow-hidden">
@@ -448,14 +892,18 @@ export default function EmailAdminPanel() {
       {/* Sent history */}
       <div className="nc-glass rounded-[1.5rem] overflow-hidden">
         <div className="px-5 py-4 border-b border-zinc-50">
-          <h3 className="text-sm font-black text-[#2c3340]">Skickade utskick</h3>
+          <h3 className="text-sm font-black text-[#2c3340]">
+            {t('sentBroadcastsTitle', locale)}
+          </h3>
           <p className="text-xs text-zinc-400 mt-0.5">
-            History with open & click stats — click for details
+            {t('sentBroadcastsSub', locale)}
           </p>
         </div>
         <div className="divide-y divide-zinc-50">
           {broadcasts.filter((b) => b.status === 'sent').length === 0 ? (
-            <div className="py-10 text-center text-sm text-zinc-400">No broadcasts yet</div>
+            <div className="py-10 text-center text-sm text-zinc-400">
+              {t('noBroadcastsYet', locale)}
+            </div>
           ) : (
             broadcasts
               .filter((b) => b.status === 'sent')
@@ -913,7 +1361,7 @@ export default function EmailAdminPanel() {
                           value={body}
                           onChange={(e) => setBody(e.target.value)}
                           className="w-full min-h-[160px] rounded-xl resize-none text-sm border border-zinc-100 bg-zinc-50/50 px-3 py-2.5 text-[#2c3340] placeholder:text-zinc-400 focus:outline-none focus:border-[var(--nc-coral)]"
-                          placeholder="Skriv ditt mejl… Dra in en bild, sedan flytta den upp/ner."
+                          placeholder={t('emailBodyPlaceholder', locale)}
                         />
                       )}
                     </div>

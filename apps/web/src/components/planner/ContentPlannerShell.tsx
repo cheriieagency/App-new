@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
@@ -55,7 +55,26 @@ const PLATFORM_ICONS: Record<
 type ViewMode = 'board' | 'calendar' | 'table' | 'feed' | 'copilot';
 type PlatformFilter = 'all' | SocialPlatform;
 
-export default function ContentPlannerShell() {
+type ContentPlannerShellProps = {
+  /** When set, only posts tagged with this campaign/project are shown. */
+  campaignId?: string | null;
+  /** Skip sticky top chrome — admin shell already provides it. */
+  embedded?: boolean;
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  /** Extra actions rendered next to platform/view controls (e.g. New project). */
+  headerExtra?: ReactNode;
+};
+
+export default function ContentPlannerShell({
+  campaignId = null,
+  embedded = false,
+  eyebrow,
+  title,
+  description,
+  headerExtra,
+}: ContentPlannerShellProps) {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -121,8 +140,71 @@ export default function ContentPlannerShell() {
     },
   });
 
+  const rescheduleMutation = useMutation({
+    mutationFn: async ({ id, scheduledAt }: { id: string; scheduledAt: Date }) => {
+      const r = await fetch('/api/planner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reschedule',
+          id,
+          scheduled_at: scheduledAt.toISOString(),
+          actor: 'Ebba',
+        }),
+      });
+      if (!r.ok) throw new Error('reschedule failed');
+      return r.json() as Promise<{ posts: PlannerPost[] }>;
+    },
+    onMutate: async ({ id, scheduledAt }) => {
+      await queryClient.cancelQueries({ queryKey: ['planner-posts', project] });
+      const prev = queryClient.getQueryData<{ posts: PlannerPost[] }>([
+        'planner-posts',
+        project,
+      ]);
+      if (prev) {
+        queryClient.setQueryData(['planner-posts', project], {
+          ...prev,
+          posts: prev.posts.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  scheduled_at: scheduledAt.toISOString(),
+                  workflow:
+                    p.workflow === 'IDEA' ||
+                    p.workflow === 'IN_PROGRESS' ||
+                    p.workflow === 'READY'
+                      ? 'SCHEDULED'
+                      : p.workflow,
+                  status:
+                    p.workflow === 'PUBLISHED' || p.status === 'published'
+                      ? p.status
+                      : 'scheduled',
+                }
+              : p
+          ),
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['planner-posts', project], ctx.prev);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
+    },
+  });
+
+  const defaultCampaignIds = useMemo(
+    () => (campaignId ? [campaignId] : undefined),
+    [campaignId]
+  );
+
   const posts = useMemo(() => {
     let list = data?.posts ?? [];
+    // Scope to a single project/campaign when opened from Projects nav.
+    if (campaignId) {
+      list = list.filter((p) => (p.campaigns ?? []).includes(campaignId));
+    }
     if (platformFilter !== 'all') {
       list = list.filter((p) => p.platforms.includes(platformFilter));
     }
@@ -136,7 +218,7 @@ export default function ContentPlannerShell() {
       );
     }
     return list;
-  }, [data?.posts, platformFilter, search]);
+  }, [data?.posts, campaignId, platformFilter, search]);
 
   const openStudio = (post?: PlannerPost | null) => {
     setActivePost(post ?? null);
@@ -170,6 +252,8 @@ export default function ContentPlannerShell() {
         platforms: input.platforms,
         workflow: 'IDEA',
         project,
+        // Auto-tag AI drafts when creating inside a project view.
+        campaigns: campaignId ? [campaignId] : undefined,
         actor: 'Ebba',
       }),
     });
@@ -217,6 +301,202 @@ export default function ContentPlannerShell() {
       { key: 'copilot' as const, label: t('aiCopilot', locale), icon: Sparkles },
     ] as const
   );
+
+  const pageHeader = (
+    <AdminPageHeader
+      eyebrow={eyebrow ?? t('adminContentPlanner', locale)}
+      title={title ?? t('adminNavPlanner', locale)}
+      description={
+        description ??
+        (activeWorkspace ? `${activeWorkspace.name} · ${activeWorkspace.handle}` : undefined)
+      }
+      actions={
+        <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto min-w-0">
+          {headerExtra ? (
+            <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end w-full">
+              {headerExtra}
+            </div>
+          ) : null}
+          {/* Platform filters — above view tabs, right-aligned */}
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none justify-start sm:justify-end max-w-full">
+            <button
+              type="button"
+              onClick={() => setPlatformFilter('all')}
+              className={`text-xs px-3.5 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 transition-colors ${
+                platformFilter === 'all'
+                  ? 'bg-slate-900 text-white font-semibold'
+                  : 'bg-white text-slate-600 border border-slate-200/80 font-semibold hover:bg-slate-50'
+              }`}
+            >
+              {t('allPlatforms', locale)}
+            </button>
+            {(['instagram', 'tiktok', 'linkedin', 'youtube'] as SocialPlatform[]).map((p) => {
+              const active = platformFilter === p;
+              const Icon = PLATFORM_ICONS[p];
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => {
+                    setPlatformFilter(p);
+                    if (view === 'feed' && p !== 'instagram' && p !== 'tiktok') {
+                      setView('board');
+                    }
+                  }}
+                  className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 font-semibold transition-colors ${
+                    active
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                  }`}
+                >
+                  <Icon size={13} className={active ? 'text-white' : undefined} />
+                  {PLATFORM_META[p].label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* View tabs — Progress / Calendar / Table / … */}
+          <div className="flex gap-0.5 overflow-x-auto scrollbar-none p-1 rounded-xl bg-slate-100/80 border border-slate-200/80 w-fit max-w-full sm:ml-auto">
+            {viewTabs.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setView(key)}
+                className={`inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-lg text-xs transition-all flex-shrink-0 ${
+                  view === key
+                    ? 'bg-white text-slate-900 shadow-sm font-semibold'
+                    : 'text-slate-500 font-medium hover:text-slate-800'
+                }`}
+              >
+                <Icon
+                  size={13}
+                  className={
+                    key === 'copilot' && view !== 'copilot' ? 'text-[#F472B6]' : undefined
+                  }
+                />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      }
+    />
+  );
+
+  const views = (
+    <>
+      {view === 'copilot' ? (
+        <AiCopilotPanel
+          onUseIdea={(idea, platform) => void useIdea(idea, platform)}
+          onCreateFromCaption={(input) => void createDraftFromAi(input)}
+        />
+      ) : isLoading ? (
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-sm text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          {t('loadingPlanner', locale)}
+        </div>
+      ) : view === 'board' ? (
+        <PlannerKanbanBoard
+          posts={posts}
+          onOpen={openStudio}
+          onMove={(id, workflow) => moveMutation.mutate({ id, workflow })}
+        />
+      ) : view === 'calendar' ? (
+        <ContentCalendar
+          posts={posts.filter(
+            (p) => p.workflow === 'SCHEDULED' || p.workflow === 'PUBLISHED' || p.scheduled_at
+          )}
+          view="month"
+          cursor={cursor}
+          onCursorChange={setCursor}
+          onSelectPost={openStudio}
+          onSelectDay={openStudioForDay}
+          onReschedule={(id, scheduledAt) =>
+            rescheduleMutation.mutate({ id, scheduledAt })
+          }
+        />
+      ) : view === 'feed' ? (
+        <FeedGridPlanner
+          posts={posts}
+          workspace={workspaces.find((w) => w.id === activeWorkspaceId) ?? null}
+          activePlatform={
+            platformFilter === 'instagram' || platformFilter === 'tiktok'
+              ? platformFilter
+              : platformFilter === 'all'
+                ? 'all'
+                : null
+          }
+          onOpen={openStudio}
+          onRefresh={async () => {
+            await queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
+          }}
+        />
+      ) : (
+        <PlannerTableView posts={posts} onOpen={openStudio} />
+      )}
+    </>
+  );
+
+  const modals = (
+    <>
+      <PostStudioModal
+        open={studioOpen}
+        onOpenChange={(open) => {
+          setStudioOpen(open);
+          if (!open) setDefaultScheduledAt(null);
+        }}
+        post={activePost}
+        projectName={project}
+        workspaces={workspaces}
+        defaultScheduledAt={defaultScheduledAt}
+        defaultCampaignIds={defaultCampaignIds}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ['planner-posts'] })}
+      />
+
+      <TeamWorkspaceModal
+        open={teamOpen}
+        onOpenChange={setTeamOpen}
+        projectName={project}
+        workspaces={workspaces}
+      />
+
+      <SocialAccountsModal open={accountsOpen} onOpenChange={setAccountsOpen} />
+    </>
+  );
+
+  // Embedded in admin Projects: reuse planner views without a second sticky bar.
+  if (embedded) {
+    return (
+      <div className="space-y-6">
+        {/* Compact search + create when admin chrome has no planner actions */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+          <div className="relative w-full max-w-md">
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('searchPosts', locale)}
+              className="w-full bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-3 py-2.5 min-h-[44px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => openStudio(null)}
+            className="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 min-h-[44px] rounded-xl transition-colors flex-shrink-0"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            {t('createPost', locale)}
+          </button>
+        </div>
+        {pageHeader}
+        {views}
+        {modals}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -298,143 +578,11 @@ export default function ContentPlannerShell() {
       </div>
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 py-8 pb-24 md:pb-16 space-y-6">
-        <AdminPageHeader
-          eyebrow="Content Planner"
-          title="Planner"
-          description={activeWorkspace ? `${activeWorkspace.name} · ${activeWorkspace.handle}` : undefined}
-          actions={
-            <div className="flex gap-0.5 overflow-x-auto scrollbar-none p-1 rounded-xl bg-slate-100/80 border border-slate-200/80">
-              {viewTabs.map(({ key, label, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setView(key)}
-                  className={`inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-lg text-xs transition-all flex-shrink-0 ${
-                    view === key
-                      ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                      : 'text-slate-500 font-medium hover:text-slate-800'
-                  }`}
-                >
-                  <Icon
-                    size={13}
-                    className={
-                      key === 'copilot' && view !== 'copilot' ? 'text-[#F472B6]' : undefined
-                    }
-                  />
-                  {label}
-                </button>
-              ))}
-            </div>
-          }
-        />
-
-        {/* Platform filters */}
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mt-2">
-          <button
-            type="button"
-            onClick={() => setPlatformFilter('all')}
-            className={`text-xs px-3.5 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 transition-colors ${
-              platformFilter === 'all'
-                ? 'bg-slate-900 text-white font-semibold'
-                : 'bg-white text-slate-600 border border-slate-200/80 font-semibold hover:bg-slate-50'
-            }`}
-          >
-            {t('allPlatforms', locale)}
-          </button>
-          {(['instagram', 'tiktok', 'linkedin', 'youtube'] as SocialPlatform[]).map((p) => {
-            const active = platformFilter === p;
-            const Icon = PLATFORM_ICONS[p];
-            return (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  setPlatformFilter(p);
-                  if (view === 'feed' && p !== 'instagram' && p !== 'tiktok') {
-                    setView('board');
-                  }
-                }}
-                className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 font-semibold transition-colors ${
-                  active
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
-                }`}
-              >
-                <Icon size={13} className={active ? 'text-white' : undefined} />
-                {PLATFORM_META[p].label}
-              </button>
-            );
-          })}
-        </div>
-
-        {view === 'copilot' ? (
-          <AiCopilotPanel
-            onUseIdea={(idea, platform) => void useIdea(idea, platform)}
-            onCreateFromCaption={(input) => void createDraftFromAi(input)}
-          />
-        ) : isLoading ? (
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-sm text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-            {t('loadingPlanner', locale)}
-          </div>
-        ) : view === 'board' ? (
-          <PlannerKanbanBoard
-            posts={posts}
-            onOpen={openStudio}
-            onMove={(id, workflow) => moveMutation.mutate({ id, workflow })}
-          />
-        ) : view === 'calendar' ? (
-          <ContentCalendar
-            posts={posts.filter(
-              (p) => p.workflow === 'SCHEDULED' || p.workflow === 'PUBLISHED' || p.scheduled_at
-            )}
-            view="month"
-            cursor={cursor}
-            onCursorChange={setCursor}
-            onSelectPost={openStudio}
-            onSelectDay={openStudioForDay}
-          />
-        ) : view === 'feed' ? (
-          <FeedGridPlanner
-            posts={posts}
-            workspace={workspaces.find((w) => w.id === activeWorkspaceId) ?? null}
-            activePlatform={
-              platformFilter === 'instagram' || platformFilter === 'tiktok'
-                ? platformFilter
-                : platformFilter === 'all'
-                  ? 'all'
-                  : null
-            }
-            onOpen={openStudio}
-            onRefresh={async () => {
-              await queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
-            }}
-          />
-        ) : (
-          <PlannerTableView posts={posts} onOpen={openStudio} />
-        )}
+        {pageHeader}
+        {views}
       </main>
 
-      <PostStudioModal
-        open={studioOpen}
-        onOpenChange={(open) => {
-          setStudioOpen(open);
-          if (!open) setDefaultScheduledAt(null);
-        }}
-        post={activePost}
-        projectName={project}
-        workspaces={workspaces}
-        defaultScheduledAt={defaultScheduledAt}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ['planner-posts'] })}
-      />
-
-      <TeamWorkspaceModal
-        open={teamOpen}
-        onOpenChange={setTeamOpen}
-        projectName={project}
-        workspaces={workspaces}
-      />
-
-      <SocialAccountsModal open={accountsOpen} onOpenChange={setAccountsOpen} />
+      {modals}
     </div>
   );
 }

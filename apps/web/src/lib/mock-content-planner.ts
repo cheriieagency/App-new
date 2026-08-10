@@ -80,7 +80,10 @@ export type PlannerPost = {
   media_items: PlannerMediaItem[];
   youtube?: YoutubeMeta | null;
   idea_title?: string;
+  /** Brand workspace name (Team Workspace). */
   project: string;
+  /** Campaign / project label ids this post is tagged with. */
+  campaigns: string[];
   assignees: PlannerAssignee[];
   subtasks: PlannerSubtask[];
   auto_post: boolean;
@@ -88,6 +91,15 @@ export type PlannerPost = {
   comments: PlannerComment[];
   created_at: string;
   created_by: string;
+};
+
+/** Campaign / project label used to group scheduled content by initiative. */
+export type CampaignLabel = {
+  id: string;
+  name: string;
+  color: string;
+  description: string;
+  created_at: string;
 };
 
 export type ConnectedSocialAccount = {
@@ -522,6 +534,90 @@ function act(
   return { id: `act-${++activitySeq}`, text, created_at: at, visibility };
 }
 
+let campaignSeq = 3;
+const campaigns: CampaignLabel[] = [
+  {
+    id: 'camp-1',
+    name: 'Summer Launch 2026',
+    color: '#F472B6',
+    description: 'Launch content for the summer collection and waitlist.',
+    created_at: new Date(now - 14 * day).toISOString(),
+  },
+  {
+    id: 'camp-2',
+    name: 'Nordic Creator Collab',
+    color: '#9089F0',
+    description: 'Partner posts and community collabs across the Nordics.',
+    created_at: new Date(now - 10 * day).toISOString(),
+  },
+  {
+    id: 'camp-3',
+    name: 'Product Drop Q3',
+    color: '#10B981',
+    description: 'Product reveal, teaser clips, and CTA-focused carousels.',
+    created_at: new Date(now - 5 * day).toISOString(),
+  },
+];
+
+export function listCampaignLabels(): CampaignLabel[] {
+  return [...campaigns].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+export function getCampaignLabel(id: string): CampaignLabel | null {
+  return campaigns.find((c) => c.id === id) ?? null;
+}
+
+export function createCampaignLabel(input: {
+  name: string;
+  color?: string;
+  description?: string;
+}): CampaignLabel {
+  const label: CampaignLabel = {
+    id: `camp-${++campaignSeq}`,
+    name: input.name.trim() || 'Untitled project',
+    color: input.color || '#9089F0',
+    description: (input.description ?? '').trim(),
+    created_at: new Date().toISOString(),
+  };
+  campaigns.unshift(label);
+  return label;
+}
+
+export function updateCampaignLabel(
+  id: string,
+  patch: Partial<Pick<CampaignLabel, 'name' | 'color' | 'description'>>
+): CampaignLabel | null {
+  const c = campaigns.find((x) => x.id === id);
+  if (!c) return null;
+  if (patch.name !== undefined) c.name = patch.name.trim() || c.name;
+  if (patch.color !== undefined) c.color = patch.color;
+  if (patch.description !== undefined) c.description = patch.description.trim();
+  return c;
+}
+
+export function deleteCampaignLabel(id: string): boolean {
+  const idx = campaigns.findIndex((c) => c.id === id);
+  if (idx < 0) return false;
+  campaigns.splice(idx, 1);
+  // Detach label from all posts
+  for (const p of posts) {
+    p.campaigns = (p.campaigns ?? []).filter((cid) => cid !== id);
+  }
+  return true;
+}
+
+/** Posts tagged with a campaign label (optionally scoped to a brand workspace). */
+export function listPostsForCampaign(
+  campaignId: string,
+  workspaceName?: string
+): PlannerPost[] {
+  return listPlannerPosts(workspaceName).filter((p) =>
+    (p.campaigns ?? []).includes(campaignId)
+  );
+}
+
 const posts: PlannerPost[] = [
   {
     id: 'post-1',
@@ -545,6 +641,7 @@ const posts: PlannerPost[] = [
     ],
     idea_title: '3 misstag i e-handel',
     project: 'Ebba Creator Lab',
+    campaigns: ['camp-3', 'camp-1'],
     assignees: [PLANNER_TEAM[0], PLANNER_TEAM[1]],
     subtasks: [
       { id: 'st-1', title: 'Skriv hook', done: true },
@@ -598,6 +695,7 @@ const posts: PlannerPost[] = [
     ],
     idea_title: 'Community som konverterar',
     project: 'Ebba Creator Lab',
+    campaigns: ['camp-2'],
     assignees: [PLANNER_TEAM[2]],
     subtasks: [
       { id: 'st-5', title: 'Draft LinkedIn text', done: true },
@@ -634,6 +732,7 @@ const posts: PlannerPost[] = [
       },
     ],
     project: 'Clikd Launch',
+    campaigns: [],
     assignees: [PLANNER_TEAM[0]],
     subtasks: [
       { id: 'st-8', title: 'Klipp highlight', done: true },
@@ -666,6 +765,7 @@ const posts: PlannerPost[] = [
     media_type: null,
     media_items: [],
     project: 'Clikd Launch',
+    campaigns: [],
     assignees: [PLANNER_TEAM[1], PLANNER_TEAM[3]],
     subtasks: [
       { id: 'st-10', title: 'Brief', done: true },
@@ -714,6 +814,7 @@ const posts: PlannerPost[] = [
       tags: ['contentcreator', 'productivity', 'shorts'],
     },
     project: 'Ebba Live Studio',
+    campaigns: [],
     assignees: [PLANNER_TEAM[3]],
     subtasks: [
       { id: 'st-14', title: 'Script', done: true },
@@ -753,6 +854,7 @@ const posts: PlannerPost[] = [
       },
     ],
     project: 'Cherii Media Agency',
+    campaigns: [],
     assignees: [
       { id: 'u-mira', name: 'Mira', avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mira' },
     ],
@@ -789,6 +891,7 @@ const posts: PlannerPost[] = [
       },
     ],
     project: 'Ebba Creator Lab',
+    campaigns: [],
     assignees: [PLANNER_TEAM[0]],
     subtasks: [],
     auto_post: true,
@@ -825,6 +928,7 @@ const posts: PlannerPost[] = [
       },
     ],
     project: 'Ebba Creator Lab',
+    campaigns: [],
     assignees: [PLANNER_TEAM[0]],
     subtasks: [],
     auto_post: true,
@@ -856,6 +960,7 @@ const posts: PlannerPost[] = [
       },
     ],
     project: 'Ebba Creator Lab',
+    campaigns: [],
     assignees: [PLANNER_TEAM[1]],
     subtasks: [],
     auto_post: true,
@@ -892,6 +997,7 @@ const posts: PlannerPost[] = [
       },
     ],
     project: 'Ebba Creator Lab',
+    campaigns: [],
     assignees: [PLANNER_TEAM[0]],
     subtasks: [],
     auto_post: true,
@@ -924,6 +1030,7 @@ const posts: PlannerPost[] = [
     ],
     idea_title: 'Q&A reel från DM',
     project: 'Ebba Creator Lab',
+    campaigns: [],
     assignees: [PLANNER_TEAM[0]],
     subtasks: [{ id: 'st-f5', title: 'Samla frågor', done: false }],
     auto_post: false,
@@ -954,6 +1061,7 @@ const posts: PlannerPost[] = [
       },
     ],
     project: 'Ebba Creator Lab',
+    campaigns: [],
     assignees: [PLANNER_TEAM[1]],
     subtasks: [],
     auto_post: false,
@@ -979,6 +1087,7 @@ const posts: PlannerPost[] = [
     media_type: null,
     media_items: [],
     project: 'Clikd Launch',
+    campaigns: [],
     assignees: [PLANNER_TEAM[0]],
     subtasks: [
       { id: 'st-17', title: 'Brainstorm hooks', done: false },
@@ -1095,6 +1204,41 @@ export function movePlannerPost(
   return post;
 }
 
+/** Drag-and-drop: move a post to a new scheduled datetime. */
+export function reschedulePlannerPost(
+  id: string,
+  scheduledAt: string,
+  actor = 'Ebba'
+): PlannerPost | null {
+  const post = posts.find((p) => p.id === id);
+  if (!post) return null;
+  const prev = post.scheduled_at;
+  post.scheduled_at = scheduledAt;
+  // Promote draft-like items into the schedule when dropped on the calendar.
+  if (post.workflow === 'IDEA' || post.workflow === 'IN_PROGRESS' || post.workflow === 'READY') {
+    post.workflow = 'SCHEDULED';
+    post.status = 'scheduled';
+  } else if (post.workflow === 'SCHEDULED') {
+    post.status = 'scheduled';
+  }
+  const when = new Date(scheduledAt).toLocaleString('sv-SE', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  post.activity = [
+    ...post.activity,
+    act(
+      prev
+        ? `Schedule was moved to ${when} by ${actor}`
+        : `Post was scheduled for ${when} by ${actor}`
+    ),
+  ];
+  return post;
+}
+
 export function upsertPlannerPost(
   input: Partial<PlannerPost> & { caption?: string; platforms: SocialPlatform[] },
   actor = 'Ebba'
@@ -1128,6 +1272,8 @@ export function upsertPlannerPost(
       youtube: input.youtube !== undefined ? input.youtube : existing.youtube,
       idea_title: input.idea_title ?? input.title ?? existing.idea_title,
       project: input.project ?? existing.project,
+      campaigns:
+        input.campaigns !== undefined ? input.campaigns : existing.campaigns ?? [],
       assignees: input.assignees ?? existing.assignees,
       subtasks: input.subtasks ?? existing.subtasks,
       auto_post: input.auto_post ?? existing.auto_post,
@@ -1171,6 +1317,7 @@ export function upsertPlannerPost(
     youtube: input.youtube ?? null,
     idea_title: input.idea_title ?? title,
     project: wsName,
+    campaigns: input.campaigns ?? [],
     assignees: input.assignees ?? [PLANNER_TEAM[0]],
     subtasks: input.subtasks ?? [],
     auto_post: input.auto_post ?? false,

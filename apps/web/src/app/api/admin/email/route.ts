@@ -5,8 +5,13 @@ import {
   applyMergeTags,
   createBroadcast,
   getMockEmailCrmPayload,
+  listCommunityAutomationEmails,
+  listEmailAutomations,
   listEmailSubscribers,
+  setEmailAutomationStatus,
   syncSubscriber,
+  upsertEmailAutomation,
+  type EmailAutomationTrigger,
   type SubscriberSource,
 } from '@/lib/mock-email-crm';
 
@@ -86,6 +91,8 @@ export async function GET(request: Request) {
       total_broadcasts: sent.length,
       subscribers,
       broadcasts,
+      automations: listEmailAutomations({ community_id: cid }),
+      community_emails: listCommunityAutomationEmails({ community_id: cid }),
       audiences: getMockEmailCrmPayload().audiences,
       tags: ['all', ...Array.from(new Set(subscribers.flatMap((s) => s.tags)))],
       demo: false,
@@ -103,6 +110,34 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const action = String(body.action ?? 'send');
+
+    if (action === 'toggle_automation') {
+      const id = String(body.id ?? '');
+      const status = body.status === 'paused' ? 'paused' : 'active';
+      const automation = setEmailAutomationStatus(id, status);
+      if (!automation) {
+        return Response.json({ error: 'Automation not found' }, { status: 404 });
+      }
+      return Response.json({ success: true, automation, demo: true });
+    }
+
+    if (action === 'upsert_automation') {
+      const trigger = String(body.trigger ?? 'community_join') as EmailAutomationTrigger;
+      const automation = upsertEmailAutomation({
+        id: body.id ? String(body.id) : undefined,
+        name: String(body.name ?? ''),
+        description: body.description != null ? String(body.description) : undefined,
+        trigger,
+        subject: String(body.subject ?? ''),
+        body: String(body.body ?? ''),
+        status: body.status === 'paused' ? 'paused' : 'active',
+        community_id:
+          body.community_id != null && body.community_id !== ''
+            ? Number(body.community_id)
+            : null,
+      });
+      return Response.json({ success: true, automation, demo: true });
+    }
 
     // Auto-sync from join / purchase flows.
     if (action === 'sync') {

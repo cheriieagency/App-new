@@ -1,5 +1,10 @@
 /** Demo CRM subscribers + broadcasts for creator email dashboard. */
 
+import {
+  buildCommunityAccessEmail,
+  type CommunityAccessEmailInput,
+} from '@/lib/community-access-email';
+
 export type SubscriberSource =
   | 'community_member'
   | 'ebook_purchaser'
@@ -31,6 +36,91 @@ export type EmailBroadcast = {
   open_rate: number;
   click_rate: number;
   status: 'sent' | 'draft' | 'test';
+  sent_at: string;
+};
+
+export type EmailAutomationTrigger =
+  | 'purchase_community_access'
+  | 'community_join'
+  | 'webinar_rsvp'
+  | 'ebook_download';
+
+export type EmailAutomation = {
+  id: string;
+  name: string;
+  description: string;
+  trigger: EmailAutomationTrigger;
+  trigger_label: string;
+  /** Subject template shown in the automations list. */
+  subject: string;
+  /** Email body template ({first_name}, {community} supported). */
+  body: string;
+  status: 'active' | 'paused';
+  sent_count: number;
+  last_sent_at: string | null;
+  /** Optional brand scope — null = all workspaces. */
+  community_id: number | null;
+};
+
+export const AUTOMATION_TRIGGER_OPTIONS: {
+  value: EmailAutomationTrigger;
+  label: string;
+  defaultName: string;
+  defaultSubject: string;
+  defaultBody: string;
+}[] = [
+  {
+    value: 'purchase_community_access',
+    label: 'Product purchase → community access',
+    defaultName: 'Community access after purchase',
+    defaultSubject: "You're in — access {community}",
+    defaultBody:
+      'Hi {first_name},\n\nThanks for your purchase. Open your community here:\n{community_url}\n\nSee you inside!',
+  },
+  {
+    value: 'community_join',
+    label: 'New community member',
+    defaultName: 'Welcome to community',
+    defaultSubject: 'Welcome to {community}',
+    defaultBody:
+      'Hi {first_name},\n\nWelcome to {community}. We’re glad you’re here.\n\nExplore the feed, classroom and upcoming events.',
+  },
+  {
+    value: 'webinar_rsvp',
+    label: 'Event RSVP',
+    defaultName: 'Webinar confirmation',
+    defaultSubject: "You're registered — see you live",
+    defaultBody:
+      'Hi {first_name},\n\nYou’re registered for the next live session in {community}.\nWe’ll send the link before we go live.',
+  },
+  {
+    value: 'ebook_download',
+    label: 'Lead magnet / e-book',
+    defaultName: 'E-book delivery',
+    defaultSubject: 'Your download is ready',
+    defaultBody:
+      'Hi {first_name},\n\nHere’s your download from {community}. Enjoy!',
+  },
+];
+
+function triggerLabel(trigger: EmailAutomationTrigger): string {
+  return (
+    AUTOMATION_TRIGGER_OPTIONS.find((o) => o.value === trigger)?.label ?? trigger
+  );
+}
+
+/** One automated community email that was sent (purchase unlock or member auto). */
+export type CommunityAutomationEmail = {
+  id: string;
+  community_id: number;
+  community_name: string;
+  kind: 'purchase_access' | 'member_auto';
+  kind_label: string;
+  subject: string;
+  recipient_name: string;
+  recipient_email: string;
+  /** Product title when kind is purchase_access. */
+  product_title?: string | null;
   sent_at: string;
 };
 
@@ -149,6 +239,11 @@ let extraSubscribers: EmailSubscriber[] = [];
 let extraBroadcasts: EmailBroadcast[] = [];
 let nextSubId = 200;
 let nextBroadcastId = 50;
+/** Extra sends layered onto seed automation counters (demo). */
+const automationSendBump = new Map<string, number>();
+const automationLastSent = new Map<string, string>();
+let extraCommunityEmails: CommunityAutomationEmail[] = [];
+let nextCommunityEmailId = 100;
 
 const SEED: EmailSubscriber[] = [
   {
@@ -288,6 +383,126 @@ const SEED_BROADCASTS: EmailBroadcast[] = [
   },
 ];
 
+/** Mutable automation store (seed + creator-added). */
+let automationStore: EmailAutomation[] = [
+  {
+    id: 'auto-community-access',
+    name: 'Community access after purchase',
+    description:
+      'When a product unlocks a community, buyers get an email with a direct join link.',
+    trigger: 'purchase_community_access',
+    trigger_label: 'Product purchase → community access',
+    subject: "You're in — access {community}",
+    body: AUTOMATION_TRIGGER_OPTIONS[0].defaultBody,
+    status: 'active',
+    sent_count: 14,
+    last_sent_at: daysAgo(1),
+    community_id: null,
+  },
+  {
+    id: 'auto-welcome',
+    name: 'Welcome to community',
+    description: 'Sent automatically when someone joins your community.',
+    trigger: 'community_join',
+    trigger_label: 'New community member',
+    subject: 'Welcome to {community}',
+    body: AUTOMATION_TRIGGER_OPTIONS[1].defaultBody,
+    status: 'active',
+    sent_count: 48,
+    last_sent_at: daysAgo(2),
+    community_id: null,
+  },
+  {
+    id: 'auto-webinar-rsvp',
+    name: 'Webinar confirmation',
+    description: 'Confirms RSVP and includes the event link for community members.',
+    trigger: 'webinar_rsvp',
+    trigger_label: 'Event RSVP',
+    subject: "You're registered — see you live",
+    body: AUTOMATION_TRIGGER_OPTIONS[2].defaultBody,
+    status: 'active',
+    sent_count: 31,
+    last_sent_at: daysAgo(3),
+    community_id: null,
+  },
+];
+let nextAutomationId = 10;
+
+const SEED_COMMUNITY_EMAILS: CommunityAutomationEmail[] = [
+  {
+    id: 'ce-1',
+    community_id: 101,
+    community_name: 'Ebba Creator Lab',
+    kind: 'purchase_access',
+    kind_label: 'Purchase → community',
+    subject: "You're in — access Ebba Creator Lab",
+    recipient_name: 'Marcus Björk',
+    recipient_email: 'marcus@example.com',
+    product_title: 'Creator Starter Pack',
+    sent_at: daysAgo(1),
+  },
+  {
+    id: 'ce-2',
+    community_id: 101,
+    community_name: 'Ebba Creator Lab',
+    kind: 'member_auto',
+    kind_label: 'Member automation',
+    subject: 'Welcome to Ebba Creator Lab',
+    recipient_name: 'Linn Petersson',
+    recipient_email: 'linn@example.com',
+    product_title: null,
+    sent_at: daysAgo(2),
+  },
+  {
+    id: 'ce-3',
+    community_id: 101,
+    community_name: 'Ebba Creator Lab',
+    kind: 'purchase_access',
+    kind_label: 'Purchase → community',
+    subject: "You're in — access Ebba Creator Lab",
+    recipient_name: 'Emma Lindqvist',
+    recipient_email: 'emma@example.com',
+    product_title: '1:1 Coaching',
+    sent_at: daysAgo(4),
+  },
+  {
+    id: 'ce-4',
+    community_id: 102,
+    community_name: 'Ebba Live Studio',
+    kind: 'purchase_access',
+    kind_label: 'Purchase → community',
+    subject: "You're in — access Ebba Live Studio",
+    recipient_name: 'Nora Ek',
+    recipient_email: 'nora@example.com',
+    product_title: 'Live Coaching Slot',
+    sent_at: daysAgo(1),
+  },
+  {
+    id: 'ce-5',
+    community_id: 102,
+    community_name: 'Ebba Live Studio',
+    kind: 'member_auto',
+    kind_label: 'Member automation',
+    subject: "You're registered — see you live",
+    recipient_name: 'Sara Magnusson',
+    recipient_email: 'sara@example.com',
+    product_title: null,
+    sent_at: daysAgo(3),
+  },
+  {
+    id: 'ce-6',
+    community_id: 102,
+    community_name: 'Ebba Live Studio',
+    kind: 'member_auto',
+    kind_label: 'Member automation',
+    subject: 'Welcome to Ebba Live Studio',
+    recipient_name: 'Astrid Karlsson',
+    recipient_email: 'astrid@example.com',
+    product_title: null,
+    sent_at: daysAgo(5),
+  },
+];
+
 function allSubscribers(): EmailSubscriber[] {
   const byEmail = new Map<string, EmailSubscriber>();
   for (const s of [...SEED, ...extraSubscribers]) {
@@ -331,6 +546,129 @@ export function listEmailBroadcasts() {
   return [...extraBroadcasts, ...SEED_BROADCASTS].sort(
     (a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
   );
+}
+
+/** Automations available in Email CRM (optionally scoped to a brand). */
+export function listEmailAutomations(opts?: { community_id?: number }): EmailAutomation[] {
+  return automationStore
+    .map((a) => {
+      const bump = automationSendBump.get(a.id) ?? 0;
+      const last = automationLastSent.get(a.id) ?? a.last_sent_at;
+      return {
+        ...a,
+        body: a.body || '',
+        sent_count: a.sent_count + bump,
+        last_sent_at: last,
+      };
+    })
+    .filter(
+      (a) =>
+        a.community_id == null ||
+        opts?.community_id == null ||
+        a.community_id === opts.community_id
+    );
+}
+
+function bumpAutomationSend(automationId: string) {
+  automationSendBump.set(
+    automationId,
+    (automationSendBump.get(automationId) ?? 0) + 1
+  );
+  automationLastSent.set(automationId, new Date().toISOString());
+}
+
+/** Toggle active/paused for demo automations. */
+export function setEmailAutomationStatus(
+  id: string,
+  status: 'active' | 'paused'
+): EmailAutomation | null {
+  const idx = automationStore.findIndex((a) => a.id === id);
+  if (idx < 0) return null;
+  automationStore[idx] = { ...automationStore[idx], status };
+  return listEmailAutomations().find((a) => a.id === id) ?? null;
+}
+
+export type UpsertAutomationInput = {
+  id?: string;
+  name: string;
+  description?: string;
+  trigger: EmailAutomationTrigger;
+  subject: string;
+  body: string;
+  status?: 'active' | 'paused';
+  community_id?: number | null;
+};
+
+/** Create or update an automation rule. */
+export function upsertEmailAutomation(input: UpsertAutomationInput): EmailAutomation {
+  const trigger = input.trigger;
+  const label = triggerLabel(trigger);
+  const defaults =
+    AUTOMATION_TRIGGER_OPTIONS.find((o) => o.value === trigger) ??
+    AUTOMATION_TRIGGER_OPTIONS[0];
+
+  if (input.id) {
+    const idx = automationStore.findIndex((a) => a.id === input.id);
+    if (idx >= 0) {
+      const prev = automationStore[idx];
+      automationStore[idx] = {
+        ...prev,
+        name: input.name.trim() || prev.name,
+        description: (input.description ?? prev.description).trim() || prev.description,
+        trigger,
+        trigger_label: label,
+        subject: input.subject.trim() || prev.subject,
+        body: input.body.trim() || prev.body,
+        status: input.status ?? prev.status,
+        community_id:
+          input.community_id !== undefined ? input.community_id : prev.community_id,
+      };
+      return { ...automationStore[idx] };
+    }
+  }
+
+  const created: EmailAutomation = {
+    id: `auto-${nextAutomationId++}`,
+    name: input.name.trim() || defaults.defaultName,
+    description:
+      (input.description ?? '').trim() ||
+      `Automated email for ${label.toLowerCase()}.`,
+    trigger,
+    trigger_label: label,
+    subject: input.subject.trim() || defaults.defaultSubject,
+    body: input.body.trim() || defaults.defaultBody,
+    status: input.status ?? 'active',
+    sent_count: 0,
+    last_sent_at: null,
+    community_id: input.community_id ?? null,
+  };
+  automationStore = [created, ...automationStore];
+  return { ...created };
+}
+
+/** Recent automated emails for a community (purchase unlocks + member autos). */
+export function listCommunityAutomationEmails(opts?: {
+  community_id?: number;
+}): CommunityAutomationEmail[] {
+  const all = [...extraCommunityEmails, ...SEED_COMMUNITY_EMAILS].sort(
+    (a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
+  );
+  if (opts?.community_id != null) {
+    return all.filter((e) => e.community_id === opts.community_id);
+  }
+  return all;
+}
+
+export function logCommunityAutomationEmail(
+  input: Omit<CommunityAutomationEmail, 'id' | 'sent_at'> & { sent_at?: string }
+): CommunityAutomationEmail {
+  const row: CommunityAutomationEmail = {
+    ...input,
+    id: `ce-live-${nextCommunityEmailId++}`,
+    sent_at: input.sent_at ?? new Date().toISOString(),
+  };
+  extraCommunityEmails = [row, ...extraCommunityEmails];
+  return row;
 }
 
 export function getEmailCrmStats() {
@@ -445,6 +783,55 @@ export function applyMergeTags(body: string, firstName: string) {
   return body.replace(/\{first_name\}/gi, firstName || 'där');
 }
 
+/**
+ * Queue the automated post-purchase community invite email (demo CRM).
+ * Syncs the buyer as a VIP/community subscriber and logs a 1:1 broadcast.
+ */
+export function sendCommunityAccessInvite(input: CommunityAccessEmailInput): {
+  subscriber: EmailSubscriber;
+  broadcast: EmailBroadcast;
+  communityUrl: string;
+  preview: string;
+} {
+  const content = buildCommunityAccessEmail(input);
+  const subscriber = syncSubscriber({
+    email: input.buyerEmail,
+    name: input.buyerName || content.firstName,
+    source: 'vip_access',
+    community_id: input.communityId,
+    extra_tags: ['Community Access', input.productTitle],
+  });
+  const personalized = applyMergeTags(content.body, content.firstName);
+  const broadcast = createBroadcast({
+    subject: content.subject,
+    body: personalized,
+    audience: 'vip_access',
+    status: 'sent',
+  });
+  // One-to-one automated send — override aggregate recipient count.
+  broadcast.recipient_count = 1;
+  broadcast.audience_label = 'Community access (auto)';
+  broadcast.open_rate = 0;
+  broadcast.click_rate = 0;
+  bumpAutomationSend('auto-community-access');
+  logCommunityAutomationEmail({
+    community_id: input.communityId,
+    community_name: input.communityName,
+    kind: 'purchase_access',
+    kind_label: 'Purchase → community',
+    subject: content.subject,
+    recipient_name: input.buyerName || content.firstName,
+    recipient_email: input.buyerEmail,
+    product_title: input.productTitle,
+  });
+  return {
+    subscriber,
+    broadcast,
+    communityUrl: content.communityUrl,
+    preview: personalized,
+  };
+}
+
 export function getMockEmailCrmPayload(opts?: {
   tag?: string;
   q?: string;
@@ -452,6 +839,10 @@ export function getMockEmailCrmPayload(opts?: {
 }) {
   const subscribers = listEmailSubscribers(opts);
   const broadcasts = listEmailBroadcasts();
+  const automations = listEmailAutomations({ community_id: opts?.community_id });
+  const community_emails = listCommunityAutomationEmails({
+    community_id: opts?.community_id,
+  });
   const global = getEmailCrmStats();
   // Scope headline stats to the active brand when community_id is set.
   const total_subscribers = opts?.community_id
@@ -463,6 +854,8 @@ export function getMockEmailCrmPayload(opts?: {
     average_open_rate: global.average_open_rate,
     subscribers,
     broadcasts,
+    automations,
+    community_emails,
     audiences: AUDIENCE_OPTIONS,
     tags: [
       'all',

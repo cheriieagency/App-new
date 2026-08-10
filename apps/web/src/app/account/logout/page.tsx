@@ -11,15 +11,20 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
+import { clearPlatformRole } from '@/lib/use-platform-role';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 function LogoutHandler() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
   const [error, setError] = useState<string | null>(null);
+  const { locale } = useLanguage();
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      await clearPlatformRole();
       const { error: signOutError } = await authClient.signOut();
       if (cancelled) return;
       if (signOutError) {
@@ -43,7 +48,7 @@ function LogoutHandler() {
         {error ? (
           <span className="text-red-600">{error}</span>
         ) : (
-          <span>Signing out…</span>
+          <span>{t('signingOut', locale)}</span>
         )}
       </div>
     </main>

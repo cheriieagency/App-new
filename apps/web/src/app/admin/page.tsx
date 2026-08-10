@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useId } from 'react';
+import { useState, useEffect, useCallback, useRef, useId, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authClient } from '@/lib/auth-client';
+import { clearPlatformRole } from '@/lib/use-platform-role';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,11 @@ import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
 import CommunityAdminPanel from '@/components/admin/CommunityAdminPanel';
-import { getMockCommunityAdminPayload } from '@/lib/mock-community-admin';
+import {
+  getMockCommunityAdminPayload,
+  listManagedCommunities,
+  type ManagedCommunity,
+} from '@/lib/mock-community-admin';
 import EmailAdminPanel from '@/components/admin/EmailAdminPanel';
 import WorkspaceSelector from '@/components/planner/WorkspaceSelector';
 import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
@@ -76,6 +81,7 @@ import LaterAnalyticsPanel from '@/components/admin/LaterAnalyticsPanel';
 import AdminSettingsPanel from '@/components/admin/AdminSettingsPanel';
 import SocialInboxPanel from '@/components/admin/SocialInboxPanel';
 import MediaLibraryPanel from '@/components/admin/MediaLibraryPanel';
+import ProjectsPanel from '@/components/admin/ProjectsPanel';
 import {
   appendUtmParams,
   buildTrackedShortUrl,
@@ -135,6 +141,10 @@ interface BioBlock {
   price?: number | null;
   /** Optional reduced/sale price in SEK (Links blocks). */
   sale_price?: number | null;
+  /** Purchase unlocks access to a creator community. */
+  grants_community_access?: boolean;
+  /** Target community when grants_community_access is true. */
+  access_community_id?: number | null;
 }
 
 function parsePriceInput(value: string): number | null {
@@ -400,6 +410,11 @@ function normalizeBioBlock(block: Partial<BioBlock> & { id: string }): BioBlock 
       typeof block.sale_price === 'number' && Number.isFinite(block.sale_price)
         ? block.sale_price
         : null,
+    grants_community_access: block.grants_community_access === true,
+    access_community_id:
+      typeof block.access_community_id === 'number' && Number.isFinite(block.access_community_id)
+        ? block.access_community_id
+        : null,
   };
 }
 
@@ -630,6 +645,7 @@ function MobilePreview({
   socialLinks: SocialLink[];
   theme: BioTheme;
 }) {
+  const { locale } = useLocale();
   const [previewTab, setPreviewTab] = useState<BioCategory>('links');
   const visible = blocks.filter((b) => b.visible);
   const linkBlocks = visible.filter((b) => b.category !== 'store');
@@ -830,7 +846,9 @@ function MobilePreview({
 
                   {activeBlocks.length === 0 ? (
                     <p className={`text-[10px] px-0.5 pt-2 text-center ${isGlass ? 'text-white/40' : 'text-slate-400'}`}>
-                      {previewTab === 'store' ? 'No store products yet' : 'No links yet'}
+                      {previewTab === 'store'
+                        ? t('noStoreProductsYet', locale)
+                        : t('noLinksYet', locale)}
                     </p>
                   ) : (
                     activeBlocks.map((block) => (
@@ -875,6 +893,7 @@ function BioDragBlock({
   index,
   dragging,
   handle,
+  communities,
   onDragStart,
   onDragOver,
   onDrop,
@@ -886,6 +905,7 @@ function BioDragBlock({
   index: number;
   dragging: number | null;
   handle: string;
+  communities: ManagedCommunity[];
   onDragStart: (i: number) => void;
   onDragOver: (i: number) => void;
   onDrop: () => void;
@@ -893,6 +913,7 @@ function BioDragBlock({
   onDelete: (i: number) => void;
   onToggle: (i: number) => void;
 }) {
+  const { locale } = useLocale();
   const [editing, setEditing] = useState(false);
   const [iconTab, setIconTab] = useState<'emoji' | 'upload'>('emoji');
   const [utmCopied, setUtmCopied] = useState(false);
@@ -904,6 +925,7 @@ function BioDragBlock({
   const utmDestination = block.destination_url
     ? appendUtmParams(block.destination_url, { handle: handle || 'creator', slug })
     : '';
+  const accessCommunity = communities.find((c) => c.id === block.access_community_id);
 
   const copyUtm = async () => {
     await navigator.clipboard.writeText(trackedUrl);
@@ -1064,6 +1086,86 @@ function BioDragBlock({
                   </p>
                 </>
               )}
+              {/* Community access unlock after purchase */}
+              <div className="rounded-xl border border-slate-200 bg-white p-2.5 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-600">
+                      {t('communityAccessLabel', locale)}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-medium leading-snug">
+                      {t('communityAccessHint', locale)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdate(index, {
+                          grants_community_access: false,
+                          access_community_id: null,
+                        })
+                      }
+                      className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[10px] font-bold border transition-colors ${
+                        !block.grants_community_access
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {t('noLabel', locale)}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdate(index, {
+                          grants_community_access: true,
+                          access_community_id:
+                            block.access_community_id ?? communities[0]?.id ?? null,
+                        })
+                      }
+                      className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[10px] font-bold border transition-colors ${
+                        block.grants_community_access
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {t('yesLabel', locale)}
+                    </button>
+                  </div>
+                </div>
+                {block.grants_community_access && (
+                  <div className="space-y-2">
+                    <label className="block">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-400 block mb-0.5">
+                        {t('whichCommunity', locale)}
+                      </span>
+                      <select
+                        value={block.access_community_id ?? ''}
+                        onChange={(e) =>
+                          onUpdate(index, {
+                            access_community_id: e.target.value
+                              ? Number(e.target.value)
+                              : null,
+                          })
+                        }
+                        className="w-full h-11 min-h-[44px] text-[11px] font-semibold text-slate-800 bg-zinc-50 border border-zinc-200 rounded-lg px-2 focus:outline-none focus:border-indigo-300"
+                      >
+                        {communities.length === 0 && (
+                          <option value="">No communities yet</option>
+                        )}
+                        {communities.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-2 font-medium leading-snug">
+                      {t('communityAccessEmailNote', locale)}
+                    </p>
+                  </div>
+                )}
+              </div>
               <div className="flex gap-1.5 flex-wrap">
                 {['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6B7280', '#9b8afb'].map(
                   (c) => (
@@ -1084,6 +1186,11 @@ function BioDragBlock({
                 {block.title || '(Inget namn)'}
               </p>
               <p className="font-mono text-[10px] text-slate-400 truncate">{block.subtitle}</p>
+              {block.grants_community_access && accessCommunity && (
+                <p className="text-[9px] text-emerald-600 font-semibold truncate mt-0.5">
+                  {t('unlocksLabel', locale)} · {accessCommunity.name}
+                </p>
+              )}
               {isStore && block.destination_url && (
                 <p className="text-[9px] text-zinc-300 truncate font-mono mt-0.5">{trackedUrl}</p>
               )}
@@ -1502,6 +1609,14 @@ export default function AdminPage() {
   } = useWorkspace();
   const adminCommunityId = activeWorkspace.community.community_id;
   const { section, setSection } = useAdminNav();
+
+  // Planner is its own route — never show the admin interstitial for ?tab=calendar.
+  useEffect(() => {
+    if (section === 'calendar') {
+      router.replace('/planner');
+    }
+  }, [section, router]);
+
   const [communityInitialSub, setCommunityInitialSub] =
     useState<CommunityInitialSub>('overview');
   const [bioTheme, setBioTheme] = useState<BioTheme>(DEFAULT_BIO_THEME);
@@ -1510,6 +1625,7 @@ export default function AdminPage() {
   const [adminSearch, setAdminSearch] = useState('');
   const [createWsOpen, setCreateWsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
   const bioHydratingRef = useRef(false);
 
@@ -1591,6 +1707,8 @@ export default function AdminPage() {
       color: '#10B981',
       visible: true,
       price: 599,
+      grants_community_access: true,
+      access_community_id: 101,
     },
     {
       id: '4',
@@ -1602,6 +1720,8 @@ export default function AdminPage() {
       color: '#F59E0B',
       visible: true,
       price: 0,
+      grants_community_access: true,
+      access_community_id: 101,
     },
     {
       id: 's1',
@@ -1640,6 +1760,8 @@ export default function AdminPage() {
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  // Creator communities available for product → membership unlock.
+  const bioCommunities = useMemo(() => listManagedCommunities(), []);
 
   // Set stream key once on mount using stable uid (no Math.random / Date.now in render path)
   useEffect(() => {
@@ -2076,10 +2198,10 @@ export default function AdminPage() {
   };
 
   const BIO_SUB_TABS: { key: BioSubTab; label: string }[] = [
-    { key: 'design', label: 'Design & Theme' },
-    { key: 'blocks', label: 'Blocks & Links' },
-    { key: 'analytics', label: 'UTM Analytics' },
-    { key: 'settings', label: 'Settings' },
+    { key: 'design', label: t('bioTabDesign', locale) },
+    { key: 'blocks', label: t('bioTabBlocks', locale) },
+    { key: 'analytics', label: t('bioTabAnalytics', locale) },
+    { key: 'settings', label: t('settings', locale) },
   ];
 
   return (
@@ -2102,7 +2224,7 @@ export default function AdminPage() {
           <input
             value={adminSearch}
             onChange={(e) => setAdminSearch(e.target.value)}
-            placeholder="Sök..."
+            placeholder={t('adminSearchPlaceholder', locale)}
             className="w-full max-w-md bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-14 py-2 min-h-[40px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
           />
           <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">
@@ -2115,19 +2237,22 @@ export default function AdminPage() {
             type="button"
             onClick={() => setShowCreatorAI(true)}
             className="hidden xl:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-lg text-slate-500 text-xs font-semibold hover:bg-slate-50 hover:text-slate-800 transition-colors"
-            title="AI Copilot"
+            title={t('aiCopilotTitle', locale)}
           >
             <Sparkles size={14} />
           </button>
           <span className="hidden md:inline-flex items-center text-xs font-medium text-slate-400">
-            Swish Aktiv ✓
+            {t('swishActive', locale)}
           </span>
           <div className="relative">
             <button
               type="button"
-              onClick={() => setNotifOpen((v) => !v)}
+              onClick={() => {
+                setAccountMenuOpen(false);
+                setNotifOpen((v) => !v);
+              }}
               className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-500 relative transition-colors"
-              aria-label="Notifications"
+              aria-label={t('notificationsTitle', locale)}
             >
               <Bell size={17} strokeWidth={1.75} />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#F472B6]" />
@@ -2135,7 +2260,9 @@ export default function AdminPage() {
             {notifOpen && (
               <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-40 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-100">
-                  <p className="text-xs font-bold text-slate-900">Notifications</p>
+                  <p className="text-xs font-bold text-slate-900">
+                    {t('notificationsTitle', locale)}
+                  </p>
                 </div>
                 {[
                   '3 new members in Creator Lab',
@@ -2154,41 +2281,149 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() =>
-              authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } })
-            }
-            className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full overflow-hidden border border-slate-200 shadow-sm bg-slate-900 flex items-center justify-center text-white text-xs font-bold"
-            title={session.user.name}
-          >
-            {session.user.image ? (
-              <img src={session.user.image} alt="" className="w-full h-full object-cover" />
-            ) : (
-              (session.user.name?.[0] ?? 'U')
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setNotifOpen(false);
+                setAccountMenuOpen((v) => !v);
+              }}
+              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full overflow-hidden border border-slate-200 shadow-sm bg-slate-900 flex items-center justify-center text-white text-xs font-bold"
+              title={session.user.name || t('accountMenuTitle', locale)}
+              aria-expanded={accountMenuOpen}
+              aria-haspopup="menu"
+            >
+              {session.user.image ? (
+                <img src={session.user.image} alt="" className="w-full h-full object-cover" />
+              ) : (
+                (session.user.name?.[0] ?? 'U').toLowerCase()
+              )}
+            </button>
+            {accountMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-label={t('settingsClose', locale)}
+                  className="fixed inset-0 z-40 cursor-default"
+                  onClick={() => setAccountMenuOpen(false)}
+                />
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-50 overflow-hidden"
+                >
+                  <div className="px-4 py-4 border-b border-slate-100 flex items-center gap-3">
+                    <div className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                      {session.user.image ? (
+                        <img
+                          src={session.user.image}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        (session.user.name?.[0] ?? 'U').toLowerCase()
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-extrabold text-slate-900 truncate">
+                        {session.user.name || t('accountMenuCreator', locale)}
+                      </p>
+                      <p className="text-xs font-medium text-slate-500 truncate flex items-center gap-1 mt-0.5">
+                        <Mail size={11} className="flex-shrink-0 text-slate-400" />
+                        {session.user.email || '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="px-4 py-3 border-b border-slate-100 space-y-2">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                      {t('accountMenuTitle', locale)}
+                    </p>
+                    <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          {t('email', locale)}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-700 text-right break-all">
+                          {session.user.email || '—'}
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          {t('accountMenuWorkspace', locale)}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-700 text-right truncate">
+                          {activeWorkspace.name} ({activeWorkspace.handle})
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          {t('accountMenuRole', locale)}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-700">
+                          {t('accountMenuCreator', locale)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="py-1.5">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        setSection('settings');
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 min-h-[44px] text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <Settings size={14} className="text-slate-400" />
+                      {t('accountMenuSettingsBilling', locale)}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        setSection('biobuilder');
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 min-h-[44px] text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <UserCheck size={14} className="text-slate-400" />
+                      {t('accountMenuProfileBio', locale)}
+                    </button>
+                  </div>
+
+                  <div className="border-t border-slate-100 p-2">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        void clearPlatformRole().then(() =>
+                          authClient.signOut({
+                            fetchOptions: { onSuccess: () => router.push('/') },
+                          })
+                        );
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                    >
+                      <LogOut size={14} />
+                      {t('signOut', locale)}
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
-          </button>
+          </div>
         </div>
       </header>
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 py-8 pb-24 md:pb-16">
         {section === 'analytics' && <LaterAnalyticsPanel />}
         {section === 'media' && <MediaLibraryPanel />}
+        {section === 'projects' && <ProjectsPanel />}
         {section === 'inbox' && <SocialInboxPanel />}
         {section === 'settings' && <AdminSettingsPanel />}
-        {section === 'calendar' && (
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-8 sm:p-10 text-center space-y-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-            <CalendarDays className="mx-auto text-slate-400" size={28} strokeWidth={1.75} />
-            <h2 className="font-clikd-wordmark font-extrabold text-xl text-slate-900">Planner</h2>
-            <p className="text-sm text-slate-500">Öppna Content Planner för att schemalägga inlägg.</p>
-            <Link
-              href="/planner"
-              className="inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
-            >
-              Öppna Planner
-            </Link>
-          </div>
-        )}
 
         {/* ── COMMUNITY (includes Event + Sänd Live) ── */}
         {section === 'community' && (
@@ -2197,8 +2432,8 @@ export default function AdminPage() {
             isLive={isLive}
             eventPanel={
           <div className="space-y-5">
-            <div className="nc-glass rounded-[1.5rem] p-6 max-w-2xl">
-              <h3 className="text-sm font-black text-[#2c3340] mb-4 flex items-center gap-2">
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6 max-w-2xl">
+              <h3 className="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-2">
                 <Calendar size={14} /> {t('scheduleEvent', locale)}
               </h3>
               <div className="space-y-4">
@@ -2218,7 +2453,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={() => eventCoverRef.current?.click()}
                   disabled={eventUploading}
-                  className="relative w-full h-36 min-h-[144px] rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 overflow-hidden flex flex-col items-center justify-center gap-1.5 hover:border-[var(--nc-coral)] transition-colors"
+                  className="relative w-full h-36 min-h-[144px] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden flex flex-col items-center justify-center gap-1.5 hover:border-[#9089F0] transition-colors"
                 >
                   {eventForm.image_url ? (
                     <>
@@ -2234,14 +2469,14 @@ export default function AdminPage() {
                   ) : eventUploading ? (
                     <Loader2
                       size={22}
-                      className="text-zinc-400"
+                      className="text-slate-400"
                       style={{ animation: 'spin 1s linear infinite' }}
                     />
                   ) : (
                     <>
-                      <ImageIcon size={22} className="text-zinc-300" />
-                      <span className="text-xs font-bold text-zinc-500">Add header image</span>
-                      <span className="text-[10px] text-zinc-400 font-medium">
+                      <ImageIcon size={22} className="text-slate-300" />
+                      <span className="text-xs font-bold text-slate-500">Add header image</span>
+                      <span className="text-[10px] text-slate-400 font-medium">
                         Shown at the top of the event
                       </span>
                     </>
@@ -2251,7 +2486,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setEventForm((p) => ({ ...p, image_url: '' }))}
-                    className="text-xs font-bold text-zinc-400 hover:text-red-500 transition-colors -mt-2"
+                    className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors -mt-2"
                   >
                     Ta bort bild
                   </button>
@@ -2261,24 +2496,24 @@ export default function AdminPage() {
                   placeholder={t('eventTitle', locale)}
                   value={eventForm.title}
                   onChange={(e) => setEventForm((p) => ({ ...p, title: e.target.value }))}
-                  className="rounded-xl bg-zinc-50 border-zinc-100 h-11"
+                  className="rounded-xl bg-slate-50 border-slate-100 h-11"
                 />
                 <Textarea
                   placeholder={t('description', locale)}
                   value={eventForm.description}
                   onChange={(e) => setEventForm((p) => ({ ...p, description: e.target.value }))}
-                  className="rounded-xl bg-zinc-50 border-zinc-100 min-h-[70px] resize-none"
+                  className="rounded-xl bg-slate-50 border-slate-100 min-h-[70px] resize-none"
                 />
                 <Input
                   type="datetime-local"
                   value={eventForm.start_time}
                   onChange={(e) => setEventForm((p) => ({ ...p, start_time: e.target.value }))}
-                  className="rounded-xl bg-zinc-50 border-zinc-100 h-11"
+                  className="rounded-xl bg-slate-50 border-slate-100 h-11"
                 />
 
                 {/* In person / Online */}
                 <div>
-                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-zinc-400 mb-2">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-slate-400 mb-2">
                     Plats
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -2296,8 +2531,8 @@ export default function AdminPage() {
                           onClick={() => setEventForm((p) => ({ ...p, location_type: key }))}
                           className={`h-11 min-h-[44px] rounded-xl border text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
                             active
-                              ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_10%,white)] text-[#2c3340]'
-                              : 'border-zinc-100 bg-zinc-50 text-zinc-500 hover:border-zinc-200'
+                              ? 'border-[#9089F0] bg-[#E9D5FF]/50 text-slate-900'
+                              : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'
                           }`}
                         >
                           <Icon size={15} /> {label}
@@ -2312,7 +2547,7 @@ export default function AdminPage() {
                     placeholder={t('streamUrl', locale)}
                     value={eventForm.stream_url}
                     onChange={(e) => setEventForm((p) => ({ ...p, stream_url: e.target.value }))}
-                    className="rounded-xl bg-zinc-50 border-zinc-100 h-11"
+                    className="rounded-xl bg-slate-50 border-slate-100 h-11"
                   />
                 ) : (
                   <Input
@@ -2321,13 +2556,13 @@ export default function AdminPage() {
                     onChange={(e) =>
                       setEventForm((p) => ({ ...p, location_address: e.target.value }))
                     }
-                    className="rounded-xl bg-zinc-50 border-zinc-100 h-11"
+                    className="rounded-xl bg-slate-50 border-slate-100 h-11"
                   />
                 )}
 
                 {/* Audience */}
                 <div>
-                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-zinc-400 mb-2">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-slate-400 mb-2">
                     Vem kan delta
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -2358,8 +2593,8 @@ export default function AdminPage() {
                           onClick={() => setEventForm((p) => ({ ...p, audience: key }))}
                           className={`h-11 min-h-[44px] rounded-xl border text-xs sm:text-[13px] font-bold flex items-center justify-center gap-1.5 px-2 transition-colors ${
                             active
-                              ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_10%,white)] text-[#2c3340]'
-                              : 'border-zinc-100 bg-zinc-50 text-zinc-500 hover:border-zinc-200'
+                              ? 'border-[#9089F0] bg-[#E9D5FF]/50 text-slate-900'
+                              : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'
                           }`}
                         >
                           <Icon size={14} className="flex-shrink-0" /> {label}
@@ -2370,8 +2605,8 @@ export default function AdminPage() {
                 </div>
 
                 {eventForm.audience === 'selected' && (
-                  <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-3 max-h-44 overflow-y-auto space-y-1">
-                    <p className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wide mb-2">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 max-h-44 overflow-y-auto space-y-1">
+                    <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wide mb-2">
                       Select members
                     </p>
                     {getMockCommunityAdminPayload(adminCommunityId).members.map((m) => {
@@ -2382,20 +2617,20 @@ export default function AdminPage() {
                           type="button"
                           onClick={() => toggleInvitedMember(m.id)}
                           className={`w-full flex items-center gap-2.5 px-2.5 h-11 min-h-[44px] rounded-lg text-left transition-colors ${
-                            checked ? 'bg-white border border-[var(--nc-coral)]/40' : 'hover:bg-white'
+                            checked ? 'bg-white border border-[#9089F0]/50' : 'hover:bg-white'
                           }`}
                         >
                           <span
                             className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                               checked
-                                ? 'bg-[var(--nc-coral)] border-[var(--nc-coral)]'
+                                ? 'bg-[#1a1848] border-[#1a1848]'
                                 : 'border-zinc-300 bg-white'
                             }`}
                           >
                             {checked && <Check size={10} className="text-white" />}
                           </span>
-                          <span className="text-sm font-bold text-[#2c3340] truncate">{m.name}</span>
-                          <span className="text-[10px] text-zinc-400 font-medium ml-auto flex-shrink-0">
+                          <span className="text-sm font-bold text-slate-900 truncate">{m.name}</span>
+                          <span className="text-[10px] text-slate-400 font-medium ml-auto flex-shrink-0">
                             {m.role}
                           </span>
                         </button>
@@ -2405,7 +2640,7 @@ export default function AdminPage() {
                 )}
 
                 {eventForm.audience === 'invite_only' && (
-                  <p className="text-xs text-zinc-400 font-medium -mt-1">
+                  <p className="text-xs text-slate-400 font-medium -mt-1">
                     Only people you personally invite can see and RSVP.
                   </p>
                 )}
@@ -2414,7 +2649,7 @@ export default function AdminPage() {
                   placeholder={t('speakerName', locale)}
                   value={eventForm.speaker_name}
                   onChange={(e) => setEventForm((p) => ({ ...p, speaker_name: e.target.value }))}
-                  className="rounded-xl bg-zinc-50 border-zinc-100 h-11"
+                  className="rounded-xl bg-slate-50 border-slate-100 h-11"
                 />
                 <Button
                   onClick={() => addEventMutation.mutate()}
@@ -2426,7 +2661,7 @@ export default function AdminPage() {
                       eventForm.invited_member_ids.length === 0) ||
                     (eventForm.location_type === 'in_person' && !eventForm.location_address.trim())
                   }
-                  className="w-full rounded-full bg-[var(--nc-coral)] text-white font-black h-11 min-h-[44px] flex items-center justify-center gap-2"
+                  className="w-full rounded-full bg-[#1a1848] hover:bg-[#2B2568] text-white font-extrabold h-11 min-h-[44px] flex items-center justify-center gap-2"
                 >
                   {saved === 'event' ? (
                     <>
@@ -2443,15 +2678,15 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {/* Planned / upcoming */}
-              <div className="nc-glass rounded-[1.5rem] p-6">
-                <h3 className="text-sm font-black text-[#2c3340] mb-1 flex items-center gap-2">
-                  <Calendar size={14} className="text-[var(--nc-coral)]" /> Planerade events
+              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6">
+                <h3 className="text-sm font-extrabold text-slate-900 mb-1 flex items-center gap-2">
+                  <Calendar size={14} className="text-[#9089F0]" /> Planerade events
                 </h3>
-                <p className="text-xs text-zinc-400 font-medium mb-4">
+                <p className="text-xs text-slate-400 font-medium mb-4">
                   Upcoming events visible to members.
                 </p>
                 {plannedEvents.length === 0 ? (
-                  <p className="text-sm text-zinc-400 font-medium py-6 text-center">
+                  <p className="text-sm text-slate-400 font-medium py-6 text-center">
                     {t('noUpcomingEvents', locale)}
                   </p>
                 ) : (
@@ -2470,7 +2705,7 @@ export default function AdminPage() {
                       }) => (
                         <li
                           key={ev.id}
-                          className="flex items-start gap-3 p-3 rounded-xl bg-zinc-50 border border-zinc-100"
+                          className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100"
                         >
                           {ev.image_url ? (
                             <img
@@ -2482,23 +2717,23 @@ export default function AdminPage() {
                             <div
                               className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                               style={{
-                                background: 'color-mix(in srgb, var(--nc-coral) 14%, white)',
+                                background: '#E9D5FF',
                               }}
                             >
-                              <Calendar size={16} className="text-[var(--nc-coral)]" />
+                              <Calendar size={16} className="text-[#9089F0]" />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-[#2c3340] truncate">{ev.title}</p>
-                            <p className="text-xs text-zinc-500 mt-0.5">
+                            <p className="text-sm font-bold text-slate-900 truncate">{ev.title}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">
                               {formatEventWhen(ev.start_time)}
                               {ev.speaker_name ? ` · ${ev.speaker_name}` : ''}
                             </p>
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-500 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
                                 {ev.location_type === 'in_person' ? 'In person' : 'Online'}
                               </span>
-                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-500 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
                                 {ev.audience === 'invite_only'
                                   ? 'Inbjudan'
                                   : ev.audience === 'selected'
@@ -2506,11 +2741,11 @@ export default function AdminPage() {
                                     : 'Community'}
                               </span>
                               {ev.category && (
-                                <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-500 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
                                   {ev.category}
                                 </span>
                               )}
-                              <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-1">
+                              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                                 <Users size={10} /> {ev.attendee_count ?? 0} RSVP
                               </span>
                             </div>
@@ -2523,15 +2758,15 @@ export default function AdminPage() {
               </div>
 
               {/* Previous / past */}
-              <div className="nc-glass rounded-[1.5rem] p-6">
-                <h3 className="text-sm font-black text-[#2c3340] mb-1 flex items-center gap-2">
-                  <CheckCircle2 size={14} className="text-zinc-400" /> Tidigare events
+              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6">
+                <h3 className="text-sm font-extrabold text-slate-900 mb-1 flex items-center gap-2">
+                  <CheckCircle2 size={14} className="text-slate-400" /> Tidigare events
                 </h3>
-                <p className="text-xs text-zinc-400 font-medium mb-4">
+                <p className="text-xs text-slate-400 font-medium mb-4">
                   Avslutade events och replays.
                 </p>
                 {previousEvents.length === 0 ? (
-                  <p className="text-sm text-zinc-400 font-medium py-6 text-center">
+                  <p className="text-sm text-slate-400 font-medium py-6 text-center">
                     No past events yet.
                   </p>
                 ) : (
@@ -2550,7 +2785,7 @@ export default function AdminPage() {
                       }) => (
                         <li
                           key={ev.id}
-                          className="flex items-start gap-3 p-3 rounded-xl bg-zinc-50/80 border border-zinc-100"
+                          className="flex items-start gap-3 p-3 rounded-xl bg-slate-50/80 border border-slate-100"
                         >
                           {ev.image_url ? (
                             <img
@@ -2560,20 +2795,20 @@ export default function AdminPage() {
                             />
                           ) : (
                             <div className="w-12 h-12 rounded-xl bg-zinc-100 flex items-center justify-center flex-shrink-0">
-                              <CheckCircle2 size={16} className="text-zinc-400" />
+                              <CheckCircle2 size={16} className="text-slate-400" />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-zinc-600 truncate">{ev.title}</p>
-                            <p className="text-xs text-zinc-400 mt-0.5">
+                            <p className="text-sm font-bold text-slate-600 truncate">{ev.title}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">
                               {formatEventWhen(ev.start_time)}
                               {ev.speaker_name ? ` · ${ev.speaker_name}` : ''}
                             </p>
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-400 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
                                 {ev.location_type === 'in_person' ? 'In person' : 'Online'}
                               </span>
-                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-400 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
                                 {ev.audience === 'invite_only'
                                   ? 'Inbjudan'
                                   : ev.audience === 'selected'
@@ -2581,11 +2816,11 @@ export default function AdminPage() {
                                     : 'Community'}
                               </span>
                               {ev.category && (
-                                <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-400 bg-white border border-zinc-100 px-2 py-0.5 rounded-md">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
                                   {ev.category}
                                 </span>
                               )}
-                              <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-1">
+                              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                                 <Users size={10} /> {ev.attendee_count ?? 0} deltog
                               </span>
                             </div>
@@ -2602,7 +2837,7 @@ export default function AdminPage() {
             broadcastPanel={
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              <div className="bg-[var(--nc-coral)] rounded-2xl overflow-hidden">
+              <div className="bg-[#1a1848] rounded-2xl overflow-hidden">
                 <div className="aspect-video bg-zinc-950 flex items-center justify-center relative">
                   {isLive ? (
                     <div className="text-center text-white">
@@ -2613,7 +2848,7 @@ export default function AdminPage() {
                           style={{ animation: 'livePulse 1s ease-in-out infinite' }}
                         />
                       </div>
-                      <p className="text-lg font-black">{liveTitle || 'Live Broadcast'}</p>
+                      <p className="text-lg font-extrabold">{liveTitle || 'Live Broadcast'}</p>
                       <div className="flex items-center justify-center gap-2 mt-2">
                         <span className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-extrabold px-3 py-1 rounded-full">
                           <div
@@ -2629,8 +2864,8 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="text-center">
-                      <Video size={48} className="text-zinc-700 mx-auto mb-3" strokeWidth={1} />
-                      <p className="text-zinc-500 text-sm font-bold">
+                      <Video size={48} className="text-slate-500 mx-auto mb-3" strokeWidth={1} />
+                      <p className="text-slate-500 text-sm font-bold">
                         {t('readyToBroadcast', locale)}
                       </p>
                     </div>
@@ -2649,31 +2884,31 @@ export default function AdminPage() {
                       if (isLive) endBroadcast();
                       else startBroadcast();
                     }}
-                    className={`flex items-center gap-2 h-10 px-5 rounded-xl font-black text-sm transition-all ${isLive ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
+                    className={`flex items-center gap-2 h-10 px-5 rounded-xl font-extrabold text-sm transition-all ${isLive ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
                   >
                     <Radio size={13} />{' '}
                     {isLive ? t('endBroadcast', locale) : t('startBroadcast', locale)}
                   </button>
                 </div>
               </div>
-              <div className="nc-glass rounded-[1.5rem] p-6">
-                <h3 className="text-sm font-black text-[#2c3340] mb-4 flex items-center gap-2">
+              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6">
+                <h3 className="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-2">
                   <Activity size={14} className="text-red-500" /> {t('broadcastSettings', locale)}
                 </h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
                       {t('broadcastTitle', locale)}
                     </label>
                     <Input
                       value={liveTitle}
                       onChange={(e) => setLiveTitle(e.target.value)}
                       placeholder={t('broadcastTitlePlaceholder', locale)}
-                      className="rounded-xl border-zinc-200"
+                      className="rounded-xl border-slate-200"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
                       {t('streamKeyLabel', locale)} (dela publikt)
                     </label>
                     <div className="flex gap-2">
@@ -2685,7 +2920,7 @@ export default function AdminPage() {
                         }
                         readOnly
                         onFocus={(e) => e.currentTarget.select()}
-                        className="rounded-xl border-zinc-200 font-mono text-xs bg-zinc-50 flex-1 cursor-text"
+                        className="rounded-xl border-slate-200 font-mono text-xs bg-slate-50 flex-1 cursor-text"
                       />
                       <button
                         type="button"
@@ -2695,7 +2930,7 @@ export default function AdminPage() {
                           setKeyCopied(true);
                           setTimeout(() => setKeyCopied(false), 2000);
                         }}
-                        className={`h-11 min-h-[44px] px-3 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${keyCopied ? 'bg-green-100 text-green-600' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600'}`}
+                        className={`h-11 min-h-[44px] px-3 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${keyCopied ? 'bg-green-100 text-green-600' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
                         title="Copy link"
                       >
                         {keyCopied ? <Check size={13} /> : <Share2 size={13} />}
@@ -2704,27 +2939,27 @@ export default function AdminPage() {
                         href={`/live/${streamKey}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="h-11 min-h-[44px] px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center flex-shrink-0"
+                        className="h-11 min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center flex-shrink-0"
                         title="Open live page"
                       >
                         <ExternalLink size={13} />
                       </a>
                     </div>
-                    <p className="text-[11px] text-zinc-400 font-medium mt-1.5">
+                    <p className="text-[11px] text-slate-400 font-medium mt-1.5">
                       Share the link with anyone — works outside the community. No
                       login required to watch.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-zinc-50 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-black text-[#2c3340]">{attendeeCount}</p>
-                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                    <div className="bg-slate-50 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-extrabold text-slate-900">{attendeeCount}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         {t('viewers', locale)}
                       </p>
                     </div>
-                    <div className="bg-zinc-50 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-black text-[#2c3340]">{liveChat.length}</p>
-                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                    <div className="bg-slate-50 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-extrabold text-slate-900">{liveChat.length}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         {t('chatMessages', locale)}
                       </p>
                     </div>
@@ -2733,14 +2968,14 @@ export default function AdminPage() {
               </div>
             </div>
             <div
-              className="nc-glass rounded-[1.5rem] flex flex-col overflow-hidden"
+              className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col overflow-hidden"
               style={{ height: 560 }}
             >
-              <div className="p-4 border-b border-zinc-50 flex items-center gap-2 flex-shrink-0">
-                <Radio size={13} className={isLive ? 'text-red-500' : 'text-zinc-300'} />
-                <h3 className="text-sm font-black text-[#2c3340]">{t('liveChat', locale)}</h3>
+              <div className="p-4 border-b border-slate-100 flex items-center gap-2 flex-shrink-0">
+                <Radio size={13} className={isLive ? 'text-red-500' : 'text-slate-300'} />
+                <h3 className="text-sm font-extrabold text-slate-900">{t('liveChat', locale)}</h3>
                 {isLive && (
-                  <span className="ml-auto text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                  <span className="ml-auto text-[10px] font-extrabold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
                     LIVE
                   </span>
                 )}
@@ -2749,8 +2984,8 @@ export default function AdminPage() {
                 {liveChat.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-center">
                     <div>
-                      <Radio size={28} className="text-zinc-200 mx-auto mb-2" />
-                      <p className="text-sm text-zinc-400 font-medium">
+                      <Radio size={28} className="text-slate-200 mx-auto mb-2" />
+                      <p className="text-sm text-slate-400 font-medium">
                         {isLive ? t('waitingMessages', locale) : t('startForChat', locale)}
                       </p>
                     </div>
@@ -2758,18 +2993,18 @@ export default function AdminPage() {
                 ) : (
                   liveChat.map((msg, i) => (
                     <div key={i} className="flex gap-2">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-extrabold text-[var(--nc-coral)] flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-extrabold text-[#9089F0] flex-shrink-0">
                         {msg.name[0]}
                       </div>
                       <div>
-                        <span className="text-xs font-extrabold text-[var(--nc-coral)]">{msg.name}: </span>
-                        <span className="text-xs text-zinc-600">{msg.msg}</span>
+                        <span className="text-xs font-extrabold text-[#9089F0]">{msg.name}: </span>
+                        <span className="text-xs text-slate-600">{msg.msg}</span>
                       </div>
                     </div>
                   ))
                 )}
               </div>
-              <div className="p-3 border-t border-zinc-50 flex gap-2 flex-shrink-0">
+              <div className="p-3 border-t border-slate-100 flex gap-2 flex-shrink-0">
                 <input
                   value={chatMsg}
                   onChange={(e) => setChatMsg(e.target.value)}
@@ -2780,7 +3015,7 @@ export default function AdminPage() {
                       setChatMsg('');
                     }
                   }}
-                  className="flex-1 h-9 rounded-xl bg-zinc-50 border border-zinc-200 px-3 text-xs focus:outline-none focus:border-indigo-300"
+                  className="flex-1 h-9 rounded-xl bg-slate-50 border border-slate-200 px-3 text-xs focus:outline-none focus:border-indigo-300"
                 />
                 <button
                   onClick={() => {
@@ -2790,7 +3025,7 @@ export default function AdminPage() {
                     }
                   }}
                   disabled={!chatMsg.trim()}
-                  className="w-9 h-9 rounded-xl bg-[var(--nc-coral)] flex items-center justify-center disabled:opacity-40 hover:bg-indigo-700 transition-colors flex-shrink-0"
+                  className="w-9 h-9 rounded-xl bg-[#1a1848] flex items-center justify-center disabled:opacity-40 hover:bg-[#2B2568] transition-colors flex-shrink-0"
                 >
                   <Send size={12} className="text-white" />
                 </button>
@@ -2813,10 +3048,11 @@ export default function AdminPage() {
               <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
-                    Bio Store · <span className="text-slate-600">{activeWorkspace.handle}</span>
+                    {t('adminBioBuilder', locale)} ·{' '}
+                    <span className="text-slate-600">{activeWorkspace.handle}</span>
                   </p>
                   <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mt-1">
-                    Link in Bio
+                    {t('linkInBio', locale)}
                   </h1>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -2845,9 +3081,9 @@ export default function AdminPage() {
                       );
                     }}
                     className="h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 inline-flex items-center gap-1.5 hover:bg-slate-50 transition-colors"
-                    title="Open your public link-in-bio in a new tab"
+                    title={t('openPublicBioTitle', locale)}
                   >
-                    <ExternalLink size={13} /> Preview
+                    <ExternalLink size={13} /> {t('preview', locale)}
                   </button>
                   <button
                     type="button"
@@ -2861,11 +3097,11 @@ export default function AdminPage() {
                   >
                     {bioSaved ? (
                       <>
-                        <Check size={13} /> Published
+                        <Check size={13} /> {t('publishedCheck', locale)}
                       </>
                     ) : (
                       <>
-                        <Save size={13} /> Publish Changes
+                        <Save size={13} /> {t('publishChanges', locale)}
                       </>
                     )}
                   </button>
@@ -2908,22 +3144,24 @@ export default function AdminPage() {
                     <div className="rounded-2xl border border-slate-200/90 bg-white p-5 space-y-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <h3 className="text-sm font-black text-slate-900">Active blocks</h3>
-                          <p className="text-xs text-slate-500">Buttons, products, e-books & social links. Drag to reorder.</p>
+                          <h3 className="text-sm font-black text-slate-900">
+                            {t('activeBlocksTitle', locale)}
+                          </h3>
+                          <p className="text-xs text-slate-500">{t('activeBlocksSub', locale)}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setAddDrawerOpen(true)}
                           className="h-11 min-h-[44px] px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-extrabold inline-flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
                         >
-                          <Plus size={13} /> Add Link / Product
+                          <Plus size={13} /> {t('addLinkOrProduct', locale)}
                         </button>
                       </div>
 
                       <SocialLinksEditor links={socialLinks} onChange={setSocialLinks} />
 
                       <p className="font-bold text-xs text-slate-900 uppercase tracking-wider">
-                        Länkar & lead magnets
+                        {t('linksAndLeadMagnets', locale)}
                       </p>
                       <div className="space-y-2" onDragEnd={handleDrop}>
                         {blocks.map((block, i) =>
@@ -2934,6 +3172,7 @@ export default function AdminPage() {
                               index={i}
                               dragging={dragIndex}
                               handle={bioHandle}
+                              communities={bioCommunities}
                               onDragStart={handleDragStart}
                               onDragOver={handleDragOver}
                               onDrop={handleDrop}
@@ -2945,11 +3184,13 @@ export default function AdminPage() {
                         )}
                       </div>
                       {blocks.filter((b) => b.category !== 'store').length === 0 && (
-                        <p className="text-sm font-bold text-zinc-400 text-center py-6">No links yet</p>
+                        <p className="text-sm font-bold text-zinc-400 text-center py-6">
+                          {t('noLinksYet', locale)}
+                        </p>
                       )}
 
                       <p className="font-bold text-xs text-slate-900 uppercase tracking-wider pt-2">
-                        Store products
+                        {t('storeProductsTitle', locale)}
                       </p>
                       <div className="space-y-2" onDragEnd={handleDrop}>
                         {blocks.map((block, i) =>
@@ -2960,6 +3201,7 @@ export default function AdminPage() {
                               index={i}
                               dragging={dragIndex}
                               handle={bioHandle}
+                              communities={bioCommunities}
                               onDragStart={handleDragStart}
                               onDragOver={handleDragOver}
                               onDrop={handleDrop}
@@ -2971,7 +3213,9 @@ export default function AdminPage() {
                         )}
                       </div>
                       {blocks.filter((b) => b.category === 'store').length === 0 && (
-                        <p className="text-sm font-bold text-zinc-400 text-center py-6">No store products yet</p>
+                        <p className="text-sm font-bold text-zinc-400 text-center py-6">
+                          {t('noStoreProductsYet', locale)}
+                        </p>
                       )}
                     </div>
 
@@ -2980,7 +3224,9 @@ export default function AdminPage() {
                         <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setAddDrawerOpen(false)} />
                         <div className="fixed right-0 top-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl p-5 overflow-y-auto">
                           <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-black text-[#1f2430]">Add Link / Product</h3>
+                            <h3 className="text-sm font-black text-[#1f2430]">
+                              {t('addLinkOrProduct', locale)}
+                            </h3>
                             <button type="button" onClick={() => setAddDrawerOpen(false)} className="h-11 w-11 rounded-xl hover:bg-zinc-100 inline-flex items-center justify-center">
                               <X size={16} />
                             </button>

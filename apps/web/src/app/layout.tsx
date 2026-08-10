@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
-import { Fira_Code, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
+import { Fira_Code, Outfit, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import './global.css';
 import { Providers } from './providers';
 
@@ -15,6 +15,13 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   weight: ['500', '600', '700'],
   variable: '--font-space-grotesk',
+  display: 'swap',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['500', '600', '700', '800'],
+  variable: '--font-outfit-face',
   display: 'swap',
 });
 
@@ -38,7 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${spaceGrotesk.variable} ${firaCode.variable}`}
+      className={`${plusJakarta.variable} ${spaceGrotesk.variable} ${outfit.variable} ${firaCode.variable}`}
     >
       <head>
         <link

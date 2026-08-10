@@ -37,6 +37,8 @@ import {
   Sparkles,
   MapPin,
 } from 'lucide-react';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS & HELPERS
@@ -108,6 +110,7 @@ function icalDataUrl(event: any) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function useCountdown(startTime: string) {
+  const { locale } = useLanguage();
   const [label, setLabel] = useState('');
   const [isLive, setIsLive] = useState(false);
 
@@ -116,7 +119,7 @@ function useCountdown(startTime: string) {
       const diff =
         parseISO(startTime).getTime() - (window.performance.timeOrigin + window.performance.now());
       if (diff <= 0) {
-        setLabel('LIVE NU 🔴');
+        setLabel(t('liveNow', locale));
         setIsLive(true);
         return;
       }
@@ -134,7 +137,7 @@ function useCountdown(startTime: string) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [startTime]);
+  }, [startTime, locale]);
 
   return { label, isLive };
 }
@@ -194,24 +197,25 @@ function AttendeeStack({ count, firstNames }: { count: number; firstNames?: stri
 // ─────────────────────────────────────────────────────────────────────────────
 
 function CalendarMenu({ event, onClose }: { event: any; onClose: () => void }) {
+  const { locale } = useLanguage();
   const options = [
     {
       emoji: '📅',
-      label: 'Google Kalender',
+      label: t('googleCal', locale),
       href: googleCalLink(event),
       target: '_blank',
       download: undefined,
     },
     {
       emoji: '🍎',
-      label: 'Apple iCal',
+      label: t('appleCal', locale),
       href: icalDataUrl(event),
       target: undefined,
       download: `${event.title}.ics`,
     },
     {
       emoji: '📬',
-      label: 'Outlook Web',
+      label: t('outlookCal', locale),
       href: googleCalLink(event),
       target: '_blank',
       download: undefined,
@@ -222,7 +226,7 @@ function CalendarMenu({ event, onClose }: { event: any; onClose: () => void }) {
       <div className="flex items-center gap-1.5 px-4 py-2.5 bg-green-100/60 border-b border-green-200">
         <CalendarPlus size={12} className="text-green-600" />
         <span className="text-[10px] font-black text-green-700 uppercase tracking-widest">
-          Lägg till i kalender
+          {t('addToCalendar', locale)}
         </span>
       </div>
       {options.map((opt) => (
@@ -260,6 +264,7 @@ function EventCard({
   onRsvp: (id: number) => void;
 }) {
   const { label: countdown, isLive } = useCountdown(event.start_time);
+  const { locale } = useLanguage();
   const [calOpen, setCalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const cs = catStyle(event.category);
@@ -323,7 +328,7 @@ function EventCard({
           {isLive ? (
             <span className="flex items-center gap-1.5 bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg shadow-red-500/30">
               <span className="w-1.5 h-1.5 bg-white rounded-full livePingDot" />
-              LIVE NU
+              {t('liveNow', locale)}
             </span>
           ) : (
             <span className="flex items-center gap-1 text-[10px] font-bold text-white/60 bg-black/20 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/10">
@@ -444,10 +449,10 @@ function EventCard({
             >
               {rsvpd ? (
                 <>
-                  <Check size={12} /> OSA Bekräftad
+                  <Check size={12} /> {t('rsvpConfirmed', locale)}
                 </>
               ) : (
-                'OSA / Jag kommer'
+                t('rsvp', locale)
               )}
             </button>
 
@@ -462,7 +467,7 @@ function EventCard({
             >
               {isLive ? (
                 <>
-                  <Radio size={12} /> Live
+                  <Radio size={12} /> {t('joinLive', locale)}
                 </>
               ) : (
                 <ExternalLink size={14} />
@@ -479,7 +484,7 @@ function EventCard({
               onClick={() => setCalOpen(true)}
               className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold text-green-600 hover:text-green-700 transition-colors"
             >
-              <CalendarPlus size={11} /> Lägg till i kalender
+              <CalendarPlus size={11} /> {t('addToCalendar', locale)}
             </button>
           )}
         </div>
@@ -637,6 +642,7 @@ export default function EventsPage() {
   const { data: session } = authClient.useSession();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { locale } = useLanguage();
 
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [calMonth, setCalMonth] = useState<Date | null>(null);
@@ -696,9 +702,7 @@ export default function EventsPage() {
 
   const liveEvents = (events as any[]).filter((ev) => {
     try {
-      const diff =
-        parseISO(ev.start_time).getTime() -
-        (window.performance?.timeOrigin ?? 0 + window.performance?.now() ?? 0);
+      const diff = parseISO(ev.start_time).getTime() - Date.now();
       return diff <= 0;
     } catch {
       return false;
@@ -720,7 +724,7 @@ export default function EventsPage() {
               href="/"
               className="flex items-center gap-1.5 text-[#94a0b0] hover:text-[#2c3340] transition-colors text-xs font-bold flex-shrink-0"
             >
-              <ArrowLeft size={14} /> Hem
+              <ArrowLeft size={14} /> {t('home', locale)}
             </Link>
             <div className="h-4 w-px bg-[#d5dce8] flex-shrink-0" />
             <div className="flex items-center gap-2 min-w-0">
@@ -728,7 +732,7 @@ export default function EventsPage() {
                 <Calendar size={13} className="text-white" />
               </div>
               <span className="text-sm font-display font-extrabold text-[#2c3340] truncate">
-                Events & Webinarer
+                {t('eventsAndWebinars', locale)}
               </span>
             </div>
           </div>
@@ -738,9 +742,9 @@ export default function EventsPage() {
             <div className="flex items-center gap-0.5 bg-white/50 p-0.5 rounded-full">
               {(
                 [
-                  { key: 'list', icon: List, label: 'Lista' },
-                  { key: 'calendar', icon: Calendar, label: 'Kalender' },
-                ] as const
+                  { key: 'list' as const, icon: List, label: t('listView', locale) },
+                  { key: 'calendar' as const, icon: Calendar, label: t('calendarView', locale) },
+                ]
               ).map(({ key, icon: Icon, label }) => (
                 <button
                   key={key}
@@ -758,14 +762,14 @@ export default function EventsPage() {
                 href="/dashboard"
                 className="h-8 px-3 rounded-full bg-[var(--nc-coral)] text-white text-xs font-bold hover:opacity-90 transition-all flex items-center"
               >
-                Member Portal →
+                {t('dashboard', locale)} →
               </Link>
             ) : (
               <Link
                 href="/account/signin"
                 className="h-8 px-3 rounded-full bg-[var(--nc-coral)] text-white text-xs font-bold hover:opacity-90 transition-all flex items-center gap-1.5"
               >
-                <LogIn size={13} /> Logga in
+                <LogIn size={13} /> {t('logIn', locale)}
               </Link>
             )}
           </div>
@@ -800,19 +804,20 @@ export default function EventsPage() {
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-[#2c3340] leading-tight mb-2">
-                Live Events &<br /> Webbinarier
+                {t('eventsHeroHeadline', locale)}
               </h1>
               <p className="text-sm text-[#5b6472] leading-relaxed max-w-sm">
-                Exklusiva live-sessioner, masterclasses och workshops. Lär av de bästa och nätverka
-                med {mounted && totalAttendees > 0 ? `${totalAttendees}+` : 'hundratals'} nordiska
-                kreatörer.
+                {t('eventsHeroSub', locale)}
               </p>
             </div>
             <div className="flex gap-4 sm:gap-6 flex-shrink-0">
               {[
-                { val: `${events.length}`, label: 'Kommande Events' },
-                { val: mounted ? `${totalAttendees}+` : '—', label: 'Anmälda Totalt' },
-                { val: `${liveEvents.length}`, label: 'Live Nu' },
+                { val: `${events.length}`, label: t('upcomingEventsTab', locale) },
+                {
+                  val: mounted ? `${totalAttendees}+` : '—',
+                  label: t('totalRegistered', locale),
+                },
+                { val: `${liveEvents.length}`, label: t('liveNowCount', locale) },
               ].map((stat) => (
                 <div key={stat.label} className="text-center" suppressHydrationWarning>
                   <p className="text-2xl font-display font-extrabold text-[#2c3340]">{stat.val}</p>
@@ -856,7 +861,7 @@ export default function EventsPage() {
 
               {isLoading ? (
                 <div className="flex items-center justify-center py-16">
-                  <div className="text-zinc-400 text-sm">Laddar events...</div>
+                  <div className="text-zinc-400 text-sm">{t('loadingEvents', locale)}</div>
                 </div>
               ) : displayEvents.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -873,7 +878,7 @@ export default function EventsPage() {
                 <div className="flex flex-col items-center justify-center py-16 nc-glass rounded-[1.5rem]">
                   <Calendar size={32} className="text-zinc-300 mb-3" />
                   <p className="text-zinc-400 text-sm font-medium">
-                    {selectedDay ? 'Inga events denna dag' : 'Inga kommande events'}
+                    {selectedDay ? t('noEventsToday', locale) : t('noUpcomingEvents', locale)}
                   </p>
                 </div>
               )}
@@ -918,8 +923,8 @@ export default function EventsPage() {
             ) : events.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 nc-glass rounded-[1.5rem]">
                 <Calendar size={40} className="text-zinc-200 mb-4" />
-                <p className="text-zinc-400 font-medium">Inga kommande events planerade</p>
-                <p className="text-zinc-300 text-sm mt-1">Kom tillbaka snart!</p>
+                <p className="text-zinc-400 font-medium">{t('noUpcomingEvents', locale)}</p>
+                <p className="text-zinc-300 text-sm mt-1">{t('comeBackSoon', locale)}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">

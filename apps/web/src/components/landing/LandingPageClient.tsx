@@ -8,6 +8,7 @@ import { ArrowRight } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
+import { ValuePillarsSection } from '@/components/landing/ValuePillarsSection';
 import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { PlatformSuiteSection } from '@/components/landing/PlatformSuiteSection';
@@ -15,11 +16,11 @@ import { RoiCalculator } from '@/components/landing/RoiCalculator';
 import { ShowcaseSection } from '@/components/landing/ShowcaseSection';
 import { FaqSection } from '@/components/landing/FaqSection';
 import { PricingSection } from '@/components/landing/PricingSection';
+import { LandingFooter } from '@/components/landing/LandingFooter';
 import type { SearchableCommunity } from '@/components/landing/CommunitySearchAutocomplete';
 import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
-import { ClikdWordmark } from '@/components/brand/ClikdLogo';
 
 function filterCommunities(list: SearchableCommunity[], query: string): SearchableCommunity[] {
   const q = query.trim().toLowerCase();
@@ -100,12 +101,13 @@ export function LandingPageClient() {
   };
 
   return (
-    <div className="nc-landing min-h-screen">
+    <div className="nc-landing min-h-screen bg-[#FAFAFA]">
       <LandingHeader isLoggedIn={!!session} />
       <HeroSection />
-      <ComparisonSection />
-      <FeaturesSection />
+      <ValuePillarsSection />
       <PlatformSuiteSection />
+      <FeaturesSection />
+      <ComparisonSection />
       <RoiCalculator />
       <PricingSection />
       <ShowcaseSection
@@ -128,67 +130,40 @@ export function LandingPageClient() {
       />
       <FaqSection />
 
-      <section className="relative py-24 text-center overflow-hidden">
-        <div
-          className="nc-blob w-[30rem] h-[30rem] left-1/2 top-0 -translate-x-1/2 opacity-80"
-          style={{ background: 'var(--nc-blush)' }}
-        />
-        <div
-          className="nc-blob w-80 h-80 left-1/4 bottom-0 opacity-60"
-          style={{ background: 'var(--nc-sky)' }}
-        />
-        <div className="relative max-w-2xl mx-auto px-4 sm:px-6 nc-glass rounded-[2rem] py-12 px-6 sm:px-10">
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-[#2c3340] mb-4 leading-tight tracking-tight">
-            {t('landingReadyHeadline', locale)}
-          </h2>
-          <p className="text-[#5b6472] mb-9 text-lg font-medium">
-            {t('landingReadySub', locale)}
-          </p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Link
-              href="/account/signup"
-              className="flex items-center gap-2 min-h-12 px-8 rounded-full font-extrabold text-sm text-white transition-all active:scale-[0.98]"
-              style={{
-                background: 'var(--nc-coral)',
-                boxShadow: '0 14px 32px -12px rgba(155,138,251,0.5)',
-              }}
-            >
-              {t('landingCtaStartFree', locale)} <ArrowRight size={14} />
-            </Link>
-            <button
-              type="button"
-              onClick={() =>
-                document.getElementById('communities')?.scrollIntoView({ behavior: 'smooth' })
-              }
-              className="flex items-center gap-2 min-h-12 px-8 rounded-full bg-white/70 border border-white text-[#2c3340] font-bold text-sm hover:bg-white transition-all"
-            >
-              {t('landingCtaExplore', locale)}
-            </button>
+      <section className="relative py-16 sm:py-24 text-center overflow-hidden bg-[#FAFAFA]">
+        <div className="relative max-w-2xl mx-auto px-4 sm:px-6">
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] py-12 px-6 sm:px-10">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
+              {t('getStartedEyebrow', locale)}
+            </p>
+            <h2 className="font-outfit font-extrabold text-3xl sm:text-4xl text-slate-900 mb-4 leading-tight tracking-tight">
+              {t('landingReadyHeadline', locale)}
+            </h2>
+            <p className="text-slate-600 mb-9 text-base sm:text-lg font-medium font-display leading-relaxed">
+              {t('landingReadySub', locale)}
+            </p>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <Link
+                href="/account/signup"
+                className="flex items-center gap-2 min-h-12 px-8 rounded-xl font-extrabold text-sm text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]"
+              >
+                {t('landingCtaStartFree', locale)} <ArrowRight size={14} />
+              </Link>
+              <button
+                type="button"
+                onClick={() =>
+                  document.getElementById('communities')?.scrollIntoView({ behavior: 'smooth' })
+                }
+                className="flex items-center gap-2 min-h-12 px-8 rounded-xl bg-white border border-slate-200/80 text-slate-800 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+              >
+                {t('landingCtaExplore', locale)}
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
-      <footer className="text-[#94a0b0] py-8 text-center text-xs font-medium">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ClikdWordmark markSize={24} className="gap-2 min-h-0" />
-          </div>
-          <div className="flex items-center gap-6">
-            <Link
-              href="/account/signin"
-              className="hover:text-[#2c3340] transition-colors min-h-11 inline-flex items-center"
-            >
-              {t('signIn', locale)}
-            </Link>
-            <Link
-              href="/account/signup"
-              className="hover:text-[#2c3340] transition-colors min-h-11 inline-flex items-center"
-            >
-              {t('signUp', locale)}
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }

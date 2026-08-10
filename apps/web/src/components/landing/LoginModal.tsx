@@ -29,6 +29,7 @@ import {
   loadRememberedAuth,
   saveRememberedAuth,
 } from '@/lib/remember-auth';
+import { persistPlatformRole } from '@/lib/use-platform-role';
 
 type Role = 'member' | 'creator';
 
@@ -45,8 +46,6 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const callbackUrl = role === 'creator' ? '/admin' : '/dashboard';
 
   useEffect(() => {
     if (!open) return;
@@ -80,8 +79,11 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
         clearRememberedAuth();
       }
 
+      // Persist Member vs Creator access before hard redirect
+      const home = await persistPlatformRole(role);
+
       if (typeof window !== 'undefined') {
-        window.location.href = callbackUrl;
+        window.location.href = home;
       }
     } catch (err) {
       setError(formatAuthError(err, t('signInFailed', locale)));
@@ -185,12 +187,12 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
               {loading ? t('signingIn', locale) : t('signIn', locale)}
             </button>
 
-            <SocialSignInButtons callbackUrl={callbackUrl} />
+            <SocialSignInButtons callbackUrl={role === 'creator' ? '/admin' : '/dashboard'} />
 
             <p className="text-center text-sm text-zinc-400">
               {t('noAccount', locale)}{' '}
               <Link
-                href={`/account/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+                href={`/account/signup?callbackUrl=${encodeURIComponent(role === 'creator' ? '/admin' : '/dashboard')}`}
                 className="font-black text-zinc-900 hover:underline transition-colors"
                 onClick={() => onOpenChange(false)}
               >

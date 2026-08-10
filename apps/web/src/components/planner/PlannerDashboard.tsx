@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   CalendarDays,
@@ -24,8 +24,11 @@ import type {
   PlannerPost,
   SocialPlatform,
 } from '@/lib/mock-content-planner';
+import { useLanguage } from '@/lib/locale-context';
+import { t, localeTag } from '@/lib/i18n';
 
 export default function PlannerDashboard() {
+  const { locale } = useLanguage();
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -96,10 +99,30 @@ export default function PlannerDashboard() {
     setComposerOpen(true);
   };
 
+  const rescheduleMutation = useMutation({
+    mutationFn: async ({ id, scheduledAt }: { id: string; scheduledAt: Date }) => {
+      const r = await fetch('/api/planner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reschedule',
+          id,
+          scheduled_at: scheduledAt.toISOString(),
+          actor: 'Ebba',
+        }),
+      });
+      if (!r.ok) throw new Error('reschedule failed');
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
+    },
+  });
+
   if (isPending) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-400 text-sm">
-        Laddar…
+        {t('loading', locale)}
       </div>
     );
   }
@@ -107,6 +130,12 @@ export default function PlannerDashboard() {
     router.push('/account/signin');
     return null;
   }
+
+  const statCards = [
+    { labelKey: 'statScheduled' as const, value: stats.scheduled, icon: Clock },
+    { labelKey: 'statDrafts' as const, value: stats.drafts, icon: FileText },
+    { labelKey: 'statPublished' as const, value: stats.published, icon: CalendarDays },
+  ];
 
   return (
     <div className="nc-app nc-app-shell min-h-screen">
@@ -116,11 +145,11 @@ export default function PlannerDashboard() {
             href="/admin"
             className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-2 rounded-xl text-sm font-extrabold text-zinc-500 hover:text-[#2c3340] hover:bg-zinc-50"
           >
-            <ArrowLeft size={15} /> Admin
+            <ArrowLeft size={15} /> {t('adminShort', locale)}
           </Link>
           <div className="flex-1 min-w-0">
             <h1 className="text-sm sm:text-base font-black text-[#2c3340] truncate">
-              Content Planner
+              {t('adminContentPlanner', locale)}
             </h1>
             <Link
               href="/planner"
@@ -133,7 +162,7 @@ export default function PlannerDashboard() {
             href="/admin/settings/socials"
             className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-zinc-600 bg-zinc-50 hover:bg-zinc-100"
           >
-            <Settings2 size={14} /> Konton
+            <Settings2 size={14} /> {t('accounts', locale)}
           </Link>
         </div>
       </header>
@@ -173,23 +202,19 @@ export default function PlannerDashboard() {
               onClick={() => openComposer(null)}
               className="h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-extrabold gap-2"
             >
-              <Plus size={14} /> Skapa / Schemalägg Inlägg
+              <Plus size={14} /> {t('createSchedulePostBtn', locale)}
             </Button>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'Schemalagda', value: stats.scheduled, icon: Clock },
-            { label: 'Utkast', value: stats.drafts, icon: FileText },
-            { label: 'Publicerade', value: stats.published, icon: CalendarDays },
-          ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="nc-glass rounded-2xl p-4">
+          {statCards.map(({ labelKey, value, icon: Icon }) => (
+            <div key={labelKey} className="nc-glass rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Icon size={13} className="text-zinc-400" />
                 <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                  {label}
+                  {t(labelKey, locale)}
                 </p>
               </div>
               <p className="text-2xl font-black text-[#2c3340]">{value}</p>
@@ -201,7 +226,7 @@ export default function PlannerDashboard() {
           <div className="lg:col-span-2">
             {isLoading ? (
               <div className="nc-glass rounded-[1.5rem] p-10 text-center text-sm text-zinc-400">
-                Laddar kalender…
+                {t('loadingCalendar', locale)}
               </div>
             ) : (
               <ContentCalendar
@@ -211,6 +236,9 @@ export default function PlannerDashboard() {
                 onCursorChange={setCursor}
                 onSelectPost={(p) => openComposer(p)}
                 onSelectDay={openForDay}
+                onReschedule={(id, scheduledAt) =>
+                  rescheduleMutation.mutate({ id, scheduledAt })
+                }
               />
             )}
           </div>
@@ -219,7 +247,7 @@ export default function PlannerDashboard() {
             <div className="nc-glass rounded-[1.5rem] p-5">
               <h3 className="text-sm font-black text-[#2c3340] mb-3 flex items-center gap-2">
                 <Clock size={14} className="text-[var(--nc-coral)]" />
-                Kommande
+                {t('upcoming', locale)}
               </h3>
               {upcoming.length === 0 ? (
                 <p className="text-sm text-zinc-400 font-medium py-6 text-center">
@@ -239,7 +267,7 @@ export default function PlannerDashboard() {
                         </p>
                         <p className="text-[11px] text-zinc-500 font-medium mb-2">
                           {post.scheduled_at
-                            ? new Intl.DateTimeFormat('sv-SE', {
+                            ? new Intl.DateTimeFormat(localeTag(locale), {
                                 weekday: 'short',
                                 day: 'numeric',
                                 month: 'short',
@@ -263,7 +291,7 @@ export default function PlannerDashboard() {
             <div className="nc-glass rounded-[1.5rem] p-5">
               <h3 className="text-sm font-black text-[#2c3340] mb-2 flex items-center gap-2">
                 <FileText size={14} className="text-zinc-400" />
-                Utkast
+                {t('statDrafts', locale)}
               </h3>
               <ul className="space-y-2">
                 {posts
@@ -282,7 +310,7 @@ export default function PlannerDashboard() {
                   ))}
                 {posts.filter((p) => p.status === 'draft').length === 0 && (
                   <p className="text-sm text-zinc-400 font-medium py-4 text-center">
-                    Inga utkast.
+                    {t('noDraftsYet', locale)}
                   </p>
                 )}
               </ul>

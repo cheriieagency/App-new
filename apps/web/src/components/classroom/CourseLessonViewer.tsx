@@ -26,7 +26,7 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
           return (
             <h3
               key={i}
-              className="text-lg sm:text-xl font-black text-[#2c3340] tracking-tight"
+              className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight"
             >
               {block.text}
             </h3>
@@ -34,7 +34,7 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
         }
         if (block.type === 'paragraph') {
           return (
-            <p key={i} className="text-sm text-zinc-600 leading-relaxed">
+            <p key={i} className="text-sm text-slate-600 leading-relaxed">
               {block.text}
             </p>
           );
@@ -43,7 +43,7 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
           return (
             <ul key={i} className="space-y-2 pl-1">
               {block.items.map((item, j) => (
-                <li key={j} className="flex items-start gap-2.5 text-sm text-zinc-600">
+                <li key={j} className="flex items-start gap-2.5 text-sm text-slate-600">
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[var(--nc-coral)] flex-shrink-0" />
                   <span className="leading-relaxed">{item}</span>
                 </li>
@@ -58,7 +58,7 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
               ? 'bg-emerald-50 border-emerald-100 text-emerald-900'
               : tone === 'warn'
                 ? 'bg-amber-50 border-amber-100 text-amber-900'
-                : 'bg-[#f2eeff] border-[#ffe0d4] text-[#7a3b2a]';
+                : 'bg-[#FCE7F3] border-[#ffe0d4] text-[#7a3b2a]';
           return (
             <blockquote
               key={i}
@@ -73,7 +73,7 @@ function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
         }
         if (block.type === 'image') {
           return (
-            <div key={i} className="rounded-2xl overflow-hidden border border-zinc-100">
+            <div key={i} className="rounded-2xl overflow-hidden border border-slate-100">
               <img
                 src={block.url}
                 alt={block.alt ?? ''}
@@ -143,26 +143,26 @@ export default function CourseLessonViewer({
     <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 min-h-[70vh]">
       {/* LEFT SIDEBAR */}
       <aside className="w-full lg:w-[300px] xl:w-[320px] flex-shrink-0">
-        <div className="nc-glass rounded-[1.5rem] overflow-hidden lg:sticky lg:top-24">
-          <div className="p-4 border-b border-zinc-50">
+        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden lg:sticky lg:top-24">
+          <div className="p-4 border-b border-slate-50">
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 h-10 min-h-[44px] -ml-1 px-2 text-xs font-extrabold text-zinc-500 hover:text-[#2c3340] transition-colors"
+              className="inline-flex items-center gap-1.5 h-10 min-h-[44px] -ml-1 px-2 text-xs font-extrabold text-slate-500 hover:text-slate-900 transition-colors"
             >
               <ArrowLeft size={14} /> Alla kurser
             </button>
-            <h2 className="text-base font-black text-[#2c3340] leading-snug mt-1">
+            <h2 className="text-base font-extrabold text-slate-900 leading-snug mt-1">
               {course.title}
             </h2>
             <div className="mt-3">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
                   Progress
                 </span>
-                <span className="text-xs font-black text-[var(--nc-coral)]">{progress}%</span>
+                <span className="text-xs font-extrabold text-[var(--nc-coral)]">{progress}%</span>
               </div>
-              <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full bg-[var(--nc-coral)] transition-all duration-500"
                   style={{ width: `${progress}%` }}
@@ -179,21 +179,21 @@ export default function CourseLessonViewer({
                   <button
                     type="button"
                     onClick={() => toggleModule(mod.id)}
-                    className="w-full flex items-center gap-2 h-11 min-h-[44px] px-2.5 rounded-xl text-left hover:bg-zinc-50 transition-colors"
+                    className="w-full flex items-center gap-2 h-11 min-h-[44px] px-2.5 rounded-xl text-left hover:bg-slate-50 transition-colors"
                   >
                     {open ? (
-                      <ChevronDown size={14} className="text-zinc-400 flex-shrink-0" />
+                      <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />
                     ) : (
-                      <ChevronRight size={14} className="text-zinc-400 flex-shrink-0" />
+                      <ChevronRight size={14} className="text-slate-400 flex-shrink-0" />
                     )}
                     <span className="text-sm leading-none">{mod.emoji}</span>
-                    <span className="text-xs font-extrabold text-[#2c3340] truncate">
+                    <span className="text-xs font-extrabold text-slate-900 truncate">
                       {mod.title}
                     </span>
                   </button>
 
                   {open && (
-                    <div className="ml-2 pl-2 border-l border-zinc-100 space-y-0.5 mb-2">
+                    <div className="ml-2 pl-2 border-l border-slate-100 space-y-0.5 mb-2">
                       {mod.lessons
                         .slice()
                         .sort((a, b) => a.order - b.order)
@@ -210,8 +210,8 @@ export default function CourseLessonViewer({
                               }}
                               className={`w-full flex items-center gap-2 min-h-[44px] px-3 py-2 rounded-xl text-left transition-all ${
                                 active
-                                  ? 'bg-[#f2eeff] text-[#6b5bb8]'
-                                  : 'hover:bg-zinc-50 text-zinc-600'
+                                  ? 'bg-[#FCE7F3] text-[#6b5bb8]'
+                                  : 'hover:bg-slate-50 text-slate-600'
                               }`}
                             >
                               <span
@@ -220,7 +220,7 @@ export default function CourseLessonViewer({
                                     ? 'bg-emerald-100 text-emerald-600'
                                     : active
                                       ? 'bg-white text-[var(--nc-coral)]'
-                                      : 'bg-zinc-100 text-zinc-400'
+                                      : 'bg-slate-100 text-slate-400'
                                 }`}
                               >
                                 {done ? (
@@ -251,18 +251,18 @@ export default function CourseLessonViewer({
       {/* RIGHT MAIN CONTENT */}
       <main className="flex-1 min-w-0">
         {!activeLesson ? (
-          <div className="nc-glass rounded-[1.5rem] p-10 text-center text-sm text-zinc-400">
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-10 text-center text-sm text-slate-400">
             Välj en lektion till vänster
           </div>
         ) : (
-          <div className="nc-glass rounded-[1.5rem] overflow-hidden">
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
             {/* Header */}
-            <div className="p-4 sm:p-6 border-b border-zinc-50 flex flex-col sm:flex-row sm:items-start gap-3 justify-between">
+            <div className="p-4 sm:p-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-start gap-3 justify-between">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1">
                   {course.title}
                 </p>
-                <h1 className="text-xl sm:text-2xl font-black text-[#2c3340] leading-tight">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-tight">
                   {activeLesson.title}
                 </h1>
               </div>
@@ -298,7 +298,7 @@ export default function CourseLessonViewer({
                   />
                 </div>
               ) : activeLesson.banner_url ? (
-                <div className="rounded-2xl overflow-hidden aspect-[21/9] bg-zinc-100">
+                <div className="rounded-2xl overflow-hidden aspect-[21/9] bg-slate-100">
                   <img
                     src={activeLesson.banner_url}
                     alt=""
@@ -308,7 +308,7 @@ export default function CourseLessonViewer({
               ) : null}
 
               {activeLesson.description && !activeLesson.content_blocks?.length && (
-                <p className="text-sm text-zinc-600 leading-relaxed">
+                <p className="text-sm text-slate-600 leading-relaxed">
                   {activeLesson.description}
                 </p>
               )}
@@ -317,8 +317,8 @@ export default function CourseLessonViewer({
 
               {/* Resources */}
               {((activeLesson.resources?.length ?? 0) > 0 || activeLesson.pdf_url) && (
-                <div className="pt-4 border-t border-zinc-100">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">
+                <div className="pt-4 border-t border-slate-100">
+                  <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-3">
                     Resources
                   </h4>
                   <div className="space-y-2">
@@ -327,13 +327,13 @@ export default function CourseLessonViewer({
                         href={activeLesson.pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-100 hover:border-[var(--nc-coral)] transition-colors"
+                        className="flex items-center gap-3 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[var(--nc-coral)] transition-colors"
                       >
                         <FileText size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
-                        <span className="text-xs font-extrabold text-[#2c3340] flex-1">
+                        <span className="text-xs font-extrabold text-slate-900 flex-1">
                           Lesson PDF
                         </span>
-                        <ExternalLink size={13} className="text-zinc-300" />
+                        <ExternalLink size={13} className="text-slate-300" />
                       </a>
                     )}
                     {(activeLesson.resources ?? []).map((res, i) => (
@@ -342,15 +342,15 @@ export default function CourseLessonViewer({
                         href={res.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-zinc-50 border border-zinc-100 hover:border-[var(--nc-coral)] transition-colors"
+                        className="flex items-center gap-3 min-h-[44px] px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-[var(--nc-coral)] transition-colors"
                       >
                         <span className="text-base flex-shrink-0 w-5 text-center">
                           {res.icon || <Link2 size={14} className="text-[var(--nc-coral)]" />}
                         </span>
-                        <span className="text-xs font-extrabold text-[#2c3340] flex-1">
+                        <span className="text-xs font-extrabold text-slate-900 flex-1">
                           {res.label}
                         </span>
-                        <ExternalLink size={13} className="text-zinc-300" />
+                        <ExternalLink size={13} className="text-slate-300" />
                       </a>
                     ))}
                   </div>

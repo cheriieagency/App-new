@@ -24,6 +24,8 @@ import {
   type ContentTone,
   type SocialPlatform,
 } from '@/lib/mock-content-planner';
+import { useLanguage } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
 
 type CopilotMode = 'ideas' | 'caption' | 'hashtags' | 'hooks' | 'saved';
 
@@ -44,36 +46,41 @@ const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'youtube', label: 'YouTube' },
 ];
 
-const MODES: { key: CopilotMode; label: string; icon: ElementType; hint: string }[] = [
+const MODE_DEFS: {
+  key: CopilotMode;
+  labelKey: TranslationKey;
+  hintKey: TranslationKey;
+  icon: ElementType;
+}[] = [
   {
     key: 'ideas',
-    label: 'Idéer',
+    labelKey: 'copilotIdeas',
+    hintKey: 'copilotIdeasHint',
     icon: Lightbulb,
-    hint: 'Få 3 unika inläggsidéer med captions per plattform.',
   },
   {
     key: 'caption',
-    label: 'Caption',
+    labelKey: 'copilotCaption',
+    hintKey: 'copilotCaptionHint',
     icon: MessageSquareText,
-    hint: 'Skriv eller polera en caption utifrån din brief.',
   },
   {
     key: 'hashtags',
-    label: 'Hashtags',
+    labelKey: 'copilotHashtags',
+    hintKey: 'copilotHashtagsHint',
     icon: Hash,
-    hint: 'Föreslå relevanta hashtags för ditt ämne.',
   },
   {
     key: 'hooks',
-    label: 'Hooks',
+    labelKey: 'copilotHooks',
+    hintKey: 'copilotHooksHint',
     icon: Wand2,
-    hint: 'Scroll-stoppare och öppningsrader för Reels / Shorts.',
   },
   {
     key: 'saved',
-    label: 'Saved ideas',
+    labelKey: 'copilotSaved',
+    hintKey: 'copilotSavedHint',
     icon: Bookmark,
-    hint: 'Dina sparade idéer, captions och hooks — redo att öppna i Post Studio.',
   },
 ];
 
@@ -152,6 +159,7 @@ export default function AiCopilotPanel({
     platforms: SocialPlatform[];
   }) => void;
 }) {
+  const { locale } = useLanguage();
   const [mode, setMode] = useState<CopilotMode>('ideas');
   const [prompt, setPrompt] = useState('');
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
@@ -172,6 +180,12 @@ export default function AiCopilotPanel({
   useEffect(() => {
     setSavedIdeas(loadSavedIdeas());
   }, []);
+
+  const modes = MODE_DEFS.map((m) => ({
+    ...m,
+    label: t(m.labelKey, locale),
+    hint: t(m.hintKey, locale),
+  }));
 
   const togglePlatform = (p: SocialPlatform) => {
     setPlatforms((prev) =>
@@ -279,7 +293,7 @@ export default function AiCopilotPanel({
     }
   };
 
-  const activeMode = MODES.find((m) => m.key === mode)!;
+  const activeMode = modes.find((m) => m.key === mode)!;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 lg:gap-5">
@@ -290,7 +304,7 @@ export default function AiCopilotPanel({
           <h2 className="text-sm font-black text-[#2c3340]">AI Copilot</h2>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-1 gap-1.5">
-          {MODES.map(({ key, label, icon: Icon }) => (
+          {modes.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"
@@ -405,12 +419,12 @@ export default function AiCopilotPanel({
                 <Sparkles size={15} />
               )}
               {mode === 'ideas'
-                ? 'Generera idéer'
+                ? t('copilotIdeas', locale)
                 : mode === 'caption'
-                  ? 'Skriv caption'
+                  ? t('writeCaptionShort', locale)
                   : mode === 'hashtags'
-                    ? 'Föreslå hashtags'
-                    : 'Generera hooks'}
+                    ? t('copilotHashtags', locale)
+                    : t('copilotHooks', locale)}
             </Button>
           </div>
         )}

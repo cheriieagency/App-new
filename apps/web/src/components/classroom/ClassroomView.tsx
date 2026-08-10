@@ -11,6 +11,8 @@ import {
 } from '@/lib/classroom-content';
 import ClassroomOverview from '@/components/classroom/ClassroomOverview';
 import CourseLessonViewer from '@/components/classroom/CourseLessonViewer';
+import { useLanguage } from '@/lib/locale-context';
+import { t, tf } from '@/lib/i18n';
 
 const STORAGE_KEY = 'nc-classroom-completed';
 
@@ -37,6 +39,7 @@ export default function ClassroomView({
   communitySlug?: string | null;
   communityName?: string | null;
 } = {}) {
+  const { locale } = useLanguage();
   const [activeCourse, setActiveCourse] = useState<ClassroomCourse | null>(null);
   const [completedLessons, setCompletedLessons] = useState<Set<number>>(new Set());
   const [hydrated, setHydrated] = useState(false);
@@ -97,7 +100,7 @@ export default function ClassroomView({
   if (isLoading) {
     return (
       <div className="text-center py-16 text-zinc-400 text-sm font-medium">
-        Laddar kurser...
+        {t('loadingCourses', locale)}
       </div>
     );
   }
@@ -119,12 +122,12 @@ export default function ClassroomView({
         <div>
           <h2 className="text-lg font-black text-[#2c3340] flex items-center gap-2">
             <GraduationCap size={18} className="text-[var(--nc-coral)]" />
-            Classroom
+            {t('classroom', locale)}
           </h2>
           <p className="text-xs text-zinc-400 mt-1 font-medium">
             {communityName
-              ? `Kurser i ${communityName} — ditt framsteg sparas här.`
-              : 'Välj en kurs för att börja — ditt framsteg sparas här.'}
+              ? tf('coursesInCommunity', locale, { name: communityName })
+              : t('pickCourseHint', locale)}
           </p>
         </div>
         <p className="text-[11px] font-extrabold text-zinc-400">

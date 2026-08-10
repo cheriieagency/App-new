@@ -11,8 +11,50 @@ import {
   type BioTheme,
 } from '@/lib/bio-theme';
 import type { WorkspaceBioBlock, WorkspaceProfile } from '@/lib/mock-workspace-profiles';
+import type { StoreProduct } from '@/lib/mock-store';
+import { DEFAULT_COLLECT_FIELDS } from '@/lib/store-collect-fields';
+import OneTapCheckoutDrawer from '@/components/store/OneTapCheckoutDrawer';
 
 type Category = 'links' | 'store';
+
+/** Map a bio block into a checkout product when it unlocks community access. */
+function bioBlockAsCheckoutProduct(block: WorkspaceBioBlock): StoreProduct {
+  const price =
+    typeof block.sale_price === 'number' &&
+    typeof block.price === 'number' &&
+    block.sale_price < block.price
+      ? block.sale_price
+      : typeof block.price === 'number'
+        ? block.price
+        : 0;
+  return {
+    id: Number.parseInt(String(block.id).replace(/\D/g, ''), 10) || Date.now(),
+    name: block.title || 'Product',
+    description: block.subtitle || null,
+    price,
+    currency: 'SEK',
+    type:
+      block.type === 'course'
+        ? 'course'
+        : block.type === 'coaching'
+          ? 'coaching'
+          : block.type === 'community'
+            ? 'community'
+            : block.type === 'lead_magnet'
+              ? 'ebook'
+              : 'digital',
+    kind:
+      block.type === 'coaching' || block.type === 'community' ? 'service' : 'product',
+    image_url: null,
+    community_id: block.access_community_id ?? null,
+    is_published: true,
+    created_at: new Date().toISOString(),
+    collect_fields: DEFAULT_COLLECT_FIELDS,
+    order_bump: null,
+    grants_community_access: block.grants_community_access === true,
+    access_community_id: block.access_community_id ?? null,
+  };
+}
 
 function formatSek(amount: number) {
   return `${Math.round(amount).toLocaleString('en-US')} SEK`;
@@ -47,7 +89,15 @@ function pricePill(block: WorkspaceBioBlock) {
   return null;
 }
 
-function BlockRow({ block, theme }: { block: WorkspaceBioBlock; theme: BioTheme }) {
+function BlockRow({
+  block,
+  theme,
+  onCheckout,
+}: {
+  block: WorkspaceBioBlock;
+  theme: BioTheme;
+  onCheckout?: (block: WorkspaceBioBlock) => void;
+}) {
   if (block.type === 'divider') {
     return <div className="h-px mx-1 bg-white/15" />;
   }
@@ -57,6 +107,9 @@ function BlockRow({ block, theme }: { block: WorkspaceBioBlock; theme: BioTheme 
     theme.bgType === 'liquid';
   const pill = pricePill(block);
   const href = block.destination_url || block.url || '#';
+  const usesCheckout =
+    Boolean(block.grants_community_access && block.access_community_id) &&
+    typeof onCheckout === 'function';
 
   const inner = (
     <>
@@ -74,6 +127,40 @@ function BlockRow({ block, theme }: { block: WorkspaceBioBlock; theme: BioTheme 
       {pill ? <span className={pill.className}>{pill.label}</span> : null}
     </>
   );
+
+  if (usesCheckout) {
+    const className = isFrosted
+      ? `w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3.5 flex items-center justify-between gap-2 text-white min-h-[52px] ${hoverEffectClass(theme.hoverEffect)}`
+      : `w-full rounded-2xl p-3.5 flex items-center justify-between gap-2 min-h-[52px] border border-slate-200 bg-white text-slate-900 shadow-sm ${hoverEffectClass(theme.hoverEffect)}`;
+    return (
+      <button type="button" onClick={() => onCheckout?.(block)} className={className}>
+        {isFrosted ? (
+          inner
+        ) : (
+          <>
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-base flex-shrink-0">
+                <span>{block.emoji || '🔗'}</span>
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="font-bold text-sm truncate leading-snug">{block.title}</p>
+                {block.subtitle ? (
+                  <p className="text-[11px] text-slate-500 truncate font-medium">
+                    {block.subtitle}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            {pill ? (
+              <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                {pill.label}
+              </span>
+            ) : null}
+          </>
+        )}
+      </button>
+    );
+  }
 
   if (isFrosted) {
     return (
@@ -120,6 +207,7 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
   const bio = profile.bio;
   const theme = useMemo(() => normalizeBioTheme(bio.theme), [bio.theme]);
   const [tab, setTab] = useState<Category>('links');
+  const [checkoutProduct, setCheckoutProduct] = useState<StoreProduct | null>(null);
   const handle = (bio.handle || profile.handle || 'creator').replace(/^@/, '');
   const visible = bio.blocks.filter((b) => b.visible !== false);
   const links = visible.filter((b) => b.category !== 'store');
@@ -244,7 +332,14 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
               {tab === 'store' ? 'No products yet' : 'No links yet'}
             </p>
           ) : (
-            active.map((block) => <BlockRow key={block.id} block={block} theme={theme} />)
+            active.map((block) => (
+              <BlockRow
+                key={block.id}
+                block={block}
+                theme={theme}
+                onCheckout={(b) => setCheckoutProduct(bioBlockAsCheckoutProduct(b))}
+              />
+            ))
           )}
         </div>
 
@@ -256,6 +351,13 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
           Powered by clikd:
         </p>
       </div>
+
+      <OneTapCheckoutDrawer
+        open={Boolean(checkoutProduct)}
+        product={checkoutProduct}
+        communityId={checkoutProduct?.access_community_id ?? null}
+        onClose={() => setCheckoutProduct(null)}
+      />
     </div>
   );
 }

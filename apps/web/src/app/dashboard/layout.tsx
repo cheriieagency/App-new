@@ -1,8 +1,6 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { authClient } from '@/lib/auth-client';
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+import type { ReactNode } from 'react';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen">{children}</div>;
+/** Member dashboard shell — light canvas matching admin / brand guidelines. */
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  return <div className="min-h-screen bg-[#FAFAFA] text-slate-900 font-sans">{children}</div>;
 }

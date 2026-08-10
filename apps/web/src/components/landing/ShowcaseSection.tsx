@@ -1,11 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, Search, Zap } from 'lucide-react';
+import {
+  BookOpen,
+  Heart,
+  LineChart,
+  Search,
+  Sparkles,
+  Users,
+  Wallet,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   CommunitySearchAutocomplete,
   type SearchableCommunity,
 } from '@/components/landing/CommunitySearchAutocomplete';
+import { useLanguage } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
 
 export type CommunityCard = SearchableCommunity;
 
@@ -23,32 +35,28 @@ type ShowcaseSectionProps = {
   isSearchLoading?: boolean;
 };
 
-const CATEGORY_PILLS = [
-  { label: '✨ All Categories', filter: '' },
-  { label: '📈 Marketing', filter: 'Marketing' },
-  { label: '💓 Health & Fitness', filter: 'Health' },
-  { label: '💳 Finance & E-com', filter: 'Finance' },
-  { label: '🧠 Coaching', filter: 'Coaching' },
-] as const;
-
-const COVER_GRADIENTS = [
-  'from-indigo-500 via-violet-500 to-purple-600',
-  'from-sky-500 via-blue-500 to-indigo-600',
-  'from-emerald-500 via-teal-500 to-cyan-600',
+const CATEGORY_PILLS: { labelKey: TranslationKey; filter: string; icon: LucideIcon }[] = [
+  { labelKey: 'allCategoriesPill', filter: '', icon: Sparkles },
+  { labelKey: 'catMarketing', filter: 'Marketing', icon: LineChart },
+  { labelKey: 'catHealth', filter: 'Health', icon: Heart },
+  { labelKey: 'catFinance', filter: 'Finance', icon: Wallet },
+  { labelKey: 'catCoaching', filter: 'Coaching', icon: Users },
 ];
 
-function formatMembers(count: number) {
-  return count.toLocaleString('en-US');
+const COVER_TONES = ['bg-[#2B2568]', 'bg-[#0F172A]', 'bg-[#1a1848]'] as const;
+
+function formatMembers(count: number, locale: string) {
+  return count.toLocaleString(locale === 'en' ? 'en-US' : 'sv-SE');
 }
 
-function categoryTag(raw: string) {
+function categoryTag(raw: string, locale: Parameters<typeof t>[1]) {
   const c = raw.toLowerCase();
-  if (c.includes('market') || c.includes('marknads')) return 'Marknadsföring';
-  if (c.includes('health') || c.includes('hälsa') || c.includes('fitness')) return 'Health';
-  if (c.includes('e-handel') || c.includes('ecom') || c.includes('e-com')) return 'E-handel';
-  if (c.includes('financ') || c.includes('ekonomi')) return 'Finance';
-  if (c.includes('coach')) return 'Coaching';
-  return raw || 'Community';
+  if (c.includes('market') || c.includes('marknads')) return t('catMarketing', locale);
+  if (c.includes('health') || c.includes('hälsa') || c.includes('fitness')) return t('catHealth', locale);
+  if (c.includes('e-handel') || c.includes('ecom') || c.includes('e-com') || c.includes('financ') || c.includes('ekonomi'))
+    return t('catFinance', locale);
+  if (c.includes('coach')) return t('catCoaching', locale);
+  return raw || t('navCommunities', locale);
 }
 
 function isCategoryActive(searchQuery: string, filter: string) {
@@ -74,35 +82,32 @@ export function ShowcaseSection({
   onSelectCommunity,
   isSearchLoading = false,
 }: ShowcaseSectionProps) {
+  const { locale } = useLanguage();
   const hero = resolveFeatured(featured, allCommunities);
   const trending = (searchQuery.trim() ? communities : allCommunities).slice(0, 3);
 
   return (
     <section
       id="communities"
-      className="relative py-20 sm:py-28 scroll-mt-20 overflow-visible bg-gradient-to-b from-slate-50 via-indigo-50/30 to-slate-100"
+      className="relative py-16 sm:py-24 scroll-mt-20 overflow-visible bg-[#FAFAFA]"
+      aria-labelledby="communities-heading"
     >
-      <div
-        className="absolute -top-16 -right-20 w-96 h-96 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none"
-        aria-hidden
-      />
-
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 overflow-visible">
         {/* Header + search */}
         <div className="relative z-20 mb-8 flex flex-col gap-5">
           <div className="max-w-2xl">
-            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-indigo-600 mb-3">
-              ⚡ Discover & Explore
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
+              {t('discoverExplore', locale)}
             </p>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              Find Your Next{' '}
-              <span className="bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
-                Nordic Community
-              </span>
+            <h2
+              id="communities-heading"
+              className="font-outfit text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight"
+            >
+              {t('findNordicCommunity', locale)}{' '}
+              <span className="text-[#F472B6]">{t('findNordicCommunityAccent', locale)}</span>
             </h2>
-            <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed">
-              Explore high-value communities, masterclasses, and digital hubs created by leading
-              creators across Scandinavia.
+            <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
+              {t('discoverSub', locale)}
             </p>
           </div>
           <CommunitySearchAutocomplete
@@ -111,7 +116,7 @@ export function ShowcaseSection({
             communities={allCommunities}
             onSelectCommunity={onSelectCommunity}
             isLoading={isSearchLoading}
-            placeholder="Search topics, creators..."
+            placeholder={t('searchCommunities', locale)}
           />
         </div>
 
@@ -119,87 +124,98 @@ export function ShowcaseSection({
         <div className="flex flex-wrap gap-2 mb-10">
           {CATEGORY_PILLS.map((cat) => {
             const active = isCategoryActive(searchQuery, cat.filter);
+            const Icon = cat.icon;
             return (
               <button
-                key={cat.label}
+                key={cat.labelKey}
                 type="button"
                 onClick={() => onSearchChange(active && cat.filter ? '' : cat.filter)}
                 className={
                   active
-                    ? 'bg-indigo-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md min-h-[44px]'
-                    : 'bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200/90 shadow-sm min-h-[44px]'
+                    ? 'inline-flex items-center gap-1.5 bg-[#1a1848] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm min-h-[44px]'
+                    : 'inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] min-h-[44px]'
                 }
               >
-                {cat.label}
+                <Icon size={14} className={active ? 'text-[#F472B6]' : 'text-slate-400'} aria-hidden />
+                {t(cat.labelKey, locale)}
               </button>
             );
           })}
         </div>
 
-        {/* Community of the Week — dark glass hero */}
+        {/* Community of the Week */}
         {hero && (
           <div className="mb-12">
             <div className="flex items-center gap-3 mb-5">
-              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-indigo-600">
-                Community of the Week
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6]">
+                {t('communityOfWeek', locale)}
               </p>
               <div className="flex-1 h-px bg-slate-200/80" />
             </div>
 
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 lg:p-10 shadow-2xl border border-slate-800">
+            <div className="relative overflow-hidden rounded-2xl bg-[#0F172A] text-white p-6 sm:p-8 lg:p-10 shadow-[0_8px_40px_-12px_rgba(15,23,42,0.35)] border border-[#0F172A]">
               <div
-                className="absolute -right-12 -top-12 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"
+                className="absolute -right-12 -top-12 w-96 h-96 rounded-full pointer-events-none"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(244,114,182,0.22) 0%, transparent 68%)',
+                }}
                 aria-hidden
               />
 
               <div className="relative grid lg:grid-cols-[1.4fr_0.7fr] gap-8 items-center">
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="inline-flex items-center text-xs font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 px-2.5 py-1 rounded-full">
-                      #{categoryTag(hero.category)}
+                    <span className="inline-flex items-center text-xs font-bold bg-[#F472B6]/15 text-[#F472B6] border border-[#F472B6]/25 px-2.5 py-1 rounded-full">
+                      #{categoryTag(hero.category, locale)}
                     </span>
                     <span className="inline-flex items-center text-xs font-bold text-slate-200 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
-                      Sofia Bergström ✔️
+                      Sofia Bergström
                     </span>
-                    <span className="inline-flex items-center text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/20 px-2.5 py-1 rounded-full">
-                      ⭐ 4.9 (128 Reviews)
+                    <span className="inline-flex items-center text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 px-2.5 py-1 rounded-full">
+                      {t('reviewsLabel', locale)}
                     </span>
                   </div>
 
-                  <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-3 leading-tight tracking-tight">
-                    Clikd Hub
+                  {/* Community name/description are creator content — leave untranslated */}
+                  <h3 className="font-outfit text-2xl sm:text-3xl font-extrabold text-white mb-3 leading-tight tracking-tight">
+                    {hero.name}
                   </h3>
-                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl mb-6">
-                    The ultimate community for Nordic digital creators & educators. Weekly live
-                    Q&As, course library, Swish funnel templates, and private member chat.
+                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl mb-6 font-display">
+                    {hero.description}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-200">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
-                      👥 1,340 Active Members
+                      <Users size={14} className="text-[#F472B6]" aria-hidden />
+                      {formatMembers(hero.member_count, locale)} {t('activeMembersLabel', locale)}
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
-                      <Zap size={14} className="text-amber-300" /> Instant Swish Access
+                      <Zap size={14} className="text-[#10B981]" aria-hidden />{' '}
+                      {t('instantSwishAccess', locale)}
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
-                      <BookOpen size={14} className="text-sky-300" /> 12 Courses Included
+                      <BookOpen size={14} className="text-slate-300" aria-hidden />{' '}
+                      {t('coursesIncluded', locale)}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/10">
-                  <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-300 mb-2">
-                    Membership Fee
+                <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
+                    {t('membershipFee', locale)}
                   </p>
-                  <p className="font-display font-extrabold text-3xl text-white mb-1 tracking-tight">
-                    199 <span className="text-base font-bold text-slate-300">SEK / mo</span>
+                  <p className="font-outfit font-extrabold text-3xl text-white mb-1 tracking-tight tabular-nums">
+                    199 <span className="text-base font-bold text-slate-400 font-mono">{t('sekPerMo', locale)}</span>
                   </p>
-                  <p className="text-xs font-medium text-slate-400 mb-5">Cancel anytime · Swish ready</p>
+                  <p className="text-xs font-medium text-slate-400 mb-5 font-display">
+                    {t('cancelAnytimeSwish', locale)}
+                  </p>
                   <Link
                     href={`/communities/${hero.id}`}
-                    className="bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:opacity-95 text-white font-bold text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 min-h-[44px] transition-all"
+                    className="bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-[0.98]"
                   >
-                    View Community →
+                    {t('viewCommunity', locale)} →
                   </Link>
                 </div>
               </div>
@@ -208,49 +224,49 @@ export function ShowcaseSection({
         )}
 
         {/* Trending grid */}
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-display text-lg font-extrabold text-slate-900">
-            {searchQuery ? `Results for “${searchQuery}”` : 'Trending Communities'}
+        <div className="flex items-center justify-between mb-5 gap-3">
+          <h3 className="font-outfit text-lg font-extrabold text-slate-900 tracking-tight">
+            {searchQuery
+              ? `${t('searchCommunitiesHeading', locale)} “${searchQuery}”`
+              : t('trendingCommunities', locale)}
           </h3>
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 min-h-11 px-2"
+              className="text-xs font-bold text-[#F472B6] hover:text-[#2B2568] min-h-11 px-2 transition-colors"
             >
-              Clear filter
+              {t('clearFilterShort', locale)}
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {trending.map((community, index) => (
             <article
               key={community.id}
-              className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300 flex flex-col"
+              className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] hover:border-slate-300/90 hover:shadow-md transition-all duration-300 flex flex-col"
             >
-              <div
-                className={`h-24 bg-gradient-to-br ${COVER_GRADIENTS[index % COVER_GRADIENTS.length]} relative`}
-              >
-                <span className="absolute top-3 left-3 text-[10px] font-extrabold text-white bg-white/20 backdrop-blur px-2.5 py-1 rounded-full">
-                  #{categoryTag(community.category)}
+              <div className={`h-24 ${COVER_TONES[index % COVER_TONES.length]} relative`}>
+                <span className="absolute top-3 left-3 text-[10px] font-extrabold text-white bg-white/15 backdrop-blur px-2.5 py-1 rounded-full">
+                  #{categoryTag(community.category, locale)}
                 </span>
               </div>
               <div className="p-5 flex flex-col flex-1">
-                <h3 className="font-display text-base font-extrabold text-slate-900 mb-1 tracking-tight">
+                <h3 className="font-outfit text-base font-extrabold text-slate-900 mb-1 tracking-tight">
                   {community.name}
                 </h3>
-                <p className="text-xs text-slate-500 font-medium line-clamp-2 mb-4 flex-1">
+                <p className="text-xs text-slate-500 font-medium line-clamp-2 mb-4 flex-1 font-display">
                   {community.description}
                 </p>
-                <p className="text-[11px] font-bold text-slate-500 mb-4">
-                  {formatMembers(community.member_count)} Active Members
+                <p className="text-[11px] font-bold text-slate-500 mb-4 font-mono">
+                  {formatMembers(community.member_count, locale)} {t('activeMembersLabel', locale)}
                 </p>
                 <Link
                   href={`/communities/${community.id}`}
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-3 rounded-xl transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-[#0F172A] hover:bg-[#1a1848] text-white font-bold text-xs px-4 py-3 rounded-xl transition-colors"
                 >
-                  Join →
+                  {t('joinArrow', locale)}
                 </Link>
               </div>
             </article>
@@ -258,15 +274,17 @@ export function ShowcaseSection({
         </div>
 
         {trending.length === 0 && (
-          <div className="text-center py-14 bg-white/70 border border-slate-200/90 rounded-3xl">
+          <div className="text-center py-14 bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
             <Search size={22} className="mx-auto mb-2 text-slate-300" />
-            <p className="text-slate-500 font-bold">No communities match “{searchQuery}”</p>
+            <p className="text-slate-500 font-bold font-display">
+              {t('noCommunitiesMatch', locale)} “{searchQuery}”
+            </p>
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="mt-3 text-sm text-indigo-600 font-bold hover:underline min-h-11"
+              className="mt-3 text-sm text-[#F472B6] font-bold hover:text-[#2B2568] min-h-11 transition-colors"
             >
-              Show all
+              {t('showAllShort', locale)}
             </button>
           </div>
         )}

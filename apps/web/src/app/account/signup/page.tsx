@@ -28,11 +28,18 @@ import {
 	loadRememberedAuth,
 	saveRememberedAuth,
 } from "@/lib/remember-auth";
+import { persistPlatformRole } from "@/lib/use-platform-role";
+import type { PlatformRole } from "@/lib/platform-role";
 
 function SignUpForm() {
 	const searchParams = useSearchParams();
 	const { locale } = useLanguage();
-	const callbackUrl = searchParams.get("callbackUrl") || "/";
+	const rawCallback = searchParams.get("callbackUrl") || "/dashboard";
+	const role: PlatformRole =
+		rawCallback.startsWith("/admin") || rawCallback.startsWith("/planner")
+			? "creator"
+			: "member";
+	const callbackUrl = role === "creator" ? "/admin" : "/dashboard";
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [rememberMe, setRememberMe] = useState(false);
@@ -77,8 +84,10 @@ function SignUpForm() {
 				clearRememberedAuth();
 			}
 
+			const home = await persistPlatformRole(role);
+
 			if (typeof window !== "undefined") {
-				window.location.href = callbackUrl;
+				window.location.href = home || callbackUrl;
 			} else {
 				console.warn(
 					"signup: window is undefined; cannot redirect to callbackUrl",

@@ -28,6 +28,8 @@ import {
   type TeamRole,
   type WorkspacePlan,
 } from '@/lib/mock-content-planner';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 type TeamResponse = {
   members: PlannerTeamMember[];
@@ -53,6 +55,7 @@ export default function TeamWorkspaceModal({
   projectName: string;
   workspaces: BrandWorkspace[];
 }) {
+  const { locale } = useLanguage();
   const queryClient = useQueryClient();
   const [filterProject, setFilterProject] = useState<'all' | string>('all');
   const [name, setName] = useState('');
@@ -255,7 +258,7 @@ export default function TeamWorkspaceModal({
                 onChange={(e) => setFilterProject(e.target.value)}
                 className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-[11px] font-bold text-zinc-600"
               >
-                <option value="all">Alla team-ytor</option>
+                <option value="all">{t('allTeamWorkspaces', locale)}</option>
                 {workspaces.map((p) => (
                   <option key={p.id} value={p.name}>
                     {p.name}
@@ -265,7 +268,7 @@ export default function TeamWorkspaceModal({
             </div>
 
             {isLoading ? (
-              <p className="text-sm text-zinc-400 font-medium py-6 text-center">Laddar…</p>
+              <p className="text-sm text-zinc-400 font-medium py-6 text-center">{t('loading', locale)}</p>
             ) : (
               <ul className="space-y-2">
                 {members.map((m) => (

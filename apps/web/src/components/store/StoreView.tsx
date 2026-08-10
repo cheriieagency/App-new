@@ -62,16 +62,16 @@ export default function StoreView({
     <div>
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-2xl font-black text-[#2c3340]">
+          <h2 className="text-2xl font-extrabold text-slate-900">
             {t('store', locale)}
           </h2>
-          <p className="text-sm text-zinc-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             {communityName
               ? t('storeCommunityHint', locale).replace('{name}', communityName)
               : t('productsAndOffers', locale)}
           </p>
         </div>
-        <div className="flex items-center gap-1 bg-white border border-zinc-100 shadow-sm p-1 rounded-2xl w-fit">
+        <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-2xl w-fit">
           {filters.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -80,7 +80,7 @@ export default function StoreView({
               className={`flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl text-xs font-bold transition-all ${
                 filter === key
                   ? 'bg-[var(--nc-coral)] text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-700'
+                  : 'text-slate-400 hover:text-slate-700'
               }`}
             >
               <Icon size={13} />
@@ -91,14 +91,14 @@ export default function StoreView({
       </div>
 
       {isLoading ? (
-        <div className="text-center py-16 text-zinc-400 text-sm flex items-center justify-center gap-2">
+        <div className="text-center py-16 text-slate-400 text-sm flex items-center justify-center gap-2">
           <Loader2 size={16} className="animate-spin" />
           {t('loading', locale)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="nc-glass rounded-[1.5rem] py-16 text-center">
-          <ShoppingBag size={32} className="text-zinc-200 mx-auto mb-3" />
-          <p className="text-sm font-bold text-zinc-400">{t('storeEmpty', locale)}</p>
+        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] py-16 text-center">
+          <ShoppingBag size={32} className="text-slate-200 mx-auto mb-3" />
+          <p className="text-sm font-bold text-slate-400">{t('storeEmpty', locale)}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
@@ -109,9 +109,9 @@ export default function StoreView({
                 key={product.id}
                 type="button"
                 onClick={() => setCheckoutProduct(product)}
-                className="nc-glass rounded-[1.5rem] overflow-hidden border border-white/60 flex flex-col text-left hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden border border-white/60 flex flex-col text-left hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
               >
-                <div className="relative aspect-[16/10] bg-zinc-100 overflow-hidden">
+                <div className="relative aspect-[16/10] bg-slate-100 overflow-hidden">
                   {product.image_url ? (
                     <img
                       src={product.image_url}
@@ -119,7 +119,7 @@ export default function StoreView({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#f2eeff] to-zinc-100">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FCE7F3] to-slate-100">
                       {isService ? (
                         <Briefcase size={32} className="text-[#ffb59f]" />
                       ) : (
@@ -128,7 +128,7 @@ export default function StoreView({
                     </div>
                   )}
                   <span
-                    className={`absolute top-3 left-3 text-[10px] font-black uppercase tracking-wide px-2 py-1 rounded-lg backdrop-blur-sm ${
+                    className={`absolute top-3 left-3 text-[10px] font-extrabold uppercase tracking-wide px-2 py-1 rounded-lg backdrop-blur-sm ${
                       isService
                         ? 'bg-[#2c3340]/70 text-white'
                         : 'bg-[var(--nc-coral)]/90 text-white'
@@ -141,21 +141,21 @@ export default function StoreView({
                 </div>
 
                 <div className="p-4 sm:p-5 flex flex-col flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1">
                     {typeLabel(product.type)}
                   </p>
-                  <h3 className="text-base font-black text-[#2c3340] leading-snug mb-1.5">
+                  <h3 className="text-base font-extrabold text-slate-900 leading-snug mb-1.5">
                     {product.name}
                   </h3>
-                  <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2 flex-1">
+                  <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 flex-1">
                     {product.description}
                   </p>
 
-                  <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between gap-3">
-                    <p className="text-lg font-black text-[#2c3340] tabular-nums">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <p className="text-lg font-extrabold text-slate-900 tabular-nums">
                       {formatPrice(product.price, product.currency, locale)}
                     </p>
-                    <span className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-black bg-[var(--nc-coral)] text-white flex items-center">
+                    <span className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-extrabold bg-[var(--nc-coral)] text-white flex items-center">
                       {t('storeBuy', locale)}
                     </span>
                   </div>

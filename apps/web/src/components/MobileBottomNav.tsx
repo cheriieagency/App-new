@@ -10,17 +10,20 @@ import {
   UserRound,
   type LucideIcon,
 } from 'lucide-react';
+import { usePlatformRole } from '@/lib/use-platform-role';
+import { useLanguage } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
 
-const TABS: {
+const MEMBER_TABS: {
   href: string;
   match: (path: string, tab: string | null) => boolean;
-  label: string;
+  key: TranslationKey;
   icon: LucideIcon;
 }[] = [
   {
     href: '/dashboard?tab=store',
     match: (path, tab) => path.startsWith('/dashboard') && tab === 'store',
-    label: 'Store',
+    key: 'store',
     icon: ShoppingBag,
   },
   {
@@ -28,27 +31,35 @@ const TABS: {
     match: (path, tab) =>
       (path.startsWith('/dashboard') && (tab === 'community' || !tab)) ||
       path.startsWith('/communities'),
-    label: 'Feed',
+    key: 'feed',
     icon: MessageSquare,
   },
   {
     href: '/dashboard?tab=events',
     match: (path, tab) =>
       (path.startsWith('/dashboard') && tab === 'events') || path.startsWith('/events'),
-    label: 'Events',
+    key: 'events',
     icon: CalendarDays,
   },
   {
     href: '/dashboard?tab=classroom',
     match: (path, tab) =>
       (path.startsWith('/dashboard') && tab === 'classroom') || path.startsWith('/classroom'),
-    label: 'Class',
+    key: 'classShort',
     icon: GraduationCap,
   },
+];
+
+const CREATOR_TABS: {
+  href: string;
+  match: (path: string, tab: string | null) => boolean;
+  key: TranslationKey;
+  icon: LucideIcon;
+}[] = [
   {
     href: '/admin',
     match: (path) => path.startsWith('/admin') || path.startsWith('/planner'),
-    label: 'Admin',
+    key: 'adminShort',
     icon: UserRound,
   },
 ];
@@ -74,28 +85,38 @@ export function MobileBottomNav() {
   const pathname = usePathname() || '';
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
+  const { isCreator, loading } = usePlatformRole();
+  const { locale } = useLanguage();
 
   if (!shouldShowMobileBottomNav(pathname)) return null;
+  if (loading) return null;
+
+  const tabs = isCreator ? CREATOR_TABS : MEMBER_TABS;
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 h-16 flex items-center justify-around"
-      aria-label="Primary mobile"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(15,23,42,0.04)]"
+      aria-label={t('primaryMobileNav', locale)}
     >
-      {TABS.map((item) => {
+      {tabs.map((item) => {
         const active = item.match(pathname, tab);
         const Icon = item.icon;
         return (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[56px] px-2 transition-colors ${
-              active ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[56px] px-2 rounded-xl transition-colors ${
+              active ? 'text-[#2B2568]' : 'text-slate-400 hover:text-slate-700'
             }`}
             aria-current={active ? 'page' : undefined}
           >
-            <Icon size={20} strokeWidth={active ? 2.4 : 2} aria-hidden />
-            <span className="text-[10px] font-bold">{item.label}</span>
+            <Icon
+              size={20}
+              strokeWidth={active ? 2.4 : 2}
+              className={active ? 'text-[#F472B6]' : undefined}
+              aria-hidden
+            />
+            <span className="text-[10px] font-bold tracking-tight">{t(item.key, locale)}</span>
           </Link>
         );
       })}

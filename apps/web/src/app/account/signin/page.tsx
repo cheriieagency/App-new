@@ -30,15 +30,16 @@ import {
   loadRememberedAuth,
   saveRememberedAuth,
 } from '@/lib/remember-auth';
+import { persistPlatformRole } from '@/lib/use-platform-role';
 
 type Role = 'member' | 'creator';
 
 function SignInForm() {
   const searchParams = useSearchParams();
   const { locale } = useLanguage();
-  const rawCallback = searchParams.get('callbackUrl') || '/';
+  void searchParams; // keep useSearchParams for platform callbackUrl contract
   const [role, setRole] = useState<Role>('member');
-  const callbackUrl = role === 'creator' ? '/admin' : rawCallback === '/admin' ? '/' : rawCallback;
+  const callbackUrl = role === 'creator' ? '/admin' : '/dashboard';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -78,8 +79,11 @@ function SignInForm() {
         clearRememberedAuth();
       }
 
+      // Cookie is source of truth; tab chooses member vs creator studio
+      const home = await persistPlatformRole(role);
+
       if (typeof window !== 'undefined') {
-        window.location.href = callbackUrl;
+        window.location.href = home;
       } else {
         console.warn('signin: window is undefined; cannot redirect to callbackUrl');
       }

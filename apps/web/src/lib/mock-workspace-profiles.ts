@@ -25,6 +25,9 @@ export type WorkspaceBioBlock = {
   url?: string;
   price?: number | null;
   sale_price?: number | null;
+  /** When true, purchase unlocks membership in access_community_id. */
+  grants_community_access?: boolean;
+  access_community_id?: number | null;
 };
 
 export type WorkspaceBioData = {
@@ -174,6 +177,8 @@ const liveStudioBlocks: WorkspaceBioBlock[] = [
     color: '#0f766e',
     visible: true,
     price: 0,
+    grants_community_access: true,
+    access_community_id: 102,
   },
   {
     id: '102-3',
@@ -185,6 +190,8 @@ const liveStudioBlocks: WorkspaceBioBlock[] = [
     color: '#E11D48',
     visible: true,
     price: 599,
+    grants_community_access: true,
+    access_community_id: 102,
   },
   {
     id: '102-s1',

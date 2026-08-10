@@ -4,9 +4,10 @@ import { LandingPageClient } from '@/components/landing/LandingPageClient';
 export const metadata: Metadata = {
   title: 'clikd: — Build, Sell & Scale Community, Bio & Socials',
   description:
-    'Stan Store alternative and Skool alternative for Sweden and the Nordics. All-in-one creator platform with community, Swish Link-in-Bio, courses, social planner, and Vipps payments.',
+    'Nordisk all-in-one creator-plattform. Community, Bio Store, kurser, social planner och Swish — allt i en app.',
 };
 
+/** Landing page — Clikd. brand system (Syren-Rosa, Midnight Periwinkle, Light Canvas). */
 export default function PlatformHome() {
   return <LandingPageClient />;
 }
