@@ -87,7 +87,7 @@ function icalDataUrl(event: any) {
     const ics = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//Nordic Creator//Events//SV',
+      'PRODID:-//clikd://Events//SV',
       'BEGIN:VEVENT',
       `DTSTART:${fmt(start)}`,
       `DTEND:${fmt(end)}`,
@@ -796,7 +796,7 @@ export default function EventsPage() {
                   className="text-[10px] font-extrabold uppercase tracking-widest"
                   style={{ color: 'var(--nc-coral)' }}
                 >
-                  Nordic Creator Community
+                  clikd: Community
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-[#2c3340] leading-tight mb-2">

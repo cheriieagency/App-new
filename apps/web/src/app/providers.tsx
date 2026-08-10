@@ -2,10 +2,11 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { Suspense, useState } from 'react';
 import { Toaster } from 'sonner';
-import { useState } from 'react';
 import { LocaleProvider } from '@/lib/locale-context';
 import { GlobalLanguageMenu } from '@/components/GlobalLanguageMenu';
+import { MobileBottomNav, MobileBottomNavSpacer } from '@/components/MobileBottomNav';
 
 // Create a client that persists across re-renders
 function makeQueryClient() {
@@ -40,7 +41,10 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
-        {children}
+        <Suspense fallback={children}>
+          <MobileBottomNavSpacer>{children}</MobileBottomNavSpacer>
+          <MobileBottomNav />
+        </Suspense>
         <GlobalLanguageMenu />
         <Toaster position="bottom-right" />
       </LocaleProvider>

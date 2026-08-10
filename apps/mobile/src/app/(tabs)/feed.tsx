@@ -114,7 +114,7 @@ export default function FeedScreen() {
             marginBottom: 28,
           }}
         >
-          Gå med i Nordic Creator Community för att delta i diskussioner och ta del av exklusivt
+          Gå med i clikd: Community för att delta i diskussioner och ta del av exklusivt
           innehåll.
         </Text>
         <TouchableOpacity
@@ -155,7 +155,7 @@ export default function FeedScreen() {
         >
           <Text style={{ fontWeight: '900', fontSize: 18, color: '#111' }}>Community Feed</Text>
           <Text style={{ fontSize: 11, color: '#9CA3AF', fontWeight: '600' }}>
-            Nordic Creator Members
+            clikd: Members
           </Text>
         </View>
 

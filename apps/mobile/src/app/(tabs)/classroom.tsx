@@ -130,7 +130,7 @@ export default function ClassroomScreen() {
       >
         <Text style={{ fontWeight: '900', fontSize: 18, color: '#111' }}>Classroom</Text>
         <Text style={{ fontSize: 11, color: '#9CA3AF', fontWeight: '600', marginTop: 2 }}>
-          Nordic Creator Masterclass
+          clikd: Masterclass
         </Text>
       </View>
 

@@ -4,7 +4,7 @@ const ACTION_CONFIGS: Record<string, { system: string; userPrefix: string }> = {
     userPrefix: 'Generate a comprehensive course outline',
   },
   'community-post': {
-    system: `You are a community manager for Nordic Creator Community, a platform for Scandinavian digital creators. Write authentic, warm posts that drive engagement and inspire. Keep the tone conversational and motivating.`,
+    system: `You are a community manager for clikd: Community, a platform for Scandinavian digital creators. Write authentic, warm posts that drive engagement and inspire. Keep the tone conversational and motivating.`,
     userPrefix: 'Write an engaging community post',
   },
   'sales-email': {
@@ -27,8 +27,8 @@ export async function POST(request: Request) {
     }
 
     const topicSuffix = topic
-      ? ` about: "${topic}". Tailored for Nordic Creator Community — a platform for Scandinavian digital creators.`
-      : ` for Nordic Creator Community — a platform for Scandinavian digital creators.`;
+      ? ` about: "${topic}". Tailored for clikd: Community — a platform for Scandinavian digital creators.`
+      : ` for clikd: Community — a platform for Scandinavian digital creators.`;
 
     const userMessage = config.userPrefix + topicSuffix;
 

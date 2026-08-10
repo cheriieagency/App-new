@@ -12,28 +12,33 @@ import {
   workspaceChannelLabel,
   type BrandWorkspace,
 } from '@/lib/mock-content-planner';
+import { useLocale } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 function BrandAvatar({
   workspace,
   size = 36,
+  round = false,
 }: {
   workspace: BrandWorkspace;
   size?: number;
+  round?: boolean;
 }) {
   const dim = `${size}px`;
+  const radius = round ? 'rounded-full' : 'rounded-xl';
   if (workspace.avatar_url) {
     return (
       <img
         src={workspace.avatar_url}
         alt=""
-        className="rounded-xl object-cover flex-shrink-0"
+        className={`${radius} object-cover flex-shrink-0`}
         style={{ width: dim, height: dim, background: workspace.color }}
       />
     );
   }
   return (
     <div
-      className="rounded-xl flex items-center justify-center text-white font-black flex-shrink-0"
+      className={`${radius} flex items-center justify-center text-white font-black flex-shrink-0`}
       style={{ width: dim, height: dim, background: workspace.color, fontSize: size * 0.38 }}
     >
       {workspace.name?.[0] ?? 'B'}
@@ -46,14 +51,21 @@ export default function WorkspaceSelector({
   activeId,
   onSelect,
   onCreateNew,
+  compact = false,
 }: {
   workspaces: BrandWorkspace[];
   activeId: string;
   onSelect: (workspace: BrandWorkspace) => void;
   onCreateNew: () => void;
+  /** Name-only trigger (admin shell reference). */
+  compact?: boolean;
 }) {
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+
+  const accountWord = (n: number) =>
+    t(n === 1 ? 'accountSingular' : 'accountPlural', locale);
 
   const active =
     workspaces.find((w) => w.id === activeId) || workspaces[0] || null;
@@ -81,18 +93,32 @@ export default function WorkspaceSelector({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-2 h-11 min-h-[44px] max-w-[220px] sm:max-w-[280px] rounded-xl border border-zinc-200 bg-white pl-1.5 pr-2.5 hover:border-zinc-300 transition-colors text-left"
+          className={
+            compact
+              ? 'flex items-center gap-2.5 w-full h-11 min-h-[44px] rounded-2xl border border-slate-200/90 bg-white pl-1.5 pr-3 hover:border-slate-300 hover:bg-slate-50/80 transition-colors text-left'
+              : 'flex items-center gap-2 h-10 min-h-[40px] max-w-[220px] sm:max-w-[300px] rounded-xl border border-slate-200/90 bg-white pl-1.5 pr-2.5 hover:border-slate-300 hover:bg-slate-50/80 transition-colors text-left'
+          }
         >
-          <BrandAvatar workspace={active} size={32} />
+          <span>
+            <BrandAvatar workspace={active} size={compact ? 28 : 30} round={compact} />
+          </span>
           <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm font-black text-[#2c3340] truncate leading-tight">
+            <p
+              className={
+                compact
+                  ? 'text-[13px] font-semibold text-slate-800 truncate leading-tight'
+                  : 'text-xs font-bold text-slate-900 truncate leading-tight'
+              }
+            >
               {active.name}
             </p>
-            <p className="text-[10px] text-zinc-400 font-bold truncate">
-              {workspaceChannelLabel(active)}
-            </p>
+            {!compact && (
+              <p className="text-[10px] text-slate-500 font-semibold truncate">
+                {workspaceChannelLabel(active, accountWord(active.channels.length))}
+              </p>
+            )}
           </div>
-          <ChevronDown size={14} className="text-zinc-400 flex-shrink-0" />
+          <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -101,7 +127,7 @@ export default function WorkspaceSelector({
       >
         <div className="p-3 border-b border-zinc-100">
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-0.5">
-            Team Workspaces / Brands
+            {t('teamWorkspacesBrands', locale)}
           </p>
           <div className="relative">
             <Search
@@ -111,7 +137,7 @@ export default function WorkspaceSelector({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search brand…"
+              placeholder={t('searchBrand', locale)}
               className="w-full h-10 min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-[var(--nc-coral)] focus:bg-white"
             />
           </div>
@@ -147,7 +173,7 @@ export default function WorkspaceSelector({
                       )}
                     </div>
                     <p className="text-[11px] text-zinc-500 font-bold truncate">
-                      {workspaceChannelLabel(ws)}
+                      {workspaceChannelLabel(ws, accountWord(ws.channels.length))}
                     </p>
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {ws.channels.map((c) => (
@@ -161,7 +187,7 @@ export default function WorkspaceSelector({
           })}
           {filtered.length === 0 && (
             <p className="text-xs text-zinc-400 font-medium text-center py-6">
-              No brands match.
+              {t('noBrandsMatch', locale)}
             </p>
           )}
         </div>
@@ -175,7 +201,7 @@ export default function WorkspaceSelector({
             }}
             className="w-full h-11 min-h-[44px] rounded-xl text-xs font-extrabold text-[var(--nc-coral)] hover:bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)] inline-flex items-center justify-center gap-1.5"
           >
-            <Plus size={14} /> Create New Team Workspace / Brand
+            <Plus size={14} /> {t('createTeamWorkspace', locale)}
           </button>
         </div>
       </PopoverContent>

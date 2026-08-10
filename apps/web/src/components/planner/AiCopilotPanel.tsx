@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, type ElementType } from 'react';
+import { useEffect, useState, type ElementType } from 'react';
 import {
+  Bookmark,
   Check,
   Copy,
   Hash,
@@ -10,6 +11,7 @@ import {
   MessageSquareText,
   Plus,
   Sparkles,
+  Trash2,
   Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,7 +25,17 @@ import {
   type SocialPlatform,
 } from '@/lib/mock-content-planner';
 
-type CopilotMode = 'ideas' | 'caption' | 'hashtags' | 'hooks';
+type CopilotMode = 'ideas' | 'caption' | 'hashtags' | 'hooks' | 'saved';
+
+type SavedIdea = {
+  id: string;
+  title: string;
+  body: string;
+  source: CopilotMode | 'manual';
+  savedAt: string;
+};
+
+const SAVED_KEY = 'nc_ai_copilot_saved_ideas';
 
 const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'instagram', label: 'Instagram' },
@@ -57,6 +69,12 @@ const MODES: { key: CopilotMode; label: string; icon: ElementType; hint: string 
     icon: Wand2,
     hint: 'Scroll-stoppare och öppningsrader för Reels / Shorts.',
   },
+  {
+    key: 'saved',
+    label: 'Saved ideas',
+    icon: Bookmark,
+    hint: 'Dina sparade idéer, captions och hooks — redo att öppna i Post Studio.',
+  },
 ];
 
 const QUICK_PROMPTS = [
@@ -69,7 +87,6 @@ const QUICK_PROMPTS = [
 function extractHashtags(text: string): string {
   const tags = text.match(/#[\wåäöÅÄÖ]+/gi) ?? [];
   if (tags.length) return [...new Set(tags)].join(' ');
-  // Fallback demo tags from words
   const words = text
     .toLowerCase()
     .replace(/[^\wåäö\s]/gi, ' ')
@@ -106,6 +123,23 @@ function buildHooks(prompt: string, tone: ContentTone): string[] {
   return openers[tone];
 }
 
+function loadSavedIdeas(): SavedIdea[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(SAVED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SavedIdea[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedIdeas(items: SavedIdea[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SAVED_KEY, JSON.stringify(items));
+}
+
 export default function AiCopilotPanel({
   onUseIdea,
   onCreateFromCaption,
@@ -132,6 +166,12 @@ export default function AiCopilotPanel({
   const [hashtagResult, setHashtagResult] = useState('');
   const [hooks, setHooks] = useState<string[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
+  const [savedIdeas, setSavedIdeas] = useState<SavedIdea[]>([]);
+  const [justSaved, setJustSaved] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSavedIdeas(loadSavedIdeas());
+  }, []);
 
   const togglePlatform = (p: SocialPlatform) => {
     setPlatforms((prev) =>
@@ -145,8 +185,33 @@ export default function AiCopilotPanel({
     setTimeout(() => setCopied(null), 1600);
   };
 
+  const saveIdea = (title: string, body: string, source: CopilotMode) => {
+    const entry: SavedIdea = {
+      id: `saved-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: title.slice(0, 80) || 'Saved idea',
+      body,
+      source,
+      savedAt: new Date().toISOString(),
+    };
+    setSavedIdeas((prev) => {
+      const next = [entry, ...prev].slice(0, 50);
+      persistSavedIdeas(next);
+      return next;
+    });
+    setJustSaved(entry.id);
+    setTimeout(() => setJustSaved(null), 1600);
+  };
+
+  const removeSaved = (id: string) => {
+    setSavedIdeas((prev) => {
+      const next = prev.filter((s) => s.id !== id);
+      persistSavedIdeas(next);
+      return next;
+    });
+  };
+
   const run = async () => {
-    if (!prompt.trim() || loading) return;
+    if (!prompt.trim() || loading || mode === 'saved') return;
     if ((mode === 'ideas' || mode === 'caption') && platforms.length === 0) return;
     setLoading(true);
     try {
@@ -162,7 +227,6 @@ export default function AiCopilotPanel({
         setHashtagResult('');
         setHooks([]);
       } else if (mode === 'caption') {
-        // Generate ideas then polish the first platform caption into a clean draft.
         const r = await fetch('/api/planner/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -188,7 +252,12 @@ export default function AiCopilotPanel({
         const r = await fetch('/api/planner/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'ideas', prompt, platforms: platforms.length ? platforms : ['instagram'], tone }),
+          body: JSON.stringify({
+            action: 'ideas',
+            prompt,
+            platforms: platforms.length ? platforms : ['instagram'],
+            tone,
+          }),
         });
         const data = await r.json();
         const blob = [
@@ -199,7 +268,7 @@ export default function AiCopilotPanel({
         setIdeas([]);
         setCaptionResult('');
         setHooks([]);
-      } else {
+      } else if (mode === 'hooks') {
         setHooks(buildHooks(prompt, tone));
         setIdeas([]);
         setCaptionResult('');
@@ -215,7 +284,7 @@ export default function AiCopilotPanel({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 lg:gap-5">
       {/* Mode sidebar */}
-      <aside className="nc-glass rounded-[1.5rem] p-3 sm:p-4 h-fit lg:sticky lg:top-28">
+      <aside className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-3 sm:p-4 h-fit lg:sticky lg:top-28">
         <div className="flex items-center gap-2 mb-3 px-1">
           <Sparkles size={15} className="text-[var(--nc-coral)]" />
           <h2 className="text-sm font-black text-[#2c3340]">AI Copilot</h2>
@@ -233,6 +302,15 @@ export default function AiCopilotPanel({
               }`}
             >
               <Icon size={14} /> {label}
+              {key === 'saved' && savedIdeas.length > 0 && (
+                <span
+                  className={`ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                    mode === key ? 'bg-white/20 text-white' : 'bg-zinc-200 text-zinc-600'
+                  }`}
+                >
+                  {savedIdeas.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -242,98 +320,175 @@ export default function AiCopilotPanel({
       </aside>
 
       <div className="space-y-4">
-        <div className="nc-glass rounded-[1.5rem] p-4 sm:p-6 space-y-4">
-          <div>
-            <p className="text-xs font-extrabold text-zinc-500 mb-1 lg:hidden">{activeMode.hint}</p>
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-              Vad vill du ha hjälp med?
-            </label>
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="T.ex. 5 tips för att starta e-handel…"
-              className="min-h-[110px] rounded-xl border-zinc-200 resize-none text-sm"
-            />
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {QUICK_PROMPTS.map((q) => (
-                <button
-                  key={q}
-                  type="button"
-                  onClick={() => setPrompt(q)}
-                  className="h-9 min-h-[36px] px-2.5 rounded-full text-[11px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-100 hover:border-[var(--nc-coral)] hover:text-[#2c3340]"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {(mode === 'ideas' || mode === 'caption' || mode === 'hashtags') && (
+        {mode !== 'saved' && (
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-6 space-y-4">
             <div>
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-2">
-                Plattformar
+              <p className="text-xs font-extrabold text-zinc-500 mb-1 lg:hidden">{activeMode.hint}</p>
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
+                Vad vill du ha hjälp med?
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {PLATFORM_OPTIONS.map(({ key, label }) => {
-                  const checked = platforms.includes(key);
-                  return (
-                    <label
-                      key={key}
-                      className={`flex items-center gap-2 h-11 min-h-[44px] px-3 rounded-xl border text-xs font-extrabold cursor-pointer ${
-                        checked
-                          ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)]'
-                          : 'border-zinc-100 bg-zinc-50 text-zinc-500'
-                      }`}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={() => togglePlatform(key)}
-                      />
-                      {label}
-                    </label>
-                  );
-                })}
+              <Textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="T.ex. 5 tips för att starta e-handel…"
+                className="min-h-[110px] rounded-xl border-zinc-200 resize-none text-sm"
+              />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {QUICK_PROMPTS.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => setPrompt(q)}
+                    className="h-9 min-h-[36px] px-2.5 rounded-full text-[11px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-100 hover:border-[var(--nc-coral)] hover:text-[#2c3340]"
+                  >
+                    {q}
+                  </button>
+                ))}
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-              Ton
-            </label>
-            <select
-              value={tone}
-              onChange={(e) => setTone(e.target.value as ContentTone)}
-              className="w-full sm:max-w-xs h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-[#2c3340]"
-            >
-              {TONE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <Button
-            type="button"
-            onClick={() => void run()}
-            disabled={!prompt.trim() || loading}
-            className="w-full sm:w-auto h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-black gap-2 px-6"
-          >
-            {loading ? (
-              <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <Sparkles size={15} />
+            {(mode === 'ideas' || mode === 'caption' || mode === 'hashtags') && (
+              <div>
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-2">
+                  Plattformar
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {PLATFORM_OPTIONS.map(({ key, label }) => {
+                    const checked = platforms.includes(key);
+                    return (
+                      <label
+                        key={key}
+                        className={`flex items-center gap-2 h-11 min-h-[44px] px-3 rounded-xl border text-xs font-extrabold cursor-pointer ${
+                          checked
+                            ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)]'
+                            : 'border-zinc-100 bg-zinc-50 text-zinc-500'
+                        }`}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => togglePlatform(key)}
+                        />
+                        {label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-            {mode === 'ideas'
-              ? 'Generera idéer'
-              : mode === 'caption'
-                ? 'Skriv caption'
-                : mode === 'hashtags'
-                  ? 'Föreslå hashtags'
-                  : 'Generera hooks'}
-          </Button>
-        </div>
+
+            <div>
+              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
+                Ton
+              </label>
+              <select
+                value={tone}
+                onChange={(e) => setTone(e.target.value as ContentTone)}
+                className="w-full sm:max-w-xs h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-[#2c3340]"
+              >
+                {TONE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => void run()}
+              disabled={!prompt.trim() || loading}
+              className="w-full sm:w-auto h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-black gap-2 px-6"
+            >
+              {loading ? (
+                <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+              ) : (
+                <Sparkles size={15} />
+              )}
+              {mode === 'ideas'
+                ? 'Generera idéer'
+                : mode === 'caption'
+                  ? 'Skriv caption'
+                  : mode === 'hashtags'
+                    ? 'Föreslå hashtags'
+                    : 'Generera hooks'}
+            </Button>
+          </div>
+        )}
+
+        {/* Saved ideas panel */}
+        {mode === 'saved' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                Saved ideas ({savedIdeas.length})
+              </p>
+            </div>
+            {savedIdeas.length === 0 ? (
+              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-8 text-center">
+                <Bookmark size={22} className="mx-auto mb-2 text-zinc-300" />
+                <p className="text-sm font-extrabold text-[#2c3340]">No saved ideas yet</p>
+                <p className="text-xs text-zinc-500 font-medium mt-1 max-w-sm mx-auto">
+                  Generate idéer, captions or hooks and tap Save to keep them here.
+                </p>
+              </div>
+            ) : (
+              savedIdeas.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-[#2c3340]">{item.title}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-1">
+                        {item.source} ·{' '}
+                        {new Date(item.savedAt).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSaved(item.id)}
+                      className="h-10 min-h-[44px] px-2 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-50"
+                      aria-label="Remove saved idea"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-zinc-600 whitespace-pre-wrap leading-relaxed">
+                    {item.body}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void copyText(item.body, item.id)}
+                      className="h-10 min-h-[44px] px-3 rounded-xl text-[11px] font-extrabold text-zinc-500 bg-zinc-50 hover:bg-zinc-100 inline-flex items-center gap-1"
+                    >
+                      {copied === item.id ? <Check size={12} /> : <Copy size={12} />}
+                      Copy
+                    </button>
+                    <Button
+                      type="button"
+                      onClick={() =>
+                        onCreateFromCaption({
+                          title: item.title,
+                          caption: item.body,
+                          hashtags: extractHashtags(item.body),
+                          platforms: platforms.length ? platforms : ['instagram', 'tiktok'],
+                        })
+                      }
+                      className="h-10 min-h-[44px] rounded-xl bg-[var(--nc-coral)] text-white font-extrabold gap-1.5 text-[11px] px-3"
+                    >
+                      <Plus size={12} /> Open in Post Studio
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {/* Results */}
         {mode === 'ideas' && ideas.length > 0 && (
@@ -344,14 +499,29 @@ export default function AiCopilotPanel({
             {ideas.map((idea) => (
               <div
                 key={idea.id}
-                className="nc-glass rounded-[1.5rem] p-4 sm:p-5 space-y-3"
+                className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-3"
               >
-                <div>
-                  <p className="text-sm font-black text-[#2c3340]">{idea.title}</p>
-                  <p className="text-xs text-zinc-500 font-medium mt-1">{idea.hook}</p>
-                  <p className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wide mt-2">
-                    Mall: {idea.template}
-                  </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-black text-[#2c3340]">{idea.title}</p>
+                    <p className="text-xs text-zinc-500 font-medium mt-1">{idea.hook}</p>
+                    <p className="text-[11px] font-extrabold text-zinc-400 uppercase tracking-wide mt-2">
+                      Mall: {idea.template}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      saveIdea(
+                        idea.title,
+                        `${idea.hook}\n\n${Object.values(idea.captions).join('\n\n')}`,
+                        'ideas'
+                      )
+                    }
+                    className="h-10 min-h-[44px] px-2.5 rounded-lg text-[11px] font-extrabold text-zinc-500 hover:bg-zinc-50 inline-flex items-center gap-1 flex-shrink-0"
+                  >
+                    <Bookmark size={12} /> Save
+                  </button>
                 </div>
                 <div className="space-y-2">
                   {(Object.entries(idea.captions) as [SocialPlatform, string][]).map(
@@ -395,17 +565,26 @@ export default function AiCopilotPanel({
         )}
 
         {mode === 'caption' && captionResult && (
-          <div className="nc-glass rounded-[1.5rem] p-4 sm:p-5 space-y-3">
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-black text-[#2c3340]">Föreslagen caption</p>
-              <button
-                type="button"
-                onClick={() => void copyText(captionResult, 'caption')}
-                className="h-10 min-h-[44px] px-2 rounded-lg text-[11px] font-extrabold text-zinc-500 hover:bg-zinc-50 inline-flex items-center gap-1"
-              >
-                {copied === 'caption' ? <Check size={12} /> : <Copy size={12} />}
-                Kopiera
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => saveIdea(prompt.slice(0, 60) || 'Caption', captionResult, 'caption')}
+                  className="h-10 min-h-[44px] px-2 rounded-lg text-[11px] font-extrabold text-zinc-500 hover:bg-zinc-50 inline-flex items-center gap-1"
+                >
+                  <Bookmark size={12} /> Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void copyText(captionResult, 'caption')}
+                  className="h-10 min-h-[44px] px-2 rounded-lg text-[11px] font-extrabold text-zinc-500 hover:bg-zinc-50 inline-flex items-center gap-1"
+                >
+                  {copied === 'caption' ? <Check size={12} /> : <Copy size={12} />}
+                  Kopiera
+                </button>
+              </div>
             </div>
             <Textarea
               value={captionResult}
@@ -430,7 +609,7 @@ export default function AiCopilotPanel({
         )}
 
         {mode === 'hashtags' && hashtagResult && (
-          <div className="nc-glass rounded-[1.5rem] p-4 sm:p-5 space-y-3">
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-black text-[#2c3340]">Hashtag-förslag</p>
               <button
@@ -470,10 +649,18 @@ export default function AiCopilotPanel({
             {hooks.map((hook, i) => (
               <div
                 key={i}
-                className="nc-glass rounded-2xl p-4 flex items-start gap-3"
+                className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3"
               >
                 <span className="text-xs font-black text-zinc-300 mt-0.5">{i + 1}</span>
                 <p className="flex-1 text-sm font-bold text-[#2c3340]">{hook}</p>
+                <button
+                  type="button"
+                  onClick={() => saveIdea(hook.slice(0, 60), hook, 'hooks')}
+                  className="h-10 min-h-[44px] px-2 rounded-lg text-[11px] font-extrabold text-zinc-500 hover:bg-zinc-50 inline-flex items-center gap-1 flex-shrink-0"
+                  title="Save idea"
+                >
+                  <Bookmark size={12} />
+                </button>
                 <button
                   type="button"
                   onClick={() => void copyText(hook, `hook-${i}`)}
@@ -498,6 +685,10 @@ export default function AiCopilotPanel({
               </div>
             ))}
           </div>
+        )}
+
+        {justSaved && (
+          <p className="text-xs font-bold text-emerald-600 px-1">Saved to Saved ideas ✓</p>
         )}
       </div>
     </div>

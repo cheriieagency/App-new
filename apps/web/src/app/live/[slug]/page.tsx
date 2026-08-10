@@ -114,7 +114,7 @@ export default function PublicLivePage({
             href="/"
             className="inline-flex items-center gap-2 h-11 min-h-[44px] text-sm font-bold text-zinc-300 hover:text-white"
           >
-            <ArrowLeft size={16} /> Nordic Creator
+            <ArrowLeft size={16} /> clikd:
           </Link>
           <button
             type="button"

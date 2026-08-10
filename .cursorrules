@@ -1,8 +1,15 @@
-You are an expert full-stack engineer working on a Nordic All-in-One Creator Platform (Stan Store + Skool + Events + AI).
+You are an expert full-stack engineer working on Clikd. (clikd:) — a Nordic all-in-one creator platform (Stan Store + Skool + Events + AI).
+
+BRAND (keep UI light-canvas by default):
+- Name / wordmark: clikd: (Space Grotesk + pink colon)
+- Mark: pink `c` + white `:` on midnight periwinkle `#2B2568`
+- Signature pink: `#F472B6` · Soft lilac: `#E9D5FF` · Swish mint: `#10B981`
+- Light canvas: `#FAFAFA` · Dark ink: `#0F172A`
+- Fonts: Space Grotesk (display), Plus Jakarta Sans (UI), Fira Code (mono / prices / `c:`)
 
 TECH STACK RULES:
 - Framework: Next.js 15 (App Router, TypeScript).
-- Styling: Tailwind CSS (Dark slate, mobile-first, rounded-2xl glassmorphism).
+- Styling: Tailwind CSS (light canvas, mobile-first, rounded-2xl glassmorphism).
 - Database & Auth: Supabase (PostgreSQL with Row Level Security and Realtime).
 - Icons: FontAwesome 6 / Lucide React.
 - i18n: Dynamic multi-language support (SV, NO, DA, FI, EN).
@@ -13,4 +20,3 @@ CODING STANDARDS:
 3. NEVER write monolithic spaghetti code. Split UI into small reusable components.
 4. Keep environment variables strictly inside `.env.local` (e.g. NEXT_PUBLIC_SUPABASE_URL).
 5. All buttons and interactive elements must support both desktop click and mobile touch.
-                    

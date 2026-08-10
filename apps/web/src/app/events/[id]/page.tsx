@@ -62,7 +62,7 @@ function icalDataUrl(event: any) {
     const ics = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//Nordic Creator//Events//SV',
+      'PRODID:-//clikd://Events//SV',
       'BEGIN:VEVENT',
       `DTSTART:${fmt(start)}`,
       `DTEND:${fmt(end)}`,

@@ -32,7 +32,6 @@ import {
   Send,
   GripVertical,
   Eye,
-  EyeOff,
   Link as LinkIcon,
   Crown,
   ToggleLeft,
@@ -42,7 +41,6 @@ import {
   Trash2,
   Edit3,
   Check,
-  Smartphone,
   Home,
   Camera,
   Globe as GlobeIcon,
@@ -57,6 +55,9 @@ import {
   Loader2,
   ExternalLink,
   Share2,
+  BookOpen,
+  GraduationCap,
+  MessagesSquare,
 } from 'lucide-react';
 import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
 import { useLocale } from '@/lib/locale-context';
@@ -76,13 +77,6 @@ import AdminSettingsPanel from '@/components/admin/AdminSettingsPanel';
 import SocialInboxPanel from '@/components/admin/SocialInboxPanel';
 import MediaLibraryPanel from '@/components/admin/MediaLibraryPanel';
 import {
-  LATER_THEME_PRESETS,
-  LATER_BIO_FONTS,
-  applyLaterPreset,
-  getLaterFontFamily,
-  getLaterGoogleFontsHref,
-} from '@/components/admin/laterBioThemes';
-import {
   appendUtmParams,
   buildTrackedShortUrl,
   registerDemoDestination,
@@ -90,17 +84,18 @@ import {
   type UtmClickStat,
 } from '@/lib/bio-utm';
 import {
-  applyBioPreset,
-  BIO_FONTS,
   BIO_THEME_PRESETS,
+  bioCanvasStyle,
   buttonRadiusPx,
   buttonShadowCss,
   DEFAULT_BIO_THEME,
   getBioFontFamily,
   getBioGoogleFontsHref,
+  hoverEffectClass,
   normalizeBioTheme,
   type BioTheme,
 } from '@/lib/bio-theme';
+import BioBuilderDesignTab from '@/components/admin/BioBuilderDesignTab';
 import {
   SOCIAL_BRAND_ICONS,
   type SocialBrandId,
@@ -111,38 +106,6 @@ type BioSubTab = 'blocks' | 'design' | 'analytics' | 'settings';
 type CommunityInitialSub = 'overview' | 'event' | 'broadcast';
 
 type BioCategory = 'links' | 'store';
-
-function ThemeColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5 min-w-0">
-      <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-400">
-        {label}
-      </span>
-      <div className="flex items-center gap-2 h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-2">
-        <input
-          type="color"
-          value={/^#[0-9A-Fa-f]{6}$/.test(value) ? value : '#000000'}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-8 h-8 rounded-lg border-0 bg-transparent cursor-pointer flex-shrink-0"
-        />
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent text-xs font-bold text-[#2c3340] focus:outline-none uppercase"
-        />
-      </div>
-    </label>
-  );
-}
 
 interface BioBlock {
   id: string;
@@ -182,7 +145,7 @@ function parsePriceInput(value: string): number | null {
 }
 
 function formatSek(amount: number): string {
-  return `${Math.round(amount)} SEK`;
+  return `${Math.round(amount).toLocaleString('en-US')} SEK`;
 }
 
 function BlockPriceLabel({
@@ -209,6 +172,92 @@ function BlockPriceLabel({
   if (hasPrice) {
     return <span className={`font-black ${className}`}>{formatSek(price!)}</span>;
   }
+  return null;
+}
+
+/** Soft pastel category icon for bio block list cards. */
+function LinkBlockCategoryIcon({ type }: { type: BioBlock['type'] }) {
+  const base =
+    'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border';
+  if (type === 'lead_magnet') {
+    return (
+      <div className={`${base} bg-indigo-50 border-indigo-100 text-indigo-600`}>
+        <BookOpen size={18} strokeWidth={2.25} />
+      </div>
+    );
+  }
+  if (type === 'course') {
+    return (
+      <div className={`${base} bg-purple-50 border-purple-100 text-purple-600`}>
+        <GraduationCap size={18} strokeWidth={2.25} />
+      </div>
+    );
+  }
+  if (type === 'coaching') {
+    return (
+      <div className={`${base} bg-amber-50 border-amber-100 text-amber-600`}>
+        <MessagesSquare size={18} strokeWidth={2.25} />
+      </div>
+    );
+  }
+  if (type === 'community') {
+    return (
+      <div className={`${base} bg-emerald-50 border-emerald-100 text-emerald-600`}>
+        <Users size={18} strokeWidth={2.25} />
+      </div>
+    );
+  }
+  if (type === 'store') {
+    return (
+      <div className={`${base} bg-violet-50 border-violet-100 text-violet-600`}>
+        <ShoppingBag size={18} strokeWidth={2.25} />
+      </div>
+    );
+  }
+  return (
+    <div className={`${base} bg-slate-50 border-slate-100 text-slate-600`}>
+      <LinkIcon size={18} strokeWidth={2.25} />
+    </div>
+  );
+}
+
+/** Price pill between subtext and action buttons (FREE / paid / coaching). */
+function getBlockPricePill(block: BioBlock): { label: string; className: string } | null {
+  if (block.type === 'divider') return null;
+  const hasPrice = typeof block.price === 'number' && block.price >= 0;
+  const hasSale =
+    typeof block.sale_price === 'number' &&
+    block.sale_price >= 0 &&
+    hasPrice &&
+    block.sale_price < block.price!;
+  const amount = hasSale ? block.sale_price! : hasPrice ? block.price! : null;
+  const freeHint = /gratis|free/i.test(`${block.title} ${block.subtitle}`);
+
+  if (block.type === 'coaching') {
+    const label = amount != null && amount > 0 ? formatSek(amount) : 'FREE';
+    return {
+      label,
+      className:
+        'bg-amber-50 text-amber-700 border border-amber-200 font-mono text-[10px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap',
+    };
+  }
+
+  if (amount === 0 || ((amount == null || !hasPrice) && (block.type === 'lead_magnet' || freeHint))) {
+    return {
+      label: 'FREE',
+      className:
+        'bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[10px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap',
+    };
+  }
+
+  if (amount != null && amount > 0) {
+    return {
+      label: formatSek(amount),
+      className:
+        'bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono text-[10px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap',
+    };
+  }
+
   return null;
 }
 
@@ -445,31 +494,91 @@ const CHAT_MSGS = [
 ];
 
 // ── Mobile preview ─────────────────────────────────────────────────────────────
+function getPreviewPricePill(block: BioBlock): { label: string; className: string } | null {
+  const base = getBlockPricePill(block);
+  if (!base) return null;
+  if (base.label === 'FREE') {
+    return {
+      label: 'FREE',
+      className:
+        'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap',
+    };
+  }
+  return {
+    label: base.label,
+    className:
+      'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 font-mono text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap',
+  };
+}
+
 function PreviewBlockRow({ block, theme }: { block: BioBlock; theme: BioTheme }) {
   if (block.type === 'divider') {
-    return <div className="h-px mx-2" style={{ background: `${theme.mutedColor}33` }} />;
+    return <div className="h-px mx-2 bg-white/15" />;
+  }
+
+  const isFrosted =
+    theme.blockVariant === 'frosted' ||
+    theme.bgType === 'mesh' ||
+    theme.bgType === 'liquid';
+  const pricePill = getPreviewPricePill(block);
+  const hover = hoverEffectClass(theme.hoverEffect);
+
+  if (isFrosted) {
+    return (
+      <div
+        className={`bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex items-center justify-between gap-2 text-white ${hover}`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 flex items-center justify-center text-xs flex-shrink-0 overflow-hidden">
+            {block.icon_url ? (
+              <img src={block.icon_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span>{block.emoji}</span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-xs text-white truncate leading-snug">{block.title}</p>
+            <p className="font-sans text-[10px] text-white/70 truncate">{block.subtitle}</p>
+          </div>
+        </div>
+        {pricePill ? (
+          <span className={pricePill.className}>{pricePill.label}</span>
+        ) : block.category === 'store' ? (
+          <span className="bg-white/10 text-white/80 border border-white/20 font-mono text-[9px] font-bold px-2 py-0.5 rounded-full">
+            UTM
+          </span>
+        ) : null}
+      </div>
+    );
   }
 
   const radius = buttonRadiusPx(theme.buttonRadius);
-  const shadow = buttonShadowCss(theme.buttonShadow);
-  const filled = theme.buttonStyle === 'filled';
-  const soft = theme.buttonStyle === 'soft';
-  const bg = filled
-    ? theme.buttonBg
-    : soft
-      ? `${theme.buttonBg}18`
-      : 'transparent';
-  const color = filled ? theme.buttonText : theme.buttonBg;
-  const border =
-    theme.buttonStyle === 'outline'
-      ? `1.5px solid ${theme.buttonBorder}`
-      : soft
-        ? `1px solid ${theme.buttonBg}22`
-        : '1px solid transparent';
+  const variant = theme.blockVariant || 'solid';
+  let bg = theme.buttonBg;
+  let color = theme.buttonText;
+  let border = '1px solid transparent';
+  let shadow = buttonShadowCss(theme.buttonShadow);
+
+  if (variant === 'luxe') {
+    bg = '#FFFFFF';
+    color = '#1C1917';
+    border = '1px solid #E7E5E4';
+    shadow = '0 1px 2px rgba(15,23,42,0.06)';
+  } else if (variant === 'minimal') {
+    bg = 'transparent';
+    color = theme.nameColor;
+    border = `1.5px solid currentColor`;
+    shadow = 'none';
+  } else {
+    bg = '#0F172A';
+    color = '#FFFFFF';
+    border = '1px solid transparent';
+    shadow = buttonShadowCss(theme.buttonShadow);
+  }
 
   return (
     <div
-      className="p-2.5 flex items-center gap-2"
+      className={`p-3 flex items-center justify-between gap-2 rounded-2xl ${hover}`}
       style={{
         background: bg,
         color,
@@ -479,44 +588,27 @@ function PreviewBlockRow({ block, theme }: { block: BioBlock; theme: BioTheme })
         fontFamily: getBioFontFamily(theme.fontId),
       }}
     >
-      <div
-        className="w-7 h-7 flex items-center justify-center text-xs flex-shrink-0 overflow-hidden"
-        style={{
-          borderRadius: Math.max(6, radius / 2),
-          background: filled ? 'rgba(255,255,255,0.16)' : `${theme.buttonBg}22`,
-        }}
-      >
-        {block.icon_url ? (
-          <img src={block.icon_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <span>{block.emoji}</span>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-black truncate" style={{ color }}>
-          {block.title}
-        </p>
-        <p className="text-[7px] truncate" style={{ color, opacity: 0.7 }}>
-          {block.subtitle}
-        </p>
-      </div>
-      {block.category !== 'store' && (block.price != null || block.sale_price != null) && (
-        <div className="flex-shrink-0 text-right text-[7px]" style={{ color }}>
-          <BlockPriceLabel price={block.price} salePrice={block.sale_price} />
-        </div>
-      )}
-      {block.category === 'store' && (
-        <span
-          className="text-[6px] font-black uppercase tracking-wide px-1 py-0.5"
-          style={{
-            borderRadius: 6,
-            background: filled ? 'rgba(255,255,255,0.18)' : `${theme.accent}18`,
-            color: filled ? theme.buttonText : theme.accent,
-          }}
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-xs flex-shrink-0 overflow-hidden"
+          style={{ background: `${theme.accent}22` }}
         >
-          UTM
-        </span>
-      )}
+          {block.icon_url ? (
+            <img src={block.icon_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span>{block.emoji}</span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-xs truncate leading-snug" style={{ color }}>
+            {block.title}
+          </p>
+          <p className="font-sans text-[10px] truncate" style={{ color, opacity: 0.7 }}>
+            {block.subtitle}
+          </p>
+        </div>
+      </div>
+      {pricePill && <span className={pricePill.className}>{pricePill.label}</span>}
     </div>
   );
 }
@@ -544,6 +636,10 @@ function MobilePreview({
   const storeBlocks = visible.filter((b) => b.category === 'store');
   const activeBlocks = previewTab === 'store' ? storeBlocks : linkBlocks;
   const fontFamily = getBioFontFamily(theme.fontId);
+  const isGlass =
+    theme.blockVariant === 'frosted' ||
+    theme.bgType === 'mesh' ||
+    theme.bgType === 'liquid';
 
   useEffect(() => {
     const href = getBioGoogleFontsHref(theme.fontId);
@@ -557,118 +653,215 @@ function MobilePreview({
     document.head.appendChild(link);
   }, [theme.fontId]);
 
+  const avatarRadius = theme.avatarShape === 'squircle' ? '1.5rem' : '9999px';
+  const canvas = isGlass
+    ? bioCanvasStyle({ ...theme, bg: theme.bg || '#0B0F17', bgType: theme.bgType || 'mesh' })
+    : bioCanvasStyle(theme);
+  const coverOn = theme.coverEnabled || isGlass;
+  const coverUrl =
+    theme.coverImageUrl ||
+    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80';
+  const socialIcons = socialLinks.slice(0, 5).map((sl, i) => {
+    const plat = SOCIAL_PLATFORMS.find((p) => p.id === sl.platform) ?? SOCIAL_PLATFORMS[6];
+    return (
+      <div
+        key={i}
+        className="w-7 h-7 rounded-full flex items-center justify-center border border-white/15 bg-white/10 backdrop-blur-md"
+        style={{ color: plat.color }}
+      >
+        <SocialPlatformIcon id={plat.id} size={12} />
+      </div>
+    );
+  });
+
   return (
     <div className="flex items-center justify-center py-2">
-      <div style={{ width: 240 }}>
-        <div className="rounded-[34px] p-2.5 shadow-2xl" style={{ background: theme.accent }}>
-          <div className="bg-white rounded-[26px] overflow-hidden" style={{ height: 490 }}>
-            <div
-              className="h-7 flex items-center justify-between px-5"
-              style={{ background: theme.accent }}
-            >
-              <span className="text-white text-[8px] font-bold">9:41</span>
-              <div className="w-20 h-3.5 bg-zinc-700 rounded-full" />
-              <div className="flex gap-0.5">
-                <div className="w-2.5 h-2 bg-white/50 rounded-sm" />
-                <div className="w-2 h-2 bg-white/50 rounded-full" />
-              </div>
-            </div>
-            <div
-              className="overflow-y-auto px-3 pt-4 pb-4 space-y-2"
-              style={{ height: 463, background: theme.bg, fontFamily }}
-            >
-              <div className="text-center mb-2">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 overflow-hidden border-2 border-white shadow"
-                  style={{
-                    background: `linear-gradient(135deg, ${theme.accent}cc, ${theme.accent})`,
-                  }}
+      <style jsx global>{`
+        @keyframes bio-liquid {
+          0%,
+          100% {
+            background-position: 0% 40%;
+          }
+          50% {
+            background-position: 100% 60%;
+          }
+        }
+        .bio-block-shimmer {
+          position: relative;
+          overflow: hidden;
+        }
+        .bio-block-shimmer::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            105deg,
+            transparent 40%,
+            rgba(255, 255, 255, 0.35) 50%,
+            transparent 60%
+          );
+          transform: translateX(-120%);
+          pointer-events: none;
+        }
+        .bio-block-shimmer:hover::after {
+          animation: bio-shimmer 0.7s ease;
+        }
+        @keyframes bio-shimmer {
+          to {
+            transform: translateX(120%);
+          }
+        }
+      `}</style>
+      <div style={{ width: 260 }}>
+        <div className="rounded-[36px] p-[3px] shadow-2xl bg-gradient-to-b from-slate-600 via-slate-800 to-slate-950">
+          <div
+            className="rounded-[33px] overflow-hidden relative"
+            style={{ height: 560, background: isGlass ? '#0B0F17' : theme.bg }}
+          >
+            <div className="absolute inset-0" style={canvas} />
+            <div className="relative z-10 flex flex-col h-full">
+              {/* Status bar */}
+              <div className="h-8 flex items-center justify-between px-5 flex-shrink-0 relative z-20">
+                <span
+                  className={`text-[9px] font-bold ${isGlass ? 'text-white/90' : ''}`}
+                  style={isGlass ? undefined : { color: theme.nameColor }}
                 >
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <Crown size={18} className="text-white" />
+                  9:41
+                </span>
+                <div className="w-20 h-3.5 bg-black/50 rounded-full border border-white/10" />
+                <div className="flex gap-0.5">
+                  <div className={`w-2.5 h-2 rounded-sm ${isGlass ? 'bg-white/50' : ''}`} style={isGlass ? undefined : { background: `${theme.nameColor}66` }} />
+                  <div className={`w-2 h-2 rounded-full ${isGlass ? 'bg-white/50' : ''}`} style={isGlass ? undefined : { background: `${theme.nameColor}66` }} />
+                </div>
+              </div>
+
+              <div className="overflow-y-auto flex-1" style={{ fontFamily }}>
+                {/* Cover banner */}
+                {coverOn && (
+                  <div className="relative h-24 w-full overflow-hidden bg-gradient-to-r from-indigo-600 to-purple-600">
+                    <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/40 to-transparent" />
+                  </div>
+                )}
+
+                {/* Profile header */}
+                <div className={`text-center px-4 ${coverOn ? '-mt-10' : 'pt-4'}`}>
+                  <div className="relative w-20 h-20 mx-auto mb-2.5">
+                    <div
+                      className="w-20 h-20 flex items-center justify-center overflow-hidden border-2 border-white/80 shadow-xl object-cover"
+                      style={{
+                        borderRadius: avatarRadius,
+                        background: `linear-gradient(135deg, ${theme.accent}cc, #6366f1)`,
+                      }}
+                    >
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Crown size={22} className="text-white" />
+                      )}
+                    </div>
+                    {(theme.verifiedBadge || isGlass) && (
+                      <span
+                        className="absolute bottom-0.5 right-0.5 bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[9px] border-2 border-slate-950 shadow"
+                        title="Verified"
+                      >
+                        <Check size={10} strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    className={`text-[13px] font-extrabold tracking-tight ${isGlass ? 'text-white' : ''}`}
+                    style={isGlass ? undefined : { color: theme.nameColor }}
+                  >
+                    {displayName || 'Creator Name'}
+                  </p>
+                  <p className="font-mono text-[11px] text-slate-400 mt-0.5">
+                    @{handle || 'creator'}
+                  </p>
+                  <p
+                    className={`text-[11px] font-medium leading-snug mt-1.5 px-1 ${isGlass ? 'text-white/80' : ''}`}
+                    style={isGlass ? undefined : { color: theme.mutedColor }}
+                  >
+                    {bioText || 'Bio text here...'}
+                  </p>
+                  {theme.socialLayout === 'header' && socialIcons.length > 0 && (
+                    <div className="flex items-center justify-center gap-1.5 mt-2.5 flex-wrap">
+                      {socialIcons}
+                    </div>
                   )}
                 </div>
-                <p className="text-[10px] font-black" style={{ color: theme.nameColor }}>
-                  {displayName || 'Creator Name'}
-                </p>
-                <p className="text-[8px] font-medium" style={{ color: theme.mutedColor }}>
-                  @{handle || 'creator'}
-                </p>
-                <p
-                  className="text-[8px] mt-1 leading-relaxed px-2"
-                  style={{ color: theme.mutedColor }}
-                >
-                  {bioText || 'Bio text here...'}
-                </p>
-                {socialLinks.length > 0 && (
-                  <div className="flex items-center justify-center gap-1.5 mt-2 flex-wrap">
-                    {socialLinks.slice(0, 5).map((sl, i) => {
-                      const plat =
-                        SOCIAL_PLATFORMS.find((p) => p.id === sl.platform) ?? SOCIAL_PLATFORMS[6];
+
+                <div className="px-3 pt-3 pb-2 space-y-2">
+                  {/* Segmented tabs */}
+                  <div
+                    className={
+                      isGlass
+                        ? 'bg-white/10 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex items-center gap-0.5'
+                        : 'flex items-center gap-0.5 p-1 rounded-2xl border border-slate-200 bg-slate-50'
+                    }
+                  >
+                    {(
+                      [
+                        { key: 'links' as const, label: 'Links' },
+                        { key: 'store' as const, label: 'Store 🛍️' },
+                      ] as const
+                    ).map(({ key, label }) => {
+                      const active = previewTab === key;
                       return (
-                        <div
-                          key={i}
-                          className="w-6 h-6 rounded-full flex items-center justify-center"
-                          style={{ background: `${plat.color}18`, color: plat.color }}
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setPreviewTab(key)}
+                          className={`flex-1 h-8 min-h-[32px] rounded-xl text-[9px] font-extrabold uppercase tracking-[0.14em] transition-all ${
+                            isGlass
+                              ? active
+                                ? 'bg-white/20 text-white shadow-xs'
+                                : 'text-white/70 opacity-70'
+                              : active
+                                ? 'bg-white text-slate-900 shadow-xs'
+                                : 'text-slate-400'
+                          }`}
                         >
-                          <SocialPlatformIcon id={plat.id} size={12} />
-                        </div>
+                          {label}
+                        </button>
                       );
                     })}
                   </div>
-                )}
+
+                  {activeBlocks.length === 0 ? (
+                    <p className={`text-[10px] px-0.5 pt-2 text-center ${isGlass ? 'text-white/40' : 'text-slate-400'}`}>
+                      {previewTab === 'store' ? 'No store products yet' : 'No links yet'}
+                    </p>
+                  ) : (
+                    activeBlocks.map((block) => (
+                      <PreviewBlockRow key={block.id} block={block} theme={theme} />
+                    ))
+                  )}
+                </div>
               </div>
 
-              {/* Links | Store menu */}
-              <div
-                className="flex items-center gap-0.5 p-0.5 rounded-xl border"
-                style={{
-                  background: `${theme.nameColor}08`,
-                  borderColor: `${theme.nameColor}10`,
-                }}
-              >
-                {(
-                  [
-                    { key: 'links' as const, label: 'Links' },
-                    { key: 'store' as const, label: 'Store' },
-                  ] as const
-                ).map(({ key, label }) => {
-                  const active = previewTab === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setPreviewTab(key)}
-                      className="flex-1 h-7 min-h-[28px] rounded-[10px] text-[8px] font-black uppercase tracking-[0.12em] transition-all"
-                      style={
-                        active
-                          ? { background: theme.accent, color: '#fff' }
-                          : { color: theme.mutedColor }
-                      }
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {activeBlocks.length === 0 ? (
-                <p className="text-[7px] px-0.5 pt-1" style={{ color: theme.mutedColor }}>
-                  {previewTab === 'store'
-                    ? 'No store products yet'
-                    : 'No links yet'}
-                </p>
-              ) : (
-                activeBlocks.map((block) => (
-                  <PreviewBlockRow key={block.id} block={block} theme={theme} />
-                ))
+              {theme.socialLayout === 'dock' && socialIcons.length > 0 && (
+                <div className="px-3 pb-1 flex-shrink-0">
+                  <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                    {socialIcons}
+                  </div>
+                </div>
               )}
+
+              {/* Watermark footer */}
+              <div className="px-3 pb-3 pt-1 flex-shrink-0 text-center">
+                <p
+                  className={`font-mono text-[8px] uppercase tracking-widest ${
+                    isGlass ? 'text-white/40' : 'text-slate-400/80'
+                  }`}
+                >
+                  Powered by clikd: Studio
+                </p>
+              </div>
             </div>
           </div>
         </div>
-        <p className="text-center text-[10px] font-bold text-zinc-400 mt-2">
+        <p className="text-center text-[10px] font-mono font-bold text-zinc-400 mt-2.5">
           app.se/@{handle || 'creator'}
         </p>
       </div>
@@ -759,6 +952,8 @@ function BioDragBlock({
       </div>
     );
   }
+  const pricePill = getBlockPricePill(block);
+
   return (
     <div
       draggable={!editing}
@@ -768,181 +963,176 @@ function BioDragBlock({
         onDragOver(index);
       }}
       onDrop={onDrop}
-      className={`group bg-white rounded-2xl border transition-all ${editing ? 'cursor-default' : 'cursor-grab'} ${dragging === index ? 'opacity-40 scale-95' : 'hover:border-zinc-200 hover:shadow-sm'} ${block.visible ? 'border-zinc-100' : 'border-dashed border-zinc-200 opacity-60'}`}
+      className={`group bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs transition-all ${editing ? 'cursor-default space-y-3' : 'cursor-grab'} ${dragging === index ? 'opacity-40 scale-95' : 'hover:border-indigo-300'} ${block.visible ? '' : 'border-dashed opacity-60'}`}
     >
-      <div className="flex items-center gap-3 p-3">
-        <GripVertical size={15} className="text-zinc-300 hover:text-zinc-500 flex-shrink-0" />
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(true);
-            setIconTab(block.icon_url ? 'upload' : 'emoji');
-          }}
-          className="relative flex-shrink-0 rounded-xl ring-offset-1 hover:ring-2 hover:ring-[var(--nc-coral)]/40 transition-shadow"
-          title="Byt ikon"
-        >
-          <BlockIconVisual block={block} />
-          <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white border border-zinc-200 flex items-center justify-center shadow-sm">
-            <Camera size={9} className="text-zinc-500" />
-          </span>
-        </button>
-        {editing ? (
-          <div className="flex-1 space-y-1.5 min-w-0">
-            <input
-              value={block.title}
-              onChange={(e) =>
-                onUpdate(index, {
-                  title: e.target.value,
-                  ...(isStore
-                    ? { utm_slug: slugifyBioProduct(e.target.value || 'product', block.id) }
-                    : {}),
-                })
-              }
-              className="w-full text-xs font-extrabold text-[#2c3340] bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
-            />
-            {!isStore && (
+      <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <GripVertical size={15} className="text-slate-300 hover:text-slate-500 flex-shrink-0" />
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(true);
+              setIconTab(block.icon_url ? 'upload' : 'emoji');
+            }}
+            className="relative flex-shrink-0 rounded-xl ring-offset-1 hover:ring-2 hover:ring-indigo-300/50 transition-shadow"
+            title="Byt ikon"
+          >
+            <LinkBlockCategoryIcon type={block.type} />
+          </button>
+          {editing ? (
+            <div className="flex-1 space-y-1.5 min-w-0">
               <input
-                value={block.subtitle}
-                onChange={(e) => onUpdate(index, { subtitle: e.target.value })}
-                className="w-full text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
+                value={block.title}
+                onChange={(e) =>
+                  onUpdate(index, {
+                    title: e.target.value,
+                    ...(isStore
+                      ? { utm_slug: slugifyBioProduct(e.target.value || 'product', block.id) }
+                      : {}),
+                  })
+                }
+                className="w-full text-xs font-extrabold text-slate-900 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
               />
-            )}
-            {!isStore && (
-              <div className="grid grid-cols-2 gap-1.5">
-                <label className="min-w-0">
-                  <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-400 block mb-0.5">
-                    Pris (SEK)
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    inputMode="decimal"
-                    value={block.price ?? ''}
-                    onChange={(e) =>
-                      onUpdate(index, { price: parsePriceInput(e.target.value) })
-                    }
-                    placeholder="t.ex. 499"
-                    className="w-full text-[10px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[var(--nc-coral)]"
-                  />
-                </label>
-                <label className="min-w-0">
-                  <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-400 block mb-0.5">
-                    Reapris (SEK)
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    inputMode="decimal"
-                    value={block.sale_price ?? ''}
-                    onChange={(e) =>
-                      onUpdate(index, { sale_price: parsePriceInput(e.target.value) })
-                    }
-                    placeholder="t.ex. 299"
-                    className="w-full text-[10px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[var(--nc-coral)]"
-                  />
-                </label>
-              </div>
-            )}
-            {(block.type === 'link' || block.type === 'lead_magnet') && (
-              <input
-                value={block.url ?? ''}
-                onChange={(e) => onUpdate(index, { url: e.target.value })}
-                placeholder="https://..."
-                className="w-full text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
-              />
-            )}
-            {isStore && (
-              <>
+              {!isStore && (
                 <input
-                  value={block.destination_url ?? ''}
-                  onChange={(e) =>
-                    onUpdate(index, {
-                      destination_url: e.target.value,
-                      url: e.target.value,
-                    })
-                  }
-                  placeholder="Produkt-URL (Shopify, Gumroad…)"
-                  className="w-full text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[var(--nc-coral)]"
+                  value={block.subtitle}
+                  onChange={(e) => onUpdate(index, { subtitle: e.target.value })}
+                  className="w-full text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
                 />
-                <p className="text-[9px] text-zinc-400 font-medium break-all">
-                  UTM: {utmDestination || 'Add a product URL'}
-                </p>
-              </>
-            )}
-            <div className="flex gap-1.5 flex-wrap">
-              {['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6B7280', '#9b8afb'].map(
-                (c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => onUpdate(index, { color: c })}
-                    className={`w-4 h-4 rounded-full transition-transform hover:scale-110 ${block.color === c ? 'ring-2 ring-offset-1 ring-zinc-400 scale-110' : ''}`}
-                    style={{ background: c }}
-                  />
-                )
               )}
+              {!isStore && (
+                <div className="grid grid-cols-2 gap-1.5">
+                  <label className="min-w-0">
+                    <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-400 block mb-0.5">
+                      Pris (SEK)
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      inputMode="decimal"
+                      value={block.price ?? ''}
+                      onChange={(e) =>
+                        onUpdate(index, { price: parsePriceInput(e.target.value) })
+                      }
+                      placeholder="t.ex. 499"
+                      className="w-full text-[10px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-300"
+                    />
+                  </label>
+                  <label className="min-w-0">
+                    <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-400 block mb-0.5">
+                      Reapris (SEK)
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      inputMode="decimal"
+                      value={block.sale_price ?? ''}
+                      onChange={(e) =>
+                        onUpdate(index, { sale_price: parsePriceInput(e.target.value) })
+                      }
+                      placeholder="t.ex. 299"
+                      className="w-full text-[10px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-300"
+                    />
+                  </label>
+                </div>
+              )}
+              {(block.type === 'link' || block.type === 'lead_magnet') && (
+                <input
+                  value={block.url ?? ''}
+                  onChange={(e) => onUpdate(index, { url: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
+                />
+              )}
+              {isStore && (
+                <>
+                  <input
+                    value={block.destination_url ?? ''}
+                    onChange={(e) =>
+                      onUpdate(index, {
+                        destination_url: e.target.value,
+                        url: e.target.value,
+                      })
+                    }
+                    placeholder="Produkt-URL (Shopify, Gumroad…)"
+                    className="w-full text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
+                  />
+                  <p className="text-[9px] text-zinc-400 font-medium break-all">
+                    UTM: {utmDestination || 'Add a product URL'}
+                  </p>
+                </>
+              )}
+              <div className="flex gap-1.5 flex-wrap">
+                {['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6B7280', '#9b8afb'].map(
+                  (c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => onUpdate(index, { color: c })}
+                      className={`w-4 h-4 rounded-full transition-transform hover:scale-110 ${block.color === c ? 'ring-2 ring-offset-1 ring-zinc-400 scale-110' : ''}`}
+                      style={{ background: c }}
+                    />
+                  )
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs font-extrabold text-[#2c3340] truncate">
+          ) : (
+            <div className="min-w-0 flex-1">
+              <p className="font-extrabold text-xs text-slate-900 leading-snug truncate">
                 {block.title || '(Inget namn)'}
               </p>
-              {isStore && (
-                <span className="text-[8px] font-black uppercase tracking-wide text-[var(--nc-coral)] bg-[#f2eeff] px-1.5 py-0.5 rounded-full flex-shrink-0">
-                  Store
-                </span>
+              <p className="font-mono text-[10px] text-slate-400 truncate">{block.subtitle}</p>
+              {isStore && block.destination_url && (
+                <p className="text-[9px] text-zinc-300 truncate font-mono mt-0.5">{trackedUrl}</p>
               )}
             </div>
-            <p className="text-[10px] text-zinc-400 truncate">{block.subtitle}</p>
-            {!isStore && (block.price != null || block.sale_price != null) && (
-              <p className="text-[10px] text-[#2c3340] mt-0.5">
-                <BlockPriceLabel price={block.price} salePrice={block.sale_price} />
-              </p>
-            )}
-            {isStore && block.destination_url && (
-              <p className="text-[9px] text-zinc-300 truncate font-mono mt-0.5">{trackedUrl}</p>
-            )}
-          </div>
-        )}
-        <div className="flex items-center gap-1 flex-shrink-0">
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!editing && pricePill && (
+            <span className={pricePill.className}>{pricePill.label}</span>
+          )}
           {isStore && (
             <button
               type="button"
               onClick={() => void copyUtm()}
-              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${utmCopied ? 'bg-green-100 text-green-600' : 'bg-[#f2eeff] text-[var(--nc-coral)] hover:bg-[#f2eeff]'}`}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${utmCopied ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
               title="Copy UTM link"
             >
-              {utmCopied ? <Check size={11} /> : <Copy size={11} />}
+              {utmCopied ? <Check size={12} /> : <Copy size={12} />}
             </button>
           )}
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${editing ? 'bg-indigo-100 text-[var(--nc-coral)]' : 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200'}`}
+            className={`w-8 h-8 min-h-[32px] min-w-[32px] rounded-xl flex items-center justify-center transition-all border ${editing ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'}`}
+            aria-label="Edit"
           >
-            {editing ? <Check size={11} /> : <Edit3 size={11} />}
+            {editing ? <Check size={12} /> : <Edit3 size={12} />}
           </button>
           <button
             type="button"
             onClick={() => onToggle(index)}
-            className="w-7 h-7 rounded-lg bg-zinc-100 flex items-center justify-center hover:bg-zinc-200 transition-colors"
+            role="switch"
+            aria-checked={block.visible}
+            className="flex items-center justify-center flex-shrink-0"
+            aria-label="Toggle active"
           >
             {block.visible ? (
-              <ToggleRight size={13} className="text-green-500" />
+              <ToggleRight className="text-indigo-600 text-base" size={22} />
             ) : (
-              <ToggleLeft size={13} className="text-zinc-400" />
+              <ToggleLeft className="text-slate-300 text-base" size={22} />
             )}
           </button>
           <button
             type="button"
             onClick={() => onDelete(index)}
-            className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
+            className="w-8 h-8 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
           >
-            <Trash2 size={11} className="text-red-400" />
+            <Trash2 size={12} className="text-red-400" />
           </button>
         </div>
       </div>
@@ -951,7 +1141,7 @@ function BioDragBlock({
         <div className="px-3 pb-3 pt-0">
           <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
+              <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400">
                 Ikon
               </p>
               <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white border border-zinc-100">
@@ -1315,9 +1505,7 @@ export default function AdminPage() {
   const [communityInitialSub, setCommunityInitialSub] =
     useState<CommunityInitialSub>('overview');
   const [bioTheme, setBioTheme] = useState<BioTheme>(DEFAULT_BIO_THEME);
-  const [bioSubTab, setBioSubTab] = useState<BioSubTab>('blocks');
-  const [showAllThemes, setShowAllThemes] = useState(false);
-  const [bgMode, setBgMode] = useState<'color' | 'image'>('color');
+  const [bioSubTab, setBioSubTab] = useState<BioSubTab>('design');
   const [saved, setSaved] = useState('');
   const [adminSearch, setAdminSearch] = useState('');
   const [createWsOpen, setCreateWsOpen] = useState(false);
@@ -1375,41 +1563,45 @@ export default function AdminPage() {
       id: '1',
       type: 'lead_magnet',
       category: 'links',
-      title: 'Gratis E-bok',
-      subtitle: 'Ladda ned gratis',
+      title: 'Live Hook Checklist',
+      subtitle: 'Ladda ned gratis PDF-guide • 142 nedladdningar',
       emoji: '📘',
       color: '#3B82F6',
       visible: true,
+      price: 0,
     },
     {
       id: '2',
       type: 'course',
       category: 'links',
-      title: 'Kurs: Nordic Creator',
-      subtitle: 'Onlinekurs · 12 lektioner',
+      title: 'Kurs: Clikd Studio',
+      subtitle: 'Onlinekurs · 12 lektioner • Masterclass',
       emoji: '🎓',
       color: '#9b8afb',
       visible: true,
+      price: 1499,
     },
     {
       id: '3',
       type: 'coaching',
       category: 'links',
       title: '1:1 Coaching',
-      subtitle: 'Boka ett samtal',
+      subtitle: 'Boka ett samtal • 45 min Zoom',
       emoji: '🤝',
       color: '#10B981',
       visible: true,
+      price: 599,
     },
     {
       id: '4',
       type: 'community',
       category: 'links',
       title: 'Join the Community',
-      subtitle: 'Free & open',
+      subtitle: 'Free & open • Webbinarier & RSVP',
       emoji: '🏠',
       color: '#F59E0B',
       visible: true,
+      price: 0,
     },
     {
       id: 's1',
@@ -1422,6 +1614,7 @@ export default function AdminPage() {
       visible: true,
       destination_url: 'https://example.com/starter-pack',
       utm_slug: 'starter-pack-s1',
+      price: 1499,
     },
     {
       id: 's2',
@@ -1434,6 +1627,7 @@ export default function AdminPage() {
       visible: true,
       destination_url: 'https://example.com/hook-pack',
       utm_slug: 'hook-pack-s2',
+      price: 299,
     },
   ]);
   const [bioHandle, setBioHandle] = useState('');
@@ -1882,125 +2076,116 @@ export default function AdminPage() {
   };
 
   const BIO_SUB_TABS: { key: BioSubTab; label: string }[] = [
-    { key: 'blocks', label: 'Blocks' },
-    { key: 'design', label: 'Design' },
-    { key: 'analytics', label: 'Analytics' },
+    { key: 'design', label: 'Design & Theme' },
+    { key: 'blocks', label: 'Blocks & Links' },
+    { key: 'analytics', label: 'UTM Analytics' },
     { key: 'settings', label: 'Settings' },
   ];
 
-  const visibleThemes = showAllThemes
-    ? LATER_THEME_PRESETS
-    : LATER_THEME_PRESETS.slice(0, 4);
-
   return (
-    <div className="min-h-screen bg-[#f3f4f6]">
-      {/* Compact top bar — Later aesthetic (sidebar owns primary nav) */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-zinc-200/80">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center gap-3">
-          <div className="md:hidden flex-shrink-0 min-w-0 max-w-[46%]">
-            <WorkspaceSelector
-              workspaces={brandWorkspaces}
-              activeId={activeWorkspaceId}
-              onSelect={(ws) => setActiveWorkspaceId(ws.id)}
-              onCreateNew={() => setCreateWsOpen(true)}
-            />
-          </div>
-          <div className="flex-1 flex justify-center min-w-0">
-            <div className="relative w-full max-w-md">
-              <Search
-                size={15}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"
-              />
-              <input
-                value={adminSearch}
-                onChange={(e) => setAdminSearch(e.target.value)}
-                placeholder="Search admin…"
-                className="w-full h-11 min-h-[44px] rounded-full bg-zinc-100 border border-transparent focus:border-zinc-200 focus:bg-white pl-10 pr-4 text-sm font-medium text-[#1f2430] placeholder:text-zinc-400 focus:outline-none transition-colors"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            <LanguageSwitcher />
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* Top navbar — minimal Clikd shell */}
+      <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between gap-4">
+        <div className="md:hidden flex-shrink-0 min-w-0 max-w-[42%]">
+          <WorkspaceSelector
+            workspaces={brandWorkspaces}
+            activeId={activeWorkspaceId}
+            onSelect={(ws) => setActiveWorkspaceId(ws.id)}
+            onCreateNew={() => setCreateWsOpen(true)}
+          />
+        </div>
+        <div className="relative w-full max-w-md hidden sm:block flex-1">
+          <Search
+            size={15}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <input
+            value={adminSearch}
+            onChange={(e) => setAdminSearch(e.target.value)}
+            placeholder="Sök..."
+            className="w-full max-w-md bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-14 py-2 min-h-[40px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
+          />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">
+            ⌘K
+          </kbd>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+          <LanguageSwitcher className="hidden lg:block [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:h-9 [&_button]:min-h-[36px] [&_button]:text-slate-500 [&_button]:px-2 [&_button]:text-xs [&_button]:font-semibold" />
+          <button
+            type="button"
+            onClick={() => setShowCreatorAI(true)}
+            className="hidden xl:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-lg text-slate-500 text-xs font-semibold hover:bg-slate-50 hover:text-slate-800 transition-colors"
+            title="AI Copilot"
+          >
+            <Sparkles size={14} />
+          </button>
+          <span className="hidden md:inline-flex items-center text-xs font-medium text-slate-400">
+            Swish Aktiv ✓
+          </span>
+          <div className="relative">
             <button
               type="button"
-              onClick={() => setShowCreatorAI(true)}
-              className="hidden sm:inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-full bg-[#1f2430] text-white text-xs font-extrabold hover:opacity-90"
+              onClick={() => setNotifOpen((v) => !v)}
+              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-500 relative transition-colors"
+              aria-label="Notifications"
             >
-              <Sparkles size={13} /> AI
+              <Bell size={17} strokeWidth={1.75} />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#F472B6]" />
             </button>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setNotifOpen((v) => !v)}
-                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center text-zinc-600 relative"
-                aria-label="Notifications"
-              >
-                <Bell size={16} />
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#7c6cf0]" />
-              </button>
-              {notifOpen && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-zinc-100 rounded-2xl shadow-xl z-40 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-zinc-50">
-                    <p className="text-xs font-black text-[#1f2430]">Notifications</p>
-                  </div>
-                  {[
-                    '3 new members in Creator Lab',
-                    'E-book purchase: Creator Starter Pack',
-                    'Broadcast open rate 62%',
-                  ].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setNotifOpen(false)}
-                      className="w-full text-left px-4 py-3 text-xs font-medium text-zinc-600 hover:bg-zinc-50 border-b border-zinc-50 last:border-0"
-                    >
-                      {n}
-                    </button>
-                  ))}
+            {notifOpen && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-40 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <p className="text-xs font-bold text-slate-900">Notifications</p>
                 </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push('/dashboard')}
-              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-zinc-100 hover:bg-zinc-200 hidden sm:flex items-center justify-center text-zinc-600"
-              title="Dashboard"
-            >
-              <Home size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } })
-              }
-              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border-2 border-white shadow-sm bg-[#7c6cf0] flex items-center justify-center text-white text-xs font-black"
-              title={session.user.name}
-            >
-              {session.user.image ? (
-                <img src={session.user.image} alt="" className="w-full h-full object-cover" />
-              ) : (
-                (session.user.name?.[0] ?? 'U')
-              )}
-            </button>
+                {[
+                  '3 new members in Creator Lab',
+                  'E-book purchase: Creator Starter Pack',
+                  'Broadcast open rate 62%',
+                ].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNotifOpen(false)}
+                    className="w-full text-left px-4 py-3 text-xs font-medium text-slate-600 hover:bg-slate-50 border-b border-slate-50 last:border-0"
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          <button
+            type="button"
+            onClick={() =>
+              authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } })
+            }
+            className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full overflow-hidden border border-slate-200 shadow-sm bg-slate-900 flex items-center justify-center text-white text-xs font-bold"
+            title={session.user.name}
+          >
+            {session.user.image ? (
+              <img src={session.user.image} alt="" className="w-full h-full object-cover" />
+            ) : (
+              (session.user.name?.[0] ?? 'U')
+            )}
+          </button>
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-16">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 py-8 pb-24 md:pb-16">
         {section === 'analytics' && <LaterAnalyticsPanel />}
         {section === 'media' && <MediaLibraryPanel />}
         {section === 'inbox' && <SocialInboxPanel />}
         {section === 'settings' && <AdminSettingsPanel />}
         {section === 'calendar' && (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center space-y-3">
-            <CalendarDays className="mx-auto text-zinc-400" size={28} />
-            <h2 className="text-lg font-black text-[#1f2430]">Calendar / Planner</h2>
-            <p className="text-sm text-zinc-500">Open the full Content Planner to schedule posts.</p>
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-8 sm:p-10 text-center space-y-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <CalendarDays className="mx-auto text-slate-400" size={28} strokeWidth={1.75} />
+            <h2 className="font-clikd-wordmark font-extrabold text-xl text-slate-900">Planner</h2>
+            <p className="text-sm text-slate-500">Öppna Content Planner för att schemalägga inlägg.</p>
             <Link
               href="/planner"
-              className="inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-[#1f2430] text-white text-xs font-extrabold"
+              className="inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
             >
-              Open Planner
+              Öppna Planner
             </Link>
           </div>
         )}
@@ -2620,78 +2805,116 @@ export default function AdminPage() {
         {section === 'email' && <EmailAdminPanel />}
 
 
-        {/* ── BIO BUILDER — Later-style 4 sub-tabs ── */}
+        {/* ── BIO BUILDER — Link in Bio Studio ── */}
         {section === 'biobuilder' && (
-          <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
-                  Bio Builder · {activeWorkspace.name}
-                </p>
-                <h1 className="text-xl sm:text-2xl font-black text-[#1f2430] tracking-tight">
-                  Link in Bio
-                </h1>
-                <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                  {activeWorkspace.handle} · Blocks, Design, Analytics & Settings
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => saveBioMutation.mutate()}
-                  disabled={saveBioMutation.isPending}
-                  className={`h-11 min-h-[44px] px-4 rounded-xl text-xs font-extrabold inline-flex items-center gap-1.5 ${
-                    bioSaved ? 'bg-emerald-600 text-white' : 'bg-[#1f2430] text-white'
-                  }`}
-                >
-                  {bioSaved ? <><Check size={13} /> Saved</> : <><Save size={13} /> Save bio</>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPreview((v) => !v)}
-                  className="h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 inline-flex items-center gap-1.5"
-                >
-                  {showPreview ? <EyeOff size={13} /> : <Eye size={13} />} Preview
-                </button>
-              </div>
-            </div>
-
-            {/* Sub-tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none border-b border-zinc-200">
-              {BIO_SUB_TABS.map(({ key, label }) => {
-                const active = bioSubTab === key;
-                return (
+          <div className="-mx-4 sm:-mx-6 -mt-6 mb-5">
+            {/* Sub-header & CTAs */}
+            <div className="bg-white border-b border-slate-200/80 px-4 sm:px-8 py-6">
+              <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+                    Bio Store · <span className="text-slate-600">{activeWorkspace.handle}</span>
+                  </p>
+                  <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mt-1">
+                    Link in Bio
+                  </h1>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
-                    key={key}
                     type="button"
-                    onClick={() => setBioSubTab(key)}
-                    className={`relative h-11 min-h-[44px] px-4 text-xs font-extrabold whitespace-nowrap transition-colors ${
-                      active ? 'text-[#1f2430]' : 'text-zinc-400 hover:text-zinc-700'
+                    onClick={() => {
+                      const cleanHandle = (bioHandle || activeWorkspace.handle || 'creator')
+                        .replace(/^@/, '')
+                        .trim();
+                      // Persist latest studio state so the new tab sees what you see.
+                      updateActiveBio({
+                        profile_photo: bioAvatarUrl || null,
+                        display_name: bioDisplayName,
+                        handle: cleanHandle,
+                        bio_text: bioBioText,
+                        theme: bioTheme,
+                        theme_label:
+                          BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)
+                            ?.label || activeWorkspace.bio.theme_label,
+                        blocks: blocks as WorkspaceBioBlock[],
+                      });
+                      window.open(
+                        `/bio/${encodeURIComponent(cleanHandle || 'creator')}`,
+                        '_blank',
+                        'noopener,noreferrer'
+                      );
+                    }}
+                    className="h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 inline-flex items-center gap-1.5 hover:bg-slate-50 transition-colors"
+                    title="Open your public link-in-bio in a new tab"
+                  >
+                    <ExternalLink size={13} /> Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => saveBioMutation.mutate()}
+                    disabled={saveBioMutation.isPending}
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-5 py-2.5 min-h-[40px] rounded-xl transition-all hover:opacity-95 ${
+                      bioSaved
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-900 text-white hover:bg-slate-800'
                     }`}
                   >
-                    {label}
-                    {active && (
-                      <span className="absolute left-2 right-2 bottom-0 h-0.5 rounded-full bg-[#1f2430]" />
+                    {bioSaved ? (
+                      <>
+                        <Check size={13} /> Published
+                      </>
+                    ) : (
+                      <>
+                        <Save size={13} /> Publish Changes
+                      </>
                     )}
                   </button>
-                );
-              })}
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <div className="lg:col-span-2 space-y-4">
+            {/* Sub nav tabs */}
+            <div className="bg-white border-b border-slate-200/80 px-4 sm:px-8">
+              <div className="max-w-7xl mx-auto flex items-center gap-1 overflow-x-auto scrollbar-none">
+                {BIO_SUB_TABS.map(({ key, label }) => {
+                  const active = bioSubTab === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setBioSubTab(key)}
+                      className={`relative h-11 min-h-[44px] px-4 text-xs whitespace-nowrap transition-colors border-b-2 ${
+                        active
+                          ? 'border-indigo-600 text-indigo-600 font-bold'
+                          : 'border-transparent text-slate-400 font-semibold hover:text-slate-700'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {section === 'biobuilder' && (
+          <div className="space-y-5">
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              <div className={`${bioSubTab === 'design' ? 'lg:col-span-8' : 'lg:col-span-7'} space-y-4`}>
                 {bioSubTab === 'blocks' && (
                   <>
-                    <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-4">
+                    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 space-y-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <h3 className="text-sm font-black text-[#1f2430]">Active blocks</h3>
-                          <p className="text-xs text-zinc-500">Buttons, products, e-books & social links. Drag to reorder.</p>
+                          <h3 className="text-sm font-black text-slate-900">Active blocks</h3>
+                          <p className="text-xs text-slate-500">Buttons, products, e-books & social links. Drag to reorder.</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setAddDrawerOpen(true)}
-                          className="h-11 min-h-[44px] px-3 rounded-xl bg-[#1f2430] text-white text-xs font-extrabold inline-flex items-center gap-1.5"
+                          className="h-11 min-h-[44px] px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-extrabold inline-flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
                         >
                           <Plus size={13} /> Add Link / Product
                         </button>
@@ -2699,8 +2922,8 @@ export default function AdminPage() {
 
                       <SocialLinksEditor links={socialLinks} onChange={setSocialLinks} />
 
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
-                        Links & lead magnets
+                      <p className="font-bold text-xs text-slate-900 uppercase tracking-wider">
+                        Länkar & lead magnets
                       </p>
                       <div className="space-y-2" onDragEnd={handleDrop}>
                         {blocks.map((block, i) =>
@@ -2725,7 +2948,7 @@ export default function AdminPage() {
                         <p className="text-sm font-bold text-zinc-400 text-center py-6">No links yet</p>
                       )}
 
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 pt-2">
+                      <p className="font-bold text-xs text-slate-900 uppercase tracking-wider pt-2">
                         Store products
                       </p>
                       <div className="space-y-2" onDragEnd={handleDrop}>
@@ -2762,7 +2985,7 @@ export default function AdminPage() {
                               <X size={16} />
                             </button>
                           </div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Links</p>
+                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Links</p>
                           <div className="space-y-1 mb-5">
                             {LINK_BLOCK_TYPES.map((bt) => (
                               <button
@@ -2778,7 +3001,7 @@ export default function AdminPage() {
                               </button>
                             ))}
                           </div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Products</p>
+                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Products</p>
                           <button
                             type="button"
                             onClick={() => {
@@ -2796,149 +3019,17 @@ export default function AdminPage() {
                 )}
 
                 {bioSubTab === 'design' && (
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-6">
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div>
-                          <h3 className="text-sm font-black text-[#1f2430]">Themes</h3>
-                          <p className="text-xs text-zinc-500">Preset selector</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowAllThemes((v) => !v)}
-                          className="h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 text-xs font-extrabold text-zinc-600"
-                        >
-                          {showAllThemes ? 'Show fewer' : 'Show all themes'}
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                        {visibleThemes.map((theme) => {
-                          const active = bioTheme.presetId === theme.presetId;
-                          return (
-                            <button
-                              key={theme.presetId}
-                              type="button"
-                              onClick={() => setBioTheme(applyLaterPreset(theme.presetId))}
-                              className={`p-3 rounded-2xl border-2 text-left min-h-[44px] transition-all ${
-                                active ? 'border-[#7c6cf0] shadow-sm' : 'border-zinc-100 hover:border-zinc-200'
-                              }`}
-                              style={{ background: theme.bg }}
-                            >
-                              <div className="flex gap-1 mb-2">
-                                <span className="w-5 h-5 rounded-md" style={{ background: theme.buttonBg }} />
-                                <span className="w-5 h-5 rounded-md border border-black/5" style={{ background: theme.accent }} />
-                              </div>
-                              <p className="text-xs font-extrabold" style={{ color: theme.nameColor }}>{theme.label}</p>
-                              <p className="text-[10px]" style={{ color: theme.mutedColor }}>{theme.desc}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="border-t border-zinc-100 pt-5 space-y-4">
-                      <h3 className="text-sm font-black text-[#1f2430]">Page Customization</h3>
-                      <div>
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Background</p>
-                        <div className="inline-flex p-1 rounded-full bg-zinc-100 mb-3">
-                          {(['color', 'image'] as const).map((mode) => (
-                            <button
-                              key={mode}
-                              type="button"
-                              onClick={() => setBgMode(mode)}
-                              className={`h-10 min-h-[40px] px-4 rounded-full text-xs font-extrabold capitalize ${
-                                bgMode === mode ? 'bg-white text-[#1f2430] shadow-sm' : 'text-zinc-500'
-                              }`}
-                            >
-                              {mode}
-                            </button>
-                          ))}
-                        </div>
-                        {bgMode === 'color' ? (
-                          <ThemeColorField label="Background color" value={bioTheme.bg} onChange={(v) => patchBioTheme('bg', v)} />
-                        ) : (
-                          <p className="text-xs text-zinc-500 font-medium rounded-xl border border-dashed border-zinc-200 p-4">
-                            Image backgrounds coming soon — use a solid color for now.
-                          </p>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <ThemeColorField label="Text and Icon color" value={bioTheme.nameColor} onChange={(v) => patchBioTheme('nameColor', v)} />
-                        <ThemeColorField label="Muted text" value={bioTheme.mutedColor} onChange={(v) => patchBioTheme('mutedColor', v)} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Font</p>
-                        <select
-                          value={bioTheme.fontId}
-                          onChange={(e) => {
-                            const id = e.target.value;
-                            const href = getLaterGoogleFontsHref(id) || getBioGoogleFontsHref(id);
-                            if (href && typeof document !== 'undefined') {
-                              const elId = `bio-font-${id}`;
-                              if (!document.getElementById(elId)) {
-                                const link = document.createElement('link');
-                                link.id = elId;
-                                link.rel = 'stylesheet';
-                                link.href = href;
-                                document.head.appendChild(link);
-                              }
-                            }
-                            patchBioTheme('fontId', id);
-                          }}
-                          className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-[#1f2430]"
-                        >
-                          {LATER_BIO_FONTS.map((f) => (
-                            <option key={f.id} value={f.id}>{f.label}</option>
-                          ))}
-                          {BIO_FONTS.map((f) => (
-                            <option key={f.id} value={f.id}>{f.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-zinc-100 pt-5 space-y-4">
-                      <h3 className="text-sm font-black text-[#1f2430]">Block Design</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <ThemeColorField label="Block background" value={bioTheme.buttonBg} onChange={(v) => patchBioTheme('buttonBg', v)} />
-                        <ThemeColorField label="Text color inside blocks" value={bioTheme.buttonText} onChange={(v) => patchBioTheme('buttonText', v)} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Corner style</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {([
-                            { key: 'rounded' as const, label: 'Round Corners' },
-                            { key: 'sharp' as const, label: 'Sharp' },
-                            { key: 'pill' as const, label: 'Pill' },
-                          ]).map(({ key, label }) => (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => patchBioTheme('buttonRadius', key)}
-                              className={`h-11 min-h-[44px] rounded-xl border text-xs font-bold ${
-                                bioTheme.buttonRadius === key
-                                  ? 'border-[#7c6cf0] bg-[#f8f6ff] text-[#1f2430]'
-                                  : 'border-zinc-100 bg-zinc-50 text-zinc-500'
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        className="w-full rounded-xl bg-[#1f2430] text-white font-black h-11 min-h-[44px]"
-                        onClick={() => {
-                          saveBioMutation.mutate();
-                          setSaved('theme');
-                          setTimeout(() => setSaved(''), 2000);
-                        }}
-                      >
-                        {saved === 'theme' ? 'Theme saved' : 'Apply theme'}
-                      </Button>
-                    </div>
-                  </div>
+                  <BioBuilderDesignTab
+                    theme={bioTheme}
+                    onChange={setBioTheme}
+                    onPatch={patchBioTheme}
+                    onApply={() => {
+                      saveBioMutation.mutate();
+                      setSaved('theme');
+                      setTimeout(() => setSaved(''), 2000);
+                    }}
+                    saved={saved === 'theme'}
+                  />
                 )}
 
                 {bioSubTab === 'analytics' && (
@@ -2980,37 +3071,23 @@ export default function AdminPage() {
 
                 {bioSubTab === 'settings' && (
                   <div className="space-y-4">
-                    <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-                      <h3 className="text-sm font-black text-[#1f2430] mb-1">UTM Tracking for Google Analytics</h3>
-                      <p className="text-xs text-zinc-500 font-medium mb-4">
-                        Add custom UTM parameters to your links to track clicks and conversions.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setBioSubTab('analytics')}
-                        className="h-11 min-h-[44px] px-4 rounded-xl bg-[#1f2430] text-white text-xs font-extrabold"
-                      >
-                        Manage UTM Tracking
-                      </button>
-                    </div>
-
                     <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-4">
                       <h3 className="text-sm font-black text-[#1f2430]">Profile</h3>
                       <div className="mb-2">
-                        <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-2">
+                        <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-2">
                           Profile photo
                         </label>
                         <AvatarUploader avatarUrl={bioAvatarUrl} onUpdate={setBioAvatarUrl} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+                          <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
                             Display name
                           </label>
                           <Input value={bioDisplayName} onChange={(e) => setBioDisplayName(e.target.value)} className="rounded-xl border-zinc-200 text-sm" />
                         </div>
                         <div>
-                          <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+                          <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
                             Handle
                           </label>
                           <Input
@@ -3021,7 +3098,7 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div>
-                        <label className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+                        <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
                           Bio
                         </label>
                         <Textarea
@@ -3036,12 +3113,11 @@ export default function AdminPage() {
                 )}
               </div>
 
-              <div className="lg:sticky lg:top-24 lg:self-start h-fit">
+              <div
+                className={`${bioSubTab === 'design' ? 'lg:col-span-4' : 'lg:col-span-5'} lg:sticky lg:top-20 lg:self-start h-fit`}
+              >
                 {showPreview ? (
-                  <div className="rounded-2xl border border-zinc-200 bg-white p-5 max-h-[calc(100vh-8rem)] overflow-y-auto">
-                    <h3 className="text-xs font-extrabold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <Smartphone size={12} /> Live preview
-                    </h3>
+                  <div className="max-h-[calc(100vh-7rem)] overflow-y-auto">
                     <MobilePreview
                       blocks={blocks}
                       handle={bioHandle}

@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   CalendarDays,
   Columns3,
+  LayoutGrid,
   LayoutList,
   Plus,
   Search,
@@ -15,7 +14,6 @@ import {
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -24,20 +22,37 @@ import PlannerTableView from '@/components/planner/PlannerTableView';
 import ContentCalendar from '@/components/planner/ContentCalendar';
 import PostStudioModal from '@/components/planner/PostStudioModal';
 import AiCopilotPanel from '@/components/planner/AiCopilotPanel';
+import FeedGridPlanner from '@/components/planner/FeedGridPlanner';
 import TeamWorkspaceModal from '@/components/planner/TeamWorkspaceModal';
-import WorkspaceSelector from '@/components/planner/WorkspaceSelector';
-import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
+import SocialAccountsModal from '@/components/planner/SocialAccountsModal';
+import { AdminPageHeader } from '@/components/admin/AdminUi';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import {
+  InstagramIcon,
+  LinkedInIcon,
+  TikTokIcon,
+  YouTubeIcon,
+} from '@/components/icons/SocialBrandIcons';
 import {
   PLATFORM_META,
   type AiContentIdea,
-  type BrandWorkspace,
   type PlannerPost,
   type PlannerTeamMember,
   type SocialPlatform,
   type WorkflowStatus,
 } from '@/lib/mock-content-planner';
 
-type ViewMode = 'board' | 'calendar' | 'table' | 'copilot';
+const PLATFORM_ICONS: Record<
+  SocialPlatform,
+  typeof InstagramIcon
+> = {
+  instagram: InstagramIcon,
+  tiktok: TikTokIcon,
+  linkedin: LinkedInIcon,
+  youtube: YouTubeIcon,
+};
+
+type ViewMode = 'board' | 'calendar' | 'table' | 'feed' | 'copilot';
 type PlatformFilter = 'all' | SocialPlatform;
 
 export default function ContentPlannerShell() {
@@ -45,58 +60,22 @@ export default function ContentPlannerShell() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { locale } = useLocale();
+  const {
+    brandWorkspaces: workspaces,
+    activeWorkspaceId,
+    activeWorkspace,
+  } = useWorkspace();
 
-  const [workspaceId, setWorkspaceId] = useState(() => {
-    if (typeof window === 'undefined') return '101';
-    return localStorage.getItem('nc_active_workspace_id') || '101';
-  });
   const [view, setView] = useState<ViewMode>('board');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
   const [search, setSearch] = useState('');
   const [cursor, setCursor] = useState(() => new Date());
   const [studioOpen, setStudioOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
-  const [createWsOpen, setCreateWsOpen] = useState(false);
+  const [accountsOpen, setAccountsOpen] = useState(false);
   const [activePost, setActivePost] = useState<PlannerPost | null>(null);
+  const [defaultScheduledAt, setDefaultScheduledAt] = useState<string | null>(null);
 
-  const { data: wsData } = useQuery<{ workspaces: BrandWorkspace[] }>({
-    queryKey: ['planner-workspaces'],
-    queryFn: async () => {
-      const r = await fetch('/api/planner/workspaces');
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
-    },
-    enabled: !!session,
-  });
-
-  const workspaces = wsData?.workspaces ?? [];
-
-  // Sync with Admin global workspace (localStorage) when workspaces load.
-  useEffect(() => {
-    if (!workspaces.length) return;
-    const storedId = localStorage.getItem('nc_active_workspace_id');
-    const storedName = localStorage.getItem('nc_active_workspace_name');
-    const byId = storedId ? workspaces.find((w) => w.id === storedId) : null;
-    const byName = storedName
-      ? workspaces.find((w) => w.name === storedName)
-      : null;
-    const match = byId || byName;
-    if (match && match.id !== workspaceId) setWorkspaceId(match.id);
-  }, [workspaces]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const persistWorkspace = (ws: BrandWorkspace) => {
-    setWorkspaceId(ws.id);
-    try {
-      localStorage.setItem('nc_active_workspace_id', ws.id);
-      localStorage.setItem('nc_active_workspace_name', ws.name);
-      localStorage.setItem('nc_active_workspace_handle', ws.handle);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const activeWorkspace =
-    workspaces.find((w) => w.id === workspaceId) || workspaces[0] || null;
   const project = activeWorkspace?.name ?? 'Ebba Creator Lab';
 
   const { data, isLoading } = useQuery<{ posts: PlannerPost[] }>({
@@ -161,6 +140,16 @@ export default function ContentPlannerShell() {
 
   const openStudio = (post?: PlannerPost | null) => {
     setActivePost(post ?? null);
+    setDefaultScheduledAt(null);
+    setStudioOpen(true);
+  };
+
+  /** Open "+ create post" pre-scheduled for a calendar day (10:00 local). */
+  const openStudioForDay = (day: Date) => {
+    setActivePost(null);
+    const d = new Date(day);
+    d.setHours(10, 0, 0, 0);
+    setDefaultScheduledAt(d.toISOString());
     setStudioOpen(true);
   };
 
@@ -206,7 +195,7 @@ export default function ContentPlannerShell() {
   if (isPending) {
     return (
       <div className="min-h-screen flex items-center justify-center text-zinc-400 text-sm">
-        Laddar…
+        {t('loading', locale)}
       </div>
     );
   }
@@ -215,165 +204,177 @@ export default function ContentPlannerShell() {
     return null;
   }
 
+  const viewTabs = (
+    [
+      { key: 'board' as const, label: t('boardKanban', locale), icon: Columns3 },
+      { key: 'calendar' as const, label: t('calendarTab', locale), icon: CalendarDays },
+      { key: 'table' as const, label: t('tableTab', locale), icon: LayoutList },
+      ...(platformFilter === 'all' ||
+      platformFilter === 'instagram' ||
+      platformFilter === 'tiktok'
+        ? [{ key: 'feed' as const, label: t('feedGridTab', locale), icon: LayoutGrid }]
+        : []),
+      { key: 'copilot' as const, label: t('aiCopilot', locale), icon: Sparkles },
+    ] as const
+  );
+
   return (
-    <div className="nc-app nc-app-shell min-h-screen">
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-zinc-100">
-        <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-3 space-y-3">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1 h-11 min-h-[44px] px-2 rounded-xl text-xs font-extrabold text-zinc-500 hover:bg-zinc-50"
-            >
-              <ArrowLeft size={14} /> Admin
-            </Link>
+    <div className="min-h-screen bg-[#FAFAFA]">
+      {/* Top navbar — matches admin shell */}
+      <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between gap-4">
+        <div className="relative w-full max-w-md hidden sm:block flex-1">
+          <Search
+            size={15}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('searchPosts', locale)}
+            className="w-full max-w-md bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-14 py-2 min-h-[40px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
+          />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">
+            ⌘K
+          </kbd>
+        </div>
 
-            <WorkspaceSelector
-              workspaces={workspaces}
-              activeId={activeWorkspace?.id ?? workspaceId}
-              onSelect={(ws) => persistWorkspace(ws)}
-              onCreateNew={() => setCreateWsOpen(true)}
-            />
-
-            <div className="flex-1 relative min-w-0">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+          <button
+            type="button"
+            onClick={() => setTeamOpen(true)}
+            className="hidden sm:flex items-center -space-x-2 min-h-[44px] pr-1"
+            title={t('teamTab', locale)}
+            aria-label={t('teamMembersAria', locale)}
+          >
+            {teamAvatars.slice(0, 4).map((m) => (
+              <img
+                key={m.id}
+                src={m.avatar_url}
+                alt={m.name}
+                title={m.name}
+                className="w-8 h-8 rounded-full border-2 border-white object-cover"
               />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('searchPosts', locale)}
-                className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 pl-9 pr-3 text-sm font-medium focus:outline-none focus:border-[var(--nc-coral)] focus:bg-white"
-              />
-            </div>
+            ))}
+            <span className="relative z-10 w-8 h-8 rounded-full border-2 border-white bg-slate-100 text-slate-500 text-[10px] font-bold flex items-center justify-center">
+              +
+            </span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setTeamOpen(true)}
-              className="hidden sm:flex items-center -space-x-2 flex-shrink-0 h-11 min-h-[44px] pl-1 pr-2 rounded-full hover:bg-zinc-50 transition-colors"
-              title="Hantera team"
-              aria-label="Hantera teammedlemmar"
-            >
-              {teamAvatars.map((m) => (
-                <img
-                  key={m.id}
-                  src={m.avatar_url}
-                  alt={m.name}
-                  title={m.name}
-                  className="w-9 h-9 rounded-full border-2 border-white object-cover"
-                />
-              ))}
-              <span className="relative z-10 w-9 h-9 rounded-full border-2 border-white bg-zinc-100 text-zinc-500 text-xs font-black flex items-center justify-center">
-                +
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTeamOpen(true)}
-              className="sm:hidden h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-zinc-100 text-zinc-600 flex items-center justify-center text-sm font-black"
-              aria-label="Team"
-            >
-              {(teamAvatars[0]?.name?.[0] ?? 'T')}
-            </button>
+          <LanguageSwitcher className="hidden lg:block [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:h-9 [&_button]:min-h-[36px] [&_button]:text-slate-500 [&_button]:px-2 [&_button]:text-xs [&_button]:font-semibold" />
 
-              <LanguageSwitcher className="hidden sm:block" />
+          <button
+            type="button"
+            onClick={() => setAccountsOpen(true)}
+            className="hidden md:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+          >
+            <Settings2 size={14} /> {t('accounts', locale)}
+          </button>
 
-            <Link
-              href="/admin/settings/socials"
-              className="hidden md:inline-flex h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-zinc-600 bg-zinc-50 hover:bg-zinc-100 items-center gap-1.5"
-            >
-              <Settings2 size={14} /> {t('accounts', locale)}
-            </Link>
+          <button
+            type="button"
+            onClick={() => openStudio(null)}
+            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-3.5 sm:px-4 py-2 min-h-[40px] rounded-xl transition-colors"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            <span className="hidden sm:inline">{t('createPost', locale)}</span>
+          </button>
+        </div>
+      </header>
 
-            <Button
-              type="button"
-              onClick={() => openStudio(null)}
-              className="h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-extrabold gap-1.5 px-3 sm:px-4"
-            >
-              <Plus size={15} />
-              <span className="hidden sm:inline">{t('createPost', locale)}</span>
-            </Button>
-          </div>
+      {/* Mobile search */}
+      <div className="sm:hidden px-4 pt-3">
+        <div className="relative">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('searchPosts', locale)}
+            className="w-full bg-white text-sm rounded-xl border border-slate-200/90 pl-9 pr-3 py-2.5 min-h-[44px] font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+          />
+        </div>
+      </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex gap-1 p-1 rounded-xl bg-zinc-100 w-fit overflow-x-auto scrollbar-none max-w-full">
-              {(
-                [
-                  { key: 'board' as const, label: t('boardKanban', locale), icon: Columns3 },
-                  { key: 'calendar' as const, label: t('calendarTab', locale), icon: CalendarDays },
-                  { key: 'table' as const, label: t('tableTab', locale), icon: LayoutList },
-                  { key: 'copilot' as const, label: t('aiCopilot', locale), icon: Sparkles },
-                ] as const
-              ).map(({ key, label, icon: Icon }) => (
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 py-8 pb-24 md:pb-16 space-y-6">
+        <AdminPageHeader
+          eyebrow="Content Planner"
+          title="Planner"
+          description={activeWorkspace ? `${activeWorkspace.name} · ${activeWorkspace.handle}` : undefined}
+          actions={
+            <div className="flex gap-0.5 overflow-x-auto scrollbar-none p-1 rounded-xl bg-slate-100/80 border border-slate-200/80">
+              {viewTabs.map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => setView(key)}
-                  className={`inline-flex items-center gap-1.5 h-10 min-h-[44px] px-3 rounded-lg text-xs font-extrabold transition-colors flex-shrink-0 ${
+                  className={`inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-lg text-xs transition-all flex-shrink-0 ${
                     view === key
-                      ? 'bg-white text-[#2c3340] shadow-sm'
-                      : 'text-zinc-500 hover:text-[#2c3340]'
+                      ? 'bg-white text-slate-900 shadow-sm font-semibold'
+                      : 'text-slate-500 font-medium hover:text-slate-800'
                   }`}
                 >
                   <Icon
                     size={13}
                     className={
-                      key === 'copilot' && view !== 'copilot'
-                        ? 'text-[var(--nc-coral)]'
-                        : undefined
+                      key === 'copilot' && view !== 'copilot' ? 'text-[#F472B6]' : undefined
                     }
                   />
                   {label}
                 </button>
               ))}
             </div>
+          }
+        />
 
-            {view !== 'copilot' && (
-              <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
-                {(
-                  [
-                    { key: 'all' as const, label: t('allPlatforms', locale), color: '#71717a' },
-                    ...(['instagram', 'tiktok', 'linkedin', 'youtube'] as SocialPlatform[]).map(
-                      (p) => ({
-                        key: p as PlatformFilter,
-                        label: PLATFORM_META[p].label,
-                        color: PLATFORM_META[p].color,
-                      })
-                    ),
-                  ] as const
-                ).map(({ key, label, color }) => {
-                  const active = platformFilter === key;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setPlatformFilter(key)}
-                      className={`h-10 min-h-[44px] px-3 rounded-full text-[11px] font-extrabold whitespace-nowrap flex-shrink-0 border transition-colors ${
-                        active
-                          ? 'text-white border-transparent'
-                          : 'bg-white text-zinc-500 border-zinc-100 hover:text-[#2c3340]'
-                      }`}
-                      style={active ? { background: color } : undefined}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+        {/* Platform filters */}
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mt-2">
+          <button
+            type="button"
+            onClick={() => setPlatformFilter('all')}
+            className={`text-xs px-3.5 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 transition-colors ${
+              platformFilter === 'all'
+                ? 'bg-slate-900 text-white font-semibold'
+                : 'bg-white text-slate-600 border border-slate-200/80 font-semibold hover:bg-slate-50'
+            }`}
+          >
+            {t('allPlatforms', locale)}
+          </button>
+          {(['instagram', 'tiktok', 'linkedin', 'youtube'] as SocialPlatform[]).map((p) => {
+            const active = platformFilter === p;
+            const Icon = PLATFORM_ICONS[p];
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => {
+                  setPlatformFilter(p);
+                  if (view === 'feed' && p !== 'instagram' && p !== 'tiktok') {
+                    setView('board');
+                  }
+                }}
+                className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 font-semibold transition-colors ${
+                  active
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                }`}
+              >
+                <Icon size={13} className={active ? 'text-white' : undefined} />
+                {PLATFORM_META[p].label}
+              </button>
+            );
+          })}
         </div>
-      </header>
 
-      <main className="relative z-10 max-w-[1400px] mx-auto px-3 sm:px-6 py-5 pb-16">
         {view === 'copilot' ? (
           <AiCopilotPanel
             onUseIdea={(idea, platform) => void useIdea(idea, platform)}
             onCreateFromCaption={(input) => void createDraftFromAi(input)}
           />
         ) : isLoading ? (
-          <div className="nc-glass rounded-[1.5rem] p-12 text-center text-sm text-zinc-400">
-            Laddar planner…
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-sm text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            {t('loadingPlanner', locale)}
           </div>
         ) : view === 'board' ? (
           <PlannerKanbanBoard
@@ -390,7 +391,23 @@ export default function ContentPlannerShell() {
             cursor={cursor}
             onCursorChange={setCursor}
             onSelectPost={openStudio}
-            onSelectDay={() => openStudio(null)}
+            onSelectDay={openStudioForDay}
+          />
+        ) : view === 'feed' ? (
+          <FeedGridPlanner
+            posts={posts}
+            workspace={workspaces.find((w) => w.id === activeWorkspaceId) ?? null}
+            activePlatform={
+              platformFilter === 'instagram' || platformFilter === 'tiktok'
+                ? platformFilter
+                : platformFilter === 'all'
+                  ? 'all'
+                  : null
+            }
+            onOpen={openStudio}
+            onRefresh={async () => {
+              await queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
+            }}
           />
         ) : (
           <PlannerTableView posts={posts} onOpen={openStudio} />
@@ -399,10 +416,14 @@ export default function ContentPlannerShell() {
 
       <PostStudioModal
         open={studioOpen}
-        onOpenChange={setStudioOpen}
+        onOpenChange={(open) => {
+          setStudioOpen(open);
+          if (!open) setDefaultScheduledAt(null);
+        }}
         post={activePost}
         projectName={project}
         workspaces={workspaces}
+        defaultScheduledAt={defaultScheduledAt}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ['planner-posts'] })}
       />
 
@@ -413,14 +434,7 @@ export default function ContentPlannerShell() {
         workspaces={workspaces}
       />
 
-      <CreateWorkspaceModal
-        open={createWsOpen}
-        onOpenChange={setCreateWsOpen}
-        onCreated={(ws) => {
-          queryClient.invalidateQueries({ queryKey: ['planner-workspaces'] });
-          persistWorkspace(ws);
-        }}
-      />
+      <SocialAccountsModal open={accountsOpen} onOpenChange={setAccountsOpen} />
     </div>
   );
 }

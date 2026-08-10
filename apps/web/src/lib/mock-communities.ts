@@ -59,7 +59,7 @@ export const MOCK_COMMUNITIES: SearchableCommunity[] = [
   },
   {
     id: 1,
-    name: 'Nordic Creator Hub',
+    name: 'Clikd Hub',
     slug: 'nordic-creator',
     description:
       'The ultimate community for Nordic digital creators & educators. Weekly live Q&As, course library, Swish funnel templates, and private member chat.',
@@ -164,4 +164,83 @@ export function normalizeCommunities(data: unknown): SearchableCommunity[] {
       price: typeof c.price === 'number' ? c.price : null,
     };
   });
+}
+
+/**
+ * Recommend communities the user has not joined yet, ranked from their
+ * current memberships (shared category + topical overlap).
+ */
+export function recommendCommunitiesFromMemberships(
+  communities: SearchableCommunity[],
+  opts?: { limit?: number }
+): SearchableCommunity[] {
+  const limit = opts?.limit ?? 12;
+  const joined = communities.filter((c) => c.is_joined);
+  const joinedIds = new Set(joined.map((c) => c.id));
+  const candidates = communities.filter((c) => !joinedIds.has(c.id));
+
+  if (candidates.length === 0) return [];
+
+  // No memberships yet → featured / popular discovery fallback.
+  if (joined.length === 0) {
+    return [...candidates]
+      .sort(
+        (a, b) =>
+          Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured)) ||
+          b.member_count - a.member_count
+      )
+      .slice(0, limit);
+  }
+
+  const joinedCategories = new Set(
+    joined.map((c) => c.category.trim().toLowerCase()).filter(Boolean)
+  );
+
+  const interestTokens = new Set<string>();
+  for (const c of joined) {
+    const blob = `${c.name} ${c.description} ${c.category}`.toLowerCase();
+    for (const word of blob.split(/[^a-zà-ö0-9]+/i)) {
+      if (word.length >= 4) interestTokens.add(word);
+    }
+  }
+
+  const scored = candidates.map((c) => {
+    let score = 0;
+    const category = c.category.trim().toLowerCase();
+    if (joinedCategories.has(category)) score += 100;
+    if (c.is_featured) score += 20;
+
+    const hay = `${c.name} ${c.description} ${c.category}`.toLowerCase();
+    for (const token of interestTokens) {
+      if (hay.includes(token)) score += 5;
+    }
+
+    score += Math.min(25, Math.log10(c.member_count + 1) * 8);
+    return { c, score, categoryMatch: joinedCategories.has(category) };
+  });
+
+  scored.sort(
+    (a, b) =>
+      b.score - a.score ||
+      Number(b.categoryMatch) - Number(a.categoryMatch) ||
+      b.c.member_count - a.c.member_count
+  );
+
+  return scored.map((s) => s.c).slice(0, limit);
+}
+
+/** Unique categories from communities the user has already joined. */
+export function joinedCommunityCategories(communities: SearchableCommunity[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const c of communities) {
+    if (!c.is_joined) continue;
+    const key = c.category.trim();
+    if (!key) continue;
+    const lower = key.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    out.push(key);
+  }
+  return out;
 }

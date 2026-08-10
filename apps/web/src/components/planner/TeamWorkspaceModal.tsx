@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Check,
-  Crown,
   Loader2,
   Mail,
   Plus,
@@ -145,21 +144,6 @@ export default function TeamWorkspaceModal({
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['planner-team'] }),
   });
 
-  const setPlan = useMutation({
-    mutationFn: async (plan: WorkspacePlan) => {
-      const r = await fetch('/api/planner/team', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'set_plan', plan }),
-      });
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['planner-team'] }),
-  });
-
-  const plan = data?.plan ?? 'pro';
-  const isPro = plan === 'pro';
   const members = (data?.all_members ?? []).filter((m) =>
     filterProject === 'all' ? true : m.project === filterProject
   );
@@ -194,53 +178,6 @@ export default function TeamWorkspaceModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {/* Plan badge */}
-          <div
-            className={`rounded-2xl border p-3.5 flex items-start gap-3 ${
-              isPro
-                ? 'border-emerald-100 bg-emerald-50/60'
-                : 'border-amber-100 bg-amber-50/70'
-            }`}
-          >
-            <Crown
-              size={16}
-              className={isPro ? 'text-emerald-600 mt-0.5' : 'text-amber-600 mt-0.5'}
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-extrabold text-[#2c3340]">
-                {isPro ? 'Pro-prenumeration aktiv' : `Nuvarande plan: ${plan}`}
-              </p>
-              <p className="text-[11px] text-zinc-500 font-medium mt-0.5 leading-relaxed">
-                {isPro
-                  ? 'Nya teammedlemmar får automatiskt access till Content Planner-workspacen.'
-                  : 'Uppgradera till Pro för att ge teamet access till Content Planner när du bjuder in dem.'}
-              </p>
-              {!isPro && (
-                <Button
-                  type="button"
-                  onClick={() => setPlan.mutate('pro')}
-                  disabled={setPlan.isPending}
-                  className="mt-2 h-10 min-h-[44px] rounded-xl bg-[var(--nc-coral)] text-white font-extrabold text-xs"
-                >
-                  {setPlan.isPending ? (
-                    <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
-                  ) : (
-                    'Aktivera Pro (demo)'
-                  )}
-                </Button>
-              )}
-              {isPro && (
-                <button
-                  type="button"
-                  onClick={() => setPlan.mutate('creator')}
-                  className="mt-2 text-[11px] font-extrabold text-zinc-400 hover:text-zinc-600 h-8"
-                >
-                  Simulera Creator-plan
-                </button>
-              )}
-            </div>
-          </div>
-
           {flash && (
             <div className="rounded-xl bg-[color-mix(in_srgb,var(--nc-coral)_10%,white)] border border-[var(--nc-coral)]/20 px-3 py-2.5 text-xs font-bold text-[#2c3340] flex items-start gap-2">
               <Check size={14} className="text-[var(--nc-coral)] mt-0.5 flex-shrink-0" />

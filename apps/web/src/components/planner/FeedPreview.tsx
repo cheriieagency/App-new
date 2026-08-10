@@ -374,7 +374,7 @@ export default function FeedPreview({
   platforms,
   youtube,
   username = '@nordic.creator',
-  displayName = 'Nordic Creator',
+  displayName = 'clikd:',
   brandAvatar = null,
   brandColor,
 }: {

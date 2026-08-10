@@ -1,5 +1,5 @@
 -- =============================================================================
--- Nordic Creator Platform — PostgreSQL schema
+-- clikd: Platform — PostgreSQL schema
 -- =============================================================================
 -- Self-contained schema for profiles, communities, posts, courses, lessons,
 -- payments, events, and supporting tables used by apps/web API routes.
@@ -906,11 +906,11 @@ CREATE POLICY verification_deny_client
 INSERT INTO communities (name, slug, description, category, creator_name, cover_color, member_count, is_featured)
 VALUES
   (
-    'Nordic Creator Hub',
+    'Clikd Hub',
     'nordic-creator',
     'Allt-i-ett community för nordiska kreatörer — store, kurser, events och AI.',
     'Marknadsföring',
-    'Nordic Creator',
+    'clikd:',
     '#0f1f1c',
     1280,
     true

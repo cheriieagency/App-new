@@ -293,21 +293,23 @@ export default function EmailAdminPanel() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-[#2c3340] flex items-center gap-2">
-            <Mail size={18} className="text-[var(--nc-coral)]" />
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+            Email CRM
+          </p>
+          <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mt-1 flex items-center gap-2">
             {t('emailCrmTitle', locale)}
-          </h2>
-          <p className="text-sm text-zinc-500 mt-1">
+          </h1>
+          <p className="text-sm text-slate-500 font-medium mt-1">
             {activeWorkspace.name} ({activeWorkspace.handle}) — {t('workspaceScopedData', locale)}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setComposerOpen(true)}
-          className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-5 rounded-xl bg-[var(--nc-coral)] text-white text-sm font-black hover:opacity-90"
+          className="inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
         >
           <Plus size={14} /> {t('createEmailBroadcast', locale).replace(/^\+\s*/, '')}
         </button>
@@ -318,19 +320,21 @@ export default function EmailAdminPanel() {
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <div key={s.label} className="nc-glass rounded-[1.5rem] p-5">
+            <div
+              key={s.label}
+              className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+            >
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
                   {s.label}
                 </p>
-                <div
-                  className="w-8 h-8 rounded-xl flex items-center justify-center"
-                  style={{ background: `${s.color}18` }}
-                >
-                  <Icon size={14} style={{ color: s.color }} />
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-slate-50 text-slate-500">
+                  <Icon size={14} />
                 </div>
               </div>
-              <p className="text-2xl font-black text-[#2c3340]">{s.value}</p>
+              <p className="font-clikd-wordmark font-extrabold text-2xl text-slate-900 tabular-nums">
+                {s.value}
+              </p>
             </div>
           );
         })}
@@ -499,7 +503,7 @@ export default function EmailAdminPanel() {
           <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 flex flex-col">
             <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-zinc-100">
               <div className="min-w-0">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-1">
+                <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-1">
                   Analytics
                 </p>
                 <h3 className="text-sm font-black text-[#2c3340] leading-snug">

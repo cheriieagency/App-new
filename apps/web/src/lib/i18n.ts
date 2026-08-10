@@ -76,6 +76,9 @@ export type TranslationKey =
   | 'noCommunitiesYet'
   | 'searchCommunities'
   | 'searchCommSub'
+  | 'recommendedForYou'
+  | 'recommendedCommunities'
+  | 'noRecommendationsYet'
   | 'searchCommPlaceholder'
   | 'goToCommunity'
   | 'joinCommunity'
@@ -424,7 +427,7 @@ const sv: CoreDict = {
   readySub: 'Gå med kostnadsfritt och börja lära dig av de bästa nordiska kreatörerna.',
   createFreeAccount: 'Skapa konto gratis',
   seeProducts: 'Se Produkter',
-  nordicHub: 'Nordic Creator Platform',
+  nordicHub: 'clikd: Platform',
   nordicHubSub: 'Nordens snabbast växande community-plattform',
   resultsFor: 'Resultat för',
   clearFilter: 'Rensa filter',
@@ -438,8 +441,8 @@ const sv: CoreDict = {
   openCommunity: 'Öppna community',
   searchPlaceholder: 'Sök communities, ämnen, kreatörer...',
   heroGrowthTag: 'Nordens snabbast växande community-plattform',
-  loginAsMember: 'Logga in som Medlem',
-  loginAsCreator: 'Logga in som Kreatör / Admin',
+  loginAsMember: 'Community-medlem',
+  loginAsCreator: 'Kreatör / Admin',
   welcomeBack: 'Välkommen tillbaka',
   noAccount: 'Inget konto?',
   signUp: 'Skapa konto',
@@ -453,7 +456,7 @@ const sv: CoreDict = {
   signInFailed: 'Inloggning misslyckades',
   loading: 'Laddar…',
   hi: 'Hej',
-  dashboardSub: 'Välkommen tillbaka till Nordic Creator-plattformen.',
+  dashboardSub: 'Välkommen tillbaka till clikd:-plattformen.',
   joined: 'Gick med',
   posts: 'Inlägg',
   upcoming: 'kommande',
@@ -464,6 +467,9 @@ const sv: CoreDict = {
   noCommunitiesYet: 'Du är inte med i någon community ännu.',
   searchCommunities: 'Sök Communities',
   searchCommSub: 'Hitta communities som matchar dina intressen',
+  recommendedForYou: 'Baserat på dina communities',
+  recommendedCommunities: 'Rekommenderade',
+  noRecommendationsYet: 'Inga rekommendationer ännu — gå med i en community först',
   searchCommPlaceholder: 'Sök på namn, kategori...',
   goToCommunity: 'Gå till community',
   joinCommunity: 'Gå med',
@@ -567,7 +573,7 @@ const sv: CoreDict = {
   exclusiveOffer: 'Exklusivt erbjudande — bara för dig',
   noThanks: 'Nej tack, jag tackar nej till detta erbjudande',
   goToMemberPortal: 'Gå till Memberportal',
-  loginAsMemberBtn: 'Logga in som Medlem',
+  loginAsMemberBtn: 'Logga in som Community-medlem',
   vatReceipt: 'Skattekvitto',
   vatSpec: 'Momsspecifikation · Sverige',
   buyer: 'Köpare',
@@ -796,7 +802,7 @@ const en: CoreDict = {
   readySub: 'Join for free and start learning from the best Nordic creators.',
   createFreeAccount: 'Create free account',
   seeProducts: 'See Products',
-  nordicHub: 'Nordic Creator Platform',
+  nordicHub: 'clikd: Platform',
   nordicHubSub: "The Nordics' fastest-growing community platform",
   resultsFor: 'Results for',
   clearFilter: 'Clear filter',
@@ -810,8 +816,8 @@ const en: CoreDict = {
   openCommunity: 'Open community',
   searchPlaceholder: 'Search communities, topics, creators...',
   heroGrowthTag: "The Nordics' fastest-growing community platform",
-  loginAsMember: 'Log in as Member',
-  loginAsCreator: 'Log in as Creator / Admin',
+  loginAsMember: 'Community member',
+  loginAsCreator: 'Creator / Admin',
   welcomeBack: 'Welcome back',
   noAccount: 'No account?',
   signUp: 'Sign up',
@@ -825,7 +831,7 @@ const en: CoreDict = {
   signInFailed: 'Sign in failed',
   loading: 'Loading…',
   hi: 'Hi',
-  dashboardSub: 'Welcome back to the Nordic Creator platform.',
+  dashboardSub: 'Welcome back to the clikd: platform.',
   joined: 'Joined',
   posts: 'Posts',
   upcoming: 'upcoming',
@@ -836,6 +842,9 @@ const en: CoreDict = {
   noCommunitiesYet: "You haven't joined any community yet.",
   searchCommunities: 'Search Communities',
   searchCommSub: 'Find communities matching your interests',
+  recommendedForYou: 'Based on your communities',
+  recommendedCommunities: 'Recommended',
+  noRecommendationsYet: 'No recommendations yet — join a community first',
   searchCommPlaceholder: 'Search by name, category...',
   goToCommunity: 'Go to community',
   joinCommunity: 'Join',
@@ -939,7 +948,7 @@ const en: CoreDict = {
   exclusiveOffer: 'Exclusive offer — just for you',
   noThanks: 'No thanks, I decline this offer',
   goToMemberPortal: 'Go to Member Portal',
-  loginAsMemberBtn: 'Log in as Member',
+  loginAsMemberBtn: 'Log in as Community member',
   vatReceipt: 'Tax Receipt',
   vatSpec: 'VAT Specification · Sweden',
   buyer: 'Buyer',
@@ -1181,8 +1190,8 @@ const no: CoreDict = derive(sv, {
   openCommunity: 'Åpne community',
   searchPlaceholder: 'Søk communities, emner, skapere...',
   heroGrowthTag: 'Nordens raskest voksende community-plattform',
-  loginAsMember: 'Logg inn som Medlem',
-  loginAsCreator: 'Logg inn som Skaper / Admin',
+  loginAsMember: 'Community-medlem',
+  loginAsCreator: 'Skaper / Admin',
   welcomeBack: 'Velkommen tilbake',
   noAccount: 'Ingen konto?',
   signUp: 'Opprett konto',
@@ -1196,7 +1205,7 @@ const no: CoreDict = derive(sv, {
   signInFailed: 'Innlogging mislyktes',
   loading: 'Laster…',
   hi: 'Hei',
-  dashboardSub: 'Velkommen tilbake til Nordic Creator-plattformen.',
+  dashboardSub: 'Velkommen tilbake til clikd:-plattformen.',
   joined: 'Ble med',
   posts: 'Innlegg',
   upcoming: 'kommende',
@@ -1207,6 +1216,9 @@ const no: CoreDict = derive(sv, {
   noCommunitiesYet: 'Du er ikke med i noen community ennå.',
   searchCommunities: 'Søk Communities',
   searchCommSub: 'Finn communities som matcher dine interesser',
+  recommendedForYou: 'Basert på dine communities',
+  recommendedCommunities: 'Anbefalt',
+  noRecommendationsYet: 'Ingen anbefalinger ennå — bli med i et community først',
   searchCommPlaceholder: 'Søk på navn, kategori...',
   goToCommunity: 'Gå til community',
   joinCommunity: 'Bli med',
@@ -1305,7 +1317,7 @@ const no: CoreDict = derive(sv, {
   exclusiveOffer: 'Eksklusivt tilbud — bare for deg',
   noThanks: 'Nei takk, jeg takker nei til dette tilbudet',
   goToMemberPortal: 'Gå til Memberportal',
-  loginAsMemberBtn: 'Logg inn som Medlem',
+  loginAsMemberBtn: 'Logg inn som Community-medlem',
   vatReceipt: 'Skattekvittering',
   vatSpec: 'Mva-spesifikasjon · Norge',
   buyer: 'Kjøper',
@@ -1504,6 +1516,18 @@ const no: CoreDict = derive(sv, {
   membersOnly: 'Kun for Medlemmer',
   loginOrJoin: 'Logg inn / Bli Medlem',
   divider: 'Skillelinje',
+  profile: 'Profil',
+  min: 'MIN',
+  sec: 'SEK',
+  appleCal: 'Apple iCal',
+  outlookCal: 'Outlook Web',
+  shareEvent: 'Del',
+  productType: 'Type',
+  streamUrl: 'Stream-URL',
+  broadcastStudio: 'Sendinginnstillinger',
+  readyToBroadcast: 'Klar til å sende',
+  broadcastSettings: 'Sendinginnstillinger',
+  profilePhotoUrl: 'Profilbilde-URL',
 });
 
 const da: CoreDict = derive(sv, {
@@ -1537,8 +1561,8 @@ const da: CoreDict = derive(sv, {
   openCommunity: 'Åbn community',
   searchPlaceholder: 'Søg communities, emner, skabere...',
   heroGrowthTag: 'Nordens hurtigst voksende community-platform',
-  loginAsMember: 'Log ind som Medlem',
-  loginAsCreator: 'Log ind som Skaber / Admin',
+  loginAsMember: 'Community-medlem',
+  loginAsCreator: 'Skaber / Admin',
   welcomeBack: 'Velkommen tilbage',
   noAccount: 'Ingen konto?',
   signUp: 'Opret konto',
@@ -1552,7 +1576,7 @@ const da: CoreDict = derive(sv, {
   signInFailed: 'Login mislykkedes',
   loading: 'Indlæser…',
   hi: 'Hej',
-  dashboardSub: 'Velkommen tilbage til Nordic Creator-platformen.',
+  dashboardSub: 'Velkommen tilbage til clikd:-platformen.',
   joined: 'Blev med',
   posts: 'Indlæg',
   upcoming: 'kommende',
@@ -1563,6 +1587,9 @@ const da: CoreDict = derive(sv, {
   noCommunitiesYet: 'Du er endnu ikke med i noget community.',
   searchCommunities: 'Søg Communities',
   searchCommSub: 'Find communities der matcher dine interesser',
+  recommendedForYou: 'Baseret på dine communities',
+  recommendedCommunities: 'Anbefalet',
+  noRecommendationsYet: 'Ingen anbefalinger endnu — bliv medlem af et community først',
   searchCommPlaceholder: 'Søg på navn, kategori...',
   goToCommunity: 'Gå til community',
   joinCommunity: 'Bliv med',
@@ -1661,7 +1688,7 @@ const da: CoreDict = derive(sv, {
   exclusiveOffer: 'Eksklusivt tilbud — kun til dig',
   noThanks: 'Nej tak, jeg takker nej til dette tilbud',
   goToMemberPortal: 'Gå til Memberportal',
-  loginAsMemberBtn: 'Log ind som Medlem',
+  loginAsMemberBtn: 'Log ind som Community-medlem',
   vatReceipt: 'Skattekvittering',
   vatSpec: 'Moms-specifikation · Sverige',
   buyer: 'Køber',
@@ -1860,6 +1887,18 @@ const da: CoreDict = derive(sv, {
   membersOnly: 'Kun for Medlemmer',
   loginOrJoin: 'Log ind / Bliv Medlem',
   divider: 'Skillelinje',
+  profile: 'Profil',
+  min: 'MIN',
+  sec: 'SEK',
+  appleCal: 'Apple iCal',
+  outlookCal: 'Outlook Web',
+  shareEvent: 'Del',
+  productType: 'Type',
+  streamUrl: 'Stream-URL',
+  broadcastStudio: 'Broadcast-indstillinger',
+  readyToBroadcast: 'Klar til at sende',
+  broadcastSettings: 'Broadcast-indstillinger',
+  profilePhotoUrl: 'Profilbillede-URL',
 });
 
 const fi: CoreDict = derive(sv, {
@@ -1884,7 +1923,7 @@ const fi: CoreDict = derive(sv, {
   readySub: 'Liity ilmaiseksi ja ala oppia parhaiden pohjoismaisten luojien kanssa.',
   createFreeAccount: 'Luo ilmainen tili',
   seeProducts: 'Katso tuotteet',
-  nordicHub: 'Nordic Creator -alusta',
+  nordicHub: 'clikd: -alusta',
   nordicHubSub: 'Pohjoismaiden nopeimmin kasvava yhteisöalusta',
   resultsFor: 'Tulokset haulle',
   clearFilter: 'Tyhjennä suodatin',
@@ -1898,8 +1937,8 @@ const fi: CoreDict = derive(sv, {
   openCommunity: 'Avaa yhteisö',
   searchPlaceholder: 'Hae yhteisöjä, aiheita, luojia...',
   heroGrowthTag: 'Pohjoismaiden nopeimmin kasvava yhteisöalusta',
-  loginAsMember: 'Kirjaudu jäsenenä',
-  loginAsCreator: 'Kirjaudu luojana / ylläpitäjänä',
+  loginAsMember: 'Community-jäsen',
+  loginAsCreator: 'Creator / Admin',
   welcomeBack: 'Tervetuloa takaisin',
   noAccount: 'Ei tiliä?',
   signUp: 'Luo tili',
@@ -1913,7 +1952,7 @@ const fi: CoreDict = derive(sv, {
   signInFailed: 'Kirjautuminen epäonnistui',
   loading: 'Ladataan…',
   hi: 'Hei',
-  dashboardSub: 'Tervetuloa takaisin Nordic Creator -alustalle.',
+  dashboardSub: 'Tervetuloa takaisin clikd: -alustalle.',
   joined: 'Liittyi',
   posts: 'Julkaisut',
   upcoming: 'tuleva',
@@ -1924,6 +1963,9 @@ const fi: CoreDict = derive(sv, {
   noCommunitiesYet: 'Et ole vielä liittynyt yhteenkään yhteisöön.',
   searchCommunities: 'Hae yhteisöjä',
   searchCommSub: 'Löydä yhteisöjä jotka vastaavat kiinnostuksiasi',
+  recommendedForYou: 'Perustuu yhteisöihisi',
+  recommendedCommunities: 'Suositellut',
+  noRecommendationsYet: 'Ei suosituksia vielä — liity ensin yhteisöön',
   searchCommPlaceholder: 'Hae nimellä, kategorialla...',
   goToCommunity: 'Siirry yhteisöön',
   joinCommunity: 'Liity',
@@ -2022,7 +2064,7 @@ const fi: CoreDict = derive(sv, {
   exclusiveOffer: 'Eksklusiivinen tarjous — vain sinulle',
   noThanks: 'Ei kiitos, kieltäydyn tästä tarjouksesta',
   goToMemberPortal: 'Siirry jäsenportaaliin',
-  loginAsMemberBtn: 'Kirjaudu jäsenenä',
+  loginAsMemberBtn: 'Kirjaudu community-jäsenenä',
   vatReceipt: 'Verolasku',
   vatSpec: 'ALV-erittely · Ruotsi',
   buyer: 'Ostaja',
@@ -2221,6 +2263,18 @@ const fi: CoreDict = derive(sv, {
   membersOnly: 'Vain jäsenille',
   loginOrJoin: 'Kirjaudu / Liity',
   divider: 'Erotin',
+  profile: 'Profiili',
+  min: 'MIN',
+  sec: 'SEK',
+  appleCal: 'Apple iCal',
+  outlookCal: 'Outlook Web',
+  shareEvent: 'Jaa',
+  productType: 'Tyyppi',
+  streamUrl: 'Stream-URL',
+  broadcastStudio: 'Lähetysasetukset',
+  readyToBroadcast: 'Valmis lähettämään',
+  broadcastSettings: 'Lähetysasetukset',
+  profilePhotoUrl: 'Profiilikuvan URL',
 });
 
 function withExtras(base: CoreDict, locale: Locale): Dict {
@@ -2237,6 +2291,31 @@ const translations: Record<Locale, Dict> = {
 
 export function t(key: TranslationKey, locale: Locale): string {
   return translations[locale]?.[key] ?? translations.en[key] ?? key;
+}
+
+/** Replace `{name}`-style placeholders in translated strings. */
+export function tf(
+  key: TranslationKey,
+  locale: Locale,
+  vars: Record<string, string | number>
+): string {
+  let s = t(key, locale);
+  for (const [k, v] of Object.entries(vars)) {
+    s = s.replaceAll(`{${k}}`, String(v));
+  }
+  return s;
+}
+
+/** BCP 47 tag for Intl date/number formatting. */
+export function localeTag(locale: Locale): string {
+  const map: Record<Locale, string> = {
+    en: 'en-GB',
+    sv: 'sv-SE',
+    no: 'nb-NO',
+    da: 'da-DK',
+    fi: 'fi-FI',
+  };
+  return map[locale];
 }
 
 export const DEFAULT_LOCALE: Locale = 'en';

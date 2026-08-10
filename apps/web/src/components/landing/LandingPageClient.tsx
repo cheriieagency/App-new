@@ -19,6 +19,7 @@ import type { SearchableCommunity } from '@/components/landing/CommunitySearchAu
 import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import { ClikdWordmark } from '@/components/brand/ClikdLogo';
 
 function filterCommunities(list: SearchableCommunity[], query: string): SearchableCommunity[] {
   const q = query.trim().toLowerCase();
@@ -170,13 +171,7 @@ export function LandingPageClient() {
       <footer className="text-[#94a0b0] py-8 text-center text-xs font-medium">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--nc-coral)' }}
-            >
-              <span className="text-white font-display font-extrabold text-[9px]">N</span>
-            </div>
-            <span className="font-display font-bold text-[#5b6472]">Nordic Creator</span>
+            <ClikdWordmark markSize={24} className="gap-2 min-h-0" />
           </div>
           <div className="flex items-center gap-6">
             <Link

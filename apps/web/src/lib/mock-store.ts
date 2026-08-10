@@ -221,7 +221,7 @@ export function listDemoStoreProducts(
   opts?: { includeDrafts?: boolean }
 ) {
   let list = allDemoProducts();
-  // Nordic Creator (id 1) sees the full platform catalog — same as Classroom.
+  // clikd: (id 1) sees the full platform catalog — same as Classroom.
   if (communityId != null && communityId !== 1) {
     list = list.filter((p) => p.community_id === communityId);
   }

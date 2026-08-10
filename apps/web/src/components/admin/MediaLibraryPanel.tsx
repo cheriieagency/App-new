@@ -2,6 +2,7 @@
 
 import { Image as ImageIcon } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
 
 const MEDIA = [
   {
@@ -31,38 +32,31 @@ export default function MediaLibraryPanel() {
   const { activeWorkspace } = useWorkspace();
 
   return (
-    <div className="space-y-5">
-      <div>
-        <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
-          Media Library · {activeWorkspace.name}
-        </p>
-        <h1 className="text-xl sm:text-2xl font-black text-[#1f2430] tracking-tight">
-          Media
-        </h1>
-        <p className="text-xs text-zinc-500 font-medium mt-0.5">
-          Browse creatives for your active Social Set.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <AdminPageHeader
+        eyebrow="Media Library"
+        title="Media"
+        description={`Creatives för ${activeWorkspace.name}`}
+      />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {MEDIA.map((m) => (
-          <div
-            key={m.id}
-            className="rounded-2xl overflow-hidden border border-zinc-200 bg-white text-left"
-          >
+          <div key={m.id} className={`${adminCardClass} overflow-hidden text-left`}>
             <img src={m.image} alt={m.label} className="w-full aspect-square object-cover" />
-            <div className="p-2.5">
-              <p className="text-xs font-extrabold text-[#1f2430] truncate">{m.label}</p>
-              <p className="text-[10px] font-bold text-zinc-400">{m.platform}</p>
+            <div className="p-3">
+              <p className="text-sm font-semibold text-slate-900 truncate">{m.label}</p>
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mt-0.5">
+                {m.platform}
+              </p>
             </div>
           </div>
         ))}
       </div>
 
       {MEDIA.length === 0 && (
-        <div className="py-16 text-center text-zinc-400">
+        <div className={`${adminCardClass} py-16 text-center text-slate-400`}>
           <ImageIcon size={28} className="mx-auto mb-2 opacity-40" />
-          <p className="text-sm font-bold">No media yet</p>
+          <p className="text-sm font-semibold">Ingen media ännu</p>
         </div>
       )}
     </div>

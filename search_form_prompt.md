@@ -1,6 +1,6 @@
-# Search Form Prompt — Nordic Creator Platform
+# Search Form Prompt — clikd: Platform
 
-Use this prompt when building, refining, or debugging search UI in the Nordic Creator app (`apps/web`).
+Use this prompt when building, refining, or debugging search UI in the clikd: app (`apps/web`).
 
 ---
 

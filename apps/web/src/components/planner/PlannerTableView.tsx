@@ -31,11 +31,11 @@ export default function PlannerTableView({
   onOpen: (post: PlannerPost) => void;
 }) {
   return (
-    <div className="nc-glass rounded-[1.5rem] overflow-hidden">
+    <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-left">
           <thead>
-            <tr className="border-b border-zinc-100 bg-zinc-50/80">
+            <tr className="border-b border-slate-100">
               {[
                 'Titel & Media',
                 'Status',
@@ -47,7 +47,7 @@ export default function PlannerTableView({
               ].map((h) => (
                 <th
                   key={h || 'actions'}
-                  className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-zinc-400"
+                  className="px-5 py-3 text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400"
                 >
                   {h}
                 </th>

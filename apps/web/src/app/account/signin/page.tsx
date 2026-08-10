@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { Users, Crown } from 'lucide-react';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import { ClikdWordmark } from '@/components/brand/ClikdLogo';
 import {
   clearRememberedAuth,
   hasRememberedAuth,
@@ -92,11 +93,8 @@ function SignInForm() {
     <main className="nc-app nc-app-shell flex min-h-screen w-full items-center justify-center p-4 relative z-10">
       <div className="w-full max-w-[420px]">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-full bg-[var(--nc-coral)] flex items-center justify-center">
-            <span className="text-white font-display font-extrabold text-sm">N</span>
-          </div>
-          <span className="font-display font-extrabold text-[#2c3340] text-base">Nordic Creator</span>
+        <div className="flex items-center justify-center mb-8">
+          <ClikdWordmark showMark={false} textClassName="text-2xl" className="min-h-0 gap-0" />
         </div>
 
         {/* Role switcher */}

@@ -2,7 +2,7 @@ export async function POST(request: Request) {
   try {
     const { messages, lessonContext } = await request.json();
 
-    const systemPrompt = `You are a helpful AI learning assistant for Nordic Creator Community. You help members understand course content and navigate to the right lessons.
+    const systemPrompt = `You are a helpful AI learning assistant for clikd: Community. You help members understand course content and navigate to the right lessons.
 
 Available course lessons:
 ${lessonContext || 'No lessons available yet.'}

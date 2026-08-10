@@ -246,7 +246,7 @@ export function CommunityAboutView({
 
                 <p className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-zinc-400 text-center">
                   <ShieldCheck size={12} />
-                  Drivs av Nordic Creator • Säker Swish-betalning
+                  Drivs av clikd: • Säker Swish-betalning
                 </p>
               </div>
             </div>

@@ -117,10 +117,7 @@ export function filterCoursesForCommunity(
     return false;
   });
 
-  // Never leave a community classroom empty in demo — show Start Here + matching set.
-  if (!filtered.length) {
-    return courses.filter((c) => [701, 703].includes(c.id));
-  }
+  // Empty communities stay empty — Classroom tab is hidden until courses exist.
   return filtered;
 }
 

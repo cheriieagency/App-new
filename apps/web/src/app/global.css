@@ -3,50 +3,60 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-    --nc-ink: #2c3340;
+    /* Clikd. official signature tokens */
+    --clikd-pink: #F472B6;
+    --clikd-midnight: #2B2568;
+    --clikd-lilac: #E9D5FF;
+    --clikd-white: #FFFFFF;
+    --clikd-mint: #10B981;
+    --clikd-dark: #0F172A;
+    --clikd-light: #FAFAFA;
+
+    /* Legacy nc-* aliases → Clikd (light canvas kept) */
+    --nc-ink: #0F172A;
     --nc-ink-soft: #5b6472;
-    --nc-paper: #f7f9fc;
-    --nc-blush: #e8e2ff;
-    --nc-coral: #9b8afb;
-    --nc-coral-soft: #f2eeff;
-    --nc-sky: #d7ecff;
-    --nc-mint: #d8f5ef;
+    --nc-paper: #FAFAFA;
+    --nc-blush: #E9D5FF;
+    --nc-coral: #F472B6;
+    --nc-coral-soft: #FCE7F3;
+    --nc-sky: #E9D5FF;
+    --nc-mint: #D1FAE5;
     --nc-glass: rgba(255, 255, 255, 0.55);
     --nc-glass-border: rgba(255, 255, 255, 0.75);
 
-    --background: #f7f9fc;
-    --foreground: #2c3340;
-    --card: rgba(255, 255, 255, 0.72);
-    --card-foreground: #2c3340;
+    --background: #FAFAFA;
+    --foreground: #0F172A;
+    --card: rgba(255, 255, 255, 0.85);
+    --card-foreground: #0F172A;
     --popover: #ffffff;
-    --popover-foreground: #2c3340;
-    --primary: #9b8afb;
+    --popover-foreground: #0F172A;
+    --primary: #F472B6;
     --primary-foreground: #ffffff;
-    --secondary: #f2eeff;
-    --secondary-foreground: #2c3340;
-    --muted: #eef2f7;
+    --secondary: #FCE7F3;
+    --secondary-foreground: #2B2568;
+    --muted: #F4F4F5;
     --muted-foreground: #5b6472;
-    --accent: #d7ecff;
-    --accent-foreground: #2c3340;
+    --accent: #E9D5FF;
+    --accent-foreground: #2B2568;
     --destructive: hsl(0 84.2% 60.2%);
     --destructive-foreground: hsl(0 0% 98%);
     --border: rgba(200, 210, 225, 0.55);
     --input: rgba(200, 210, 225, 0.7);
-    --ring: #9b8afb;
+    --ring: #F472B6;
     --radius: 1rem;
-    --chart-1: #9b8afb;
-    --chart-2: #38bdf8;
-    --chart-3: #2dd4bf;
-    --chart-4: #fbbf24;
-    --chart-5: #a78bfa;
-    --sidebar: rgba(255, 255, 255, 0.55);
-    --sidebar-foreground: #2c3340;
-    --sidebar-primary: #9b8afb;
+    --chart-1: #F472B6;
+    --chart-2: #2B2568;
+    --chart-3: #10B981;
+    --chart-4: #E9D5FF;
+    --chart-5: #F9A8D4;
+    --sidebar: rgba(255, 255, 255, 0.9);
+    --sidebar-foreground: #0F172A;
+    --sidebar-primary: #F472B6;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #f2eeff;
-    --sidebar-accent-foreground: #2c3340;
-    --sidebar-border: rgba(255, 255, 255, 0.7);
-    --sidebar-ring: #9b8afb;
+    --sidebar-accent: #FCE7F3;
+    --sidebar-accent-foreground: #2B2568;
+    --sidebar-border: rgba(226, 232, 240, 0.9);
+    --sidebar-ring: #F472B6;
 }
 
 .dark {
@@ -85,10 +95,19 @@
 }
 
 @theme inline {
-    /* font-sans → Plus Jakarta; font-inter / font-jakarta utilities also available */
-    --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    /* Clikd. type + color system */
+    --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     --font-jakarta: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     --font-inter: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-clikd-wordmark: var(--font-space-grotesk), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-fira-code), 'Fira Code', ui-monospace, monospace;
+    --color-clikd-pink: var(--clikd-pink);
+    --color-clikd-midnight: var(--clikd-midnight);
+    --color-clikd-lilac: var(--clikd-lilac);
+    --color-clikd-mint: var(--clikd-mint);
+    --color-clikd-dark: var(--clikd-dark);
+    --color-clikd-light: var(--clikd-light);
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
@@ -146,18 +165,18 @@
     }
 }
 
-/* Soft glass design system — landing + app */
+/* Soft glass design system — landing + app (Clikd. light canvas) */
 .nc-landing,
 .nc-app {
-    --nc-ink: #2c3340;
+    --nc-ink: #0F172A;
     --nc-ink-soft: #5b6472;
-    --nc-paper: #f7f9fc;
-    --nc-blush: #e8e2ff;
-    --nc-coral: #9b8afb;
-    --nc-coral-soft: #f2eeff;
-    --nc-sky: #d7ecff;
-    --nc-mint: #d8f5ef;
-    font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --nc-paper: #FAFAFA;
+    --nc-blush: #E9D5FF;
+    --nc-coral: #F472B6;
+    --nc-coral-soft: #FCE7F3;
+    --nc-sky: #E9D5FF;
+    --nc-mint: #D1FAE5;
+    font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     color: var(--nc-ink);
     background: var(--nc-paper);
 }
@@ -166,6 +185,16 @@
 .nc-app .font-display,
 .font-display {
     font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Clikd. wordmark only — Space Grotesk per brand guide */
+.font-clikd-wordmark {
+    font-family: var(--font-space-grotesk), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-symbol,
+.clikd-mono {
+    font-family: var(--font-fira-code), 'Fira Code', ui-monospace, monospace;
 }
 
 .nc-glass {

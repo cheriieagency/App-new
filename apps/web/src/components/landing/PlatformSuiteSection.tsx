@@ -95,8 +95,8 @@ export function PlatformSuiteSection() {
             ⚡ Creator Admin
           </p>
           <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight leading-tight">
-            Your Complete{' '}
-            <span className="bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
+            <span className="block">Your Complete</span>
+            <span className="block bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
               Creator Command Center
             </span>
           </h2>

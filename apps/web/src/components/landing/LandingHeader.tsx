@@ -6,6 +6,7 @@ import { t } from '@/lib/i18n';
 import { useLanguage } from '@/lib/locale-context';
 import { LoginModal } from '@/components/landing/LoginModal';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { ClikdWordmark } from '@/components/brand/ClikdLogo';
 
 type LandingHeaderProps = {
   isLoggedIn: boolean;
@@ -38,13 +39,8 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           {/* Left — brand */}
-          <Link href="/" className="flex items-center gap-2.5 min-h-11 shrink-0">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md shadow-indigo-600/25 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
-              <span className="text-white font-display font-extrabold text-xs">N</span>
-            </div>
-            <span className="font-display font-extrabold text-sm text-slate-900 hidden sm:block">
-              Nordic Creator
-            </span>
+          <Link href="/" className="shrink-0">
+            <ClikdWordmark showMark={false} textClassName="text-xl sm:text-2xl" className="gap-0 min-h-11" />
           </Link>
 
           {/* Middle — primary nav */}
@@ -82,7 +78,7 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
             {isLoggedIn ? (
               <Link
                 href="/dashboard"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-1.5 min-h-11 transition-colors"
+                className="bg-clikd-pink hover:brightness-95 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-pink-500/25 flex items-center gap-1.5 min-h-11 transition-all"
               >
                 {t('dashboard', locale)} →
               </Link>
@@ -97,7 +93,7 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
                 </button>
                 <Link
                   href="/account/signup"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-1.5 min-h-11 transition-colors"
+                  className="bg-clikd-pink hover:brightness-95 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-pink-500/25 flex items-center gap-1.5 min-h-11 transition-all"
                 >
                   Get started →
                 </Link>

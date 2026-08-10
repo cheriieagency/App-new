@@ -73,7 +73,7 @@ export function ComparisonSection() {
                 ✓ All-in-One Winner
               </span>
               <p className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-slate-300 mb-1 pr-16 sm:pr-24">
-                Nordic Creator
+                clikd:
               </p>
               <p className="text-[11px] sm:text-sm font-bold text-white leading-snug pr-2">
                 {t('whyNewWayStack', locale)}

@@ -731,24 +731,33 @@ export default function CommunityAdminPanel({
   const { community, overview, communities } = data;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      <div>
+        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+          Community
+        </p>
+        <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mt-1">
+          {community.name}
+        </h1>
+      </div>
+
       {/* Community picker + sub-nav */}
-      <div className="nc-glass rounded-[1.5rem] p-4 sm:p-5">
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
           <div
             className="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center text-white font-black text-sm"
-            style={{ background: community.cover_color || '#0f766e' }}
+            style={{ background: community.cover_color || '#2B2568' }}
           >
             {community.name?.[0] ?? 'C'}
           </div>
           <div className="flex-1 min-w-0">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
+            <label className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-[0.12em] block mb-1">
               {t('chooseCommunity', locale)}
             </label>
             <select
               value={selectedId ?? ''}
               onChange={(e) => setActiveWorkspaceId(String(e.target.value))}
-              className="w-full sm:max-w-xs h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-extrabold text-[#2c3340] focus:outline-none focus:border-[var(--nc-coral)]"
+              className="w-full sm:max-w-xs h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 focus:outline-none focus:border-slate-400"
               aria-label={t('chooseCommunity', locale)}
             >
               {communities.map((c) => (
@@ -759,22 +768,22 @@ export default function CommunityAdminPanel({
             </select>
           </div>
           {data.demo && (
-            <span className="inline-flex items-center gap-1 self-start sm:self-center text-[10px] font-black uppercase tracking-wide text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-full">
+            <span className="inline-flex items-center gap-1 self-start sm:self-center text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-full">
               <Sparkles size={10} /> Demo
             </span>
           )}
         </div>
 
-        <div className="flex gap-1 overflow-x-auto scrollbar-none -mx-1 px-1">
+        <div className="flex gap-0.5 overflow-x-auto scrollbar-none -mx-1 px-1">
           {SUB_TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               type="button"
               onClick={() => setSubTab(key)}
-              className={`flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all flex-shrink-0 ${
+              className={`flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
                 subTab === key
-                  ? 'bg-[var(--nc-coral)] text-white shadow-sm'
-                  : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-[#2c3340]'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
               }`}
             >
               <Icon size={13} /> {label}

@@ -183,7 +183,7 @@ const brandWorkspaces: BrandWorkspace[] = [
   },
   {
     id: 'ws-nordic',
-    name: 'Nordic Creator Launch',
+    name: 'Clikd Launch',
     handle: '@nordiccreator',
     avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=nordic',
     color: '#E11D48',
@@ -193,7 +193,7 @@ const brandWorkspaces: BrandWorkspace[] = [
   {
     id: 'ws-cherii',
     name: 'Cherii Media Agency',
-    handle: '@cheriimedia',
+    handle: '@cheriie.agency',
     avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=cherii',
     color: '#0F766E',
     channels: ['instagram', 'tiktok', 'linkedin'],
@@ -260,13 +260,16 @@ export function createBrandWorkspace(input: {
   return { ...ws, channels: [...ws.channels] };
 }
 
-export function workspaceChannelLabel(ws: BrandWorkspace): string {
+export function workspaceChannelLabel(
+  ws: BrandWorkspace,
+  accountWord = 'accounts'
+): string {
   const n = ws.channels.length;
-  return `${ws.handle} • ${n} konto${n === 1 ? '' : 'n'}`;
+  return `${ws.handle} • ${n} ${accountWord}`;
 }
 
 /** Demo workspace subscription — Pro unlocks planner invites. */
-let workspacePlan: WorkspacePlan = 'pro';
+let workspacePlan: WorkspacePlan = 'creator';
 
 const teamMembers: PlannerTeamMember[] = [
   {
@@ -630,7 +633,7 @@ const posts: PlannerPost[] = [
         type: 'image',
       },
     ],
-    project: 'Nordic Creator Launch',
+    project: 'Clikd Launch',
     assignees: [PLANNER_TEAM[0]],
     subtasks: [
       { id: 'st-8', title: 'Klipp highlight', done: true },
@@ -662,7 +665,7 @@ const posts: PlannerPost[] = [
     media_url: null,
     media_type: null,
     media_items: [],
-    project: 'Nordic Creator Launch',
+    project: 'Clikd Launch',
     assignees: [PLANNER_TEAM[1], PLANNER_TEAM[3]],
     subtasks: [
       { id: 'st-10', title: 'Brief', done: true },
@@ -767,6 +770,202 @@ const posts: PlannerPost[] = [
     created_by: 'Mira',
   },
   {
+    id: 'post-feed-1',
+    title: 'Morning routine reel',
+    caption: 'Min morning routine som creator ☕\n3 vanor som ändrade allt.',
+    hashtags: '#morningroutine #creator',
+    platforms: ['instagram', 'tiktok'],
+    workflow: 'PUBLISHED',
+    status: 'published',
+    scheduled_at: new Date(now - 6 * day).toISOString(),
+    published_at: new Date(now - 6 * day).toISOString(),
+    media_url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80',
+    media_type: 'video',
+    media_items: [
+      {
+        id: 'm-f1',
+        url: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80',
+        type: 'video',
+      },
+    ],
+    project: 'Ebba Creator Lab',
+    assignees: [PLANNER_TEAM[0]],
+    subtasks: [],
+    auto_post: true,
+    activity: [
+      act('Content was created by Ebba', 'public', new Date(now - 7 * day).toISOString()),
+      act('Status was set to PUBLISHED by Ebba', 'public', new Date(now - 6 * day).toISOString()),
+    ],
+    comments: [],
+    created_at: new Date(now - 7 * day).toISOString(),
+    created_by: 'Ebba',
+  },
+  {
+    id: 'post-feed-2',
+    title: 'Product flatlay carousel',
+    caption: '3 produkter jag använder varje vecka 📦',
+    hashtags: '#digitalprodukter #flatlay',
+    platforms: ['instagram'],
+    workflow: 'PUBLISHED',
+    status: 'published',
+    scheduled_at: new Date(now - 4 * day).toISOString(),
+    published_at: new Date(now - 4 * day).toISOString(),
+    media_url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80',
+    media_type: 'carousel',
+    media_items: [
+      {
+        id: 'm-f2a',
+        url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80',
+        type: 'image',
+      },
+      {
+        id: 'm-f2b',
+        url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80',
+        type: 'image',
+      },
+    ],
+    project: 'Ebba Creator Lab',
+    assignees: [PLANNER_TEAM[0]],
+    subtasks: [],
+    auto_post: true,
+    activity: [
+      act('Content was created by Ebba', 'public', new Date(now - 5 * day).toISOString()),
+      act('Status was set to PUBLISHED by Ebba', 'public', new Date(now - 4 * day).toISOString()),
+    ],
+    comments: [],
+    created_at: new Date(now - 5 * day).toISOString(),
+    created_by: 'Ebba',
+  },
+  {
+    id: 'post-feed-3',
+    title: 'Studio desk photo',
+    caption: 'Desk setup update 🖥️',
+    hashtags: '#workspace #creatorsetup',
+    platforms: ['instagram', 'tiktok'],
+    workflow: 'PUBLISHED',
+    status: 'published',
+    scheduled_at: new Date(now - 2 * day).toISOString(),
+    published_at: new Date(now - 2 * day).toISOString(),
+    media_url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80',
+    media_type: 'image',
+    media_items: [
+      {
+        id: 'm-f3',
+        url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80',
+        type: 'image',
+      },
+    ],
+    project: 'Ebba Creator Lab',
+    assignees: [PLANNER_TEAM[1]],
+    subtasks: [],
+    auto_post: true,
+    activity: [
+      act('Content was created by Alex', 'public', new Date(now - 3 * day).toISOString()),
+      act('Status was set to PUBLISHED by Alex', 'public', new Date(now - 2 * day).toISOString()),
+    ],
+    comments: [],
+    created_at: new Date(now - 3 * day).toISOString(),
+    created_by: 'Alex',
+  },
+  {
+    id: 'post-feed-4',
+    title: 'Carousel: 5 CTA-formler',
+    caption: 'Spara denna — 5 CTA-formler som konverterar 💾',
+    hashtags: '#copywriting #cta',
+    platforms: ['instagram', 'tiktok'],
+    workflow: 'SCHEDULED',
+    status: 'scheduled',
+    scheduled_at: new Date(now + 2 * day).toISOString(),
+    published_at: null,
+    media_url: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=600&q=80',
+    media_type: 'carousel',
+    media_items: [
+      {
+        id: 'm-f4a',
+        url: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=600&q=80',
+        type: 'image',
+      },
+      {
+        id: 'm-f4b',
+        url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&q=80',
+        type: 'image',
+      },
+    ],
+    project: 'Ebba Creator Lab',
+    assignees: [PLANNER_TEAM[0]],
+    subtasks: [],
+    auto_post: true,
+    activity: [
+      act('Content was created by Ebba', 'public', new Date(now - day).toISOString()),
+      act('Status was set to SCHEDULED by Ebba', 'public', new Date(now - 12 * hour).toISOString()),
+    ],
+    comments: [],
+    created_at: new Date(now - day).toISOString(),
+    created_by: 'Ebba',
+  },
+  {
+    id: 'post-feed-5',
+    title: 'Draft: Q&A reel',
+    caption: 'Svara på era DM:s i en reel…',
+    hashtags: '#qa #reels',
+    platforms: ['instagram', 'tiktok'],
+    workflow: 'IDEA',
+    status: 'draft',
+    scheduled_at: null,
+    published_at: null,
+    media_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80',
+    media_type: 'video',
+    media_items: [
+      {
+        id: 'm-f5',
+        url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80',
+        type: 'video',
+      },
+    ],
+    idea_title: 'Q&A reel från DM',
+    project: 'Ebba Creator Lab',
+    assignees: [PLANNER_TEAM[0]],
+    subtasks: [{ id: 'st-f5', title: 'Samla frågor', done: false }],
+    auto_post: false,
+    activity: [
+      act('Content was created by Ebba', 'public', new Date(now - 6 * hour).toISOString()),
+    ],
+    comments: [],
+    created_at: new Date(now - 6 * hour).toISOString(),
+    created_by: 'Ebba',
+  },
+  {
+    id: 'post-feed-6',
+    title: 'Draft: Soft launch teaser',
+    caption: 'Something big is coming…',
+    hashtags: '#comingsoon',
+    platforms: ['instagram'],
+    workflow: 'READY',
+    status: 'draft',
+    scheduled_at: null,
+    published_at: null,
+    media_url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80',
+    media_type: 'image',
+    media_items: [
+      {
+        id: 'm-f6',
+        url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80',
+        type: 'image',
+      },
+    ],
+    project: 'Ebba Creator Lab',
+    assignees: [PLANNER_TEAM[1]],
+    subtasks: [],
+    auto_post: false,
+    activity: [
+      act('Content was created by Alex', 'public', new Date(now - 10 * hour).toISOString()),
+      act('Status was set to READY by Alex', 'public', new Date(now - 8 * hour).toISOString()),
+    ],
+    comments: [],
+    created_at: new Date(now - 10 * hour).toISOString(),
+    created_by: 'Alex',
+  },
+  {
     id: 'post-6',
     title: 'Hook-idé: 15s scroll-stopper',
     caption: '',
@@ -779,7 +978,7 @@ const posts: PlannerPost[] = [
     media_url: null,
     media_type: null,
     media_items: [],
-    project: 'Nordic Creator Launch',
+    project: 'Clikd Launch',
     assignees: [PLANNER_TEAM[0]],
     subtasks: [
       { id: 'st-17', title: 'Brainstorm hooks', done: false },
@@ -801,7 +1000,7 @@ const socialAccounts: ConnectedSocialAccount[] = [
     platform: 'instagram',
     connected: true,
     handle: '@nordic.creator',
-    display_name: 'Nordic Creator',
+    display_name: 'clikd:',
     avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nc-ig',
     connected_at: new Date(now - 30 * day).toISOString(),
   },
@@ -816,8 +1015,8 @@ const socialAccounts: ConnectedSocialAccount[] = [
   {
     platform: 'linkedin',
     connected: true,
-    handle: 'Nordic Creator AB',
-    display_name: 'Nordic Creator',
+    handle: 'clikd: AB',
+    display_name: 'clikd:',
     avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nc-li',
     connected_at: new Date(now - 12 * day).toISOString(),
   },
@@ -954,7 +1153,7 @@ export function upsertPlannerPost(
     (input.caption || '').split('\n')[0].slice(0, 60) ||
     'Nytt inlägg';
 
-  const wsName = input.project ?? brandWorkspaces[0]?.name ?? 'Nordic Creator Launch';
+  const wsName = input.project ?? brandWorkspaces[0]?.name ?? 'Clikd Launch';
 
   const post: PlannerPost = {
     id: `post-${++postSeq}`,
@@ -1042,14 +1241,14 @@ export function setSocialConnection(
     const handles: Record<SocialPlatform, string> = {
       instagram: '@nordic.creator',
       tiktok: '@nordiccreator',
-      linkedin: 'Nordic Creator AB',
-      youtube: '@NordicCreator',
+      linkedin: 'clikd: AB',
+      youtube: '@clikd',
     };
     const names: Record<SocialPlatform, string> = {
-      instagram: 'Nordic Creator',
-      tiktok: 'Nordic Creator',
-      linkedin: 'Nordic Creator',
-      youtube: 'Nordic Creator Channel',
+      instagram: 'clikd:',
+      tiktok: 'clikd:',
+      linkedin: 'clikd:',
+      youtube: 'clikd: Channel',
     };
     acc.connected = true;
     acc.handle = handles[platform];

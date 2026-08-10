@@ -1,6 +1,6 @@
 # Form: Community Search — Implementation Instruction
 
-Concrete instructions for the **community search form** on the Nordic Creator platform (`apps/web`).  
+Concrete instructions for the **community search form** on the clikd: platform (`apps/web`).  
 Companion to `search_form_prompt.md` (general search rules). This file is community-specific.
 
 ---

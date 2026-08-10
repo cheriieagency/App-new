@@ -43,21 +43,22 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
 import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
 import useUpload from '@/utils/useUpload';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import { ClikdMark } from '@/components/brand/ClikdLogo';
 import {
   CommunitySearchAutocomplete,
   type SearchableCommunity,
 } from '@/components/landing/CommunitySearchAutocomplete';
-import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
+import { getMockCommunitiesForUser, normalizeCommunities, recommendCommunitiesFromMemberships, joinedCommunityCategories } from '@/lib/mock-communities';
 import ClassroomView from '@/components/classroom/ClassroomView';
 import StoreView from '@/components/store/StoreView';
-import { normalizeClassroomCourses } from '@/lib/classroom-content';
+import { normalizeClassroomCourses, filterCoursesForCommunity, SKOOL_CLASSROOM_COURSES } from '@/lib/classroom-content';
 
 type TabKey = 'community' | 'events' | 'classroom' | 'store';
 type CommunitySubTab = 'feed' | 'leaderboard';
@@ -520,9 +521,12 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
   );
 }
 
+const TAB_KEYS: TabKey[] = ['community', 'events', 'classroom', 'store'];
+
 export default function DashboardPage() {
   const { data: session, isPending: isAuthPending } = authClient.useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { locale } = useLanguage();
 
@@ -533,6 +537,15 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('community');
   const [communitySubTab, setCommunitySubTab] = useState<CommunitySubTab>('feed');
   const [mounted, setMounted] = useState(false);
+
+  // Sync main tabs with ?tab= from the global mobile bottom nav.
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && TAB_KEYS.includes(tab as TabKey)) {
+      setActiveTab(tab as TabKey);
+      setSidebarView('community');
+    }
+  }, [searchParams]);
   const [countdown, setCountdown] = useState<CountdownMap>({});
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
   const [expandedPosts, setExpandedPosts] = useState<Set<number>>(new Set());
@@ -879,9 +892,29 @@ export default function DashboardPage() {
   };
 
   const joinedCommunities = communities.filter((c) => c.is_joined);
+  const memberCategories = useMemo(
+    () => joinedCommunityCategories(communities),
+    [communities]
+  );
+  const recommendedCommunities = useMemo(
+    () => recommendCommunitiesFromMemberships(communities, { limit: 12 }),
+    [communities]
+  );
+  /** Courses belonging to the open community — Classroom tab stays hidden until any exist. */
+  const selectedCommunityCourses = useMemo(() => {
+    const all = normalizeClassroomCourses(classroom);
+    const catalog = all.length ? all : SKOOL_CLASSROOM_COURSES;
+    return filterCoursesForCommunity(catalog, {
+      communityId: selectedCommunity?.id != null ? Number(selectedCommunity.id) : null,
+      slug: selectedCommunity?.slug ?? null,
+    });
+  }, [classroom, selectedCommunity]);
+  const hasClassroomTab = selectedCommunityCourses.length > 0;
+
   const filteredCommunities = useMemo(() => {
     const q = communitySearch.trim().toLowerCase();
-    if (!q) return communities;
+    // Empty query → recommend from memberships (exclude already joined).
+    if (!q) return recommendedCommunities;
     return communities.filter((c) => {
       const haystack = [c.name, c.category, c.creator_name, c.slug, c.description]
         .filter(Boolean)
@@ -889,7 +922,13 @@ export default function DashboardPage() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [communities, communitySearch]);
+  }, [communities, communitySearch, recommendedCommunities]);
+
+  useEffect(() => {
+    if (activeTab !== 'classroom' || hasClassroomTab) return;
+    setActiveTab('community');
+    router.replace('/dashboard?tab=community', { scroll: false });
+  }, [activeTab, hasClassroomTab, router]);
 
   const handleSelectCommunitySearch = (community: SearchableCommunity) => {
     setMobileCommunitiesOpen(false);
@@ -993,7 +1032,7 @@ export default function DashboardPage() {
     { key: 'events', label: 'Events', icon: Calendar },
     { key: 'classroom', label: 'Classroom', icon: GraduationCap },
     { key: 'store', label: 'Store', icon: ShoppingBag },
-  ];
+  ].filter((tab) => tab.key !== 'classroom' || hasClassroomTab);
 
   // ── Sidebar icon item ────────────────────────────────────────────────────
   const SidebarIcon = ({
@@ -1171,7 +1210,7 @@ export default function DashboardPage() {
                           </span>
                         )}
                         <span className="text-[10px] text-zinc-300 bg-zinc-50 px-2 py-0.5 rounded-full font-bold">
-                          Nordic Creator
+                          clikd:
                         </span>
                       </div>
                       <p
@@ -1251,7 +1290,13 @@ export default function DashboardPage() {
   const renderSearch = () => (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
       <h1 className="text-2xl font-black text-[#2c3340] mb-2">{t('searchCommunities', locale)}</h1>
-      <p className="text-zinc-500 text-sm mb-6">{t('searchCommSub', locale)}</p>
+      <p className="text-zinc-500 text-sm mb-6">
+        {communitySearch.trim()
+          ? t('searchCommSub', locale)
+          : memberCategories.length > 0
+            ? `${t('recommendedForYou', locale)} · ${memberCategories.join(' · ')}`
+            : t('searchCommSub', locale)}
+      </p>
       <div className="relative z-20 mb-6 max-w-xl">
         <CommunitySearchAutocomplete
           value={communitySearch}
@@ -1262,10 +1307,17 @@ export default function DashboardPage() {
           placeholder={t('searchPlaceholder', locale)}
         />
       </div>
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-xs font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">
-          {filteredCommunities.length}
-        </span>
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {!communitySearch.trim() && (
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+              {t('recommendedCommunities', locale)}
+            </span>
+          )}
+          <span className="text-xs font-bold text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-full">
+            {filteredCommunities.length}
+          </span>
+        </div>
         {communitySearch && (
           <button
             type="button"
@@ -1338,15 +1390,19 @@ export default function DashboardPage() {
       {filteredCommunities.length === 0 && (
         <div className="text-center py-16">
           <p className="text-zinc-500 font-bold">
-            {t('noResults', locale)} &quot;{communitySearch}&quot;
+            {communitySearch.trim()
+              ? `${t('noResults', locale)} "${communitySearch}"`
+              : t('noRecommendationsYet', locale)}
           </p>
-          <button
-            type="button"
-            onClick={() => setCommunitySearch('')}
-            className="mt-3 text-sm text-[#2c3340] font-bold hover:underline min-h-11"
-          >
-            {t('showAll', locale)}
-          </button>
+          {communitySearch.trim() ? (
+            <button
+              type="button"
+              onClick={() => setCommunitySearch('')}
+              className="mt-3 text-sm text-[#2c3340] font-bold hover:underline min-h-11"
+            >
+              {t('showAll', locale)}
+            </button>
+          ) : null}
         </div>
       )}
     </div>
@@ -1542,7 +1598,10 @@ export default function DashboardPage() {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setActiveTab(key)}
+                    onClick={() => {
+                      setActiveTab(key);
+                      router.replace(`/dashboard?tab=${key}`, { scroll: false });
+                    }}
                     className={`relative flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 text-xs font-extrabold whitespace-nowrap transition-colors flex-shrink-0 ${
                       active ? 'text-[#2c3340]' : 'text-zinc-400 hover:text-zinc-700'
                     }`}
@@ -2038,7 +2097,7 @@ export default function DashboardPage() {
               />
             )}
 
-            {activeTab === 'classroom' && (
+            {activeTab === 'classroom' && hasClassroomTab && (
               <div>
                 <ClassroomView
                   communityId={comm?.id != null ? Number(comm.id) : null}
@@ -2170,11 +2229,8 @@ export default function DashboardPage() {
     <div className="nc-app nc-app-shell flex min-h-screen">
       {/* Left Sidebar (desktop) — soft glass */}
       <aside className="hidden lg:flex flex-col items-center w-[4.5rem] nc-glass fixed left-3 top-3 bottom-3 z-30 py-4 gap-2 rounded-[1.75rem]">
-        <Link
-          href="/"
-          className="w-10 h-10 rounded-full bg-[var(--nc-coral)] flex items-center justify-center mb-3 shadow-sm hover:opacity-90 transition-opacity"
-        >
-          <span className="text-white font-display font-extrabold text-xs">N</span>
+        <Link href="/" className="mb-3 hover:opacity-90 transition-opacity">
+          <ClikdMark size={40} className="rounded-full" />
         </Link>
         <SidebarIcon
           icon={Home}
@@ -2262,39 +2318,7 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="fixed bottom-3 left-3 right-3 lg:hidden z-20">
-        <div className="nc-glass rounded-full flex items-center justify-around h-14 px-2">
-          {[
-            { view: 'home' as SidebarView, icon: Home, label: t('home', locale) },
-            { view: 'search' as SidebarView, icon: Search, label: t('search', locale) },
-            {
-              view: 'community' as SidebarView,
-              icon: Users,
-              label: t('allCommunities', locale),
-              action: () => setMobileCommunitiesOpen(!mobileCommunitiesOpen),
-            },
-            { view: 'profile' as SidebarView, icon: User, label: t('profile', locale) },
-          ].map(({ view, icon: Icon, label, action }) => (
-            <button
-              key={view}
-              onClick={
-                action ??
-                (() => {
-                  setSidebarView(view);
-                  if (view !== 'community') setSelectedCommunity(null);
-                })
-              }
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-full transition-all ${sidebarView === view ? 'text-[var(--nc-coral)]' : 'text-[#94a0b0]'}`}
-            >
-              <Icon size={20} />
-              <span className="text-[9px] font-extrabold">{label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      {/* Mobile community sheet */}
+      {/* Mobile community sheet (opened from in-page community controls) */}
       {mobileCommunitiesOpen && (
         <div
           className="fixed inset-0 z-40 lg:hidden"

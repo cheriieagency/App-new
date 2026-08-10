@@ -41,11 +41,6 @@ function formatMembers(count: number) {
   return count.toLocaleString('en-US');
 }
 
-function priceLabel(community: CommunityCard) {
-  const price = community.monthly_price ?? community.price ?? 199;
-  return `${price.toLocaleString('sv-SE')} SEK / mo`;
-}
-
 function categoryTag(raw: string) {
   const c = raw.toLowerCase();
   if (c.includes('market') || c.includes('marknads')) return 'Marknadsföring';
@@ -61,12 +56,12 @@ function isCategoryActive(searchQuery: string, filter: string) {
   return searchQuery.trim().toLowerCase() === filter.toLowerCase();
 }
 
-/** Prefer the curated Nordic Creator Hub for the hero card when present. */
+/** Prefer the curated Clikd Hub for the hero card when present. */
 function resolveFeatured(
   featured: CommunityCard | null | undefined,
   all: CommunityCard[]
 ): CommunityCard | null {
-  const hub = all.find((c) => c.slug === 'nordic-creator' || c.name === 'Nordic Creator Hub');
+  const hub = all.find((c) => c.slug === 'nordic-creator' || c.name === 'Clikd Hub');
   return hub ?? featured ?? all.find((c) => c.is_featured) ?? all[0] ?? null;
 }
 
@@ -172,7 +167,7 @@ export function ShowcaseSection({
                   </div>
 
                   <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-white mb-3 leading-tight tracking-tight">
-                    Nordic Creator Hub
+                    Clikd Hub
                   </h3>
                   <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl mb-6">
                     The ultimate community for Nordic digital creators & educators. Weekly live
@@ -248,14 +243,9 @@ export function ShowcaseSection({
                 <p className="text-xs text-slate-500 font-medium line-clamp-2 mb-4 flex-1">
                   {community.description}
                 </p>
-                <div className="flex items-center justify-between gap-2 mb-4">
-                  <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-1 text-[11px] font-extrabold">
-                    {priceLabel(community)}
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-500">
-                    {formatMembers(community.member_count)} Active Members
-                  </span>
-                </div>
+                <p className="text-[11px] font-bold text-slate-500 mb-4">
+                  {formatMembers(community.member_count)} Active Members
+                </p>
                 <Link
                   href={`/communities/${community.id}`}
                   className="inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-3 rounded-xl transition-colors"

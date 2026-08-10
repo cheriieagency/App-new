@@ -143,7 +143,7 @@ export default function CollectInfoFieldBuilder({
                     </select>
                   )}
                   {field.isDefault && (
-                    <span className="text-[10px] font-extrabold uppercase tracking-wide text-zinc-400 bg-zinc-50 px-2 py-1 rounded-md">
+                    <span className="text-[10px] font-mono font-extrabold uppercase tracking-wide text-zinc-400 bg-zinc-50 px-2 py-1 rounded-md">
                       {field.type}
                     </span>
                   )}

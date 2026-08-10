@@ -86,6 +86,7 @@ export default function PostStudioModal({
   post,
   projectName,
   workspaces,
+  defaultScheduledAt = null,
   onSaved,
 }: {
   open: boolean;
@@ -93,6 +94,8 @@ export default function PostStudioModal({
   post: PlannerPost | null;
   projectName: string;
   workspaces: BrandWorkspace[];
+  /** When creating a new post from a calendar day, prefill schedule time. */
+  defaultScheduledAt?: string | null;
   onSaved: () => void;
 }) {
   const { locale } = useLocale();
@@ -150,10 +153,10 @@ export default function PostStudioModal({
       setCaption('');
       setHashtags('');
       setPlatforms(['instagram']);
-      setWorkflow('IDEA');
+      setWorkflow(defaultScheduledAt ? 'SCHEDULED' : 'IDEA');
       setProject(projectName);
-      setScheduledAt('');
-      setAutoPost(false);
+      setScheduledAt(defaultScheduledAt ? toLocalInputValue(defaultScheduledAt) : '');
+      setAutoPost(Boolean(defaultScheduledAt));
       setAssignees([PLANNER_TEAM[0]]);
       setSubtasks([]);
       setMediaItems([]);
@@ -165,7 +168,7 @@ export default function PostStudioModal({
     setMobilePane('details');
     setComment('');
     setCommentImage(null);
-  }, [open, post, projectName]);
+  }, [open, post, projectName, defaultScheduledAt]);
 
   const togglePlatform = (p: SocialPlatform) => {
     setPlatforms((prev) =>

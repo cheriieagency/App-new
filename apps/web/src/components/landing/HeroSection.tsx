@@ -48,7 +48,7 @@ function PhoneStorefront() {
     <div className="relative mx-auto w-full max-w-[320px]">
       {/* Ambient glow behind phone */}
       <div
-        className="absolute inset-0 -z-10 scale-125 bg-gradient-to-tr from-indigo-500/20 via-purple-500/20 to-pink-500/10 blur-3xl animate-pulse"
+        className="absolute inset-0 -z-10 scale-125 bg-gradient-to-tr from-clikd-pink/25 via-fuchsia-400/15 to-clikd-lilac/30 blur-3xl animate-pulse"
         aria-hidden
       />
 
@@ -136,7 +136,7 @@ function PhoneStorefront() {
                   Sofia Bergström <span aria-hidden>✔️</span>
                 </p>
                 <p className="text-[10px] text-slate-500 font-medium mt-1.5 leading-snug">
-                  Nordic Creator • Digital Courses & Live
+                  clikd: • Digital Courses & Live
                 </p>
               </div>
 
@@ -258,9 +258,9 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="inline-flex items-center gap-2 bg-indigo-500/10 text-indigo-700 border border-indigo-500/20 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider mb-5"
+              className="inline-flex items-center gap-2 bg-clikd-lilac/60 text-clikd-midnight border border-clikd-pink/25 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider mb-5"
             >
-              ⚡ The All-in-One Platform for Nordic Creators
+              ⚡ The All-in-One Platform — clikd:
             </motion.div>
 
             <motion.h1
@@ -270,7 +270,7 @@ export function HeroSection() {
               className="font-display font-extrabold text-slate-900 text-[2rem] sm:text-5xl lg:text-[3.15rem] leading-[1.08] tracking-tight mb-5"
             >
               Build, Sell & Scale —{' '}
-              <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-clikd-midnight via-fuchsia-600 to-clikd-pink bg-clip-text text-transparent">
                 Community, Bio & Socials
               </span>{' '}
               in One App
@@ -295,7 +295,7 @@ export function HeroSection() {
             >
               <Link
                 href="/account/signup"
-                className="w-full sm:w-auto bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:opacity-95 text-white font-bold px-7 py-4 rounded-2xl shadow-xl shadow-pink-500/25 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5 min-h-[44px]"
+                className="w-full sm:w-auto bg-clikd-pink hover:brightness-95 text-white font-bold px-7 py-4 rounded-2xl shadow-md shadow-pink-500/25 flex items-center justify-center gap-2.5 transition-all min-h-[44px]"
               >
                 Start Your Free Community →
               </Link>

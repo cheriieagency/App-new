@@ -1,8 +1,15 @@
-/** Bio page theme presets + custom style model for Bio Builder. */
+/** Bio page theme presets + luxury Design Studio model for Bio Builder. */
+
+import type { CSSProperties } from 'react';
 
 export type BioButtonStyle = 'filled' | 'soft' | 'outline';
 export type BioButtonRadius = 'sharp' | 'rounded' | 'pill';
 export type BioButtonShadow = 'none' | 'soft' | 'strong';
+export type BioBgType = 'solid' | 'mesh' | 'image' | 'liquid';
+export type BioAvatarShape = 'circle' | 'squircle';
+export type BioSocialLayout = 'header' | 'dock';
+export type BioBlockVariant = 'frosted' | 'solid' | 'luxe' | 'minimal';
+export type BioHoverEffect = 'lift' | 'shimmer' | 'scale';
 
 export type BioTheme = {
   presetId: string;
@@ -17,32 +24,25 @@ export type BioTheme = {
   buttonStyle: BioButtonStyle;
   buttonRadius: BioButtonRadius;
   buttonShadow: BioButtonShadow;
+  /** Canvas background engine */
+  bgType: BioBgType;
+  bgImageUrl: string | null;
+  /** Optional HD cover above avatar */
+  coverEnabled: boolean;
+  coverImageUrl: string | null;
+  avatarShape: BioAvatarShape;
+  verifiedBadge: boolean;
+  socialLayout: BioSocialLayout;
+  blockVariant: BioBlockVariant;
+  hoverEffect: BioHoverEffect;
 };
 
 export const BIO_FONTS = [
   {
-    id: 'system',
-    label: 'System',
-    family: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
-    google: null as string | null,
-  },
-  {
-    id: 'dm',
-    label: 'DM Sans',
-    family: '"DM Sans", ui-sans-serif, sans-serif',
-    google: 'DM+Sans:wght@400;600;700;800',
-  },
-  {
-    id: 'space',
-    label: 'Space Grotesk',
-    family: '"Space Grotesk", ui-sans-serif, sans-serif',
-    google: 'Space+Grotesk:wght@400;600;700',
-  },
-  {
-    id: 'syne',
-    label: 'Syne',
-    family: '"Syne", ui-sans-serif, sans-serif',
-    google: 'Syne:wght@500;700;800',
+    id: 'jakarta',
+    label: 'Plus Jakarta Sans',
+    family: '"Plus Jakarta Sans", ui-sans-serif, sans-serif',
+    google: 'Plus+Jakarta+Sans:wght@400;600;700;800',
   },
   {
     id: 'playfair',
@@ -51,120 +51,270 @@ export const BIO_FONTS = [
     google: 'Playfair+Display:wght@500;700;800',
   },
   {
-    id: 'libre',
-    label: 'Libre Baskerville',
-    family: '"Libre Baskerville", Georgia, serif',
-    google: 'Libre+Baskerville:wght@400;700',
+    id: 'space',
+    label: 'Space Grotesk',
+    family: '"Space Grotesk", ui-sans-serif, sans-serif',
+    google: 'Space+Grotesk:wght@400;600;700',
   },
   {
-    id: 'jetbrains',
-    label: 'JetBrains Mono',
-    family: '"JetBrains Mono", ui-monospace, monospace',
-    google: 'JetBrains+Mono:wght@400;600;700',
+    id: 'inter',
+    label: 'Inter',
+    family: '"Inter", ui-sans-serif, sans-serif',
+    google: 'Inter:wght@400;500;600;700',
   },
 ] as const;
 
+const LUXURY_DEFAULTS = {
+  bgType: 'solid' as BioBgType,
+  bgImageUrl: null as string | null,
+  coverEnabled: false,
+  coverImageUrl: null as string | null,
+  avatarShape: 'circle' as BioAvatarShape,
+  verifiedBadge: false,
+  socialLayout: 'header' as BioSocialLayout,
+  blockVariant: 'solid' as BioBlockVariant,
+  hoverEffect: 'lift' as BioHoverEffect,
+};
+
 export const DEFAULT_BIO_THEME: BioTheme = {
-  presetId: 'nordic',
+  presetId: 'nordic-minimal',
   bg: '#FAFAFA',
-  accent: '#111827',
-  buttonBg: '#111827',
+  accent: '#0F172A',
+  buttonBg: '#0F172A',
   buttonText: '#FFFFFF',
-  buttonBorder: '#111827',
-  nameColor: '#111827',
-  mutedColor: '#71717A',
-  fontId: 'dm',
+  buttonBorder: '#0F172A',
+  nameColor: '#0F172A',
+  mutedColor: '#64748B',
+  fontId: 'jakarta',
   buttonStyle: 'filled',
   buttonRadius: 'rounded',
   buttonShadow: 'soft',
+  ...LUXURY_DEFAULTS,
+  blockVariant: 'solid',
 };
 
-export const BIO_THEME_PRESETS: (BioTheme & { label: string; desc: string })[] = [
+export type BioThemePreset = BioTheme & {
+  label: string;
+  desc: string;
+  /** Mini swatch for the preset picker */
+  swatch: { from: string; via?: string; to: string };
+};
+
+export const BIO_THEME_PRESETS: BioThemePreset[] = [
   {
-    ...DEFAULT_BIO_THEME,
-    presetId: 'nordic',
-    label: 'Nordic Minimal',
-    desc: 'Ren och minimalistisk',
-  },
-  {
-    presetId: 'dark',
-    label: 'Dark Slate',
-    desc: 'Djupt och modern',
-    bg: '#0F172A',
-    accent: '#818CF8',
-    buttonBg: '#1E293B',
-    buttonText: '#F8FAFC',
-    buttonBorder: '#334155',
+    presetId: 'midnight-glass',
+    label: 'Midnight Glass',
+    desc: 'Dark mesh + frosted glass',
+    swatch: { from: '#0B0F17', via: '#1E1B4B', to: '#0F172A' },
+    bg: '#0B0F17',
+    accent: '#A5B4FC',
+    buttonBg: 'rgba(255,255,255,0.10)',
+    buttonText: '#FFFFFF',
+    buttonBorder: 'rgba(255,255,255,0.20)',
     nameColor: '#F8FAFC',
     mutedColor: '#94A3B8',
-    fontId: 'space',
+    fontId: 'jakarta',
     buttonStyle: 'soft',
     buttonRadius: 'rounded',
-    buttonShadow: 'none',
-  },
-  {
-    presetId: 'coral',
-    label: 'Coral Pop',
-    desc: 'Varm och energisk',
-    bg: '#FFF7F5',
-    accent: '#9b8afb',
-    buttonBg: '#9b8afb',
-    buttonText: '#FFFFFF',
-    buttonBorder: '#9b8afb',
-    nameColor: '#2c3340',
-    mutedColor: '#8B7355',
-    fontId: 'syne',
-    buttonStyle: 'filled',
-    buttonRadius: 'pill',
     buttonShadow: 'soft',
+    bgType: 'mesh',
+    bgImageUrl: null,
+    coverEnabled: true,
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80',
+    avatarShape: 'circle',
+    verifiedBadge: true,
+    socialLayout: 'header',
+    blockVariant: 'frosted',
+    hoverEffect: 'lift',
   },
   {
-    presetId: 'forest',
-    label: 'Forest Green',
-    desc: 'Naturlig och lugn',
-    bg: '#F0FDF4',
-    accent: '#15803D',
-    buttonBg: '#166534',
-    buttonText: '#FFFFFF',
-    buttonBorder: '#166534',
-    nameColor: '#14532D',
-    mutedColor: '#6B7280',
-    fontId: 'dm',
-    buttonStyle: 'filled',
-    buttonRadius: 'rounded',
-    buttonShadow: 'soft',
-  },
-  {
-    presetId: 'editorial',
-    label: 'Editorial',
-    desc: 'Serif och tidskriftskänsla',
-    bg: '#F7F4EF',
-    accent: '#1C1917',
-    buttonBg: '#1C1917',
-    buttonText: '#FAFAF9',
-    buttonBorder: '#1C1917',
+    presetId: 'champagne-luxe',
+    label: 'Champagne Luxe',
+    desc: 'Warm silk + gold accents',
+    swatch: { from: '#FDFBF7', via: '#F5E6C8', to: '#E8D5A3' },
+    bg: '#FDFBF7',
+    accent: '#B8860B',
+    buttonBg: '#FFFFFF',
+    buttonText: '#1C1917',
+    buttonBorder: '#E7E5E4',
     nameColor: '#1C1917',
     mutedColor: '#78716C',
     fontId: 'playfair',
+    buttonStyle: 'filled',
+    buttonRadius: 'rounded',
+    buttonShadow: 'soft',
+    bgType: 'solid',
+    bgImageUrl: null,
+    coverEnabled: false,
+    coverImageUrl: null,
+    avatarShape: 'squircle',
+    verifiedBadge: true,
+    socialLayout: 'header',
+    blockVariant: 'luxe',
+    hoverEffect: 'lift',
+  },
+  {
+    presetId: 'aurora-glow',
+    label: 'Aurora Glow',
+    desc: 'Indigo / purple glow',
+    swatch: { from: '#312E81', via: '#7C3AED', to: '#DB2777' },
+    bg: '#1E1B4B',
+    accent: '#C4B5FD',
+    buttonBg: '#4C1D95',
+    buttonText: '#F5F3FF',
+    buttonBorder: '#7C3AED',
+    nameColor: '#F5F3FF',
+    mutedColor: '#C4B5FD',
+    fontId: 'space',
+    buttonStyle: 'filled',
+    buttonRadius: 'pill',
+    buttonShadow: 'strong',
+    bgType: 'liquid',
+    bgImageUrl: null,
+    coverEnabled: true,
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?w=800&q=80',
+    avatarShape: 'circle',
+    verifiedBadge: true,
+    socialLayout: 'dock',
+    blockVariant: 'frosted',
+    hoverEffect: 'shimmer',
+  },
+  {
+    presetId: 'nordic-minimal',
+    label: 'Nordic Minimal',
+    desc: 'Clean white + crisp dark',
+    swatch: { from: '#FAFAFA', via: '#E2E8F0', to: '#0F172A' },
+    bg: '#FAFAFA',
+    accent: '#0F172A',
+    buttonBg: '#0F172A',
+    buttonText: '#FFFFFF',
+    buttonBorder: '#0F172A',
+    nameColor: '#0F172A',
+    mutedColor: '#64748B',
+    fontId: 'inter',
+    buttonStyle: 'filled',
+    buttonRadius: 'rounded',
+    buttonShadow: 'none',
+    bgType: 'solid',
+    bgImageUrl: null,
+    coverEnabled: false,
+    coverImageUrl: null,
+    avatarShape: 'circle',
+    verifiedBadge: false,
+    socialLayout: 'header',
+    blockVariant: 'solid',
+    hoverEffect: 'scale',
+  },
+  {
+    presetId: 'arctic-mist',
+    label: 'Arctic Mist',
+    desc: 'Icy slate + frosted winter air',
+    swatch: { from: '#E8F1F8', via: '#A8C5D8', to: '#1E3A4C' },
+    bg: '#E8F1F8',
+    accent: '#0E7490',
+    buttonBg: '#FFFFFF',
+    buttonText: '#0F172A',
+    buttonBorder: '#B6D0DE',
+    nameColor: '#0F172A',
+    mutedColor: '#475569',
+    fontId: 'jakarta',
+    buttonStyle: 'soft',
+    buttonRadius: 'rounded',
+    buttonShadow: 'soft',
+    bgType: 'solid',
+    bgImageUrl: null,
+    coverEnabled: true,
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1491002052546-bf14fd745f99?w=800&q=80',
+    avatarShape: 'circle',
+    verifiedBadge: true,
+    socialLayout: 'header',
+    blockVariant: 'luxe',
+    hoverEffect: 'lift',
+  },
+  {
+    presetId: 'emerald-vault',
+    label: 'Emerald Vault',
+    desc: 'Deep forest + jewel accents',
+    swatch: { from: '#052E1F', via: '#065F46', to: '#D4AF37' },
+    bg: '#052E1F',
+    accent: '#6EE7B7',
+    buttonBg: 'rgba(255,255,255,0.08)',
+    buttonText: '#ECFDF5',
+    buttonBorder: 'rgba(110,231,183,0.28)',
+    nameColor: '#ECFDF5',
+    mutedColor: '#A7F3D0',
+    fontId: 'playfair',
+    buttonStyle: 'soft',
+    buttonRadius: 'rounded',
+    buttonShadow: 'strong',
+    bgType: 'mesh',
+    bgImageUrl: null,
+    coverEnabled: true,
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80',
+    avatarShape: 'squircle',
+    verifiedBadge: true,
+    socialLayout: 'header',
+    blockVariant: 'frosted',
+    hoverEffect: 'lift',
+  },
+  {
+    presetId: 'coral-pulse',
+    label: 'Coral Pulse',
+    desc: 'Warm rose energy for CTAs',
+    swatch: { from: '#FFF1F2', via: '#FB7185', to: '#BE123C' },
+    bg: '#FFF1F2',
+    accent: '#E11D48',
+    buttonBg: '#FFFFFF',
+    buttonText: '#881337',
+    buttonBorder: '#FECDD3',
+    nameColor: '#881337',
+    mutedColor: '#9F1239',
+    fontId: 'jakarta',
+    buttonStyle: 'filled',
+    buttonRadius: 'pill',
+    buttonShadow: 'soft',
+    bgType: 'solid',
+    bgImageUrl: null,
+    coverEnabled: true,
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80',
+    avatarShape: 'circle',
+    verifiedBadge: true,
+    socialLayout: 'header',
+    blockVariant: 'luxe',
+    hoverEffect: 'scale',
+  },
+  {
+    presetId: 'noir-cinema',
+    label: 'Noir Cinema',
+    desc: 'Cinematic black + amber light',
+    swatch: { from: '#09090B', via: '#27272A', to: '#F59E0B' },
+    bg: '#09090B',
+    accent: '#FBBF24',
+    buttonBg: 'rgba(255,255,255,0.06)',
+    buttonText: '#FAFAFA',
+    buttonBorder: 'rgba(251,191,36,0.35)',
+    nameColor: '#FAFAFA',
+    mutedColor: '#A1A1AA',
+    fontId: 'space',
     buttonStyle: 'outline',
     buttonRadius: 'sharp',
     buttonShadow: 'none',
-  },
-  {
-    presetId: 'mono',
-    label: 'Mono Tech',
-    desc: 'Teknisk och tydlig',
-    bg: '#F4F4F5',
-    accent: '#18181B',
-    buttonBg: '#18181B',
-    buttonText: '#FAFAFA',
-    buttonBorder: '#18181B',
-    nameColor: '#18181B',
-    mutedColor: '#71717A',
-    fontId: 'jetbrains',
-    buttonStyle: 'filled',
-    buttonRadius: 'sharp',
-    buttonShadow: 'none',
+    bgType: 'image',
+    bgImageUrl:
+      'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=1200&q=80',
+    coverEnabled: true,
+    coverImageUrl:
+      'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=800&q=80',
+    avatarShape: 'circle',
+    verifiedBadge: true,
+    socialLayout: 'dock',
+    blockVariant: 'minimal',
+    hoverEffect: 'shimmer',
   },
 ];
 
@@ -179,15 +329,22 @@ export function getBioGoogleFontsHref(fontId: string): string | null {
 }
 
 export function buttonRadiusPx(radius: BioButtonRadius): number {
-  if (radius === 'sharp') return 8;
-  if (radius === 'pill') return 999;
-  return 14;
+  if (radius === 'sharp') return 0; // rounded-none
+  if (radius === 'pill') return 999; // rounded-full
+  return 16; // rounded-2xl
 }
 
 export function buttonShadowCss(shadow: BioButtonShadow): string {
   if (shadow === 'soft') return '0 4px 14px rgba(0,0,0,0.08)';
   if (shadow === 'strong') return '0 8px 24px rgba(0,0,0,0.16)';
   return 'none';
+}
+
+export function hoverEffectClass(effect: BioHoverEffect): string {
+  if (effect === 'scale') return 'transition-transform duration-200 hover:scale-[1.03]';
+  if (effect === 'shimmer')
+    return 'bio-block-shimmer transition-shadow duration-300 hover:shadow-lg';
+  return 'transition-all duration-200 hover:-translate-y-1 hover:shadow-lg';
 }
 
 export function normalizeBioTheme(raw?: Partial<BioTheme> | null): BioTheme {
@@ -219,12 +376,74 @@ export function normalizeBioTheme(raw?: Partial<BioTheme> | null): BioTheme {
       raw.buttonShadow === 'none'
         ? raw.buttonShadow
         : base.buttonShadow,
+    bgType:
+      raw.bgType === 'mesh' ||
+      raw.bgType === 'image' ||
+      raw.bgType === 'liquid' ||
+      raw.bgType === 'solid'
+        ? raw.bgType
+        : base.bgType,
+    bgImageUrl: typeof raw.bgImageUrl === 'string' ? raw.bgImageUrl : base.bgImageUrl,
+    coverEnabled: typeof raw.coverEnabled === 'boolean' ? raw.coverEnabled : base.coverEnabled,
+    coverImageUrl:
+      typeof raw.coverImageUrl === 'string' ? raw.coverImageUrl : base.coverImageUrl,
+    avatarShape: raw.avatarShape === 'squircle' ? 'squircle' : 'circle',
+    verifiedBadge: Boolean(raw.verifiedBadge),
+    socialLayout: raw.socialLayout === 'dock' ? 'dock' : 'header',
+    blockVariant:
+      raw.blockVariant === 'frosted' ||
+      raw.blockVariant === 'luxe' ||
+      raw.blockVariant === 'minimal' ||
+      raw.blockVariant === 'solid'
+        ? raw.blockVariant
+        : base.blockVariant,
+    hoverEffect:
+      raw.hoverEffect === 'shimmer' ||
+      raw.hoverEffect === 'scale' ||
+      raw.hoverEffect === 'lift'
+        ? raw.hoverEffect
+        : base.hoverEffect,
   };
 }
 
 export function applyBioPreset(presetId: string): BioTheme {
   const preset = BIO_THEME_PRESETS.find((p) => p.presetId === presetId);
   if (!preset) return { ...DEFAULT_BIO_THEME, presetId: 'custom' };
-  const { label: _l, desc: _d, ...theme } = preset;
+  const { label: _l, desc: _d, swatch: _s, ...theme } = preset;
   return { ...theme };
+}
+
+/** Canvas background CSS for phone preview / live page. */
+export function bioCanvasStyle(theme: BioTheme): CSSProperties {
+  if (theme.bgType === 'image' && theme.bgImageUrl) {
+    return {
+      backgroundImage: `linear-gradient(180deg, rgba(15,23,42,0.45), rgba(15,23,42,0.55)), url(${theme.bgImageUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    };
+  }
+  if (theme.bgType === 'mesh') {
+    return {
+      backgroundColor: theme.bg || '#0B0F17',
+      backgroundImage: `
+        radial-gradient(at 18% 18%, ${theme.accent}66 0px, transparent 48%),
+        radial-gradient(at 82% 12%, #6366f166 0px, transparent 42%),
+        radial-gradient(at 48% 78%, #7c3aed55 0px, transparent 46%),
+        radial-gradient(at 70% 55%, #0ea5e933 0px, transparent 40%)
+      `,
+    };
+  }
+  if (theme.bgType === 'liquid') {
+    return {
+      backgroundColor: theme.bg,
+      backgroundImage: `
+        radial-gradient(ellipse 80% 50% at 20% 40%, ${theme.accent}66, transparent),
+        radial-gradient(ellipse 60% 40% at 80% 60%, #db277766, transparent),
+        radial-gradient(ellipse 50% 30% at 50% 90%, #6366f155, transparent)
+      `,
+      backgroundSize: '200% 200%',
+      animation: 'bio-liquid 12s ease-in-out infinite',
+    };
+  }
+  return { backgroundColor: theme.bg };
 }

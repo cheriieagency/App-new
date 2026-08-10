@@ -12,6 +12,7 @@ import { Crown, Users } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { formatAuthError } from '@/lib/auth-error';
 import { SocialSignInButtons } from '@/components/SocialSignInButtons';
+import { ClikdMark } from '@/components/brand/ClikdLogo';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import {
@@ -93,9 +94,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
       <DialogContent className="sm:max-w-[440px] rounded-[1.5rem] border-white/70 bg-white/80 backdrop-blur-xl p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-full bg-[var(--nc-coral)] flex items-center justify-center">
-              <span className="text-white font-display font-extrabold text-xs">N</span>
-            </div>
+            <ClikdMark size={32} />
             <DialogTitle className="text-base font-black text-zinc-900">
               {t('loginPortalTitle', locale)}
             </DialogTitle>
@@ -130,13 +129,6 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                 {t('loginAsCreatorAdmin', locale)}
               </TabsTrigger>
             </TabsList>
-
-            <TabsContent value="member" className="mt-0">
-              <RoleBadge role="member" label={t('dashboard', locale)} />
-            </TabsContent>
-            <TabsContent value="creator" className="mt-0">
-              <RoleBadge role="creator" label={t('creatorAdmin', locale)} />
-            </TabsContent>
           </Tabs>
 
           <form
@@ -209,13 +201,5 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function RoleBadge({ role, label }: { role: Role; label: string }) {
-  return (
-    <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-xs font-bold text-zinc-700">
-      {role === 'creator' ? <Crown size={13} /> : <Users size={13} />} {label}
-    </div>
   );
 }
