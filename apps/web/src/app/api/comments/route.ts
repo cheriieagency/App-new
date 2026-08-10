@@ -2,7 +2,7 @@ import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { MOCK_COMMENTS } from '@/lib/mock-demo-content';
-import { applyCommentPinOverride } from '@/lib/demo-pin-state';
+import { applyCommentPinOverride, demoCommentPinOverrides } from '@/lib/demo-pin-state';
 
 function withDemoPins(comments: Array<Record<string, unknown>>) {
   return comments.map((c) =>
@@ -66,12 +66,37 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action } = body as { action?: string };
 
-    // Pin / unpin is creator-admin only (Community Admin panel).
+    // Pin / unpin a top-level comment (community moderation).
     if (action === 'pin' || action === 'unpin') {
-      return Response.json(
-        { error: 'Pinning is only available in Admin' },
-        { status: 403 }
-      );
+      const commentId = Number(body.comment_id);
+      if (!commentId) {
+        return Response.json({ error: 'comment_id required' }, { status: 400 });
+      }
+      const pinned = action === 'pin';
+
+      if (!process.env.DATABASE_URL?.trim()) {
+        demoCommentPinOverrides.set(commentId, pinned);
+        return Response.json({
+          success: true,
+          id: commentId,
+          is_pinned: pinned,
+          pinned_at: pinned ? new Date().toISOString() : null,
+          demo: true,
+        });
+      }
+
+      const rows = await sql`
+        UPDATE comments
+        SET is_pinned = ${pinned},
+            pinned_at = ${pinned ? new Date().toISOString() : null}
+        WHERE id = ${commentId}
+          AND parent_id IS NULL
+        RETURNING id, post_id, is_pinned, pinned_at
+      `;
+      if (!rows[0]) {
+        return Response.json({ error: 'Comment not found or is a reply' }, { status: 404 });
+      }
+      return Response.json({ success: true, ...rows[0] });
     }
 
     const { post_id, content, parent_id, media_url, media_type } = body;
@@ -107,10 +132,16 @@ export async function POST(request: Request) {
         .catch(() => ({} as Record<string, unknown>));
 
       if (body.action === 'pin' || body.action === 'unpin') {
-        return Response.json(
-          { error: 'Pinning is only available in Admin' },
-          { status: 403 }
-        );
+        const commentId = Number(body.comment_id);
+        const pinned = body.action === 'pin';
+        demoCommentPinOverrides.set(commentId, pinned);
+        return Response.json({
+          success: true,
+          id: commentId,
+          is_pinned: pinned,
+          pinned_at: pinned ? new Date().toISOString() : null,
+          demo: true,
+        });
       }
 
       const text = typeof body.content === 'string' ? body.content.trim() : '';

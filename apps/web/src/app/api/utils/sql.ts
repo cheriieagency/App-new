@@ -4,21 +4,24 @@ type SqlQueryFunction = NeonQueryFunction<false, false> & {
   query: NeonQueryFunction<false, false>;
 };
 
-const NullishQueryFunction = (() => {
-  throw new Error(
-    'No database connection string was provided to `neon()`. Perhaps process.env.DATABASE_URL has not been set'
-  );
+/**
+ * Demo / local fallback when DATABASE_URL is missing.
+ * Resolves to an empty result set so API routes can fall through to mocks
+ * without throwing on every request.
+ */
+const emptyResult = async () => [] as Record<string, unknown>[];
+
+const DemoQueryFunction = ((strings: TemplateStringsArray, ..._values: unknown[]) => {
+  void strings;
+  return emptyResult();
 }) as any as SqlQueryFunction;
 
-NullishQueryFunction.transaction = (() => {
-  throw new Error(
-    'No database connection string was provided to `neon()`. Perhaps process.env.DATABASE_URL has not been set'
-  );
-}) as any as NeonQueryFunction<false, false>['transaction'];
-NullishQueryFunction.query = NullishQueryFunction;
+DemoQueryFunction.transaction = (async () => []) as any;
+DemoQueryFunction.query = DemoQueryFunction;
 
+const databaseUrl = process.env.DATABASE_URL?.trim();
 const sql = (
-  process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : NullishQueryFunction
+  databaseUrl ? neon(databaseUrl) : DemoQueryFunction
 ) as SqlQueryFunction;
 sql.query = sql;
 
