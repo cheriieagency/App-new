@@ -880,7 +880,7 @@ function MobilePreview({
           </div>
         </div>
         <p className="text-center text-[10px] font-mono font-bold text-zinc-400 mt-2.5">
-          app.se/@{handle || 'creator'}
+          clikd.app/@{handle || 'creator'}
         </p>
       </div>
     </div>

@@ -200,7 +200,7 @@ export function CommunityAboutView({
                     {community.name}
                   </h2>
                   <p className="text-xs font-bold text-zinc-400 mt-1">
-                    nordiccreator.app/c/{community.slug ?? community.id}
+                    clikd.app/c/{community.slug ?? community.id}
                   </p>
                 </div>
 

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Fira_Code, Outfit, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import './global.css';
 import { Providers } from './providers';
+import { SITE_URL } from '@/lib/site';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -32,14 +33,39 @@ const firaCode = Fira_Code({
   display: 'swap',
 });
 
+const defaultTitle = 'clikd: — Build, Sell & Scale Community, Bio & Socials';
+const defaultDescription =
+  'All-in-one creator platform for the Nordics. Community, Swish Link-in-Bio, courses, social planner, and Vipps payments — where creators and fans click.';
+
 export const metadata: Metadata = {
-  title: 'clikd: — Build, Sell & Scale Community, Bio & Socials',
-  description:
-    'All-in-one creator platform for the Nordics. Community, Swish Link-in-Bio, courses, social planner, and Vipps payments — where creators and fans click.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: defaultTitle,
+    template: '%s · clikd:',
+  },
+  description: defaultDescription,
+  applicationName: 'clikd:',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: SITE_URL,
+    siteName: 'clikd:',
+    title: defaultTitle,
+    description: defaultDescription,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: defaultTitle,
+    description: defaultDescription,
+  },
   icons: {
     icon: '/favicon.png',
   },
 };
+
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

@@ -167,11 +167,11 @@ export function getBroadcastAnalytics(b: EmailBroadcast): BroadcastAnalytics {
   const tabletPct = Math.max(0, 100 - mobilePct - desktopPct);
 
   const linkPool = [
-    { label: 'Öppna event', url: 'https://nordiccreator.app/events/live' },
-    { label: 'Classroom', url: 'https://nordiccreator.app/classroom' },
-    { label: 'Store', url: 'https://nordiccreator.app/store' },
-    { label: 'Community', url: 'https://nordiccreator.app/community' },
-    { label: 'Avsluta prenumeration', url: 'https://nordiccreator.app/unsubscribe' },
+    { label: 'Öppna event', url: 'https://clikd.app/events/live' },
+    { label: 'Classroom', url: 'https://clikd.app/classroom' },
+    { label: 'Store', url: 'https://clikd.app/store' },
+    { label: 'Community', url: 'https://clikd.app/community' },
+    { label: 'Avsluta prenumeration', url: 'https://clikd.app/unsubscribe' },
   ];
   const top_links = linkPool.slice(0, 3 + (seed % 2)).map((link, i) => ({
     ...link,

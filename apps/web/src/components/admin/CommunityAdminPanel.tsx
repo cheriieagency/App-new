@@ -37,6 +37,7 @@ import useUpload from '@/utils/useUpload';
 import ClassroomAdminSection from '@/components/admin/ClassroomAdminSection';
 import StoreAdminSection from '@/components/admin/StoreAdminSection';
 import { AdminPageHeader, adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
+import { communityPublicUrl } from '@/lib/site';
 import type {
   CommunityAdminComment,
   CommunityAdminMember,
@@ -787,7 +788,7 @@ export default function CommunityAdminPanel({
             <button
               type="button"
               onClick={() => {
-                const url = `${window.location.origin}/communities/${community.id}`;
+                const url = communityPublicUrl(community.id);
                 void navigator.clipboard.writeText(url).then(() => {
                   setLinkCopied(true);
                   window.setTimeout(() => setLinkCopied(false), 1800);

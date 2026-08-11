@@ -221,7 +221,7 @@ export function FaqSection() {
             </p>
           </div>
           <a
-            href="mailto:support@nordiccreator.app"
+            href="mailto:support@clikd.app"
             className="inline-flex items-center justify-center min-h-[44px] bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#F472B6]/20 transition-all active:scale-[0.98]"
           >
             {t('faqContactSupport', locale)}

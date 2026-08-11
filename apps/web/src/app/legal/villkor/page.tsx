@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { LegalDoc } from '@/components/legal/LegalDoc';
 
 export const metadata: Metadata = {
-  title: 'Användarvillkor — clikd:',
+  title: 'Användarvillkor',
   description: 'Villkor för användning av clikd: plattformen.',
+  alternates: { canonical: '/legal/villkor' },
 };
 
 export default function VillkorPage() {

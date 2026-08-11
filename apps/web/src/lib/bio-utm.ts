@@ -1,5 +1,7 @@
 /** UTM helpers + demo click tracking for Bio Store product links. */
 
+import { SITE_URL } from '@/lib/site';
+
 export type UtmClickStat = {
   slug: string;
   title: string;
@@ -45,8 +47,8 @@ export function appendUtmParams(
 export function buildTrackedShortUrl(slug: string, origin?: string) {
   const base =
     origin ||
-    (typeof window !== 'undefined' ? window.location.origin : 'https://app.se');
-  return `${base}/r/${slug}`;
+    (typeof window !== 'undefined' ? window.location.origin : SITE_URL);
+  return `${base.replace(/\/$/, '')}/r/${slug}`;
 }
 
 export function recordDemoClick(slug: string, visitorKey = 'anon') {

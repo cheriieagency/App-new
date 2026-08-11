@@ -3,6 +3,7 @@ import {
 } from '@/lib/community-access-email';
 import { listManagedCommunities } from '@/lib/mock-community-admin';
 import { sendCommunityAccessInvite } from '@/lib/mock-email-crm';
+import { getSiteUrl } from '@/lib/site';
 
 /**
  * Public post-purchase hook: email the buyer a direct link into the community
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     const origin =
       String(body.origin ?? '').trim() ||
       request.headers.get('origin') ||
-      new URL(request.url).origin;
+      getSiteUrl();
 
     const result = sendCommunityAccessInvite({
       buyerName,

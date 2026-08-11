@@ -298,7 +298,7 @@ const teamMembers: PlannerTeamMember[] = [
   {
     id: 'u-alex',
     name: 'Alex',
-    email: 'alex@nordiccreator.app',
+    email: 'alex@clikd.app',
     role: 'editor',
     project: 'Ebba Creator Lab',
     avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
@@ -320,7 +320,7 @@ const teamMembers: PlannerTeamMember[] = [
   {
     id: 'u-sara',
     name: 'Sara',
-    email: 'sara@nordiccreator.app',
+    email: 'sara@clikd.app',
     role: 'approver',
     project: 'Ebba Live Studio',
     avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sara',
@@ -1108,8 +1108,8 @@ const socialAccounts: ConnectedSocialAccount[] = [
   {
     platform: 'instagram',
     connected: true,
-    handle: '@nordic.creator',
-    display_name: 'clikd:',
+    handle: '@ebbacreator',
+    display_name: 'Ebba Creator Lab',
     avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nc-ig',
     connected_at: new Date(now - 30 * day).toISOString(),
   },
@@ -1386,10 +1386,10 @@ export function setSocialConnection(
   if (!acc) throw new Error('Unknown platform');
   if (connect) {
     const handles: Record<SocialPlatform, string> = {
-      instagram: '@nordic.creator',
-      tiktok: '@nordiccreator',
+      instagram: '@ebbacreator',
+      tiktok: '@ebbacreator',
       linkedin: 'clikd: AB',
-      youtube: '@clikd',
+      youtube: '@ebbacreator',
     };
     const names: Record<SocialPlatform, string> = {
       instagram: 'clikd:',

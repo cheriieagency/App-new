@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { LegalDoc } from '@/components/legal/LegalDoc';
 
 export const metadata: Metadata = {
-  title: 'Integritetspolicy — clikd:',
+  title: 'Integritetspolicy',
   description: 'Hur clikd: samlar in, använder och skyddar dina personuppgifter.',
+  alternates: { canonical: '/legal/integritet' },
 };
 
 export default function IntegritetPage() {

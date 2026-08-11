@@ -7,6 +7,7 @@ import {
   Columns3,
   LayoutGrid,
   LayoutList,
+  NotebookPen,
   Plus,
   Search,
   Settings2,
@@ -23,6 +24,7 @@ import ContentCalendar from '@/components/planner/ContentCalendar';
 import PostStudioModal from '@/components/planner/PostStudioModal';
 import AiCopilotPanel from '@/components/planner/AiCopilotPanel';
 import FeedGridPlanner from '@/components/planner/FeedGridPlanner';
+import PlannerNotesPanel from '@/components/planner/PlannerNotesPanel';
 import TeamWorkspaceModal from '@/components/planner/TeamWorkspaceModal';
 import SocialAccountsModal from '@/components/planner/SocialAccountsModal';
 import { AdminPageHeader } from '@/components/admin/AdminUi';
@@ -52,7 +54,7 @@ const PLATFORM_ICONS: Record<
   youtube: YouTubeIcon,
 };
 
-type ViewMode = 'board' | 'calendar' | 'table' | 'feed' | 'copilot';
+type ViewMode = 'board' | 'calendar' | 'table' | 'feed' | 'notes' | 'copilot';
 type PlatformFilter = 'all' | SocialPlatform;
 
 type ContentPlannerShellProps = {
@@ -298,6 +300,7 @@ export default function ContentPlannerShell({
       platformFilter === 'tiktok'
         ? [{ key: 'feed' as const, label: t('feedGridTab', locale), icon: LayoutGrid }]
         : []),
+      { key: 'notes' as const, label: t('notesTab', locale), icon: NotebookPen },
       { key: 'copilot' as const, label: t('aiCopilot', locale), icon: Sparkles },
     ] as const
   );
@@ -391,6 +394,8 @@ export default function ContentPlannerShell({
           onUseIdea={(idea, platform) => void useIdea(idea, platform)}
           onCreateFromCaption={(input) => void createDraftFromAi(input)}
         />
+      ) : view === 'notes' ? (
+        <PlannerNotesPanel workspaceId={activeWorkspaceId} />
       ) : isLoading ? (
         <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-sm text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           {t('loadingPlanner', locale)}

@@ -55,10 +55,8 @@ function planName(plan: string) {
   return 'Pro Plan';
 }
 
-function planPrice(plan: string) {
-  if (plan === 'starter') return 'Free';
-  if (plan === 'pro') return '499 kr/mån';
-  return '199 kr/mån';
+function planPrice(_plan: string) {
+  return 'see plan';
 }
 
 export default function AdminSidebar() {

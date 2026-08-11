@@ -144,6 +144,16 @@ export type ExtraKey =
   | 'calendarTab'
   | 'tableTab'
   | 'feedGridTab'
+  | 'notesTab'
+  | 'notesTitle'
+  | 'notesHint'
+  | 'notesNew'
+  | 'notesUntitled'
+  | 'notesEmpty'
+  | 'notesPlaceholder'
+  | 'notesTitlePlaceholder'
+  | 'notesDelete'
+  | 'notesAutosaved'
   | 'workflowIdeas'
   | 'workflowInProduction'
   | 'workflowReview'
@@ -769,6 +779,11 @@ export type ExtraKey =
   | 'socialInboxTitle'
   | 'socialInboxSub'
   | 'inboxZero'
+  | 'instagramDmsTitle'
+  | 'instagramDmsHint'
+  | 'instagramDmReplyPlaceholder'
+  | 'instagramDmSend'
+  | 'instagramNotConnected'
 
 export type ExtraDict = Record<ExtraKey, string>;
 
@@ -938,6 +953,16 @@ export const EXTRA_EN: ExtraDict = {
   calendarTab: 'Calendar',
   tableTab: 'Table',
   feedGridTab: 'Feed Grid',
+  notesTab: 'Notes',
+  notesTitle: 'Notes',
+  notesHint: 'Jot down ideas, reminders, and drafts for this workspace.',
+  notesNew: 'New note',
+  notesUntitled: 'Untitled note',
+  notesEmpty: 'No notes yet. Create one to get started.',
+  notesPlaceholder: 'Write your note…',
+  notesTitlePlaceholder: 'Title',
+  notesDelete: 'Delete note',
+  notesAutosaved: 'Autosaved on this device',
   workflowIdeas: 'Ideas',
   workflowInProduction: 'In production',
   workflowReview: 'Review',
@@ -1348,10 +1373,15 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   statusLabel: 'Status',
   optionalLabel: 'Optional',
   mergeTagsHint: 'Merge tags: {first_name}, {community}, {community_url}',
-  socialInboxEyebrow: 'Social Inbox',
+  socialInboxEyebrow: 'Instagram',
   socialInboxTitle: 'Inbox',
-  socialInboxSub: 'DMs & comments · {workspace}',
-  inboxZero: 'Inbox zero',
+  socialInboxSub: 'Your Instagram DMs · {workspace}',
+  inboxZero: 'No Instagram DMs yet',
+  instagramDmsTitle: 'Instagram DMs',
+  instagramDmsHint: 'Direct messages from your connected Instagram',
+  instagramDmReplyPlaceholder: 'Reply on Instagram…',
+  instagramDmSend: 'Send reply',
+  instagramNotConnected: 'Connect Instagram to this social space',
   statusLive: 'Live',
   statusPaused: 'Paused',
   performanceChartAria: 'Performance chart',
@@ -1735,6 +1765,16 @@ export const EXTRA_SV: ExtraDict = {
   calendarTab: 'Kalender',
   tableTab: 'Tabell',
   feedGridTab: 'Feed-rutnät',
+  notesTab: 'Notes',
+  notesTitle: 'Notes',
+  notesHint: 'Skriv ner idéer, påminnelser och utkast för den här workspacen.',
+  notesNew: 'Ny anteckning',
+  notesUntitled: 'Namnlös anteckning',
+  notesEmpty: 'Inga anteckningar än. Skapa en för att komma igång.',
+  notesPlaceholder: 'Skriv din anteckning…',
+  notesTitlePlaceholder: 'Titel',
+  notesDelete: 'Radera anteckning',
+  notesAutosaved: 'Autosparas på den här enheten',
   workflowIdeas: 'Ideer',
   workflowInProduction: 'I produktion',
   workflowReview: 'Granskning',
@@ -2145,10 +2185,15 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   statusLabel: 'Status',
   optionalLabel: 'Valfritt',
   mergeTagsHint: 'Merge-taggar: {first_name}, {community}, {community_url}',
-  socialInboxEyebrow: 'Social Inbox',
-  socialInboxTitle: 'Inkorg',
-  socialInboxSub: 'DM & kommentarer · {workspace}',
-  inboxZero: 'Tom inkorg',
+  socialInboxEyebrow: 'Instagram',
+  socialInboxTitle: 'Inbox',
+  socialInboxSub: 'Dina Instagram-DM:ar · {workspace}',
+  inboxZero: 'Inga Instagram-DM:ar ännu',
+  instagramDmsTitle: 'Instagram-DM:ar',
+  instagramDmsHint: 'Direktmeddelanden från ditt anslutna Instagram',
+  instagramDmReplyPlaceholder: 'Svara på Instagram…',
+  instagramDmSend: 'Skicka svar',
+  instagramNotConnected: 'Koppla Instagram till den här social space',
   statusLive: 'Live',
   statusPaused: 'Pausad',
   performanceChartAria: 'Prestandadiagram',
@@ -2791,6 +2836,16 @@ export const EXTRA_FI: ExtraDict = {
   calendarTab: 'Kalenteri',
   tableTab: 'Taulukko',
   feedGridTab: 'Feed-ruudukko',
+  notesTab: 'Notes',
+  notesTitle: 'Notes',
+  notesHint: 'Kirjaa ideoita, muistutuksia ja luonnoksia tälle työtilalle.',
+  notesNew: 'Uusi muistiinpano',
+  notesUntitled: 'Nimetön muistiinpano',
+  notesEmpty: 'Ei muistiinpanoja vielä. Luo ensimmäinen aloittaaksesi.',
+  notesPlaceholder: 'Kirjoita muistiinpano…',
+  notesTitlePlaceholder: 'Otsikko',
+  notesDelete: 'Poista muistiinpano',
+  notesAutosaved: 'Tallennetaan automaattisesti tälle laitteelle',
   workflowIdeas: 'Ideat',
   workflowInProduction: 'Tuotannossa',
   workflowReview: 'Tarkistus',
@@ -3224,10 +3279,15 @@ navFeatures: 'Ominaisuudet',
   statusLabel: 'Tila',
   optionalLabel: 'Valinnainen',
   mergeTagsHint: 'Yhdistämistunnisteet: {first_name}, {community}, {community_url}',
-  socialInboxEyebrow: 'Social Inbox',
-  socialInboxTitle: 'Postilaatikko',
-  socialInboxSub: 'DM:t & kommentit · {workspace}',
-  inboxZero: 'Tyhjä postilaatikko',
+  socialInboxEyebrow: 'Instagram',
+  socialInboxTitle: 'Inbox',
+  socialInboxSub: 'Instagram-yksityisviestisi · {workspace}',
+  inboxZero: 'Ei Instagram-viestejä vielä',
+  instagramDmsTitle: 'Instagram-viestit',
+  instagramDmsHint: 'Yksityisviestit yhdistetystä Instagram-tilistä',
+  instagramDmReplyPlaceholder: 'Vastaa Instagramissa…',
+  instagramDmSend: 'Lähetä vastaus',
+  instagramNotConnected: 'Yhdistä Instagram tähän social spaceen',
 };
 
 export const EXTRA_BY_LOCALE: Record<ExtraLocale, ExtraDict> = {

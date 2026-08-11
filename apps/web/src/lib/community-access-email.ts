@@ -2,13 +2,15 @@
  * Automated post-purchase email that directs buyers into a community.
  */
 
+import { getSiteUrl } from '@/lib/site';
+
 export type CommunityAccessEmailInput = {
   buyerName: string;
   buyerEmail: string;
   productTitle: string;
   communityId: number;
   communityName: string;
-  /** Absolute origin, e.g. https://clikd.app — falls back to relative path. */
+  /** Absolute origin, e.g. https://clikd.app — defaults to production site URL. */
   origin?: string;
 };
 
@@ -25,10 +27,8 @@ export function buildCommunityAccessUrl(
   origin?: string
 ): string {
   const path = `/communities/${communityId}`;
-  if (origin?.trim()) {
-    return `${origin.replace(/\/$/, '')}${path}`;
-  }
-  return path;
+  const base = (origin?.trim() || getSiteUrl()).replace(/\/$/, '');
+  return `${base}${path}`;
 }
 
 /** Compose subject + body for the automated community access email. */

@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { LegalDoc } from '@/components/legal/LegalDoc';
 
 export const metadata: Metadata = {
-  title: 'GDPR — clikd:',
+  title: 'GDPR',
   description: 'Information om hur clikd: följer GDPR och vilka rättigheter du har.',
+  alternates: { canonical: '/legal/gdpr' },
 };
 
 export default function GdprPage() {
