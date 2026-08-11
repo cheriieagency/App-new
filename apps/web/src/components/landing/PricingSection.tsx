@@ -26,13 +26,9 @@ export function PricingSection() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const yearly = billingCycle === 'yearly';
 
+  // Yearly = ~17% off (pay ~10 months)
   const creatorPrice = yearly ? 165 : 199;
-  const proPrice = yearly ? 415 : 499;
-
-  const creatorSubtitle = yearly
-    ? t('planCreatorSubYearly', locale)
-    : t('planCreatorSub', locale);
-  const proSubtitle = yearly ? t('planProSubYearly', locale) : t('planProSub', locale);
+  const proPrice = yearly ? 582 : 699;
 
   return (
     <section
@@ -127,10 +123,16 @@ export function PricingSection() {
                   {t('sekPerMo', locale)}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-slate-400 mt-1">{t('planFreeForever', locale)}</p>
+              <p className="text-[11px] font-bold text-[#10B981] mt-1">
+                {t('planFreeForever', locale)}
+              </p>
             </div>
             <ul className="space-y-2.5 mb-8 flex-1">
-              {(['planF1', 'planF2', 'planF3', 'planF4'] as const).map((key) => (
+              <li className="flex items-start gap-2 text-sm font-extrabold text-slate-900 font-display">
+                <Percent size={16} className="mt-0.5 flex-shrink-0 text-slate-500" />
+                {t('planF0', locale)}
+              </li>
+              {(['planF1', 'planF2', 'planF3', 'planF4', 'planF5', 'planF6'] as const).map((key) => (
                 <li
                   key={key}
                   className="flex items-start gap-2 text-sm font-medium text-slate-800 font-display"
@@ -141,7 +143,7 @@ export function PricingSection() {
               ))}
             </ul>
             <Link
-              href="/account/signup"
+              href="/onboarding"
               className="inline-flex items-center justify-center min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors"
             >
               {t('planStarterCta', locale)}
@@ -163,7 +165,7 @@ export function PricingSection() {
               {t('planCreator', locale)}
             </h3>
             <p className="text-sm text-slate-600 font-medium mt-1.5 leading-relaxed mb-5 font-display">
-              {creatorSubtitle}
+              {t('planCreatorSub', locale)}
             </p>
             <div className="mb-6">
               <div className="flex items-end gap-1.5">
@@ -174,21 +176,26 @@ export function PricingSection() {
                   {t('sekPerMo', locale)}
                 </span>
               </div>
-              {yearly && (
-                <p className="text-[11px] font-bold text-[#10B981] mt-1">
-                  {t('planCreatorSubYearly', locale)}
-                </p>
-              )}
+              <p
+                className={`text-[11px] font-bold mt-1 ${
+                  yearly ? 'text-[#10B981]' : 'text-[#F472B6]'
+                }`}
+              >
+                {yearly
+                  ? t('planCreatorSubYearly', locale)
+                  : t('planBilledMonthly', locale)}
+              </p>
             </div>
             <ul className="space-y-2.5 mb-8 flex-1">
               {(
                 [
-                  { key: 'planC1' as const, bold: true },
-                  { key: 'planC2' as const, bold: false },
-                  { key: 'planC3' as const, bold: false },
-                  { key: 'planC4' as const, bold: false },
-                  { key: 'planC5' as const, bold: false },
-                  { key: 'planC6' as const, bold: false },
+                  { key: 'planC1' as const, bold: true, check: 'emerald' as const },
+                  { key: 'planC2' as const, bold: false, check: 'pink' as const },
+                  { key: 'planC3' as const, bold: false, check: 'pink' as const },
+                  { key: 'planC4' as const, bold: false, check: 'pink' as const },
+                  { key: 'planC5' as const, bold: false, check: 'pink' as const },
+                  { key: 'planC6' as const, bold: false, check: 'pink' as const },
+                  { key: 'planC7' as const, bold: false, check: 'pink' as const },
                 ] as const
               ).map((f) => (
                 <li
@@ -197,13 +204,18 @@ export function PricingSection() {
                     f.bold ? 'font-extrabold text-slate-900' : 'font-medium text-slate-800'
                   }`}
                 >
-                  <Check size={16} className="mt-0.5 flex-shrink-0 text-[#F472B6]" />
+                  <Check
+                    size={16}
+                    className={`mt-0.5 flex-shrink-0 ${
+                      f.check === 'emerald' ? 'text-[#10B981]' : 'text-[#F472B6]'
+                    }`}
+                  />
                   {t(f.key, locale)}
                 </li>
               ))}
             </ul>
             <Link
-              href="/account/signup"
+              href="/onboarding"
               className="inline-flex items-center justify-center gap-2 min-h-[44px] bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]"
             >
               {t('planCreatorCta', locale)}
@@ -225,7 +237,7 @@ export function PricingSection() {
               {t('planPro', locale)}
             </h3>
             <p className="text-sm text-slate-600 font-medium mt-1.5 leading-relaxed mb-5 font-display">
-              {proSubtitle}
+              {t('planProSub', locale)}
             </p>
             <div className="mb-6">
               <div className="flex items-end gap-1.5">
@@ -236,25 +248,45 @@ export function PricingSection() {
                   {t('sekPerMo', locale)}
                 </span>
               </div>
-              {yearly && (
-                <p className="text-[11px] font-bold text-[#10B981] mt-1">
-                  {t('planProSubYearly', locale)}
-                </p>
-              )}
+              <p
+                className={`text-[11px] font-bold mt-1 ${
+                  yearly ? 'text-[#10B981]' : 'text-[#F472B6]'
+                }`}
+              >
+                {yearly ? t('planProSubYearly', locale) : t('planBilledMonthly', locale)}
+              </p>
             </div>
             <ul className="space-y-2.5 mb-8 flex-1">
-              {(['planP1', 'planP2', 'planP3', 'planP4', 'planP5'] as const).map((key) => (
+              {(
+                [
+                  { key: 'planP1' as const, highlight: true },
+                  { key: 'planP2' as const, highlight: false },
+                  { key: 'planP3' as const, highlight: false },
+                  { key: 'planP4' as const, highlight: false },
+                  { key: 'planP5' as const, highlight: false },
+                  { key: 'planP6' as const, highlight: false },
+                ] as const
+              ).map((f) => (
                 <li
-                  key={key}
-                  className="flex items-start gap-2 text-sm font-medium text-slate-800 font-display"
+                  key={f.key}
+                  className={`flex items-start gap-2 text-sm font-display ${
+                    f.highlight
+                      ? 'font-extrabold text-[#10B981]'
+                      : 'font-medium text-slate-800'
+                  }`}
                 >
-                  <Check size={16} className="mt-0.5 flex-shrink-0 text-slate-500" />
-                  {t(key, locale)}
+                  <Check
+                    size={16}
+                    className={`mt-0.5 flex-shrink-0 ${
+                      f.highlight ? 'text-[#10B981]' : 'text-sky-500'
+                    }`}
+                  />
+                  {t(f.key, locale)}
                 </li>
               ))}
             </ul>
             <Link
-              href="/account/signup"
+              href="/onboarding"
               className="inline-flex items-center justify-center min-h-[44px] bg-[#0F172A] hover:bg-[#1a1848] text-white font-bold py-3.5 rounded-xl transition-colors"
             >
               {t('planProCta', locale)}

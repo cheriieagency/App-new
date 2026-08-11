@@ -137,6 +137,17 @@ export async function POST(request: Request) {
               updated_at = NOW()
           WHERE user_id = ${session.user.id}
         `;
+        const cleanHandle = String(handle ?? '')
+          .replace(/^@/, '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9._-]/g, '') || 'creator';
+        return Response.json({
+          success: true,
+          first_publish: false,
+          handle: cleanHandle,
+          theme: normalizedTheme,
+        });
       } else {
         await sql`
           INSERT INTO bio_blocks (user_id, blocks, handle, display_name, bio_text, avatar_url, social_links, theme)
@@ -144,13 +155,33 @@ export async function POST(request: Request) {
                   ${display_name ?? null}, ${bio_text ?? null}, ${avatar_url ?? null},
                   ${JSON.stringify(social_links ?? [])}, ${JSON.stringify(normalizedTheme)})
         `;
+        const cleanHandle = String(handle ?? '')
+          .replace(/^@/, '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9._-]/g, '') || 'creator';
+        return Response.json({
+          success: true,
+          first_publish: true,
+          handle: cleanHandle,
+          theme: normalizedTheme,
+        });
       }
-
-      return Response.json({ success: true, theme: normalizedTheme });
     } catch (dbError) {
       // Demo mode without DB — accept save so the UI can continue.
       console.error(dbError);
-      return Response.json({ success: true, theme: normalizedTheme, demo: true });
+      const cleanHandle = String(handle ?? '')
+        .replace(/^@/, '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '') || 'creator';
+      return Response.json({
+        success: true,
+        first_publish: false,
+        handle: cleanHandle,
+        theme: normalizedTheme,
+        demo: true,
+      });
     }
   } catch (error) {
     console.error(error);

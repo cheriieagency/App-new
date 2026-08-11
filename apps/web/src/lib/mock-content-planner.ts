@@ -1,6 +1,11 @@
 /** In-memory Social Media Content Planner (demo) — Kanban + Studio. */
 
-export type SocialPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'youtube';
+import type { WorkspacePlan } from '@/lib/config/plans';
+import { PLAN_LIMITS } from '@/lib/config/plans';
+
+export type { WorkspacePlan } from '@/lib/config/plans';
+
+export type SocialPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'youtube' | 'facebook';
 
 export type ContentTone = 'inspirerande' | 'professionell' | 'saljig' | 'casual';
 
@@ -110,6 +115,12 @@ export type ConnectedSocialAccount = {
   avatar_url: string | null;
   connected_at: string | null;
   subscriber_count?: number | null;
+  /** Instagram / TikTok follower count for connected cards */
+  follower_count?: number | null;
+  /** Page / brand name shown under the handle */
+  page_name?: string | null;
+  /** LinkedIn company page URL */
+  company_url?: string | null;
 };
 
 export type AiContentIdea = {
@@ -138,8 +149,6 @@ export type BrandWorkspace = {
 };
 
 export type TeamRole = 'owner' | 'editor' | 'viewer' | 'approver';
-
-export type WorkspacePlan = 'starter' | 'creator' | 'pro';
 
 export type PlannerTeamMember = {
   id: string;
@@ -386,7 +395,13 @@ export function addTeamMember(input: {
   email: string;
   role: TeamRole;
   project: string;
-}): { member: PlannerTeamMember; plan: WorkspacePlan; granted_access: boolean } {
+}): {
+  member: PlannerTeamMember;
+  plan: WorkspacePlan;
+  granted_access: boolean;
+  error?: 'SEAT_LIMIT';
+  seat_limit?: number;
+} {
   const email = input.email.trim().toLowerCase();
   const existing = teamMembers.find((m) => m.email === email);
   if (existing) {
@@ -396,6 +411,19 @@ export function addTeamMember(input: {
       granted_access: existing.planner_access,
     };
   }
+
+  // Enforce teammate seat cap from PLAN_LIMITS (owner counts toward seats).
+  const seatLimit = PLAN_LIMITS[workspacePlan].maxTeammateSeats;
+  if (teamMembers.length >= seatLimit) {
+    return {
+      member: teamMembers[0],
+      plan: workspacePlan,
+      granted_access: false,
+      error: 'SEAT_LIMIT',
+      seat_limit: seatLimit,
+    };
+  }
+
   const isPro = workspacePlan === 'pro';
   const member: PlannerTeamMember = {
     id: `u-${++teamSeq}`,
@@ -1107,11 +1135,13 @@ const posts: PlannerPost[] = [
 const socialAccounts: ConnectedSocialAccount[] = [
   {
     platform: 'instagram',
-    connected: true,
-    handle: '@ebbacreator',
-    display_name: 'Ebba Creator Lab',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nc-ig',
-    connected_at: new Date(now - 30 * day).toISOString(),
+    connected: false,
+    handle: null,
+    display_name: null,
+    avatar_url: null,
+    connected_at: null,
+    follower_count: null,
+    page_name: null,
   },
   {
     platform: 'tiktok',
@@ -1120,14 +1150,16 @@ const socialAccounts: ConnectedSocialAccount[] = [
     display_name: null,
     avatar_url: null,
     connected_at: null,
+    follower_count: null,
   },
   {
     platform: 'linkedin',
-    connected: true,
-    handle: 'clikd: AB',
-    display_name: 'clikd:',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nc-li',
-    connected_at: new Date(now - 12 * day).toISOString(),
+    connected: false,
+    handle: null,
+    display_name: null,
+    avatar_url: null,
+    connected_at: null,
+    company_url: null,
   },
   {
     platform: 'youtube',
@@ -1137,6 +1169,16 @@ const socialAccounts: ConnectedSocialAccount[] = [
     avatar_url: null,
     connected_at: null,
     subscriber_count: null,
+  },
+  {
+    platform: 'facebook',
+    connected: false,
+    handle: null,
+    display_name: null,
+    avatar_url: null,
+    connected_at: null,
+    follower_count: null,
+    page_name: null,
   },
 ];
 
@@ -1152,6 +1194,7 @@ const HASHTAGS: Record<SocialPlatform, string[]> = {
   tiktok: ['#fyp', '#creator', '#tips', '#learnontiktok'],
   linkedin: ['#entreprenörskap', '#contentmarketing', '#leadership', '#b2b'],
   youtube: ['#youtube', '#creator', '#tutorial'],
+  facebook: ['#creator', '#community', '#digitalmarketing', '#nordic'],
 };
 
 export function mediaTypeBadge(items: PlannerMediaItem[]): string {
@@ -1388,21 +1431,40 @@ export function setSocialConnection(
     const handles: Record<SocialPlatform, string> = {
       instagram: '@ebbacreator',
       tiktok: '@ebbacreator',
-      linkedin: 'clikd: AB',
+      linkedin: 'Ebba Brobeck',
       youtube: '@ebbacreator',
+      facebook: 'Ebba Creator Lab',
     };
     const names: Record<SocialPlatform, string> = {
-      instagram: 'clikd:',
-      tiktok: 'clikd:',
-      linkedin: 'clikd:',
+      instagram: 'Ebba Creator Lab',
+      tiktok: 'Ebba Creator Lab',
+      linkedin: 'Ebba Brobeck',
       youtube: 'clikd: Channel',
+      facebook: 'Ebba Creator Lab',
     };
     acc.connected = true;
     acc.handle = handles[platform];
     acc.display_name = names[platform];
-    acc.avatar_url = `https://api.dicebear.com/7.x/avataaars/svg?seed=nc-${platform}`;
+    acc.avatar_url =
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&fit=crop&q=80';
     acc.connected_at = new Date().toISOString();
     acc.subscriber_count = platform === 'youtube' ? 12840 : null;
+    acc.follower_count =
+      platform === 'instagram'
+        ? 48200
+        : platform === 'tiktok'
+          ? 39100
+          : platform === 'facebook'
+            ? 22400
+            : null;
+    acc.page_name =
+      platform === 'instagram' || platform === 'facebook'
+        ? 'Ebba Creator Lab'
+        : platform === 'linkedin'
+          ? 'clikd: AB'
+          : null;
+    acc.company_url =
+      platform === 'linkedin' ? 'https://www.linkedin.com/company/clikd' : null;
   } else {
     acc.connected = false;
     acc.handle = null;
@@ -1410,6 +1472,9 @@ export function setSocialConnection(
     acc.avatar_url = null;
     acc.connected_at = null;
     acc.subscriber_count = null;
+    acc.follower_count = null;
+    acc.page_name = null;
+    acc.company_url = null;
   }
   return { ...acc };
 }
@@ -1502,6 +1567,11 @@ export const PLATFORM_META: Record<
     label: 'YouTube',
     color: '#FF0000',
     connectLabel: 'Connect YouTube Channel',
+  },
+  facebook: {
+    label: 'Facebook',
+    color: '#1877F2',
+    connectLabel: 'Connect Facebook Page',
   },
 };
 

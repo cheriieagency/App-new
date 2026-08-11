@@ -51,6 +51,9 @@ import {
   listCommunityAutomationEmails,
   listEmailAutomations,
 } from '@/lib/mock-email-crm';
+import { useSubscription } from '@/components/common/useSubscription';
+import UpgradeModal from '@/components/common/UpgradeModal';
+import { PlanLockBadge } from '@/components/common/FeatureGate';
 import { useWorkspace } from '@/context/WorkspaceContext';
 
 type EmailResponse = {
@@ -151,6 +154,14 @@ export default function EmailAdminPanel() {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const { activeWorkspace } = useWorkspace();
+  const {
+    hasFeature,
+    requestUpgrade,
+    upgradeOpen,
+    setUpgradeOpen,
+    upgradeTarget,
+  } = useSubscription();
+  const canBroadcast = hasFeature('emailBroadcasts');
   const workspaceCommunityId = activeWorkspace.community.community_id;
   const [tag, setTag] = useState('all');
   const [q, setQ] = useState('');
@@ -227,20 +238,29 @@ export default function EmailAdminPanel() {
 
   const sendMutation = useMutation({
     mutationFn: async (action: 'send' | 'test') => {
-      const r = await fetch('/api/admin/email', {
+      const r = await fetch('/api/admin/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action,
+          workspaceId: activeWorkspace.id,
           subject,
-          body,
-          audience,
-          image_url: imageUrl,
-          image_placement: imagePlacement,
+          bodyContent: body,
+          recipientFilter: audience,
+          test: action === 'test',
+          imageUrl,
         }),
       });
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg =
+          typeof data.message === 'string'
+            ? data.message
+            : typeof data.error === 'string'
+              ? data.error
+              : 'Failed to send';
+        throw new Error(msg);
+      }
+      return data;
     },
     onSuccess: (_res, action) => {
       queryClient.invalidateQueries({ queryKey: ['admin-email'] });
@@ -252,6 +272,11 @@ export default function EmailAdminPanel() {
         setImageUrl(null);
         setImagePlacement('middle');
       }
+    },
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : 'Send failed';
+      setFlash(msg);
+      setTimeout(() => setFlash(''), 4500);
     },
   });
 
@@ -429,10 +454,17 @@ export default function EmailAdminPanel() {
         </div>
         <button
           type="button"
-          onClick={() => setComposerOpen(true)}
+          onClick={() => {
+            if (!canBroadcast) {
+              requestUpgrade('creator');
+              return;
+            }
+            setComposerOpen(true);
+          }}
           className="inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
         >
           <Plus size={14} /> {t('createEmailBroadcast', locale).replace(/^\+\s*/, '')}
+          {!canBroadcast && <PlanLockBadge minPlan="creator" className="ml-1 normal-case" />}
         </button>
       </div>
 
@@ -1396,16 +1428,30 @@ export default function EmailAdminPanel() {
               />
 
               {flash && (
-                <div className="flex items-center gap-2 text-sm font-bold text-green-600 bg-green-50 rounded-xl px-3 py-2.5">
+                <div
+                  className={`flex items-center gap-2 text-sm font-bold rounded-xl px-3 py-2.5 ${
+                    /missing|fail|error|forbidden|unauthorized/i.test(flash)
+                      ? 'text-rose-600 bg-rose-50'
+                      : 'text-green-600 bg-green-50'
+                  }`}
+                >
                   <CheckCircle2 size={14} /> {flash}
                 </div>
               )}
             </div>
 
             <div className="px-5 py-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-2">
+              {!canBroadcast && (
+                <div className="w-full mb-1">
+                  <PlanLockBadge minPlan="creator" />
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    Broadcasts available on Creator Plan
+                  </p>
+                </div>
+              )}
               <button
                 type="button"
-                disabled={!canSend}
+                disabled={!canSend || !canBroadcast}
                 onClick={() => sendMutation.mutate('test')}
                 className="flex-1 h-11 min-h-[44px] rounded-xl border border-zinc-200 text-sm font-extrabold text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 inline-flex items-center justify-center gap-2"
               >
@@ -1418,8 +1464,14 @@ export default function EmailAdminPanel() {
               </button>
               <button
                 type="button"
-                disabled={!canSend}
-                onClick={() => sendMutation.mutate('send')}
+                disabled={!canSend || !canBroadcast}
+                onClick={() => {
+                  if (!canBroadcast) {
+                    requestUpgrade('creator');
+                    return;
+                  }
+                  sendMutation.mutate('send');
+                }}
                 className="flex-1 h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] text-white text-sm font-black hover:opacity-90 disabled:opacity-50 inline-flex items-center justify-center gap-2"
               >
                 {sendMutation.isPending ? (
@@ -1433,6 +1485,12 @@ export default function EmailAdminPanel() {
           </div>
         </>
       )}
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        minPlan={upgradeTarget}
+      />
     </div>
   );
 }

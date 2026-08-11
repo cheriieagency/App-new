@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { t } from '@/lib/i18n';
-import { useLanguage } from '@/lib/locale-context';
+import { useLanguage } from '@/lib/i18n';
 import { LoginModal } from '@/components/landing/LoginModal';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
@@ -18,7 +17,7 @@ function scrollToId(id: string) {
 }
 
 export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
-  const { locale } = useLanguage();
+  const { t } = useLanguage();
   const [loginOpen, setLoginOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { home, isCreator } = usePlatformRole();
@@ -55,21 +54,21 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
             onClick={() => scrollToId('features')}
             className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
           >
-            {t('navFeatures', locale)}
+            {t('nav.features')}
           </button>
           <button
             type="button"
             onClick={() => scrollToId('pricing')}
             className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
           >
-            {t('navPricing', locale)}
+            {t('nav.pricing')}
           </button>
           <button
             type="button"
             onClick={() => scrollToId('communities')}
             className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
           >
-            {t('navCommunities', locale)}
+            {t('nav.exploreCommunities')}
           </button>
         </nav>
 
@@ -81,7 +80,7 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
               href={home}
               className="bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 min-h-11 transition-colors"
             >
-              {isCreator ? t('creatorAdmin', locale) : t('dashboard', locale)}
+              {isCreator ? t('creatorAdmin') : t('nav.dashboard')}
             </Link>
           ) : (
             <>
@@ -90,15 +89,14 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
                 onClick={() => setLoginOpen(true)}
                 className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
               >
-                {t('logInShort', locale)}
+                {t('nav.logIn')}
               </button>
-              <button
-                type="button"
-                onClick={() => setLoginOpen(true)}
+              <Link
+                href="/onboarding"
                 className="bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 min-h-11 transition-colors"
               >
-                {t('getStartedShort', locale)}
-              </button>
+                {t('nav.getStartedFree')}
+              </Link>
             </>
           )}
         </div>

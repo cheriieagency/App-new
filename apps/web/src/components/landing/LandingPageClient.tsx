@@ -142,7 +142,7 @@ export function LandingPageClient() {
             </p>
             <div className="flex items-center justify-center gap-3 flex-wrap">
               <Link
-                href="/account/signup"
+                href="/onboarding"
                 className="flex items-center gap-2 min-h-12 px-8 rounded-xl font-extrabold text-sm text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]"
               >
                 {t('landingCtaStartFree', locale)} <ArrowRight size={14} />

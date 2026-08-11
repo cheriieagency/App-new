@@ -26,10 +26,11 @@ import AiCopilotPanel from '@/components/planner/AiCopilotPanel';
 import FeedGridPlanner from '@/components/planner/FeedGridPlanner';
 import PlannerNotesPanel from '@/components/planner/PlannerNotesPanel';
 import TeamWorkspaceModal from '@/components/planner/TeamWorkspaceModal';
-import SocialAccountsModal from '@/components/planner/SocialAccountsModal';
 import { AdminPageHeader } from '@/components/admin/AdminUi';
+import Link from 'next/link';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import {
+  FacebookIcon,
   InstagramIcon,
   LinkedInIcon,
   TikTokIcon,
@@ -52,6 +53,7 @@ const PLATFORM_ICONS: Record<
   tiktok: TikTokIcon,
   linkedin: LinkedInIcon,
   youtube: YouTubeIcon,
+  facebook: FacebookIcon,
 };
 
 type ViewMode = 'board' | 'calendar' | 'table' | 'feed' | 'notes' | 'copilot';
@@ -93,7 +95,6 @@ export default function ContentPlannerShell({
   const [cursor, setCursor] = useState(() => new Date());
   const [studioOpen, setStudioOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
-  const [accountsOpen, setAccountsOpen] = useState(false);
   const [activePost, setActivePost] = useState<PlannerPost | null>(null);
   const [defaultScheduledAt, setDefaultScheduledAt] = useState<string | null>(null);
 
@@ -333,7 +334,7 @@ export default function ContentPlannerShell({
             >
               {t('allPlatforms', locale)}
             </button>
-            {(['instagram', 'tiktok', 'linkedin', 'youtube'] as SocialPlatform[]).map((p) => {
+            {(['instagram', 'facebook', 'tiktok', 'linkedin', 'youtube'] as SocialPlatform[]).map((p) => {
               const active = platformFilter === p;
               const Icon = PLATFORM_ICONS[p];
               return (
@@ -464,8 +465,6 @@ export default function ContentPlannerShell({
         projectName={project}
         workspaces={workspaces}
       />
-
-      <SocialAccountsModal open={accountsOpen} onOpenChange={setAccountsOpen} />
     </>
   );
 
@@ -547,13 +546,12 @@ export default function ContentPlannerShell({
 
           <LanguageSwitcher className="hidden lg:block [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:h-9 [&_button]:min-h-[36px] [&_button]:text-slate-500 [&_button]:px-2 [&_button]:text-xs [&_button]:font-semibold" />
 
-          <button
-            type="button"
-            onClick={() => setAccountsOpen(true)}
+          <Link
+            href="/admin/settings/socials"
             className="hidden md:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
           >
             <Settings2 size={14} /> {t('accounts', locale)}
-          </button>
+          </Link>
 
           <button
             type="button"

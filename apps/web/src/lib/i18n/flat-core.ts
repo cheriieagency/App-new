@@ -1,4 +1,4 @@
-import { EXTRA_BY_LOCALE, type ExtraKey } from '@/lib/i18n-extra';
+import { EXTRA_BY_LOCALE, type ExtraKey } from './extra';
 
 export type Locale = 'en' | 'sv' | 'no' | 'da' | 'fi';
 

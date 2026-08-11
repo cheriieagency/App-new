@@ -17,6 +17,7 @@ import {
   TikTokIcon,
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
+import { useLanguage } from '@/lib/i18n';
 
 type PlannerView = 'calendar' | 'kanban' | 'feed' | 'analytics';
 type ChannelFilter = 'all' | 'instagram' | 'tiktok' | 'linkedin' | 'youtube';
@@ -24,30 +25,6 @@ type CalMode = 'month' | 'week' | 'day' | 'list';
 
 const AVATAR =
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&fit=crop&q=80';
-
-const VIEW_TABS: {
-  key: PlannerView;
-  label: string;
-  icon: typeof CalendarDays;
-}[] = [
-  { key: 'calendar', label: 'Calendar Planner', icon: CalendarDays },
-  { key: 'kanban', label: 'Kanban Progress', icon: Columns3 },
-  { key: 'feed', label: 'Visual Feed Grid', icon: LayoutGrid },
-  { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-];
-
-const CHANNELS: {
-  key: ChannelFilter;
-  label: string;
-  Icon?: typeof InstagramIcon;
-  tint?: string;
-}[] = [
-  { key: 'all', label: 'All Channels' },
-  { key: 'instagram', label: 'Instagram', Icon: InstagramIcon, tint: 'text-[#E1306C]' },
-  { key: 'tiktok', label: 'TikTok', Icon: TikTokIcon, tint: 'text-slate-900' },
-  { key: 'linkedin', label: 'LinkedIn', Icon: LinkedInIcon, tint: 'text-[#0A66C2]' },
-  { key: 'youtube', label: 'YouTube', Icon: YouTubeIcon, tint: 'text-[#FF0000]' },
-];
 
 type PostChip = {
   day: number;
@@ -91,10 +68,35 @@ function august2026Cells() {
 
 /** Interactive macOS browser frame with Content Planner preview. */
 function HeroPlannerMockup() {
+  const { t } = useLanguage();
   const [activeView, setActiveView] = useState<PlannerView>('calendar');
   const [channel, setChannel] = useState<ChannelFilter>('all');
   const [calMode, setCalMode] = useState<CalMode>('month');
   const cells = useMemo(() => august2026Cells(), []);
+
+  const viewTabs: {
+    key: PlannerView;
+    label: string;
+    icon: typeof CalendarDays;
+  }[] = [
+    { key: 'calendar', label: t('hero.calendarPlanner'), icon: CalendarDays },
+    { key: 'kanban', label: t('hero.kanbanProgress'), icon: Columns3 },
+    { key: 'feed', label: t('hero.visualFeedGrid'), icon: LayoutGrid },
+    { key: 'analytics', label: t('hero.analytics'), icon: BarChart3 },
+  ];
+
+  const channels: {
+    key: ChannelFilter;
+    label: string;
+    Icon?: typeof InstagramIcon;
+    tint?: string;
+  }[] = [
+    { key: 'all', label: t('hero.allChannels') },
+    { key: 'instagram', label: 'Instagram', Icon: InstagramIcon, tint: 'text-[#E1306C]' },
+    { key: 'tiktok', label: 'TikTok', Icon: TikTokIcon, tint: 'text-slate-900' },
+    { key: 'linkedin', label: 'LinkedIn', Icon: LinkedInIcon, tint: 'text-[#0A66C2]' },
+    { key: 'youtube', label: 'YouTube', Icon: YouTubeIcon, tint: 'text-[#FF0000]' },
+  ];
 
   const posts = useMemo(
     () =>
@@ -138,7 +140,7 @@ function HeroPlannerMockup() {
       {/* View switcher */}
       <div className="flex flex-wrap items-center gap-1.5 px-3 sm:px-4 py-2.5 border-b border-slate-100 bg-white">
         <div className="flex flex-1 min-w-0 gap-1 overflow-x-auto scrollbar-none">
-          {VIEW_TABS.map(({ key, label, icon: Icon }) => {
+          {viewTabs.map(({ key, label, icon: Icon }) => {
             const active = activeView === key;
             return (
               <button
@@ -190,7 +192,7 @@ function HeroPlannerMockup() {
           </div>
         </div>
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none lg:ml-auto">
-          {CHANNELS.map(({ key, label, Icon, tint }) => {
+          {channels.map(({ key, label, Icon, tint }) => {
             const active = channel === key;
             return (
               <button
@@ -410,6 +412,8 @@ function HeroPlannerMockup() {
 
 /** Centered Content Planning hero + interactive planner showcase. */
 export function HeroSection() {
+  const { t } = useLanguage();
+
   return (
     <section className="relative overflow-hidden bg-[#FAFAFA]">
       <div
@@ -438,7 +442,7 @@ export function HeroSection() {
             className="inline-flex items-center rounded-full bg-purple-50/80 border border-purple-200/80 px-4 py-1.5"
           >
             <span className="font-mono text-xs font-bold text-purple-900 tracking-wide">
-              The all-in-one platform
+              {t('hero.badge')}
             </span>
           </motion.div>
 
@@ -448,8 +452,8 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.06 }}
             className="mt-6 text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.08] font-outfit text-center"
           >
-            <span className="block text-slate-900">Content planning</span>
-            <span className="block text-[#F472B6]">built for social media.</span>
+            <span className="block text-slate-900">{t('hero.headline1')}</span>
+            <span className="block text-[#F472B6]">{t('hero.headline2')}</span>
           </motion.h1>
 
           <motion.p
@@ -458,8 +462,7 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.12 }}
             className="mt-5 text-base sm:text-lg text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto font-sans"
           >
-            Built for creators who move at the speed of social. Plan multi-channel calendars,
-            monetize your link-in-bio, and host gamified communities — all in one unified studio.
+            {t('hero.sub')}
           </motion.p>
 
           <motion.div
@@ -469,10 +472,10 @@ export function HeroSection() {
             className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3"
           >
             <Link
-              href="/account/signup"
+              href="/onboarding"
               className="inline-flex items-center justify-center min-h-[48px] bg-[#F472B6] hover:bg-[#e0529c] text-slate-950 font-black text-xs px-7 py-4 rounded-2xl shadow-sm transition-all transform hover:-translate-y-0.5"
             >
-              Get started for free →
+              {t('hero.ctaPrimary')}
             </Link>
             <button
               type="button"
@@ -483,7 +486,7 @@ export function HeroSection() {
               }
               className="inline-flex items-center justify-center min-h-[48px] bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs px-7 py-4 rounded-2xl transition-all"
             >
-              Learn more
+              {t('hero.ctaSecondary')}
             </button>
           </motion.div>
         </div>

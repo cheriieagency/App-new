@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner'
 
 const CHANNELS: { key: SocialPlatform; label: string }[] = [
   { key: 'instagram', label: 'Instagram' },
+  { key: 'facebook', label: 'Facebook' },
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'youtube', label: 'YouTube' },
@@ -33,6 +35,7 @@ export default function CreateWorkspaceModal({
   onCreated: (workspace: BrandWorkspace) => void;
   createUrl?: string;
 }) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
   const [channels, setChannels] = useState<SocialPlatform[]>([
@@ -141,11 +144,16 @@ export default function CreateWorkspaceModal({
             className="w-full h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] text-white font-extrabold gap-2"
           >
             {saving ? (
-              <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              <>
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                {t('common.loading')}
+              </>
             ) : (
-              <Plus size={14} />
+              <>
+                <Plus size={14} />
+                Create & activate
+              </>
             )}
-            Create & activate
           </Button>
         </div>
       </DialogContent>

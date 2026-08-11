@@ -181,6 +181,7 @@ export type ExtraKey =
   | 'connectTikTokBusiness'
   | 'connectLinkedIn'
   | 'connectYouTube'
+  | 'connectFacebook'
   | 'connectedAccounts'
   | 'socialAccountsHint'
   | 'subscribersLabel'
@@ -265,6 +266,7 @@ export type ExtraKey =
   | 'planStarter'
   | 'planStarterSub'
   | 'planFreeForever'
+  | 'planBilledMonthly'
   | 'planStarterCta'
   | 'planCreator'
   | 'planCreatorSub'
@@ -279,21 +281,28 @@ export type ExtraKey =
   | 'pricingTrustCancel'
   | 'pricingTrustSecurity'
   | 'pricingTrustMigration'
+  | 'planF0'
   | 'planF1'
   | 'planF2'
   | 'planF3'
   | 'planF4'
+  | 'planF5'
+  | 'planF6'
   | 'planC1'
   | 'planC2'
   | 'planC3'
   | 'planC4'
   | 'planC5'
   | 'planC6'
+  | 'planC7'
+  | 'planC0'
   | 'planP1'
   | 'planP2'
   | 'planP3'
   | 'planP4'
   | 'planP5'
+  | 'planP6'
+  | 'planP0'
   | 'discoverExplore'
   | 'findNordicCommunity'
   | 'findNordicCommunityAccent'
@@ -456,6 +465,39 @@ export type ExtraKey =
   | 'bioTabDesign'
   | 'bioTabBlocks'
   | 'bioTabAnalytics'
+  | 'bioTabSettings'
+  | 'liveStudioPreview'
+  | 'presetsCount'
+  | 'themeMidnight'
+  | 'themeMidnightBlurb'
+  | 'themeChampagne'
+  | 'themeChampagneBlurb'
+  | 'themeAurora'
+  | 'themeAuroraBlurb'
+  | 'themeNordic'
+  | 'themeNordicBlurb'
+  | 'mockLinkWelcomeSub'
+  | 'mockLinkStudioTitle'
+  | 'mockLinkStudioSub'
+  | 'mockLinkCoaching'
+  | 'mockLinkCoachingSub'
+  | 'yourInfo'
+  | 'fieldRequired'
+  | 'validEmail'
+  | 'validPhone'
+  | 'selectOption'
+  | 'cardApplePay'
+  | 'chooseImageType'
+  | 'maxFileSize5mb'
+  | 'uploadFailedRetry'
+  | 'variantHintFrosted'
+  | 'variantHintSolid'
+  | 'variantHintLuxe'
+  | 'variantHintMinimal'
+  | 'fontHintJakarta'
+  | 'fontHintPlayfair'
+  | 'fontHintSpace'
+  | 'fontHintDefault'
   | 'linkInBio'
   | 'publishChanges'
   | 'publishedCheck'
@@ -748,6 +790,78 @@ export type ExtraKey =
   | 'notifPurchases'
   | 'notifAutomations'
   | 'notifLiveReminders'
+  | 'notifWeeklyDigest'
+  | 'notifWeeklyDigestHint'
+  | 'notifInAppHint'
+  | 'notifSampleNewMembers'
+  | 'notifSamplePurchase'
+  | 'notifSampleAutomation'
+  | 'notifSampleLive'
+  | 'notifEmpty'
+  | 'notifPrefsSaved'
+  | 'settingsIntegrationsSub'
+  | 'settingsIntegrationsOverview'
+  | 'settingsApiAuthorized'
+  | 'settingsApiNotConnected'
+  | 'settingsConnectedAt'
+  | 'settingsNoSocialsYet'
+  | 'settingsWorkspacesSub'
+  | 'settingsWorkspaceMembers'
+  | 'settingsWorkspaceRole'
+  | 'settingsWorkspaceChannels'
+  | 'settingsAddWorkspace'
+  | 'settingsNoMembers'
+  | 'settingsWorkflowsSub'
+  | 'settingsWorkflowActive'
+  | 'settingsWorkflowPaused'
+  | 'settingsWorkflowSent'
+  | 'settingsWorkflowLastSent'
+  | 'settingsNoWorkflows'
+  | 'settingsOpenEmailCrm'
+  | 'settingsPaymentMethod'
+  | 'settingsPaymentStripe'
+  | 'settingsCardOnFile'
+  | 'settingsRenewalDate'
+  | 'settingsRenewalHint'
+  | 'settingsBillingPortal'
+  | 'settingsSubscriptions'
+  | 'settingsSubscriptionsSub'
+  | 'settingsManageSubscriptions'
+  | 'settingsPlanSince'
+  | 'settingsTrialEnds'
+  | 'settingsBillingMembers'
+  | 'settingsUnitPrice'
+  | 'settingsBillingInterval'
+  | 'settingsNextInvoice'
+  | 'settingsFirstCharge'
+  | 'settingsBillingDetails'
+  | 'settingsBillingDetailsSub'
+  | 'settingsEdit'
+  | 'settingsPaymentMethodLabel'
+  | 'settingsCardMastercard'
+  | 'settingsNoTaxId'
+  | 'settingsAddTaxId'
+  | 'settingsInvoiceHistory'
+  | 'settingsInvoiceHistorySub'
+  | 'settingsInvoiceTrial'
+  | 'settingsIntervalYear'
+  | 'settingsIntervalMonth'
+  | 'settingsAvailablePlans'
+  | 'settingsMembersSub'
+  | 'settingsInviteMember'
+  | 'settingsAllSpaces'
+  | 'settingsRoleAdmin'
+  | 'settingsRoleEditor'
+  | 'settingsRoleApprover'
+  | 'settingsRoleViewer'
+  | 'settingsInviteTitle'
+  | 'settingsInviteHint'
+  | 'settingsInviteSend'
+  | 'settingsInviteSent'
+  | 'settingsMemberPending'
+  | 'settingsOrgTitle'
+  | 'settingsOrgSub'
+  | 'settingsSpaceAccess'
   | 'accountMenuTitle'
   | 'accountMenuWorkspace'
   | 'accountMenuRole'
@@ -991,6 +1105,7 @@ export const EXTRA_EN: ExtraDict = {
   connectTikTokBusiness: 'Connect TikTok Business',
   connectLinkedIn: 'Connect LinkedIn',
   connectYouTube: 'Connect YouTube',
+  connectFacebook: 'Connect Facebook Page',
   connectedAccounts: 'Connected accounts',
   socialAccountsHint: 'Connect profiles to publish and analyze from your Social Set.',
   subscribersLabel: 'subscribers',
@@ -1073,37 +1188,45 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   pricingYearly: 'Yearly',
   pricingSave17: 'Save 17%',
   planStarter: 'Starter',
-  planStarterSub: 'Perfect for launching your first digital product or bio link.',
+  planStarterSub: 'Perfect for launching your first digital product or bio link without fixed costs.',
   planFreeForever: 'Free forever',
+  planBilledMonthly: 'Billed monthly',
   planStarterCta: 'Start Free Forever',
   planCreator: 'Creator',
-  planCreatorSub: 'Everything you need to sell and grow — cancel anytime.',
+  planCreatorSub: 'Everything you need to sell, post, and grow your community — cancel anytime.',
   planCreatorSubYearly: 'Billed annually (1,990 SEK/yr) — Save 17%',
   planCreatorCta: 'Start 14-Day Free Trial →',
   planPro: 'Pro / Agency',
-  planProSub: 'For high-earning creators, educators, and multi-brand agencies.',
-  planProSubYearly: 'Billed annually (4,980 SEK/yr) — Save 17%',
+  planProSub: 'For high-earning creators, educators, and multi-brand agencies scaling up.',
+  planProSubYearly: 'Billed annually (6,990 SEK/yr) — Save 17%',
   planProCta: 'Choose Pro Plan',
   planProBadge: '0% Platform Fee',
   sekPerMo: 'SEK / mo',
   pricingTrustCancel: 'Cancel anytime with 1-click',
   pricingTrustSecurity: 'BankID & Bank-grade security',
   pricingTrustMigration: 'Free migration support',
+  planF0: '8% Transaction Fee on Sales (No monthly sub)',
   planF1: '1 Social Set & Bio Link Storefront',
   planF2: '1 Free Community (Up to 25 members)',
-  planF3: '1-Tap Mobile Checkout',
-  planF4: 'Basic Analytics & Email CRM',
+  planF3: 'Sell digital products & downloads',
+  planF4: '1-Tap Mobile Checkout',
+  planF5: 'Basic Analytics & Email CRM',
+  planF6: '1 seat in your workspace',
+  planC0: 'Everything in Starter, plus…',
   planC1: 'Unlimited Community Members',
   planC2: 'Full Social Content Planner & Kanban',
   planC3: 'Bio Link Storefront & 1-Tap Checkout',
-  planC4: 'Classroom Courses & Video Hosting',
+  planC4: 'Classroom Courses & Video Hosting (25 GB)',
   planC5: 'Email CRM & Broadcasts (2,500 contacts)',
-  planC6: 'Automated Fortnox & VAT (6%/25%)',
-  planP1: '0% Platform Fee (Keep 100% of revenue)',
-  planP2: 'Multiple Communities & Workspaces',
-  planP3: 'Custom Domain Linking (yourname.se)',
-  planP4: 'AI Content & Member Copilot Suite',
-  planP5: 'Priority 1:1 Onboarding & Support',
+  planC6: 'Reduced 2.5% Platform Fee',
+  planC7: '2 seats in your workspace for teammates',
+  planP0: 'Everything in Creator, plus…',
+  planP1: '0% Platform Fee (Keep 100% revenue)',
+  planP2: 'Multiple Communities & 3 Workspaces',
+  planP3: '5 seats in workspace (+99 kr per extra)',
+  planP4: 'Custom Domain Linking (yourname.se)',
+  planP5: 'AI Content & Member Copilot Suite',
+  planP6: 'Priority 1:1 Onboarding & Support',
   discoverExplore: 'Discover & Explore',
   findNordicCommunity: 'Find your next',
   findNordicCommunityAccent: 'Nordic community',
@@ -1347,6 +1470,83 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   notifPurchases: 'Product purchases',
   notifAutomations: 'Email automation sends',
   notifLiveReminders: 'Live event reminders',
+  notifWeeklyDigest: 'Weekly email digest',
+  notifWeeklyDigestHint:
+    'Once a week we send a summary of approved notification types to your account email.',
+  notifInAppHint:
+    'Checked items appear in the bell menu in the admin header. Uncheck to mute that category.',
+  notifSampleNewMembers: '3 new members joined Creator Lab',
+  notifSamplePurchase: 'E-book purchase: Creator Starter Pack',
+  notifSampleAutomation: 'Broadcast open rate hit 62%',
+  notifSampleLive: 'Live reminder: session starts in 1 hour',
+  notifEmpty: 'No notifications right now — turn categories on in Settings.',
+  notifPrefsSaved: 'Notification preferences saved',
+  settingsIntegrationsSub:
+    'Overview of social spaces and accounts authorized via API. Manage each connection here.',
+  settingsIntegrationsOverview: 'Connected platforms',
+  settingsApiAuthorized: 'Authorized · API ✓',
+  settingsApiNotConnected: 'Not connected',
+  settingsConnectedAt: 'Connected {date}',
+  settingsNoSocialsYet: 'No platforms connected yet for this workspace.',
+  settingsWorkspacesSub:
+    'All social spaces on your account — team members, roles, and channels.',
+  settingsWorkspaceMembers: 'Team members',
+  settingsWorkspaceRole: 'Role',
+  settingsWorkspaceChannels: 'Channels',
+  settingsAddWorkspace: 'Add workspace',
+  settingsNoMembers: 'No teammates on this workspace yet.',
+  settingsWorkflowsSub:
+    'Automated emails and workflows that run for your communities and store.',
+  settingsWorkflowActive: 'Active',
+  settingsWorkflowPaused: 'Paused',
+  settingsWorkflowSent: '{n} sent',
+  settingsWorkflowLastSent: 'Last sent {date}',
+  settingsNoWorkflows: 'No workflows yet — create them in Email CRM.',
+  settingsOpenEmailCrm: 'Open Email CRM',
+  settingsPaymentMethod: 'Payment method',
+  settingsPaymentStripe: 'Billed securely via Stripe',
+  settingsCardOnFile: 'Visa ending in 4242',
+  settingsRenewalDate: 'Next renewal',
+  settingsRenewalHint: 'Your plan renews automatically unless cancelled.',
+  settingsBillingPortal: 'Manage billing in Stripe',
+  settingsSubscriptions: 'Subscriptions',
+  settingsSubscriptionsSub: 'Manage your subscriptions',
+  settingsManageSubscriptions: 'Manage Subscriptions',
+  settingsPlanSince: 'Starter plan since {date}',
+  settingsTrialEnds: 'Free trial ends {date}',
+  settingsBillingMembers: 'Members',
+  settingsUnitPrice: 'Unit price',
+  settingsBillingInterval: 'Billing interval',
+  settingsNextInvoice: 'Next invoice date',
+  settingsFirstCharge: 'First charge excl. tax',
+  settingsBillingDetails: 'Billing details',
+  settingsBillingDetailsSub: 'Contact information and payment method on file.',
+  settingsEdit: 'Edit',
+  settingsPaymentMethodLabel: 'Payment method',
+  settingsCardMastercard: 'Mastercard credit card ending in 4242 · Stripe',
+  settingsNoTaxId: 'No tax identifier on file',
+  settingsAddTaxId: 'Add tax ID',
+  settingsInvoiceHistory: 'Invoice history',
+  settingsInvoiceHistorySub: 'Your most recent invoices.',
+  settingsInvoiceTrial: 'Free trial period for 1 × clikd: Starter',
+  settingsIntervalYear: 'Year',
+  settingsIntervalMonth: 'Month',
+  settingsAvailablePlans: 'Available plans',
+  settingsMembersSub: 'Manage your organization members · {n} seat',
+  settingsInviteMember: 'Invite member',
+  settingsAllSpaces: 'All spaces',
+  settingsRoleAdmin: 'Admin',
+  settingsRoleEditor: 'Editor',
+  settingsRoleApprover: 'Approver',
+  settingsRoleViewer: 'Viewer',
+  settingsInviteTitle: 'Invite a teammate',
+  settingsInviteHint: 'They’ll get an email with access to the spaces you choose.',
+  settingsInviteSend: 'Send invite',
+  settingsInviteSent: 'Invite sent',
+  settingsMemberPending: 'Pending',
+  settingsOrgTitle: 'Organization',
+  settingsOrgSub: 'Manage organization settings and shared configuration.',
+  settingsSpaceAccess: 'Space access',
   accountMenuTitle: 'Account',
   accountMenuWorkspace: 'Workspace',
   accountMenuRole: 'Role',
@@ -1390,6 +1590,39 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   bioTabDesign: 'Design & Theme',
   bioTabBlocks: 'Blocks & Links',
   bioTabAnalytics: 'UTM Analytics',
+  bioTabSettings: 'Settings',
+  liveStudioPreview: 'Live Studio Preview',
+  presetsCount: '8 Presets',
+  themeMidnight: 'Midnight Glass',
+  themeMidnightBlurb: 'Dark mesh + frosted glass',
+  themeChampagne: 'Champagne Luxe',
+  themeChampagneBlurb: 'Warm silk + gold accents',
+  themeAurora: 'Aurora Glow',
+  themeAuroraBlurb: 'Indigo / purple glow',
+  themeNordic: 'Nordic Minimal',
+  themeNordicBlurb: 'Clean white + crisp slate',
+  mockLinkWelcomeSub: 'Welcome to my world',
+  mockLinkStudioTitle: 'Clikd Studio',
+  mockLinkStudioSub: 'The place to be',
+  mockLinkCoaching: '1:1 Coaching',
+  mockLinkCoachingSub: 'Book a call',
+  yourInfo: 'Your info',
+  fieldRequired: 'This field is required',
+  validEmail: 'Enter a valid email',
+  validPhone: 'Enter a valid phone number',
+  selectOption: 'Select…',
+  cardApplePay: 'Card / Apple Pay',
+  chooseImageType: 'Choose a JPG, PNG, or WebP image.',
+  maxFileSize5mb: 'Max file size is 5 MB.',
+  uploadFailedRetry: 'Upload failed. Try again.',
+  variantHintFrosted: 'Blur + glass',
+  variantHintSolid: 'Bold slate',
+  variantHintLuxe: 'White card',
+  variantHintMinimal: 'Outline only',
+  fontHintJakarta: ' — Modern Clean',
+  fontHintPlayfair: ' — Editorial Luxury',
+  fontHintSpace: ' — Tech / Web3',
+  fontHintDefault: ' — Minimal Functional',
   linkInBio: 'Link in Bio',
   publishChanges: 'Publish Changes',
   publishedCheck: 'Published',
@@ -1804,6 +2037,7 @@ export const EXTRA_SV: ExtraDict = {
   connectTikTokBusiness: 'Anslut TikTok Business',
   connectLinkedIn: 'Anslut LinkedIn',
   connectYouTube: 'Anslut YouTube',
+  connectFacebook: 'Anslut Facebook-sida',
   connectedAccounts: 'Anslutna konton',
   socialAccountsHint: 'Anslut profiler för att publicera och analysera från ditt Social Set.',
   subscribersLabel: 'prenumeranter',
@@ -1886,37 +2120,45 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   pricingYearly: 'Årsvis',
   pricingSave17: 'Spara 17%',
   planStarter: 'Starter',
-  planStarterSub: 'Perfekt för att lansera din första digitala produkt eller bio-länk.',
+  planStarterSub: 'Perfekt för att lansera din första digitala produkt eller bio-länk utan fasta kostnader.',
   planFreeForever: 'Gratis för alltid',
+  planBilledMonthly: 'Faktureras månadsvis',
   planStarterCta: 'Börja gratis för alltid',
   planCreator: 'Creator',
-  planCreatorSub: 'Allt du behöver för att sälja och växa — avsluta när som helst.',
+  planCreatorSub: 'Allt du behöver för att sälja, posta och växa din community — avsluta när som helst.',
   planCreatorSubYearly: 'Faktureras årsvis (1,990 SEK/år) — Spara 17%',
   planCreatorCta: 'Starta 14 dagars gratis trial →',
   planPro: 'Pro / Agency',
-  planProSub: 'För high-earning creators, educators och multi-brand-byråer.',
-  planProSubYearly: 'Faktureras årsvis (4,980 SEK/år) — Spara 17%',
+  planProSub: 'För high-earning creators, educators och multi-brand-byråer som skalar upp.',
+  planProSubYearly: 'Faktureras årsvis (6,990 SEK/år) — Spara 17%',
   planProCta: 'Välj Pro-planen',
   planProBadge: '0% plattformsavgift',
   sekPerMo: 'SEK / mån',
   pricingTrustCancel: 'Avsluta när som helst med 1 klick',
   pricingTrustSecurity: 'BankID & banknivå-säkerhet',
   pricingTrustMigration: 'Gratis migrationssupport',
+  planF0: '8% transaktionsavgift på försäljning (ingen månadsavgift)',
   planF1: '1 Social Set & Bio Link Storefront',
   planF2: '1 gratis community (upp till 25 medlemmar)',
-  planF3: '1-trycks mobilcheckout',
-  planF4: 'Grundläggande Analytics & Email CRM',
+  planF3: 'Sälj digitala produkter & nedladdningar',
+  planF4: '1-trycks mobilcheckout',
+  planF5: 'Grundläggande Analytics & Email CRM',
+  planF6: '1 plats i ditt workspace',
+  planC0: 'Allt i Starter, plus…',
   planC1: 'Obegränsat antal community-medlemmar',
   planC2: 'Full Social Content Planner & Kanban',
   planC3: 'Bio Link Storefront & 1-trycks checkout',
-  planC4: 'Classroom-kurser & videohosting',
+  planC4: 'Classroom-kurser & videohosting (25 GB)',
   planC5: 'Email CRM & Broadcasts (2,500 kontakter)',
-  planC6: 'Automatiserad Fortnox & moms (6%/25%)',
+  planC6: 'Reducerad 2,5% plattformsavgift',
+  planC7: '2 platser i ditt workspace för teammedlemmar',
+  planP0: 'Allt i Creator, plus…',
   planP1: '0% plattformsavgift (behåll 100% av intäkterna)',
-  planP2: 'Flera communities & workspaces',
-  planP3: 'Egen domän (dittnamn.se)',
-  planP4: 'AI Content & Member Copilot Suite',
-  planP5: 'Prioriterad 1:1 onboarding & support',
+  planP2: 'Flera communities & 3 workspaces',
+  planP3: '5 platser i workspace (+99 kr per extra)',
+  planP4: 'Egen domän (dittnamn.se)',
+  planP5: 'AI Content & Member Copilot Suite',
+  planP6: 'Prioriterad 1:1 onboarding & support',
   discoverExplore: 'Upptäck & utforska',
   findNordicCommunity: 'Hitta din nästa',
   findNordicCommunityAccent: 'nordiska community',
@@ -2160,6 +2402,83 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   notifPurchases: 'Produktköp',
   notifAutomations: 'Automatiska e-postutskick',
   notifLiveReminders: 'Påminnelser om live-event',
+  notifWeeklyDigest: 'Veckosammanfattning via e-post',
+  notifWeeklyDigestHint:
+    'En gång i veckan skickar vi en sammanfattning av godkända aviseringstyper till din kontomejl.',
+  notifInAppHint:
+    'Markerade alternativ syns i klockikonen i admin-headern. Avmarkera för att tysta kategorin.',
+  notifSampleNewMembers: '3 nya medlemmar gick med i Creator Lab',
+  notifSamplePurchase: 'E-boksköp: Creator Starter Pack',
+  notifSampleAutomation: 'Broadcast öppningsfrekvens 62%',
+  notifSampleLive: 'Live-påminnelse: sessionen börjar om 1 timme',
+  notifEmpty: 'Inga aviseringar just nu — aktivera kategorier under Inställningar.',
+  notifPrefsSaved: 'Aviseringsinställningar sparade',
+  settingsIntegrationsSub:
+    'Översikt över sociala ytor och konton auktoriserade via API. Hantera varje koppling här.',
+  settingsIntegrationsOverview: 'Anslutna plattformar',
+  settingsApiAuthorized: 'Auktoriserad · API ✓',
+  settingsApiNotConnected: 'Ej ansluten',
+  settingsConnectedAt: 'Ansluten {date}',
+  settingsNoSocialsYet: 'Inga plattformar anslutna för denna arbetsyta ännu.',
+  settingsWorkspacesSub:
+    'Alla sociala ytor på ditt konto — teammedlemmar, roller och kanaler.',
+  settingsWorkspaceMembers: 'Teammedlemmar',
+  settingsWorkspaceRole: 'Roll',
+  settingsWorkspaceChannels: 'Kanaler',
+  settingsAddWorkspace: 'Lägg till arbetsyta',
+  settingsNoMembers: 'Inga teammedlemmar på denna arbetsyta ännu.',
+  settingsWorkflowsSub:
+    'Automatiska e-postflöden och workflows för dina communities och din butik.',
+  settingsWorkflowActive: 'Aktiv',
+  settingsWorkflowPaused: 'Pausad',
+  settingsWorkflowSent: '{n} skickade',
+  settingsWorkflowLastSent: 'Senast skickad {date}',
+  settingsNoWorkflows: 'Inga workflows ännu — skapa dem i E-post CRM.',
+  settingsOpenEmailCrm: 'Öppna E-post CRM',
+  settingsPaymentMethod: 'Betalningsmetod',
+  settingsPaymentStripe: 'Betalas säkert via Stripe',
+  settingsCardOnFile: 'Visa som slutar på 4242',
+  settingsRenewalDate: 'Nästa förnyelse',
+  settingsRenewalHint: 'Din plan förnyas automatiskt om den inte sägs upp.',
+  settingsBillingPortal: 'Hantera fakturering i Stripe',
+  settingsSubscriptions: 'Prenumerationer',
+  settingsSubscriptionsSub: 'Hantera dina prenumerationer',
+  settingsManageSubscriptions: 'Hantera prenumerationer',
+  settingsPlanSince: 'Starter-plan sedan {date}',
+  settingsTrialEnds: 'Gratis provperiod slutar {date}',
+  settingsBillingMembers: 'Medlemmar',
+  settingsUnitPrice: 'Enhetspris',
+  settingsBillingInterval: 'Faktureringsintervall',
+  settingsNextInvoice: 'Nästa fakturadatum',
+  settingsFirstCharge: 'Första debitering exkl. moms',
+  settingsBillingDetails: 'Faktureringsuppgifter',
+  settingsBillingDetailsSub: 'Kontaktuppgifter och betalningsmetod.',
+  settingsEdit: 'Redigera',
+  settingsPaymentMethodLabel: 'Betalningsmetod',
+  settingsCardMastercard: 'Mastercard som slutar på 4242 · Stripe',
+  settingsNoTaxId: 'Inget momsregistreringsnummer sparat',
+  settingsAddTaxId: 'Lägg till moms-ID',
+  settingsInvoiceHistory: 'Fakturahistorik',
+  settingsInvoiceHistorySub: 'Dina senaste fakturor.',
+  settingsInvoiceTrial: 'Gratis provperiod för 1 × clikd: Starter',
+  settingsIntervalYear: 'År',
+  settingsIntervalMonth: 'Månad',
+  settingsAvailablePlans: 'Tillgängliga planer',
+  settingsMembersSub: 'Hantera organisationens medlemmar · {n} plats',
+  settingsInviteMember: 'Bjud in medlem',
+  settingsAllSpaces: 'Alla ytor',
+  settingsRoleAdmin: 'Admin',
+  settingsRoleEditor: 'Redaktör',
+  settingsRoleApprover: 'Godkännare',
+  settingsRoleViewer: 'Läsare',
+  settingsInviteTitle: 'Bjud in en teammedlem',
+  settingsInviteHint: 'De får ett mejl med tillgång till de ytor du väljer.',
+  settingsInviteSend: 'Skicka inbjudan',
+  settingsInviteSent: 'Inbjudan skickad',
+  settingsMemberPending: 'Väntande',
+  settingsOrgTitle: 'Organisation',
+  settingsOrgSub: 'Hantera organisationsinställningar och delad konfiguration.',
+  settingsSpaceAccess: 'Ytåtkomst',
   accountMenuTitle: 'Konto',
   accountMenuWorkspace: 'Arbetsyta',
   accountMenuRole: 'Roll',
@@ -2203,6 +2522,39 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   bioTabDesign: 'Design & Theme',
   bioTabBlocks: 'Blocks & Links',
   bioTabAnalytics: 'UTM Analytics',
+  bioTabSettings: 'Inställningar',
+  liveStudioPreview: 'Live Studio-förhandsvisning',
+  presetsCount: '8 förinställningar',
+  themeMidnight: 'Midnight Glass',
+  themeMidnightBlurb: 'Mörk mesh + frostat glas',
+  themeChampagne: 'Champagne Luxe',
+  themeChampagneBlurb: 'Varm silke + guldaccenter',
+  themeAurora: 'Aurora Glow',
+  themeAuroraBlurb: 'Indigo / lila glöd',
+  themeNordic: 'Nordic Minimal',
+  themeNordicBlurb: 'Rent vitt + skarp slate',
+  mockLinkWelcomeSub: 'Välkommen till min värld',
+  mockLinkStudioTitle: 'Clikd Studio',
+  mockLinkStudioSub: 'Platsen att vara',
+  mockLinkCoaching: '1:1 Coaching',
+  mockLinkCoachingSub: 'Boka ett samtal',
+  yourInfo: 'Dina uppgifter',
+  fieldRequired: 'Detta fält är obligatoriskt',
+  validEmail: 'Ange en giltig e-postadress',
+  validPhone: 'Ange ett giltigt telefonnummer',
+  selectOption: 'Välj…',
+  cardApplePay: 'Kort / Apple Pay',
+  chooseImageType: 'Välj en JPG-, PNG- eller WebP-bild.',
+  maxFileSize5mb: 'Max filstorlek är 5 MB.',
+  uploadFailedRetry: 'Uppladdning misslyckades. Försök igen.',
+  variantHintFrosted: 'Blur + glas',
+  variantHintSolid: 'Kraftig slate',
+  variantHintLuxe: 'Vit kort',
+  variantHintMinimal: 'Endast kontur',
+  fontHintJakarta: ' — Modern ren',
+  fontHintPlayfair: ' — Redaktionell lyx',
+  fontHintSpace: ' — Tech / Web3',
+  fontHintDefault: ' — Minimal funktionell',
   linkInBio: 'Link in Bio',
   publishChanges: 'Publicera ändringar',
   publishedCheck: 'Publicerad',
@@ -2516,6 +2868,7 @@ export const EXTRA_NO: ExtraDict = {
   connectTikTokBusiness: 'Koble til TikTok Business',
   connectLinkedIn: 'Koble til LinkedIn',
   connectYouTube: 'Koble til YouTube',
+  connectFacebook: 'Koble til Facebook-side',
   connectedAccounts: 'Tilkoblede kontoer',
   socialAccountsHint: 'Koble til profiler for å publisere og analysere fra ditt Social Set.',
   subscribersLabel: 'abonnenter',
@@ -2642,6 +2995,7 @@ export const EXTRA_DA: ExtraDict = {
   connectTikTokBusiness: 'Forbind TikTok Business',
   connectLinkedIn: 'Forbind LinkedIn',
   connectYouTube: 'Forbind YouTube',
+  connectFacebook: 'Forbind Facebook-side',
   connectedAccounts: 'Forbundne konti',
   socialAccountsHint: 'Forbind profiler for at publicere og analysere fra dit Social Set.',
   subscribersLabel: 'abonnenter',
@@ -2876,6 +3230,7 @@ export const EXTRA_FI: ExtraDict = {
   connectTikTokBusiness: 'Yhdistä TikTok Business',
   connectLinkedIn: 'Yhdistä LinkedIn',
   connectYouTube: 'Yhdistä YouTube',
+  connectFacebook: 'Yhdistä Facebook-sivu',
   connectedAccounts: 'Yhdistetyt tilit',
   socialAccountsHint: 'Yhdistä profiilit julkaistaksesi ja analysoidaksesi Social Setistäsi.',
   subscribersLabel: 'tilaajaa',
@@ -3010,6 +3365,39 @@ navFeatures: 'Ominaisuudet',
   bioTabDesign: 'Design & teema',
   bioTabBlocks: 'Lohkot & linkit',
   bioTabAnalytics: 'UTM-analytiikka',
+  bioTabSettings: 'Asetukset',
+  liveStudioPreview: 'Live Studio -esikatselu',
+  presetsCount: '8 esiasetusta',
+  themeMidnight: 'Midnight Glass',
+  themeMidnightBlurb: 'Tumma mesh + huurrelasi',
+  themeChampagne: 'Champagne Luxe',
+  themeChampagneBlurb: 'Lämmin silkki + kulta',
+  themeAurora: 'Aurora Glow',
+  themeAuroraBlurb: 'Indigo / violetti hehku',
+  themeNordic: 'Nordic Minimal',
+  themeNordicBlurb: 'Puhdas valkoinen + slate',
+  mockLinkWelcomeSub: 'Tervetuloa maailmaani',
+  mockLinkStudioTitle: 'Clikd Studio',
+  mockLinkStudioSub: 'Paikka olla',
+  mockLinkCoaching: '1:1 Coaching',
+  mockLinkCoachingSub: 'Varaa puhelu',
+  yourInfo: 'Tietosi',
+  fieldRequired: 'Tämä kenttä on pakollinen',
+  validEmail: 'Anna kelvollinen sähköposti',
+  validPhone: 'Anna kelvollinen puhelinnumero',
+  selectOption: 'Valitse…',
+  cardApplePay: 'Kortti / Apple Pay',
+  chooseImageType: 'Valitse JPG-, PNG- tai WebP-kuva.',
+  maxFileSize5mb: 'Suurin tiedostokoko on 5 MB.',
+  uploadFailedRetry: 'Lataus epäonnistui. Yritä uudelleen.',
+  variantHintFrosted: 'Sumu + lasi',
+  variantHintSolid: 'Rohkea slate',
+  variantHintLuxe: 'Valkoinen kortti',
+  variantHintMinimal: 'Vain ääriviiva',
+  fontHintJakarta: ' — Moderni puhdas',
+  fontHintPlayfair: ' — Toimituksellinen luksus',
+  fontHintSpace: ' — Tech / Web3',
+  fontHintDefault: ' — Minimalistinen',
   linkInBio: 'Link in Bio',
   publishChanges: 'Julkaise muutokset',
   publishedCheck: 'Julkaistu',

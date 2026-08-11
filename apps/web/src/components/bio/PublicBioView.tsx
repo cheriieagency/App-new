@@ -14,6 +14,7 @@ import type { WorkspaceBioBlock, WorkspaceProfile } from '@/lib/mock-workspace-p
 import type { StoreProduct } from '@/lib/mock-store';
 import { DEFAULT_COLLECT_FIELDS } from '@/lib/store-collect-fields';
 import OneTapCheckoutDrawer from '@/components/store/OneTapCheckoutDrawer';
+import { localeTag, useLanguage } from '@/lib/i18n';
 
 type Category = 'links' | 'store';
 
@@ -56,11 +57,11 @@ function bioBlockAsCheckoutProduct(block: WorkspaceBioBlock): StoreProduct {
   };
 }
 
-function formatSek(amount: number) {
-  return `${Math.round(amount).toLocaleString('en-US')} SEK`;
+function formatSek(amount: number, language: ReturnType<typeof useLanguage>['language']) {
+  return `${Math.round(amount).toLocaleString(localeTag(language))} SEK`;
 }
 
-function pricePill(block: WorkspaceBioBlock) {
+function pricePill(block: WorkspaceBioBlock, freeLabel: string, language: ReturnType<typeof useLanguage>['language']) {
   const price = typeof block.price === 'number' ? block.price : null;
   const sale =
     typeof block.sale_price === 'number' &&
@@ -74,14 +75,14 @@ function pricePill(block: WorkspaceBioBlock) {
 
   if (amount === 0 || ((amount == null || amount <= 0) && (block.type === 'lead_magnet' || freeHint))) {
     return {
-      label: 'FREE',
+      label: freeLabel,
       className:
         'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-full',
     };
   }
   if (amount != null && amount > 0) {
     return {
-      label: formatSek(amount),
+      label: formatSek(amount, language),
       className:
         'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-full',
     };
@@ -93,10 +94,14 @@ function BlockRow({
   block,
   theme,
   onCheckout,
+  freeLabel,
+  language,
 }: {
   block: WorkspaceBioBlock;
   theme: BioTheme;
   onCheckout?: (block: WorkspaceBioBlock) => void;
+  freeLabel: string;
+  language: ReturnType<typeof useLanguage>['language'];
 }) {
   if (block.type === 'divider') {
     return <div className="h-px mx-1 bg-white/15" />;
@@ -105,7 +110,7 @@ function BlockRow({
     theme.blockVariant === 'frosted' ||
     theme.bgType === 'mesh' ||
     theme.bgType === 'liquid';
-  const pill = pricePill(block);
+  const pill = pricePill(block, freeLabel, language);
   const href = block.destination_url || block.url || '#';
   const usesCheckout =
     Boolean(block.grants_community_access && block.access_community_id) &&
@@ -204,6 +209,7 @@ function BlockRow({
 
 /** Full-page link-in-bio as visitors see it (not the admin phone chrome). */
 export default function PublicBioView({ profile }: { profile: WorkspaceProfile }) {
+  const { t, language } = useLanguage();
   const bio = profile.bio;
   const theme = useMemo(() => normalizeBioTheme(bio.theme), [bio.theme]);
   const [tab, setTab] = useState<Category>('links');
@@ -301,8 +307,8 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
           >
             {(
               [
-                { key: 'links' as const, label: 'Links' },
-                { key: 'store' as const, label: 'Store 🛍️' },
+                { key: 'links' as const, label: t('bio.links') },
+                { key: 'store' as const, label: t('bio.store') },
               ] as const
             ).map(({ key, label }) => {
               const on = tab === key;
@@ -329,7 +335,7 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
 
           {active.length === 0 ? (
             <p className={`text-center text-sm py-8 ${isGlass ? 'text-white/40' : 'text-slate-400'}`}>
-              {tab === 'store' ? 'No products yet' : 'No links yet'}
+              {tab === 'store' ? t('bio.noProductsYet') : t('bio.noLinksYet')}
             </p>
           ) : (
             active.map((block) => (
@@ -337,6 +343,8 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
                 key={block.id}
                 block={block}
                 theme={theme}
+                freeLabel={t('bio.free')}
+                language={language}
                 onCheckout={(b) => setCheckoutProduct(bioBlockAsCheckoutProduct(b))}
               />
             ))
@@ -348,7 +356,7 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
             isGlass ? 'text-white/40' : 'text-slate-400'
           }`}
         >
-          Powered by clikd:
+          {t('bio.poweredBy')}
         </p>
       </div>
 

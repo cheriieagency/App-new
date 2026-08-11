@@ -85,13 +85,17 @@ export function MobileBottomNav() {
   const pathname = usePathname() || '';
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
-  const { isCreator, loading } = usePlatformRole();
+  const { isCreator, dualAccess, loading } = usePlatformRole();
   const { locale } = useLanguage();
 
   if (!shouldShowMobileBottomNav(pathname)) return null;
   if (loading) return null;
 
-  const tabs = isCreator ? CREATOR_TABS : MEMBER_TABS;
+  // Dual-access accounts: chrome follows the surface you're on.
+  const onCreatorSurface =
+    pathname.startsWith('/admin') || pathname.startsWith('/planner');
+  const showCreatorNav = dualAccess ? onCreatorSurface : isCreator;
+  const tabs = showCreatorNav ? CREATOR_TABS : MEMBER_TABS;
 
   return (
     <nav

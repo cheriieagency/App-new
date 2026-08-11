@@ -8,6 +8,7 @@ import {
   listWorkspaceProfiles,
   profileAsBrandWorkspace,
 } from '@/lib/mock-workspace-profiles';
+import { requireLimit } from '@/lib/plan-guard';
 
 export async function GET() {
   const communities = listManagedCommunities();
@@ -25,6 +26,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    // Workspace / brand count gated by plan (Starter/Creator = 1, Pro = 3).
+    const existing =
+      listWorkspaceProfiles().length || listManagedCommunities().length;
+    const limitGate = requireLimit('maxWorkspaces', existing);
+    if (limitGate) return limitGate;
+
     const body = await request.json();
     const name = String(body.name ?? '').trim();
     const handle = String(body.handle ?? '').trim();

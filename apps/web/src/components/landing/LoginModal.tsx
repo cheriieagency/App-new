@@ -30,6 +30,8 @@ import {
   saveRememberedAuth,
 } from '@/lib/remember-auth';
 import { persistPlatformRole } from '@/lib/use-platform-role';
+import { EBBA_TEST_USER } from '@/lib/mock-communities';
+import { isDualAccessEmail } from '@/lib/platform-role';
 
 type Role = 'member' | 'creator';
 
@@ -146,10 +148,15 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                placeholder={EBBA_TEST_USER.email}
                 className="min-h-11 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all placeholder:text-zinc-300"
               />
             </label>
+            {isDualAccessEmail(email) ? (
+              <p className="text-[11px] font-medium text-zinc-400 -mt-1.5 leading-snug">
+                Same login works for both Community member and Creator / Admin.
+              </p>
+            ) : null}
 
             <label className="flex flex-col gap-1.5 text-xs font-black text-zinc-500 uppercase tracking-wider">
               {t('password', locale)}
@@ -192,7 +199,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
             <p className="text-center text-sm text-zinc-400">
               {t('noAccount', locale)}{' '}
               <Link
-                href={`/account/signup?callbackUrl=${encodeURIComponent(role === 'creator' ? '/admin' : '/dashboard')}`}
+                href={`/onboarding`}
                 className="font-black text-zinc-900 hover:underline transition-colors"
                 onClick={() => onOpenChange(false)}
               >

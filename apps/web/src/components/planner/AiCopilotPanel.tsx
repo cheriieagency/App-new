@@ -41,6 +41,7 @@ const SAVED_KEY = 'nc_ai_copilot_saved_ideas';
 
 const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'instagram', label: 'Instagram' },
+  { key: 'facebook', label: 'Facebook' },
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'youtube', label: 'YouTube' },

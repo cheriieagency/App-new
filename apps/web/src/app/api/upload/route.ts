@@ -1,5 +1,12 @@
 /** Local upload handler — returns a data URL so photos work without cloud storage. */
 
+import {
+  currentWorkspacePlan,
+  hasFeature,
+  minPlanForFeature,
+  upgradeRequiredResponse,
+} from '@/lib/plan-guard';
+
 export async function POST(request: Request) {
   try {
     const contentType = request.headers.get('content-type') ?? '';
@@ -10,6 +17,19 @@ export async function POST(request: Request) {
       if (!(file instanceof File)) {
         return Response.json({ error: 'file required' }, { status: 400 });
       }
+
+      // Video hosting uploads require Creator+ (Starter is embeds-only).
+      const isVideo =
+        file.type.startsWith('video/') ||
+        form.get('purpose') === 'video' ||
+        form.get('kind') === 'video';
+      if (isVideo && !hasFeature(currentWorkspacePlan(), 'coursesAndVideoHosting')) {
+        return upgradeRequiredResponse(minPlanForFeature('coursesAndVideoHosting'), {
+          feature: 'coursesAndVideoHosting',
+          message: 'Video hosting requires Creator plan',
+        });
+      }
+
       // Allow lesson PDFs / images up to 10 MB as data URLs for local demo.
       if (file.size > 10 * 1024 * 1024) {
         return Response.json({ error: 'File too large' }, { status: 413 });

@@ -1,0 +1,972 @@
+/**
+ * Nested translation dictionaries for clikd:
+ * Access via useLanguage().t('nav.features') — falls back to English.
+ */
+
+import {
+  LEGAL_SECTIONS_DA,
+  LEGAL_SECTIONS_EN,
+  LEGAL_SECTIONS_FI,
+  LEGAL_SECTIONS_NO,
+  LEGAL_SECTIONS_SV,
+  type LegalSectionKey,
+} from './legal-sections';
+
+export type LocaleCode = 'en' | 'sv' | 'no' | 'da' | 'fi';
+
+export const SUPPORTED_LOCALES: LocaleCode[] = ['en', 'sv', 'no', 'da', 'fi'];
+
+export const LOCALE_META: {
+  code: LocaleCode;
+  label: string;
+  flag: string;
+}[] = [
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'sv', label: 'Svenska', flag: '🇸🇪' },
+  { code: 'no', label: 'Norsk', flag: '🇳🇴' },
+  { code: 'da', label: 'Dansk', flag: '🇩🇰' },
+  { code: 'fi', label: 'Suomi', flag: '🇫🇮' },
+];
+
+/** Nested UI dictionary shape (all locales share this structure). */
+export type NestedDict = {
+  nav: {
+    features: string;
+    pricing: string;
+    exploreCommunities: string;
+    platform: string;
+    prices: string;
+    signIn: string;
+    logIn: string;
+    dashboard: string;
+    getStartedFree: string;
+    language: string;
+  };
+  hero: {
+    badge: string;
+    headline1: string;
+    headline2: string;
+    sub: string;
+    ctaPrimary: string;
+    ctaSecondary: string;
+    calendarPlanner: string;
+    kanbanProgress: string;
+    visualFeedGrid: string;
+    analytics: string;
+    allChannels: string;
+  };
+  features: {
+    eyebrow: string;
+    headline: string;
+    sub: string;
+    bioTitle: string;
+    bioSummary: string;
+    plannerTitle: string;
+    plannerSummary: string;
+    analyticsTitle: string;
+    analyticsSummary: string;
+    communityTitle: string;
+    communitySummary: string;
+    crmTitle: string;
+    crmSummary: string;
+    buyNow: string;
+    joinCommunity: string;
+    oneTapCheckout: string;
+    learnMore: string;
+  };
+  comparison: {
+    eyebrow: string;
+    headline: string;
+    sub: string;
+    mockupView: string;
+    optionBento: string;
+    optionTable: string;
+    fragmentedTitle: string;
+    winnerTitle: string;
+    toolBio: string;
+    toolBioSub: string;
+    toolCommunity: string;
+    toolCommunitySub: string;
+    toolPlanner: string;
+    toolPlannerSub: string;
+    toolVat: string;
+    toolVatSub: string;
+    extraTime: string;
+    pillarCheckout: string;
+    pillarCheckoutBody: string;
+    pillarBio: string;
+    pillarBioBody: string;
+    pillarPlanner: string;
+    pillarPlannerBody: string;
+    pillarVat: string;
+    pillarVatBody: string;
+    cta: string;
+  };
+  bio: {
+    links: string;
+    store: string;
+    free: string;
+    buyNow: string;
+    joinCommunity: string;
+    oneTapCheckout: string;
+    noLinksYet: string;
+    noProductsYet: string;
+    poweredBy: string;
+    loading: string;
+    notFound: string;
+    backToClikd: string;
+    publishChanges: string;
+    published: string;
+    preview: string;
+    yourLinkLive: string;
+    changesPublished: string;
+    yourPublicLink: string;
+    copy: string;
+    copied: string;
+    openLivePage: string;
+    done: string;
+    firstPublishBody: string;
+    updatePublishBody: string;
+  };
+  admin: {
+    planner: string;
+    mediaLibrary: string;
+    socialInbox: string;
+    analytics: string;
+    bioBuilder: string;
+    community: string;
+    emailCrm: string;
+    settings: string;
+    export: string;
+    connectedAccounts: string;
+    projects: string;
+  };
+  socials: {
+    title: string;
+    subtitle: string;
+    demoMode: string;
+    demoModeHint: string;
+    connectInstagram: string;
+    connectTikTok: string;
+    connectYouTube: string;
+    connectLinkedIn: string;
+    connectFacebook: string;
+    activeOauth: string;
+    disconnected: string;
+    grantPermission: string;
+    disconnectAccount: string;
+    cancel: string;
+    oauthTitle: string;
+    oauthBody: string;
+    permissions: string;
+    disconnectTitle: string;
+    disconnectBody: string;
+    confirmDisconnect: string;
+  };
+  legal: {
+    privacyTitle: string;
+    privacySummary: string;
+    termsTitle: string;
+    termsSummary: string;
+    cookiesTitle: string;
+    cookiesSummary: string;
+    gdprTitle: string;
+    gdprSummary: string;
+    lastUpdated: string;
+    backToHome: string;
+  } & Record<LegalSectionKey, string>;
+  common: {
+    save: string;
+    cancel: string;
+    publish: string;
+    delete: string;
+    confirm: string;
+    search: string;
+    close: string;
+    loading: string;
+    error: string;
+    success: string;
+    continue: string;
+    back: string;
+    next: string;
+    edit: string;
+    add: string;
+    remove: string;
+    yes: string;
+    no: string;
+    or: string;
+    redirecting: string;
+    continueWith: string;
+  };
+};
+export const DICT_EN: NestedDict = {
+  nav: {
+    features: 'Features',
+    pricing: 'Pricing',
+    exploreCommunities: 'Explore Communities',
+    platform: 'Platform',
+    prices: 'Pricing',
+    signIn: 'Sign in',
+    logIn: 'Log in',
+    dashboard: 'Dashboard',
+    getStartedFree: 'Get started free',
+    language: 'Language',
+  },
+  hero: {
+    badge: 'The all-in-one platform',
+    headline1: 'Content planning',
+    headline2: 'built for social media.',
+    sub: 'Built for creators who move at the speed of social. Plan multi-channel calendars, monetize your link-in-bio, and host gamified communities — all in one unified studio.',
+    ctaPrimary: 'Get started for free →',
+    ctaSecondary: 'Learn more',
+    calendarPlanner: 'Calendar Planner',
+    kanbanProgress: 'Kanban Progress',
+    visualFeedGrid: 'Visual Feed Grid',
+    analytics: 'Analytics',
+    allChannels: 'All Channels',
+  },
+  features: {
+    eyebrow: 'The Platform',
+    headline: 'Everything you need to grow',
+    sub: 'Bio store, planner, analytics, community and email — one Nordic studio.',
+    bioTitle: 'Link-in-Bio Builder',
+    bioSummary: 'Luxury themes, custom blocks, UTM analytics, products & 1-tap checkout.',
+    plannerTitle: 'Content Planner & Social Sets',
+    plannerSummary: 'Calendar schedules, Kanban boards & multi-channel Social Sets.',
+    analyticsTitle: 'In-depth Analytics & Revenue',
+    analyticsSummary: 'Reach, impressions, audience growth & Linkin.bio performance reports.',
+    communityTitle: 'Gamified Community & Hub',
+    communitySummary: 'Discussion feeds, classroom courses, live events & member leaderboards.',
+    crmTitle: 'Email CRM & Automation',
+    crmSummary: 'Subscriber CRM, automated welcome sequences & broadcast emails.',
+    buyNow: 'Buy now',
+    joinCommunity: 'Join community',
+    oneTapCheckout: '1-Tap Checkout',
+    learnMore: 'Learn more',
+  },
+  comparison: {
+    eyebrow: '⚡ WHY CHOOSE CLIKD:',
+    headline: 'Stop Juggling Multiple Subscriptions',
+    sub: 'One unified studio replacing 4+ separate subscriptions, complex logins, and hidden transaction fees.',
+    mockupView: 'Mockup view:',
+    optionBento: 'Option A: Bento Cards',
+    optionTable: 'Option B: Comparison Table',
+    fragmentedTitle: 'Fragmented Tool Stack',
+    winnerTitle: 'All-in-One Winner',
+    toolBio: 'Link in Bio & Store',
+    toolBioSub: 'Stan Store / Linktree',
+    toolCommunity: 'Community & Courses',
+    toolCommunitySub: 'Skool / Circle',
+    toolPlanner: 'Social Content Planner',
+    toolPlannerSub: 'Later / Planoly',
+    toolVat: 'Nordic VAT & Tax',
+    toolVatSub: 'Manual calculation & friction',
+    extraTime: 'Extra Time',
+    pillarCheckout: '1-Tap Mobile Checkout',
+    pillarCheckoutBody: 'Convert mobile visitors in 10s with BankID, cards & Apple Pay.',
+    pillarBio: 'Link in Bio & Digital Store',
+    pillarBioBody: 'Sell e-books, courses & coaching with luxury theme presets.',
+    pillarPlanner: 'Social Planner & Social Sets',
+    pillarPlannerBody: 'Monthly calendar, Kanban board & multi-channel post scheduler.',
+    pillarVat: 'Automated Nordic VAT & Tax',
+    pillarVatBody: 'Automated 6%/25% VAT, Fortnox sync & receipt exports built-in.',
+    cta: 'Get started free',
+  },
+  bio: {
+    links: 'Links',
+    store: 'Store',
+    free: 'FREE',
+    buyNow: 'Buy now',
+    joinCommunity: 'Join community',
+    oneTapCheckout: '1-Tap Checkout',
+    noLinksYet: 'No links yet',
+    noProductsYet: 'No products yet',
+    poweredBy: 'Powered by clikd:',
+    loading: 'Loading…',
+    notFound: 'Bio not found',
+    backToClikd: 'Back to clikd:',
+    publishChanges: 'Publish Changes',
+    published: 'Published ✓',
+    preview: 'Preview',
+    yourLinkLive: 'Your link is live!',
+    changesPublished: 'Changes published',
+    yourPublicLink: 'Your public link',
+    copy: 'Copy',
+    copied: 'Copied',
+    openLivePage: 'Open live page',
+    done: 'Done',
+    firstPublishBody:
+      'Your personal link-in-bio page has been created. Share this address anywhere — Instagram, TikTok, or your email signature.',
+    updatePublishBody: 'Your link-in-bio updates are saved and live on your public page.',
+  },
+  admin: {
+    planner: 'Planner',
+    mediaLibrary: 'Media Library',
+    socialInbox: 'Social Inbox',
+    analytics: 'Analytics',
+    bioBuilder: 'Bio Builder',
+    community: 'Community',
+    emailCrm: 'Email CRM',
+    settings: 'Settings',
+    export: 'Export',
+    connectedAccounts: 'Connected Accounts',
+    projects: 'Projects',
+  },
+  socials: {
+    title: 'Connected Social Accounts',
+    subtitle: 'Connect Instagram, TikTok, YouTube and LinkedIn to publish from clikd:',
+    demoMode: 'Demo Recording Mode',
+    demoModeHint: 'Simulates OAuth without leaving the page — perfect for screen recordings.',
+    connectInstagram: 'Connect Instagram',
+    connectTikTok: 'Connect TikTok',
+    connectYouTube: 'Connect YouTube',
+    connectLinkedIn: 'Connect LinkedIn',
+    connectFacebook: 'Connect Facebook',
+    activeOauth: 'Active · OAuth ✓',
+    disconnected: 'Disconnected',
+    grantPermission: 'Grant Permission',
+    disconnectAccount: 'Disconnect account',
+    cancel: 'Cancel',
+    oauthTitle: 'Connect {platform}',
+    oauthBody: 'clikd: is requesting permission to manage your {platform} account.',
+    permissions: 'Permissions requested',
+    disconnectTitle: 'Disconnect account?',
+    disconnectBody: 'You can reconnect anytime. Scheduled posts for this channel will pause.',
+    confirmDisconnect: 'Disconnect',
+  },
+  legal: {
+    privacyTitle: 'Privacy Policy',
+    privacySummary: 'How clikd: collects, uses, and protects your personal data.',
+    termsTitle: 'Terms of Service',
+    termsSummary: 'The rules that govern your use of the clikd: platform.',
+    cookiesTitle: 'Cookie Policy',
+    cookiesSummary: 'How we use cookies and similar technologies.',
+    gdprTitle: 'GDPR Statement',
+    gdprSummary: 'Our commitment to EU/EEA data protection rights.',
+    lastUpdated: 'Last updated',
+    backToHome: 'Back to home',
+    ...LEGAL_SECTIONS_EN,
+  },
+  common: {
+    save: 'Save',
+    cancel: 'Cancel',
+    publish: 'Publish',
+    delete: 'Delete',
+    confirm: 'Confirm',
+    search: 'Search',
+    close: 'Close',
+    loading: 'Loading…',
+    error: 'Something went wrong',
+    success: 'Success',
+    continue: 'Continue',
+    back: 'Back',
+    next: 'Next',
+    edit: 'Edit',
+    add: 'Add',
+    remove: 'Remove',
+    yes: 'Yes',
+    no: 'No',
+    or: 'or',
+    redirecting: 'Redirecting…',
+    continueWith: 'Continue with {provider}',
+  },
+};
+
+export const DICT_SV: NestedDict = {
+  nav: {
+    features: 'Funktioner',
+    pricing: 'Priser',
+    exploreCommunities: 'Utforska Communities',
+    platform: 'Plattformen',
+    prices: 'Priser',
+    signIn: 'Logga in',
+    logIn: 'Logga in',
+    dashboard: 'Dashboard',
+    getStartedFree: 'Kom igång gratis',
+    language: 'Språk',
+  },
+  hero: {
+    badge: 'Allt-i-ett-plattformen',
+    headline1: 'Content planning',
+    headline2: 'byggd för sociala medier.',
+    sub: 'Byggd för kreatörer som rör sig i social medias tempo. Planera flerkalendrar, tjäna på din link-in-bio och hosta gamifierade communities — allt i en studio.',
+    ctaPrimary: 'Kom igång gratis →',
+    ctaSecondary: 'Läs mer',
+    calendarPlanner: 'Kalenderplanerare',
+    kanbanProgress: 'Kanban-progress',
+    visualFeedGrid: 'Visuell feed-grid',
+    analytics: 'Analys',
+    allChannels: 'Alla kanaler',
+  },
+  features: {
+    eyebrow: 'Plattformen',
+    headline: 'Allt du behöver för att växa',
+    sub: 'Bio-butik, planner, analys, community och e-post — en nordisk studio.',
+    bioTitle: 'Link-in-Bio Builder',
+    bioSummary: 'Lyxiga teman, egna block, UTM-analys, produkter & 1-trycks checkout.',
+    plannerTitle: 'Content Planner & Social Sets',
+    plannerSummary: 'Kalenderscheman, Kanban-tavlor & flerkalender Social Sets.',
+    analyticsTitle: 'Djupanalys & intäkter',
+    analyticsSummary: 'Räckvidd, impressions, publiktillväxt & Linkin.bio-rapporter.',
+    communityTitle: 'Gamifierad Community & Hub',
+    communitySummary: 'Diskussioner, kurser, live-event & member-leaderboards.',
+    crmTitle: 'E-post CRM & Automation',
+    crmSummary: 'Prenumerant-CRM, välkomstsekvenser & broadcast-mail.',
+    buyNow: 'Köp nu',
+    joinCommunity: 'Gå med i community',
+    oneTapCheckout: '1-trycks Checkout',
+    learnMore: 'Läs mer',
+  },
+  comparison: {
+    eyebrow: '⚡ VARFÖR CLIKD:',
+    headline: 'Sluta jonglera flera abonnemang',
+    sub: 'En samlad studio som ersätter 4+ separata abonnemang, krångliga inloggningar och dolda avgifter.',
+    mockupView: 'Mockup-vy:',
+    optionBento: 'Alternativ A: Bento-kort',
+    optionTable: 'Alternativ B: Jämförelsetabell',
+    fragmentedTitle: 'Fragmenterad verktygsstack',
+    winnerTitle: 'Allt-i-ett-vinnaren',
+    toolBio: 'Link in Bio & butik',
+    toolBioSub: 'Stan Store / Linktree',
+    toolCommunity: 'Community & kurser',
+    toolCommunitySub: 'Skool / Circle',
+    toolPlanner: 'Social content planner',
+    toolPlannerSub: 'Later / Planoly',
+    toolVat: 'Nordisk moms & skatt',
+    toolVatSub: 'Manuell beräkning & friktion',
+    extraTime: 'Extra tid',
+    pillarCheckout: '1-trycks mobilcheckout',
+    pillarCheckoutBody: 'Konvertera mobila besökare på 10s med BankID, kort & Apple Pay.',
+    pillarBio: 'Link in Bio & digital butik',
+    pillarBioBody: 'Sälj e-böcker, kurser & coaching med lyxiga temapreset.',
+    pillarPlanner: 'Social planner & Social Sets',
+    pillarPlannerBody: 'Månadskalender, Kanban & flerkalender-schemaläggare.',
+    pillarVat: 'Automatiserad nordisk moms',
+    pillarVatBody: 'Automatisk 6%/25% moms, Fortnox-synk & kvittoexport inbyggt.',
+    cta: 'Kom igång gratis',
+  },
+  bio: {
+    links: 'Länkar',
+    store: 'Butik',
+    free: 'GRATIS',
+    buyNow: 'Köp nu',
+    joinCommunity: 'Gå med i community',
+    oneTapCheckout: '1-trycks Checkout',
+    noLinksYet: 'Inga länkar ännu',
+    noProductsYet: 'Inga produkter ännu',
+    poweredBy: 'Drivs av clikd:',
+    loading: 'Laddar…',
+    notFound: 'Bio hittades inte',
+    backToClikd: 'Tillbaka till clikd:',
+    publishChanges: 'Publicera ändringar',
+    published: 'Publicerat ✓',
+    preview: 'Förhandsvisa',
+    yourLinkLive: 'Din länk är live!',
+    changesPublished: 'Ändringar publicerade',
+    yourPublicLink: 'Din publika länk',
+    copy: 'Kopiera',
+    copied: 'Kopierat',
+    openLivePage: 'Öppna live-sida',
+    done: 'Klar',
+    firstPublishBody:
+      'Din personliga link-in-bio har skapats. Dela adressen överallt — Instagram, TikTok eller i din e-postsignatur.',
+    updatePublishBody: 'Dina link-in-bio-uppdateringar är sparade och live på din publika sida.',
+  },
+  admin: {
+    planner: 'Planner',
+    mediaLibrary: 'Mediabibliotek',
+    socialInbox: 'Social Inbox',
+    analytics: 'Analys',
+    bioBuilder: 'Bio Builder',
+    community: 'Community',
+    emailCrm: 'E-post CRM',
+    settings: 'Inställningar',
+    export: 'Exportera',
+    connectedAccounts: 'Anslutna konton',
+    projects: 'Projekt',
+  },
+  socials: {
+    title: 'Anslutna sociala konton',
+    subtitle: 'Anslut Instagram, TikTok, YouTube och LinkedIn för att publicera från clikd:',
+    demoMode: 'Demo-inspelningsläge',
+    demoModeHint: 'Simulerar OAuth utan att lämna sidan — perfekt för skärminspelningar.',
+    connectInstagram: 'Anslut Instagram',
+    connectTikTok: 'Anslut TikTok',
+    connectYouTube: 'Anslut YouTube',
+    connectLinkedIn: 'Anslut LinkedIn',
+    connectFacebook: 'Anslut Facebook',
+    activeOauth: 'Aktiv · OAuth ✓',
+    disconnected: 'Frånkopplad',
+    grantPermission: 'Ge behörighet',
+    disconnectAccount: 'Koppla från konto',
+    cancel: 'Avbryt',
+    oauthTitle: 'Anslut {platform}',
+    oauthBody: 'clikd: begär behörighet att hantera ditt {platform}-konto.',
+    permissions: 'Begärda behörigheter',
+    disconnectTitle: 'Koppla från konto?',
+    disconnectBody: 'Du kan ansluta igen när som helst. Schemalagda inlägg för kanalen pausas.',
+    confirmDisconnect: 'Koppla från',
+  },
+  legal: {
+    privacyTitle: 'Integritetspolicy',
+    privacySummary: 'Hur clikd: samlar in, använder och skyddar dina personuppgifter.',
+    termsTitle: 'Användarvillkor',
+    termsSummary: 'Reglerna som styr din användning av clikd:-plattformen.',
+    cookiesTitle: 'Cookiepolicy',
+    cookiesSummary: 'Hur vi använder cookies och liknande tekniker.',
+    gdprTitle: 'GDPR-redogörelse',
+    gdprSummary: 'Vårt åtagande för EU/EES-dataskyddsrättigheter.',
+    lastUpdated: 'Senast uppdaterad',
+    backToHome: 'Tillbaka till startsidan',
+    ...LEGAL_SECTIONS_SV,
+  },
+  common: {
+    save: 'Spara',
+    cancel: 'Avbryt',
+    publish: 'Publicera',
+    delete: 'Radera',
+    confirm: 'Bekräfta',
+    search: 'Sök',
+    close: 'Stäng',
+    loading: 'Laddar…',
+    error: 'Något gick fel',
+    success: 'Klart',
+    continue: 'Fortsätt',
+    back: 'Tillbaka',
+    next: 'Nästa',
+    edit: 'Redigera',
+    add: 'Lägg till',
+    remove: 'Ta bort',
+    yes: 'Ja',
+    no: 'Nej',
+    or: 'eller',
+    redirecting: 'Omdirigerar…',
+    continueWith: 'Fortsätt med {provider}',
+  },
+};
+
+/** Norwegian — based on Swedish with NO spelling adjustments. */
+export const DICT_NO: NestedDict = {
+  ...DICT_SV,
+  nav: {
+    ...DICT_SV.nav,
+    features: 'Funksjoner',
+    pricing: 'Priser',
+    exploreCommunities: 'Utforsk communities',
+    platform: 'Plattformen',
+    prices: 'Priser',
+    signIn: 'Logg inn',
+    logIn: 'Logg inn',
+    getStartedFree: 'Kom i gang gratis',
+    language: 'Språk',
+  },
+  hero: {
+    ...DICT_SV.hero,
+    badge: 'Alt-i-ett-plattformen',
+    headline1: 'Content planning',
+    headline2: 'bygget for sosiale medier.',
+    sub: 'Bygget for skapere som beveger seg i sosiale mediers tempo. Planlegg flerkanal-kalendere, tjen på link-in-bio og host gamifiserte communities — alt i ett studio.',
+    ctaPrimary: 'Kom i gang gratis →',
+    ctaSecondary: 'Les mer',
+    calendarPlanner: 'Kalenderplanlegger',
+    allChannels: 'Alle kanaler',
+  },
+  features: {
+    ...DICT_SV.features,
+    eyebrow: 'Plattformen',
+    headline: 'Alt du trenger for å vokse',
+    buyNow: 'Kjøp nå',
+    joinCommunity: 'Bli med i community',
+    learnMore: 'Les mer',
+  },
+  comparison: {
+    ...DICT_SV.comparison,
+    eyebrow: '⚡ HVORFOR CLIKD:',
+    headline: 'Slutt å sjonglere flere abonnementer',
+    sub: 'Ett samlet studio som erstatter 4+ separate abonnementer, kronglete innlogginger og skjulte gebyrer.',
+    cta: 'Kom i gang gratis',
+  },
+  bio: {
+    ...DICT_SV.bio,
+    links: 'Lenker',
+    store: 'Butikk',
+    free: 'GRATIS',
+    buyNow: 'Kjøp nå',
+    publishChanges: 'Publiser endringer',
+    published: 'Publisert ✓',
+    preview: 'Forhåndsvis',
+    yourLinkLive: 'Lenken din er live!',
+    changesPublished: 'Endringer publisert',
+    copy: 'Kopier',
+    copied: 'Kopiert',
+    done: 'Ferdig',
+  },
+  admin: {
+    ...DICT_SV.admin,
+    mediaLibrary: 'Mediebibliotek',
+    settings: 'Innstillinger',
+    export: 'Eksporter',
+    connectedAccounts: 'Tilknyttede kontoer',
+    projects: 'Prosjekter',
+  },
+  socials: {
+    ...DICT_SV.socials,
+    title: 'Tilknyttede sosiale kontoer',
+    connectInstagram: 'Koble til Instagram',
+    connectTikTok: 'Koble til TikTok',
+    connectYouTube: 'Koble til YouTube',
+    connectLinkedIn: 'Koble til LinkedIn',
+    connectFacebook: 'Koble til Facebook',
+    activeOauth: 'Aktiv · OAuth ✓',
+    disconnected: 'Frakoblet',
+    grantPermission: 'Gi tillatelse',
+    disconnectAccount: 'Koble fra konto',
+    cancel: 'Avbryt',
+    confirmDisconnect: 'Koble fra',
+  },
+  legal: {
+    ...DICT_SV.legal,
+    privacyTitle: 'Personvernerklæring',
+    termsTitle: 'Vilkår for bruk',
+    cookiesTitle: 'Informasjonskapsler',
+    gdprTitle: 'GDPR-erklæring',
+    lastUpdated: 'Sist oppdatert',
+    backToHome: 'Tilbake til forsiden',
+    ...LEGAL_SECTIONS_NO,
+  },
+  common: {
+    ...DICT_SV.common,
+    save: 'Lagre',
+    cancel: 'Avbryt',
+    publish: 'Publiser',
+    delete: 'Slett',
+    confirm: 'Bekreft',
+    search: 'Søk',
+    close: 'Lukk',
+    loading: 'Laster…',
+    error: 'Noe gikk galt',
+    yes: 'Ja',
+    no: 'Nei',
+  },
+};
+
+/** Danish. */
+export const DICT_DA: NestedDict = {
+  ...DICT_SV,
+  nav: {
+    ...DICT_SV.nav,
+    features: 'Funktioner',
+    pricing: 'Priser',
+    exploreCommunities: 'Udforsk communities',
+    platform: 'Platformen',
+    signIn: 'Log ind',
+    logIn: 'Log ind',
+    getStartedFree: 'Kom i gang gratis',
+    language: 'Sprog',
+  },
+  hero: {
+    ...DICT_SV.hero,
+    badge: 'Alt-i-én platformen',
+    headline2: 'bygget til sociale medier.',
+    sub: 'Bygget til creators der bevæger sig i sociale mediers tempo. Planlæg flerkanalskalendere, tjen på din link-in-bio og host gamificerede communities — alt i ét studio.',
+    ctaPrimary: 'Kom i gang gratis →',
+    ctaSecondary: 'Læs mere',
+    calendarPlanner: 'Kalenderplanlægger',
+    allChannels: 'Alle kanaler',
+  },
+  features: {
+    ...DICT_SV.features,
+    headline: 'Alt du behøver for at vokse',
+    buyNow: 'Køb nu',
+    joinCommunity: 'Deltag i community',
+    learnMore: 'Læs mere',
+  },
+  comparison: {
+    ...DICT_SV.comparison,
+    eyebrow: '⚡ HVORFOR CLIKD:',
+    headline: 'Stop med at jonglere flere abonnementer',
+    sub: 'Ét samlet studio der erstatter 4+ separate abonnementer, komplekse logins og skjulte gebyrer.',
+    cta: 'Kom i gang gratis',
+  },
+  bio: {
+    ...DICT_SV.bio,
+    links: 'Links',
+    store: 'Butik',
+    free: 'GRATIS',
+    buyNow: 'Køb nu',
+    publishChanges: 'Publicér ændringer',
+    published: 'Publiceret ✓',
+    preview: 'Forhåndsvis',
+    yourLinkLive: 'Dit link er live!',
+    changesPublished: 'Ændringer publiceret',
+    copy: 'Kopiér',
+    copied: 'Kopieret',
+    done: 'Færdig',
+  },
+  admin: {
+    ...DICT_SV.admin,
+    mediaLibrary: 'Mediebibliotek',
+    settings: 'Indstillinger',
+    export: 'Eksportér',
+    connectedAccounts: 'Forbundne konti',
+    projects: 'Projekter',
+  },
+  socials: {
+    ...DICT_SV.socials,
+    title: 'Forbundne sociale konti',
+    connectInstagram: 'Forbind Instagram',
+    connectTikTok: 'Forbind TikTok',
+    connectYouTube: 'Forbind YouTube',
+    connectLinkedIn: 'Forbind LinkedIn',
+    connectFacebook: 'Forbind Facebook',
+    activeOauth: 'Aktiv · OAuth ✓',
+    disconnected: 'Afbrudt',
+    grantPermission: 'Giv tilladelse',
+    disconnectAccount: 'Afbryd konto',
+    cancel: 'Annuller',
+    confirmDisconnect: 'Afbryd',
+  },
+  legal: {
+    ...DICT_SV.legal,
+    privacyTitle: 'Privatlivspolitik',
+    termsTitle: 'Vilkår for brug',
+    cookiesTitle: 'Cookiepolitik',
+    gdprTitle: 'GDPR-erklæring',
+    lastUpdated: 'Sidst opdateret',
+    backToHome: 'Tilbage til forsiden',
+    ...LEGAL_SECTIONS_DA,
+  },
+  common: {
+    ...DICT_SV.common,
+    save: 'Gem',
+    cancel: 'Annuller',
+    publish: 'Publicér',
+    delete: 'Slet',
+    confirm: 'Bekræft',
+    search: 'Søg',
+    close: 'Luk',
+    loading: 'Indlæser…',
+    error: 'Noget gik galt',
+    yes: 'Ja',
+    no: 'Nej',
+  },
+};
+
+/** Finnish. */
+export const DICT_FI: NestedDict = {
+  nav: {
+    features: 'Ominaisuudet',
+    pricing: 'Hinnat',
+    exploreCommunities: 'Tutustu yhteisöihin',
+    platform: 'Alusta',
+    prices: 'Hinnat',
+    signIn: 'Kirjaudu',
+    logIn: 'Kirjaudu',
+    dashboard: 'Hallinta',
+    getStartedFree: 'Aloita ilmaiseksi',
+    language: 'Kieli',
+  },
+  hero: {
+    badge: 'Kaikki yhdessä -alusta',
+    headline1: 'Sisällön suunnittelu',
+    headline2: 'rakennettu someen.',
+    sub: 'Rakennettu tekijöille, jotka liikkuvat somen tahdissa. Suunnittele monikanavakalentereita, myy link-in-biolla ja isännöi pelillistettyjä yhteisöjä — kaikki yhdessä studiossa.',
+    ctaPrimary: 'Aloita ilmaiseksi →',
+    ctaSecondary: 'Lue lisää',
+    calendarPlanner: 'Kalenterisuunnittelija',
+    kanbanProgress: 'Kanban-eteneminen',
+    visualFeedGrid: 'Visuaalinen feed-ruudukko',
+    analytics: 'Analytiikka',
+    allChannels: 'Kaikki kanavat',
+  },
+  features: {
+    eyebrow: 'Alusta',
+    headline: 'Kaikki mitä tarvitset kasvuun',
+    sub: 'Bio-kauppa, planner, analytiikka, yhteisö ja sähköposti — yksi pohjoismainen studio.',
+    bioTitle: 'Link-in-Bio Builder',
+    bioSummary: 'Luksus-teemat, omat lohkot, UTM-analytiikka, tuotteet & 1-napin checkout.',
+    plannerTitle: 'Content Planner & Social Sets',
+    plannerSummary: 'Kalenteriaikataulut, Kanban-taulut & monikanavaiset Social Sets.',
+    analyticsTitle: 'Syväanalytiikka & tulot',
+    analyticsSummary: 'Reach, impressiot, yleisön kasvu & Linkin.bio-raportit.',
+    communityTitle: 'Pelillistetty yhteisö & hub',
+    communitySummary: 'Keskustelut, kurssit, live-tapahtumat & jäsen-leaderboardit.',
+    crmTitle: 'Sähköposti-CRM & automaatio',
+    crmSummary: 'Tilaaja-CRM, tervetulosekvenssit & broadcast-sähköpostit.',
+    buyNow: 'Osta nyt',
+    joinCommunity: 'Liity yhteisöön',
+    oneTapCheckout: '1-napin Checkout',
+    learnMore: 'Lue lisää',
+  },
+  comparison: {
+    eyebrow: '⚡ MIKSI CLIKD:',
+    headline: 'Lopeta useiden tilausten jongleeraaminen',
+    sub: 'Yksi yhtenäinen studio, joka korvaa 4+ erillistä tilausta, monimutkaiset kirjautumiset ja piilotetut maksut.',
+    mockupView: 'Mockup-näkymä:',
+    optionBento: 'Vaihtoehto A: Bento-kortit',
+    optionTable: 'Vaihtoehto B: Vertailutaulukko',
+    fragmentedTitle: 'Hajanainen työkalupino',
+    winnerTitle: 'Kaikki yhdessä -voittaja',
+    toolBio: 'Link in Bio & kauppa',
+    toolBioSub: 'Stan Store / Linktree',
+    toolCommunity: 'Yhteisö & kurssit',
+    toolCommunitySub: 'Skool / Circle',
+    toolPlanner: 'Some-sisällön planner',
+    toolPlannerSub: 'Later / Planoly',
+    toolVat: 'Pohjoismainen ALV & vero',
+    toolVatSub: 'Manuaalinen laskenta & kitka',
+    extraTime: 'Lisäaikaa',
+    pillarCheckout: '1-napin mobiili-checkout',
+    pillarCheckoutBody: 'Konvertoi mobiilivieraat 10s:ssä BankID:llä, korteilla & Apple Paylla.',
+    pillarBio: 'Link in Bio & digikauppa',
+    pillarBioBody: 'Myy e-kirjoja, kursseja & coachingia luksus-teemoilla.',
+    pillarPlanner: 'Some-planner & Social Sets',
+    pillarPlannerBody: 'Kuukausikalenteri, Kanban & monikanava-aikataulutus.',
+    pillarVat: 'Automatisoitu pohjoismainen ALV',
+    pillarVatBody: 'Automaattinen 6%/25% ALV, Fortnox-synk & kuittivienti sisäänrakennettuna.',
+    cta: 'Aloita ilmaiseksi',
+  },
+  bio: {
+    links: 'Linkit',
+    store: 'Kauppa',
+    free: 'ILMAINEN',
+    buyNow: 'Osta nyt',
+    joinCommunity: 'Liity yhteisöön',
+    oneTapCheckout: '1-napin Checkout',
+    noLinksYet: 'Ei linkkejä vielä',
+    noProductsYet: 'Ei tuotteita vielä',
+    poweredBy: 'Palvelun tarjoaa clikd:',
+    loading: 'Ladataan…',
+    notFound: 'Bioa ei löytynyt',
+    backToClikd: 'Takaisin clikd:-iin',
+    publishChanges: 'Julkaise muutokset',
+    published: 'Julkaistu ✓',
+    preview: 'Esikatselu',
+    yourLinkLive: 'Linkkisi on live!',
+    changesPublished: 'Muutokset julkaistu',
+    yourPublicLink: 'Julkinen linkkisi',
+    copy: 'Kopioi',
+    copied: 'Kopioitu',
+    openLivePage: 'Avaa live-sivu',
+    done: 'Valmis',
+    firstPublishBody:
+      'Henkilökohtainen link-in-bio-sivusi on luotu. Jaa osoite missä tahansa — Instagramissa, TikTokissa tai sähköpostiallekirjoituksessa.',
+    updatePublishBody: 'Link-in-bio-päivityksesi on tallennettu ja live julkisella sivullasi.',
+  },
+  admin: {
+    planner: 'Planner',
+    mediaLibrary: 'Mediakirjasto',
+    socialInbox: 'Social Inbox',
+    analytics: 'Analytiikka',
+    bioBuilder: 'Bio Builder',
+    community: 'Yhteisö',
+    emailCrm: 'Sähköposti-CRM',
+    settings: 'Asetukset',
+    export: 'Vie',
+    connectedAccounts: 'Yhdistetyt tilit',
+    projects: 'Projektit',
+  },
+  socials: {
+    title: 'Yhdistetyt some-tilit',
+    subtitle: 'Yhdistä Instagram, TikTok, YouTube ja LinkedIn julkaistaksesi clikd:stä',
+    demoMode: 'Demo-tallennustila',
+    demoModeHint: 'Simuloi OAuthia poistumatta sivulta — täydellinen näytön tallennuksiin.',
+    connectInstagram: 'Yhdistä Instagram',
+    connectTikTok: 'Yhdistä TikTok',
+    connectYouTube: 'Yhdistä YouTube',
+    connectLinkedIn: 'Yhdistä LinkedIn',
+    connectFacebook: 'Yhdistä Facebook',
+    activeOauth: 'Aktiivinen · OAuth ✓',
+    disconnected: 'Irrotettu',
+    grantPermission: 'Myönnä oikeus',
+    disconnectAccount: 'Irrota tili',
+    cancel: 'Peruuta',
+    oauthTitle: 'Yhdistä {platform}',
+    oauthBody: 'clikd: pyytää lupaa hallita {platform}-tiliäsi.',
+    permissions: 'Pyydetyt oikeudet',
+    disconnectTitle: 'Irrota tili?',
+    disconnectBody: 'Voit yhdistää uudelleen milloin tahansa. Kanavan ajastetut julkaisut keskeytetään.',
+    confirmDisconnect: 'Irrota',
+  },
+  legal: {
+    privacyTitle: 'Tietosuojakäytäntö',
+    privacySummary: 'Miten clikd: kerää, käyttää ja suojaa henkilötietojasi.',
+    termsTitle: 'Käyttöehdot',
+    termsSummary: 'Säännöt, jotka koskevat clikd:-alustan käyttöä.',
+    cookiesTitle: 'Evästekäytäntö',
+    cookiesSummary: 'Miten käytämme evästeitä ja vastaavia teknologioita.',
+    gdprTitle: 'GDPR-lausunto',
+    gdprSummary: 'Sitoumuksemme EU/ETA-tietosuojaoikeuksiin.',
+    lastUpdated: 'Päivitetty viimeksi',
+    backToHome: 'Takaisin etusivulle',
+    ...LEGAL_SECTIONS_FI,
+  },
+  common: {
+    save: 'Tallenna',
+    cancel: 'Peruuta',
+    publish: 'Julkaise',
+    delete: 'Poista',
+    confirm: 'Vahvista',
+    search: 'Haku',
+    close: 'Sulje',
+    loading: 'Ladataan…',
+    error: 'Jokin meni pieleen',
+    success: 'Onnistui',
+    continue: 'Jatka',
+    back: 'Takaisin',
+    next: 'Seuraava',
+    edit: 'Muokkaa',
+    add: 'Lisää',
+    remove: 'Poista',
+    yes: 'Kyllä',
+    no: 'Ei',
+    or: 'tai',
+    redirecting: 'Ohjataan…',
+    continueWith: 'Jatka palvelulla {provider}',
+  },
+};
+
+export const DICTIONARIES: Record<LocaleCode, NestedDict> = {
+  en: DICT_EN,
+  sv: DICT_SV,
+  no: DICT_NO,
+  da: DICT_DA,
+  fi: DICT_FI,
+};
+
+/** Dot-path keys into NestedDict, e.g. "nav.features". */
+export type NestedKey = {
+  [C in keyof NestedDict]: {
+    [K in keyof NestedDict[C]]: `${C & string}.${K & string}`;
+  }[keyof NestedDict[C]];
+}[keyof NestedDict];
+
+/** Resolve a nested key; falls back to English, then the key itself. */
+export function tNested(
+  key: NestedKey | string,
+  locale: LocaleCode,
+  vars?: Record<string, string | number>
+): string {
+  const parts = key.split('.');
+  const read = (dict: NestedDict): string | undefined => {
+    let cur: unknown = dict;
+    for (const p of parts) {
+      if (cur && typeof cur === 'object' && p in (cur as object)) {
+        cur = (cur as Record<string, unknown>)[p];
+      } else {
+        return undefined;
+      }
+    }
+    return typeof cur === 'string' ? cur : undefined;
+  };
+
+  let value =
+    read(DICTIONARIES[locale]) ?? read(DICTIONARIES.en) ?? key;
+
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) {
+      value = value.replaceAll(`{${k}}`, String(v));
+    }
+  }
+  return value;
+}

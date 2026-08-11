@@ -948,6 +948,63 @@ WHERE c.title = 'Kom igång som kreatör'
 COMMIT;
 
 -- =============================================================================
+-- Onboarding questionnaire fields (additive / idempotent)
+-- =============================================================================
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS full_name text,
+  ADD COLUMN IF NOT EXISTS role_category text,
+  ADD COLUMN IF NOT EXISTS primary_use_cases text[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS referral_source text,
+  ADD COLUMN IF NOT EXISTS brand_name text,
+  ADD COLUMN IF NOT EXISTS brand_website text,
+  ADD COLUMN IF NOT EXISTS team_size text,
+  ADD COLUMN IF NOT EXISTS onboarding_completed boolean NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS public.user_onboarding_responses (
+  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id              text NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  full_name            text,
+  role_category        text,
+  primary_use_cases    text[] NOT NULL DEFAULT '{}',
+  referral_source      text,
+  brand_name           text,
+  brand_website        text,
+  team_size            text,
+  created_at           timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS user_onboarding_responses_user_idx
+  ON public.user_onboarding_responses (user_id);
+
+ALTER TABLE public.user_onboarding_responses ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'user_onboarding_responses'
+      AND policyname = 'onboarding_responses_select_own'
+  ) THEN
+    CREATE POLICY onboarding_responses_select_own
+      ON public.user_onboarding_responses FOR SELECT
+      USING (user_id = public.current_user_id() OR public.is_creator());
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'user_onboarding_responses'
+      AND policyname = 'onboarding_responses_insert_own'
+  ) THEN
+    CREATE POLICY onboarding_responses_insert_own
+      ON public.user_onboarding_responses FOR INSERT
+      WITH CHECK (user_id = public.current_user_id());
+  END IF;
+END;
+$$;
+
+-- =============================================================================
 -- Notes
 -- =============================================================================
 -- • apps/web API routes connect with DATABASE_URL (service role) and bypass RLS.

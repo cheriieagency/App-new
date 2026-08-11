@@ -14,8 +14,7 @@ import {
   visibleCollectFields,
   type CollectField,
 } from '@/lib/store-collect-fields';
-import { useLanguage } from '@/lib/locale-context';
-import { t, tf } from '@/lib/i18n';
+import { useLanguage } from '@/lib/i18n';
 import { listManagedCommunities } from '@/lib/mock-community-admin';
 
 type Props = {
@@ -31,15 +30,19 @@ type Props = {
   }) => void;
 };
 
-function validateField(field: CollectField, value: string): string | null {
+function validateField(
+  field: CollectField,
+  value: string,
+  translate: (key: string) => string,
+): string | null {
   const v = value.trim();
-  if (field.required && !v) return 'This field is required';
+  if (field.required && !v) return translate('fieldRequired');
   if (!v) return null;
   if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
-    return 'Enter a valid email';
+    return translate('validEmail');
   }
   if (field.type === 'phone' && v.replace(/\D/g, '').length < 8) {
-    return 'Enter a valid phone number';
+    return translate('validPhone');
   }
   return null;
 }
@@ -51,7 +54,7 @@ export default function OneTapCheckoutDrawer({
   onClose,
   onSuccess,
 }: Props) {
-  const { locale } = useLanguage();
+  const { t } = useLanguage();
   const fields = useMemo(
     () => (product ? visibleCollectFields(product.collect_fields ?? []) : []),
     [product]
@@ -115,7 +118,7 @@ export default function OneTapCheckoutDrawer({
   const validateAll = () => {
     const next: Record<string, string> = {};
     for (const f of fields) {
-      const err = validateField(f, values[f.id] ?? '');
+      const err = validateField(f, values[f.id] ?? '', t);
       if (err) next[f.id] = err;
     }
     setErrors(next);
@@ -175,7 +178,7 @@ export default function OneTapCheckoutDrawer({
     if (accessCommunityId && values.email) {
       const communityName =
         listManagedCommunities().find((c) => c.id === accessCommunityId)?.name ||
-        t('community', locale);
+        t('community');
       try {
         const res = await fetch('/api/purchase/community-access', {
           method: 'POST',
@@ -220,16 +223,16 @@ export default function OneTapCheckoutDrawer({
   const redirectHint = accessEmailSent
     ? accessEmailSent.communityName
     : product.type === 'community'
-      ? t('community', locale)
+      ? t('community')
       : product.type === 'course' || product.type === 'ebook'
-        ? t('courseContentHint', locale)
-        : t('yourPurchaseHint', locale);
+        ? t('courseContentHint')
+        : t('yourPurchaseHint');
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <button
         type="button"
-        aria-label={t('closeCheckout', locale)}
+        aria-label={t('closeCheckout')}
         className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
         onClick={() => !paying && onClose()}
       />
@@ -240,21 +243,21 @@ export default function OneTapCheckoutDrawer({
           sm:mt-0 sm:max-h-none sm:h-full sm:max-w-md sm:rounded-none"
         role="dialog"
         aria-modal="true"
-        aria-label={t('oneTapCheckout', locale)}
+        aria-label={t('oneTapCheckout')}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-              {t('oneTapCheckout', locale)}
+              {t('oneTapCheckout')}
             </p>
             <p className="text-sm font-extrabold text-slate-900">
-              {t('secureCheckout', locale)}
+              {t('secureCheckout')}
             </p>
           </div>
           <button
             type="button"
             onClick={() => !paying && onClose()}
-            aria-label={t('closeCheckout', locale)}
+            aria-label={t('closeCheckout')}
             className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-slate-50 flex items-center justify-center"
           >
             <X size={16} />
@@ -269,17 +272,17 @@ export default function OneTapCheckoutDrawer({
               </div>
               <div>
                 <p className="text-lg font-extrabold text-slate-900">
-                  {t('paymentConfirmed', locale)}
+                  {t('paymentConfirmed')}
                 </p>
                 {accessEmailSent ? (
                   <p className="text-sm text-slate-500 mt-1">
-                    {tf('communityAccessEmailSent', locale, {
+                    {t('communityAccessEmailSent', {
                       community: accessEmailSent.communityName,
                     })}
                   </p>
                 ) : (
                   <p className="text-sm text-slate-500 mt-1">
-                    {tf('redirectingTo', locale, {
+                    {t('redirectingTo', {
                       destination: redirectHint,
                       seconds: redirectIn,
                     })}
@@ -291,7 +294,7 @@ export default function OneTapCheckoutDrawer({
                   href={accessEmailSent.communityUrl}
                   className="inline-flex h-11 min-h-[44px] px-5 rounded-full bg-[var(--nc-coral)] text-white text-sm font-extrabold items-center justify-center"
                 >
-                  {t('openCommunity', locale)}
+                  {t('openCommunity')}
                 </a>
               ) : (
                 <button
@@ -299,7 +302,7 @@ export default function OneTapCheckoutDrawer({
                   onClick={onClose}
                   className="h-11 min-h-[44px] px-5 rounded-full bg-[var(--nc-coral)] text-white text-sm font-extrabold"
                 >
-                  {t('continueNow', locale)}
+                  {t('continueNow')}
                 </button>
               )}
             </div>
@@ -329,8 +332,8 @@ export default function OneTapCheckoutDrawer({
                   </p>
                   <p className="text-base font-extrabold text-slate-900 mt-1 tabular-nums">
                     {product.price === 0
-                      ? t('freeLabelShort', locale)
-                      : `${Math.round(product.price)} ${t('currencySek', locale)}`}
+                      ? t('freeLabelShort')
+                      : `${Math.round(product.price)} ${t('currencySek')}`}
                   </p>
                 </div>
               </div>
@@ -338,7 +341,7 @@ export default function OneTapCheckoutDrawer({
               {/* Collect info form */}
               <div className="space-y-3">
                 <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                  Your info
+                  {t('yourInfo')}
                 </p>
                 {fields.map((field) => (
                   <label key={field.id} className="block space-y-1">
@@ -365,7 +368,7 @@ export default function OneTapCheckoutDrawer({
                           errors[field.id] ? 'border-red-400' : 'border-slate-200'
                         }`}
                       >
-                        <option value="">Select…</option>
+                        <option value="">{t('selectOption')}</option>
                         {(field.options ?? []).map((opt) => (
                           <option key={opt} value={opt}>
                             {opt}
@@ -434,9 +437,9 @@ export default function OneTapCheckoutDrawer({
               )}
 
               <div className="flex items-center justify-between text-sm font-bold text-slate-600 pt-1">
-                <span>{t('totalLabel', locale).replace(/:$/, '')}</span>
+                <span>{t('totalLabel').replace(/:$/, '')}</span>
                 <span className="text-lg font-extrabold text-slate-900 tabular-nums">
-                  {Math.round(total)} {t('currencySek', locale)}
+                  {Math.round(total)} {t('currencySek')}
                 </span>
               </div>
             </>
@@ -463,13 +466,13 @@ export default function OneTapCheckoutDrawer({
               {paying && mobilePulse ? (
                 <>
                   <Loader2 size={16} className="animate-spin relative z-10" />
-                  <span className="relative z-10">{t('openingCheckout', locale)}</span>
+                  <span className="relative z-10">{t('openingCheckout')}</span>
                 </>
               ) : (
                 <>
                   <Smartphone size={16} className="relative z-10" />
                   <span className="relative z-10">
-                    {tf('payInstantly', locale, { amount: Math.round(total) })}
+                    {t('payInstantly', { amount: Math.round(total) })}
                   </span>
                 </>
               )}
@@ -486,7 +489,7 @@ export default function OneTapCheckoutDrawer({
               ) : (
                 <CreditCard size={15} />
               )}
-              Card / Apple Pay
+              {t('cardApplePay')}
             </button>
           </div>
         )}

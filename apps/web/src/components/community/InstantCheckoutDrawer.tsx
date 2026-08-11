@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { CheckCircle2, Loader2, Smartphone } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n';
 import {
   Drawer,
   DrawerClose,
@@ -28,6 +29,7 @@ export function InstantCheckoutDrawer({
   priceSek,
   onSuccess,
 }: InstantCheckoutDrawerProps) {
+  const { t } = useLanguage();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -128,7 +130,7 @@ export function InstantCheckoutDrawer({
               type="button"
               className="min-h-11 rounded-2xl border border-zinc-200 text-sm font-bold text-zinc-600 hover:bg-zinc-50"
             >
-              {done ? 'Stäng' : 'Avbryt'}
+              {done ? t('common.close') : t('common.cancel')}
             </button>
           </DrawerClose>
         </DrawerFooter>

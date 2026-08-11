@@ -22,6 +22,7 @@ import {
 
 const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'instagram', label: 'Instagram Reel / Post' },
+  { key: 'facebook', label: 'Facebook Post / Reel' },
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'youtube', label: 'YouTube Shorts / Video' },

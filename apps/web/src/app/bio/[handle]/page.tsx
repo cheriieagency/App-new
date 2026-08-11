@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import PublicBioView from '@/components/bio/PublicBioView';
+import { useLanguage } from '@/lib/i18n';
 import {
   getWorkspaceProfileByHandle,
   type WorkspaceProfile,
@@ -11,6 +12,7 @@ import {
 
 /** Public link-in-bio page — what viewers see at /bio/{handle}. */
 export default function PublicBioPage() {
+  const { t } = useLanguage();
   const params = useParams<{ handle: string }>();
   const handle = decodeURIComponent(params?.handle || '').replace(/^@/, '');
   const [profile, setProfile] = useState<WorkspaceProfile | null>(null);
@@ -24,7 +26,7 @@ export default function PublicBioPage() {
   if (!ready) {
     return (
       <div className="min-h-screen bg-clikd-light flex items-center justify-center text-sm text-slate-400 font-bold">
-        Loading…
+        {t('bio.loading')}
       </div>
     );
   }
@@ -32,7 +34,7 @@ export default function PublicBioPage() {
   if (!profile) {
     return (
       <div className="min-h-screen bg-clikd-light flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <p className="text-lg font-extrabold text-slate-900">Bio not found</p>
+        <p className="text-lg font-extrabold text-slate-900">{t('bio.notFound')}</p>
         <p className="text-sm text-slate-500 font-medium">
           No published page for <span className="font-mono">@{handle || '…'}</span>
         </p>
@@ -40,7 +42,7 @@ export default function PublicBioPage() {
           href="/"
           className="mt-2 h-11 min-h-[44px] px-4 rounded-xl bg-clikd-pink text-white text-xs font-extrabold inline-flex items-center"
         >
-          Back to clikd:
+          {t('bio.backToClikd')}
         </Link>
       </div>
     );

@@ -77,7 +77,7 @@ export function LandingFooter() {
               </li>
               <li>
                 <Link
-                  href="/account/signup"
+                  href="/onboarding"
                   className="text-sm font-bold text-slate-700 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
                 >
                   {t('signUp', locale)}

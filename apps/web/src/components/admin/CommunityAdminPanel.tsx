@@ -45,6 +45,8 @@ import type {
   ManagedCommunity,
 } from '@/lib/mock-community-admin';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useSubscription } from '@/components/common/useSubscription';
+import UpgradeModal from '@/components/common/UpgradeModal';
 
 export type CommunitySubTab =
   | 'overview'
@@ -504,6 +506,14 @@ export default function CommunityAdminPanel({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const { activeWorkspace, setActiveWorkspaceId } = useWorkspace();
+  const {
+    checkLimit,
+    requestUpgrade,
+    upgradeOpen,
+    setUpgradeOpen,
+    upgradeTarget,
+    limits,
+  } = useSubscription();
   const [subTab, setSubTab] = useState<CommunitySubTab>(initialSubTab);
   const [linkCopied, setLinkCopied] = useState(false);
   // Community scope follows the global Team Workspace / Brand Profile.
@@ -963,6 +973,29 @@ export default function CommunityAdminPanel({
       {/* Members + moderator management */}
       {subTab === 'members' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {(() => {
+            const memberCount = data?.members.length ?? 0;
+            const memberLimit = checkLimit('maxCommunityMembers', memberCount);
+            if (memberLimit.allowed && memberCount < memberLimit.limit) return null;
+            if (memberLimit.unlimited) return null;
+            const atCap = memberCount >= memberLimit.limit;
+            if (!atCap) return null;
+            return (
+              <div className="lg:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p className="text-sm font-semibold text-amber-900">
+                  Member limit reached ({memberCount}/{memberLimit.limit}). Upgrade to
+                  Creator for Unlimited Members.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => requestUpgrade('creator')}
+                  className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#F472B6] text-white text-xs font-bold"
+                >
+                  Upgrade to Creator
+                </button>
+              </div>
+            );
+          })()}
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
             <div className="p-5 border-b border-slate-100">
               <div className="flex items-center justify-between gap-3 mb-1">
@@ -970,6 +1003,11 @@ export default function CommunityAdminPanel({
                   <Users size={14} className="text-blue-500" />
                   {t('members', locale)}
                   <span className="text-slate-400 font-bold">({data.members.length})</span>
+                  {limits.maxCommunityMembers < 999999 && (
+                    <span className="text-[10px] font-bold text-slate-400">
+                      / {limits.maxCommunityMembers}
+                    </span>
+                  )}
                 </h3>
               </div>
               <p className="text-xs text-slate-400 mb-3 flex items-center gap-1.5">
@@ -1291,6 +1329,12 @@ export default function CommunityAdminPanel({
           )}
         </div>
       )}
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        minPlan={upgradeTarget}
+      />
     </div>
   );
 }

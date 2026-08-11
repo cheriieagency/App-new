@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  FacebookIcon,
   InstagramIcon,
   LinkedInIcon,
   TikTokIcon,
@@ -13,6 +14,7 @@ const ICONS = {
   tiktok: TikTokIcon,
   linkedin: LinkedInIcon,
   youtube: YouTubeIcon,
+  facebook: FacebookIcon,
 } as const;
 
 export function PlatformBadge({

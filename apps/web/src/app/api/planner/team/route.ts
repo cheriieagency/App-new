@@ -8,14 +8,17 @@ import {
   type TeamRole,
   type WorkspacePlan,
 } from '@/lib/mock-content-planner';
+import { getPlanLimits } from '@/lib/config/plans';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const project = searchParams.get('project') || undefined;
+  const plan = getWorkspacePlan();
   return Response.json({
     members: listTeamMembers(project),
     all_members: listTeamMembers(),
-    plan: getWorkspacePlan(),
+    plan,
+    limits: getPlanLimits(plan),
     demo: true,
   });
 }
@@ -79,6 +82,17 @@ export async function POST(request: Request) {
       role: (body.role as TeamRole) || 'editor',
       project: String(body.project ?? ''),
     });
+    if (result.error === 'SEAT_LIMIT') {
+      return Response.json(
+        {
+          error: 'UPGRADE_REQUIRED',
+          minPlan: getWorkspacePlan() === 'starter' ? 'creator' : 'pro',
+          limitKey: 'maxTeammateSeats',
+          message: `Seat limit reached (${result.seat_limit}). Upgrade for more teammate seats.`,
+        },
+        { status: 403 }
+      );
+    }
     return Response.json({
       ...result,
       members: listTeamMembers(),

@@ -45,6 +45,11 @@ const nextConfig = {
         source: '/fontawesome/:path*',
         destination: 'https://ka-p.fontawesome.com/:path*',
       },
+      // Vanity bio URLs: clikd.app/@handle → /bio/handle
+      {
+        source: '/@:handle',
+        destination: '/bio/:handle',
+      },
     ];
   },
 };

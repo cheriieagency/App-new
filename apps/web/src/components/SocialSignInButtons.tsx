@@ -16,6 +16,7 @@
 
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { useLanguage } from "@/lib/i18n";
 
 const KNOWN_PROVIDERS = ["google", "apple"] as const;
 type SocialProvider = (typeof KNOWN_PROVIDERS)[number];
@@ -43,6 +44,7 @@ const isDevPreviewIframe = () => {
 };
 
 export function SocialSignInButtons({ callbackUrl }: { callbackUrl: string }) {
+	const { t } = useLanguage();
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState<SocialProvider | null>(null);
 
@@ -77,7 +79,7 @@ export function SocialSignInButtons({ callbackUrl }: { callbackUrl: string }) {
 		<div className="flex flex-col gap-[12px]">
 			<div className="flex items-center gap-[8px] text-[12px] text-gray-400">
 				<span className="h-px flex-1 bg-gray-200" />
-				or
+				{t("common.or")}
 				<span className="h-px flex-1 bg-gray-200" />
 			</div>
 
@@ -92,8 +94,10 @@ export function SocialSignInButtons({ callbackUrl }: { callbackUrl: string }) {
 					className="flex items-center justify-center gap-[8px] rounded-[8px] border border-gray-300 bg-white p-[12px] text-[16px] font-medium text-gray-700 hover:bg-[#f7f9fc] disabled:opacity-50"
 				>
 					{pending === provider
-						? "Redirecting…"
-						: `Continue with ${PROVIDER_LABELS[provider]}`}
+						? t("common.redirecting")
+						: t("common.continueWith", {
+								provider: PROVIDER_LABELS[provider],
+							})}
 				</button>
 			))}
 

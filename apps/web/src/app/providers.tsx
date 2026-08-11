@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Suspense, useState } from 'react';
 import { Toaster } from 'sonner';
-import { LocaleProvider } from '@/lib/locale-context';
+import { LanguageProvider } from '@/lib/i18n';
 import { GlobalLanguageMenu } from '@/components/GlobalLanguageMenu';
 import { MobileBottomNav, MobileBottomNavSpacer } from '@/components/MobileBottomNav';
 
@@ -40,14 +40,14 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <LocaleProvider>
+      <LanguageProvider>
         <Suspense fallback={children}>
           <MobileBottomNavSpacer>{children}</MobileBottomNavSpacer>
           <MobileBottomNav />
         </Suspense>
         <GlobalLanguageMenu />
         <Toaster position="bottom-right" />
-      </LocaleProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

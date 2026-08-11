@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/popover';
 import { useLanguage } from '@/lib/locale-context';
 import { t, tf, localeTag, type Locale } from '@/lib/i18n';
+import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
 
 type DateRangePreset = '1w' | '1m' | '3m' | '1y' | '2y' | 'custom';
 
@@ -223,6 +224,7 @@ export default function LaterAnalyticsPanel() {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(dateRange.from);
   const [draftTo, setDraftTo] = useState(dateRange.to);
+  const [exportOpen, setExportOpen] = useState(false);
   const chart = activeWorkspace.analytics.revenue_chart;
 
   const revenue = useMemo(
@@ -419,12 +421,23 @@ export default function LaterAnalyticsPanel() {
             </Popover>
             <button
               type="button"
+              onClick={() => setExportOpen(true)}
               className="h-10 min-h-[40px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
             >
               <Download size={13} /> {t('exportLabel', locale)}
             </button>
           </>
         }
+      />
+
+      <AnalyticsExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        workspaceName={activeWorkspace.name}
+        rangeLabel={formatRangeLabel(dateRange, locale)}
+        kpis={kpis}
+        topProducts={TOP_PRODUCTS}
+        engagement={ENGAGEMENT_OVERVIEW}
       />
 
       {/* Quiet sub-nav — only shown when drilling into detail tabs */}

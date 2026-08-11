@@ -23,14 +23,14 @@ import AdminPlanModal, { useAdminPlan } from '@/components/admin/AdminPlanModal'
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAdminNav, type AdminSection } from '@/components/admin/AdminNavContext';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
-import { useLanguage } from '@/lib/locale-context';
-import { t, type TranslationKey } from '@/lib/i18n';
+import { useLanguage } from '@/lib/i18n';
+import type { NestedKey } from '@/lib/i18n';
 import type { CampaignLabel } from '@/lib/mock-content-planner';
 import { MEDIA_LIBRARY_ROOT_ID } from '@/lib/mock-media-library';
 
 type NavItem = {
   key: AdminSection;
-  labelKey: TranslationKey;
+  labelKey: NestedKey;
   icon: ElementType;
   href: string;
   badge?: string;
@@ -38,15 +38,15 @@ type NavItem = {
 
 /** Clean labels matching the Clikd admin shell reference. */
 const NAV: NavItem[] = [
-  { key: 'calendar', labelKey: 'adminNavPlanner', icon: CalendarDays, href: '/planner' },
-  { key: 'media', labelKey: 'adminNavMedia', icon: ImageIcon, href: '/admin?tab=media' },
-  { key: 'projects', labelKey: 'adminNavProjects', icon: FolderKanban, href: '/admin?tab=projects' },
-  { key: 'inbox', labelKey: 'adminNavInbox', icon: Inbox, href: '/admin?tab=inbox', badge: '3' },
-  { key: 'analytics', labelKey: 'adminNavAnalytics', icon: BarChart3, href: '/admin?tab=analytics' },
-  { key: 'biobuilder', labelKey: 'adminNavBio', icon: Link2, href: '/admin?tab=biobuilder' },
-  { key: 'community', labelKey: 'adminNavCommunity', icon: Users, href: '/admin?tab=community' },
-  { key: 'email', labelKey: 'adminNavEmail', icon: Mail, href: '/admin?tab=email' },
-  { key: 'settings', labelKey: 'adminNavSettings', icon: Settings, href: '/admin?tab=settings' },
+  { key: 'calendar', labelKey: 'admin.planner', icon: CalendarDays, href: '/planner' },
+  { key: 'media', labelKey: 'admin.mediaLibrary', icon: ImageIcon, href: '/admin?tab=media' },
+  { key: 'projects', labelKey: 'admin.projects', icon: FolderKanban, href: '/admin?tab=projects' },
+  { key: 'inbox', labelKey: 'admin.socialInbox', icon: Inbox, href: '/admin?tab=inbox', badge: '3' },
+  { key: 'analytics', labelKey: 'admin.analytics', icon: BarChart3, href: '/admin?tab=analytics' },
+  { key: 'biobuilder', labelKey: 'admin.bioBuilder', icon: Link2, href: '/admin?tab=biobuilder' },
+  { key: 'community', labelKey: 'admin.community', icon: Users, href: '/admin?tab=community' },
+  { key: 'email', labelKey: 'admin.emailCrm', icon: Mail, href: '/admin?tab=email' },
+  { key: 'settings', labelKey: 'admin.settings', icon: Settings, href: '/admin?tab=settings' },
 ];
 
 function planName(plan: string) {
@@ -73,7 +73,7 @@ export default function AdminSidebar() {
     setActiveMediaFolderId,
     setCreateMediaFolderOpen,
   } = useAdminNav();
-  const { locale } = useLanguage();
+  const { t } = useLanguage();
   const {
     brandWorkspaces,
     activeWorkspaceId,
@@ -193,7 +193,7 @@ export default function AdminSidebar() {
                         aria-hidden
                       />
                       <span className="text-[13px] truncate text-left flex-1 tracking-tight">
-                        {t(labelKey, locale)}
+                        {t(labelKey)}
                       </span>
                       <ChevronDown
                         size={16}
@@ -234,7 +234,7 @@ export default function AdminSidebar() {
                               aria-hidden
                             />
                             <span className="text-[12px] truncate tracking-tight">
-                              {t('mediaLibraryRoot', locale)}
+                              {t('mediaLibraryRoot')}
                             </span>
                           </button>
 
@@ -286,7 +286,7 @@ export default function AdminSidebar() {
                                 aria-hidden
                               />
                               <span className="text-[12px] truncate tracking-tight">
-                                {t('createMediaFolder', locale)}
+                                {t('createMediaFolder')}
                               </span>
                             </button>
                           </div>
@@ -322,7 +322,7 @@ export default function AdminSidebar() {
                         aria-hidden
                       />
                       <span className="text-[13px] truncate text-left flex-1 tracking-tight">
-                        {t(labelKey, locale)}
+                        {t(labelKey)}
                       </span>
                       <ChevronDown
                         size={16}
@@ -341,7 +341,7 @@ export default function AdminSidebar() {
                       >
                         {campaigns.length === 0 ? (
                           <p className="px-3 py-2 text-[11px] font-medium text-slate-400">
-                            {t('noProjectsYet', locale)}
+                            {t('noProjectsYet')}
                           </p>
                         ) : (
                           campaigns.map((c) => {
@@ -388,7 +388,7 @@ export default function AdminSidebar() {
                             aria-hidden
                           />
                           <span className="text-[12px] truncate tracking-tight">
-                            {t('createProject', locale)}
+                            {t('createProject')}
                           </span>
                         </button>
                       </div>
@@ -417,7 +417,7 @@ export default function AdminSidebar() {
                     aria-hidden
                   />
                   <span className="text-[13px] truncate text-left flex-1 tracking-tight">
-                    {t(labelKey, locale)}
+                    {t(labelKey)}
                   </span>
                   {badge && (
                     <span

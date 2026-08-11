@@ -86,8 +86,14 @@ function SignUpForm() {
 
 			const home = await persistPlatformRole(role);
 
-			if (typeof window !== "undefined") {
-				window.location.href = home || callbackUrl;
+			// Creators complete the onboarding questionnaire before admin.
+			const next =
+				role === 'creator'
+					? '/onboarding'
+					: home || callbackUrl;
+
+			if (typeof window !== 'undefined') {
+				window.location.href = next;
 			} else {
 				console.warn(
 					"signup: window is undefined; cannot redirect to callbackUrl",

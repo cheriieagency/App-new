@@ -19,7 +19,7 @@ import type {
   YoutubeMeta,
 } from '@/lib/mock-content-planner';
 
-type PreviewTab = 'instagram' | 'tiktok' | 'linkedin' | 'youtube';
+type PreviewTab = 'instagram' | 'facebook' | 'tiktok' | 'linkedin' | 'youtube';
 
 function MediaSlide({
   item,
@@ -45,6 +45,14 @@ function MediaSlide({
   return <img src={item.url} alt="" className={`object-cover ${className}`} />;
 }
 
+/** Meta feed: posts/carousels = 4:5, video/Reels = 9:16. */
+function metaMediaAspect(items: PlannerMediaItem[]): 'post' | 'video' {
+  const isCarousel = items.length > 1;
+  if (isCarousel) return 'post';
+  if (items[0]?.type === 'video') return 'video';
+  return 'post';
+}
+
 function InstagramPreview({
   username,
   caption,
@@ -61,36 +69,65 @@ function InstagramPreview({
   const [slide, setSlide] = useState(0);
   const current = items[slide] ?? items[0];
   const isCarousel = items.length > 1;
-  const isVideo = current?.type === 'video';
+  const format = metaMediaAspect(items);
+  const isVideoFormat = format === 'video';
 
-  return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-zinc-200 shadow-sm max-w-[320px] mx-auto">
-      <div className="flex items-center gap-2.5 px-3 h-12 border-b border-zinc-100">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-[2px]">
-          <div className="w-full h-full rounded-full bg-white p-[1px] overflow-hidden">
-            {brandAvatar ? (
-              <img src={brandAvatar} alt="" className="w-full h-full object-cover rounded-full" />
-            ) : (
-              <div
-                className="w-full h-full rounded-full flex items-center justify-center text-[10px] font-black text-white"
-                style={{ background: brandColor || '#E11D48' }}
-              >
-                {username.replace('@', '')[0]?.toUpperCase() || 'B'}
-              </div>
-            )}
+  const avatar = (
+    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-[2px]">
+      <div className="w-full h-full rounded-full bg-white p-[1px] overflow-hidden">
+        {brandAvatar ? (
+          <img src={brandAvatar} alt="" className="w-full h-full object-cover rounded-full" />
+        ) : (
+          <div
+            className="w-full h-full rounded-full flex items-center justify-center text-[10px] font-black text-white"
+            style={{ background: brandColor || '#E11D48' }}
+          >
+            {username.replace('@', '')[0]?.toUpperCase() || 'B'}
           </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Reels / video — 9:16 phone frame
+  if (isVideoFormat) {
+    return (
+      <div className="relative mx-auto w-[220px] aspect-[9/16] rounded-[1.75rem] overflow-hidden bg-black border-[3px] border-zinc-800 shadow-lg">
+        <MediaSlide item={current} className="absolute inset-0 w-full h-full" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/25" />
+        <div className="absolute top-3 inset-x-3 flex items-center gap-2 text-white">
+          {avatar}
+          <p className="text-[11px] font-extrabold truncate flex-1">{username}</p>
+          <span className="text-[9px] font-black uppercase tracking-wide bg-white/20 px-1.5 py-0.5 rounded">
+            Reel
+          </span>
         </div>
+        <div className="absolute right-2.5 bottom-28 flex flex-col items-center gap-4 text-white">
+          <Heart size={22} fill="white" />
+          <MessageCircle size={22} />
+          <Send size={20} />
+          <Bookmark size={20} />
+          <MoreHorizontal size={18} />
+        </div>
+        <div className="absolute left-3 right-14 bottom-4 text-white">
+          <p className="text-xs font-extrabold mb-1">{username}</p>
+          <p className="text-[11px] font-medium leading-snug line-clamp-3">{caption}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Feed post / carousel — 4:5
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden border border-zinc-200 shadow-sm max-w-[280px] mx-auto">
+      <div className="flex items-center gap-2.5 px-3 h-12 border-b border-zinc-100">
+        {avatar}
         <p className="text-xs font-extrabold text-[#262626] flex-1 truncate">{username}</p>
         <MoreHorizontal size={16} className="text-[#262626]" />
       </div>
 
-      <div className="relative aspect-square bg-zinc-100">
+      <div className="relative aspect-[4/5] bg-zinc-100">
         <MediaSlide item={current} className="absolute inset-0 w-full h-full" />
-        {isVideo && (
-          <span className="absolute top-2 right-2 text-[10px] font-extrabold text-white bg-black/55 px-2 py-0.5 rounded-md">
-            VIDEO
-          </span>
-        )}
         {isCarousel && (
           <>
             <div className="absolute inset-y-0 left-0 w-1/3" onClick={() => setSlide((s) => Math.max(0, s - 1))} />
@@ -124,6 +161,124 @@ function InstagramPreview({
           <span className="font-extrabold mr-1">{username}</span>
           {caption.split('\n').slice(0, 3).join(' ')}
         </p>
+      </div>
+    </div>
+  );
+}
+
+function FacebookPreview({
+  username,
+  caption,
+  items,
+  brandAvatar,
+  brandColor,
+}: {
+  username: string;
+  caption: string;
+  items: PlannerMediaItem[];
+  brandAvatar?: string | null;
+  brandColor?: string;
+}) {
+  const [slide, setSlide] = useState(0);
+  const current = items[slide] ?? items[0];
+  const isCarousel = items.length > 1;
+  const format = metaMediaAspect(items);
+  const isVideoFormat = format === 'video';
+  const pageName = username.replace(/^@/, '') || 'Page';
+
+  const avatar = brandAvatar ? (
+    <img
+      src={brandAvatar}
+      alt=""
+      className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+    />
+  ) : (
+    <div
+      className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-black"
+      style={{ background: brandColor || '#1877F2' }}
+    >
+      {pageName[0]?.toUpperCase() || 'F'}
+    </div>
+  );
+
+  // Facebook Reels / video — 9:16
+  if (isVideoFormat) {
+    return (
+      <div className="relative mx-auto w-[220px] aspect-[9/16] rounded-[1.75rem] overflow-hidden bg-black border-[3px] border-zinc-800 shadow-lg">
+        <MediaSlide item={current} className="absolute inset-0 w-full h-full" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20" />
+        <div className="absolute top-3 inset-x-3 flex items-center gap-2 text-white">
+          {avatar}
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-extrabold truncate">{pageName}</p>
+            <p className="text-[9px] font-bold text-white/70">Reel · Just now</p>
+          </div>
+        </div>
+        <div className="absolute right-2.5 bottom-28 flex flex-col items-center gap-4 text-white">
+          <ThumbsUp size={22} />
+          <MessageCircle size={22} />
+          <Share2 size={20} />
+        </div>
+        <div className="absolute left-3 right-14 bottom-4 text-white">
+          <p className="text-xs font-extrabold mb-1">{pageName}</p>
+          <p className="text-[11px] font-medium leading-snug line-clamp-3">{caption}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Facebook feed post / carousel — 4:5
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden border border-zinc-200 shadow-sm max-w-[300px] mx-auto">
+      <div className="flex items-start gap-2.5 px-3 pt-3 pb-2">
+        {avatar}
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-extrabold text-[#050505] truncate">{pageName}</p>
+          <p className="text-[10px] font-medium text-zinc-500">Just now · 🌐</p>
+        </div>
+        <MoreHorizontal size={16} className="text-zinc-500" />
+      </div>
+      <p className="px-3 pb-2 text-xs text-[#050505] leading-relaxed line-clamp-3">
+        {caption.split('\n').slice(0, 3).join(' ')}
+      </p>
+
+      <div className="relative aspect-[4/5] bg-zinc-100 border-y border-zinc-100">
+        <MediaSlide item={current} className="absolute inset-0 w-full h-full" />
+        {isCarousel && (
+          <>
+            <div className="absolute inset-y-0 left-0 w-1/3" onClick={() => setSlide((s) => Math.max(0, s - 1))} />
+            <div
+              className="absolute inset-y-0 right-0 w-1/3"
+              onClick={() => setSlide((s) => Math.min(items.length - 1, s + 1))}
+            />
+            <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1">
+              {items.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSlide(i)}
+                  className={`w-1.5 h-1.5 rounded-full ${i === slide ? 'bg-[#1877F2]' : 'bg-white/70'}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 border-t border-zinc-100">
+        {[
+          { icon: ThumbsUp, label: 'Like' },
+          { icon: MessageCircle, label: 'Comment' },
+          { icon: Share2, label: 'Share' },
+        ].map(({ icon: Icon, label }) => (
+          <button
+            key={label}
+            type="button"
+            className="h-11 min-h-[44px] flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50"
+          >
+            <Icon size={14} /> {label}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -390,6 +545,7 @@ export default function FeedPreview({
   const tabs = useMemo(() => {
     const all: { key: PreviewTab; label: string }[] = [
       { key: 'instagram', label: 'Instagram' },
+      { key: 'facebook', label: 'Facebook' },
       { key: 'tiktok', label: 'TikTok' },
       { key: 'linkedin', label: 'LinkedIn' },
       { key: 'youtube', label: 'YouTube' },
@@ -428,6 +584,15 @@ export default function FeedPreview({
       <div className="min-h-[280px]">
         {active === 'instagram' && (
           <InstagramPreview
+            username={username}
+            caption={caption}
+            items={mediaItems}
+            brandAvatar={brandAvatar}
+            brandColor={brandColor}
+          />
+        )}
+        {active === 'facebook' && (
+          <FacebookPreview
             username={username}
             caption={caption}
             items={mediaItems}

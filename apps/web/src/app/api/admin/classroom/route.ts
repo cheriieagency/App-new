@@ -2,6 +2,7 @@ import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { getMockClassroomAdmin } from '@/lib/mock-classroom-admin';
+import { requireFeature } from '@/lib/plan-guard';
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -79,6 +80,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await requireSession();
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Classroom create/update requires Creator+ (courses & video hosting).
+  const gate = requireFeature('coursesAndVideoHosting');
+  if (gate) return gate;
 
   try {
     const body = await request.json();

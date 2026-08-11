@@ -131,6 +131,17 @@ export const databaseEnv = {
   requiredKeys: ['DATABASE_URL'] as const,
 };
 
+// ---------------------------------------------------------------------------
+// 8. Resend (transactional + CRM email)
+// ---------------------------------------------------------------------------
+export const resendEnv = {
+  /** Resend secret — https://resend.com/api-keys */
+  apiKey: () => readEnv('RESEND_API_KEY'),
+  /** Verified sender, e.g. "clikd: <hello@clikd.app>" */
+  from: () => readEnv('RESEND_FROM_EMAIL') ?? 'clikd: <onboarding@resend.dev>',
+  requiredKeys: ['RESEND_API_KEY'] as const,
+};
+
 /** Aggregated export — prefer named groups above when importing. */
 export const env = {
   openai: openaiEnv,
@@ -141,4 +152,5 @@ export const env = {
   stripe: stripeEnv,
   supabase: supabaseEnv,
   database: databaseEnv,
+  resend: resendEnv,
 } as const;

@@ -9,14 +9,13 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { StoreKind, StoreProduct } from '@/lib/mock-store';
-import { useLocale } from '@/lib/locale-context';
-import { t } from '@/lib/i18n';
+import { useLanguage } from '@/lib/i18n';
 import OneTapCheckoutDrawer from '@/components/store/OneTapCheckoutDrawer';
 
 type FilterKey = 'all' | StoreKind;
 
-function formatPrice(price: number, currency: string, locale: string) {
-  if (!price) return t('freeLabel', locale as Parameters<typeof t>[1]);
+function formatPrice(price: number, currency: string, translate: (key: string) => string) {
+  if (!price) return translate('freeLabel');
   return `${Math.round(price)} ${currency}`;
 }
 
@@ -31,7 +30,7 @@ export default function StoreView({
   communityId?: number | null;
   communityName?: string | null;
 }) {
-  const { locale } = useLocale();
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<FilterKey>('all');
   const [checkoutProduct, setCheckoutProduct] = useState<StoreProduct | null>(
     null
@@ -53,9 +52,9 @@ export default function StoreView({
   }, [products, filter]);
 
   const filters: { key: FilterKey; label: string; icon: React.ElementType }[] = [
-    { key: 'all', label: t('storeAll', locale), icon: ShoppingBag },
-    { key: 'product', label: t('storeProducts', locale), icon: Package },
-    { key: 'service', label: t('storeServices', locale), icon: Briefcase },
+    { key: 'all', label: t('storeAll'), icon: ShoppingBag },
+    { key: 'product', label: t('storeProducts'), icon: Package },
+    { key: 'service', label: t('storeServices'), icon: Briefcase },
   ];
 
   return (
@@ -63,12 +62,12 @@ export default function StoreView({
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
         <div>
           <h2 className="text-2xl font-extrabold text-slate-900">
-            {t('store', locale)}
+            {t('store')}
           </h2>
           <p className="text-sm text-slate-500 mt-1">
             {communityName
-              ? t('storeCommunityHint', locale).replace('{name}', communityName)
-              : t('productsAndOffers', locale)}
+              ? t('storeCommunityHint').replace('{name}', communityName)
+              : t('productsAndOffers')}
           </p>
         </div>
         <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-2xl w-fit">
@@ -93,12 +92,12 @@ export default function StoreView({
       {isLoading ? (
         <div className="text-center py-16 text-slate-400 text-sm flex items-center justify-center gap-2">
           <Loader2 size={16} className="animate-spin" />
-          {t('loading', locale)}
+          {t('loading')}
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] py-16 text-center">
           <ShoppingBag size={32} className="text-slate-200 mx-auto mb-3" />
-          <p className="text-sm font-bold text-slate-400">{t('storeEmpty', locale)}</p>
+          <p className="text-sm font-bold text-slate-400">{t('storeEmpty')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
@@ -135,8 +134,8 @@ export default function StoreView({
                     }`}
                   >
                     {isService
-                      ? t('storeServices', locale)
-                      : t('storeProducts', locale)}
+                      ? t('storeServices')
+                      : t('storeProducts')}
                   </span>
                 </div>
 
@@ -153,10 +152,10 @@ export default function StoreView({
 
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                     <p className="text-lg font-extrabold text-slate-900 tabular-nums">
-                      {formatPrice(product.price, product.currency, locale)}
+                      {formatPrice(product.price, product.currency, t)}
                     </p>
                     <span className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-extrabold bg-[var(--nc-coral)] text-white flex items-center">
-                      {t('storeBuy', locale)}
+                      {t('storeBuy')}
                     </span>
                   </div>
                 </div>

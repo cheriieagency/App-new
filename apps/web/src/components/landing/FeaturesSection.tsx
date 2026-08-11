@@ -29,118 +29,15 @@ import {
   InstagramIcon,
   TikTokIcon,
 } from '@/components/icons/SocialBrandIcons';
+import { useLanguage } from '@/lib/i18n';
 
 type FeatureTab = 'biostore' | 'planner' | 'analytics' | 'community' | 'crm';
-
-const TABS: {
-  key: FeatureTab;
-  title: string;
-  summary: string;
-  icon: ElementType;
-  iconWrap: string;
-  hrefPreview: string;
-}[] = [
-  {
-    key: 'biostore',
-    title: 'Link-in-Bio Builder',
-    summary: 'Luxury themes, custom blocks, UTM analytics, products & 1-tap checkout.',
-    icon: Link2,
-    iconWrap: 'bg-[#FCE7F3] text-[#F472B6]',
-    hrefPreview: 'https://admin.clikd.app/bio-store/ebbabrobeck',
-  },
-  {
-    key: 'planner',
-    title: 'Content Planner & Social Sets',
-    summary: 'Calendar schedules, Kanban boards & multi-channel Social Sets.',
-    icon: CalendarDays,
-    iconWrap: 'bg-[#E9D5FF]/70 text-[#2B2568]',
-    hrefPreview: 'https://admin.clikd.app/planner/ebba-creator-lab',
-  },
-  {
-    key: 'analytics',
-    title: 'In-depth Analytics & Revenue',
-    summary: 'Reach, impressions, audience growth & Linkin.bio performance reports.',
-    icon: BarChart3,
-    iconWrap: 'bg-sky-50 text-sky-700',
-    hrefPreview: 'https://admin.clikd.app/analytics/ebbabrobeck',
-  },
-  {
-    key: 'community',
-    title: 'Gamified Community & Hub',
-    summary: 'Discussion feeds, classroom courses, live events & member leaderboards.',
-    icon: Users,
-    iconWrap: 'bg-emerald-50 text-[#10B981]',
-    hrefPreview: 'https://admin.clikd.app/community/hub',
-  },
-  {
-    key: 'crm',
-    title: 'Email CRM & Automation',
-    summary: 'Subscriber CRM, automated welcome sequences & broadcast emails.',
-    icon: Mail,
-    iconWrap: 'bg-orange-50 text-orange-600',
-    hrefPreview: 'https://admin.clikd.app/email-crm',
-  },
-];
-
-const THEMES = [
-  {
-    name: 'Midnight Glass',
-    blurb: 'Dark mesh + frosted glass',
-    swatch: 'from-[#0B0A1F] via-[#1a1848] to-[#2B2568]',
-    dots: ['#F472B6', '#FB7185'],
-    selected: false,
-  },
-  {
-    name: 'Champagne Luxe',
-    blurb: 'Warm silk + gold accents',
-    swatch: 'from-[#FDFBF7] via-[#F5E6D3] to-[#E8D4B8]',
-    dots: ['#EAB308', '#FFFFFF'],
-    selected: false,
-  },
-  {
-    name: 'Aurora Glow',
-    blurb: 'Indigo / purple glow',
-    swatch: 'from-[#4C1D95] via-[#7C3AED] to-[#F472B6]',
-    dots: ['#C4B5FD', '#E0E7FF'],
-    selected: true,
-  },
-  {
-    name: 'Nordic Minimal',
-    blurb: 'Clean white + crisp slate',
-    swatch: 'from-[#FAFAFA] via-[#F1F5F9] to-[#E2E8F0]',
-    dots: ['#2B2568', '#0F172A'],
-    selected: false,
-  },
-];
-
-const BIO_LINKS = [
-  {
-    title: 'Join my community',
-    sub: 'Welcome to my world',
-    badge: 'FREE',
-    badgeClass: 'bg-[#10B981] text-white',
-    Icon: GraduationCap,
-  },
-  {
-    title: 'Clikd Studio',
-    sub: 'The place to be',
-    badge: '199 SEK',
-    badgeClass: 'bg-[#7C3AED] text-white',
-    Icon: Zap,
-  },
-  {
-    title: '1:1 Coaching',
-    sub: 'Boka ett samtal',
-    badge: '599 SEK',
-    badgeClass: 'bg-[#EAB308] text-[#0F172A]',
-    Icon: MessageCircle,
-  },
-];
 
 const AVATAR =
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&fit=crop&q=80';
 
 function StudioChrome({ url }: { url: string }) {
+  const { t } = useLanguage();
   return (
     <div className="flex items-center gap-3 px-3 sm:px-4 py-2.5 border-b border-slate-200/80 bg-slate-50/90">
       <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -155,7 +52,7 @@ function StudioChrome({ url }: { url: string }) {
         </div>
       </div>
       <span className="hidden sm:inline-flex flex-shrink-0 items-center rounded-full bg-white border border-[#F472B6]/55 px-2.5 py-0.5 text-[10px] font-bold text-[#F472B6]">
-        Live Studio Preview
+        {t('liveStudioPreview')}
       </span>
     </div>
   );
@@ -163,6 +60,70 @@ function StudioChrome({ url }: { url: string }) {
 
 /** Exact Bio Builder studio replica for the landing features canvas. */
 function BioStoreCanvas() {
+  const { t } = useLanguage();
+
+  const themes = [
+    {
+      name: t('themeMidnight'),
+      blurb: t('themeMidnightBlurb'),
+      swatch: 'from-[#0B0A1F] via-[#1a1848] to-[#2B2568]',
+      dots: ['#F472B6', '#FB7185'],
+      selected: false,
+    },
+    {
+      name: t('themeChampagne'),
+      blurb: t('themeChampagneBlurb'),
+      swatch: 'from-[#FDFBF7] via-[#F5E6D3] to-[#E8D4B8]',
+      dots: ['#EAB308', '#FFFFFF'],
+      selected: false,
+    },
+    {
+      name: t('themeAurora'),
+      blurb: t('themeAuroraBlurb'),
+      swatch: 'from-[#4C1D95] via-[#7C3AED] to-[#F472B6]',
+      dots: ['#C4B5FD', '#E0E7FF'],
+      selected: true,
+    },
+    {
+      name: t('themeNordic'),
+      blurb: t('themeNordicBlurb'),
+      swatch: 'from-[#FAFAFA] via-[#F1F5F9] to-[#E2E8F0]',
+      dots: ['#2B2568', '#0F172A'],
+      selected: false,
+    },
+  ];
+
+  const bioLinks = [
+    {
+      title: t('features.joinCommunity'),
+      sub: t('mockLinkWelcomeSub'),
+      badge: t('bio.free'),
+      badgeClass: 'bg-[#10B981] text-white',
+      Icon: GraduationCap,
+    },
+    {
+      title: t('mockLinkStudioTitle'),
+      sub: t('mockLinkStudioSub'),
+      badge: '199 SEK',
+      badgeClass: 'bg-[#7C3AED] text-white',
+      Icon: Zap,
+    },
+    {
+      title: t('mockLinkCoaching'),
+      sub: t('mockLinkCoachingSub'),
+      badge: '599 SEK',
+      badgeClass: 'bg-[#EAB308] text-[#0F172A]',
+      Icon: MessageCircle,
+    },
+  ];
+
+  const bioTabs = [
+    t('bioTabDesign'),
+    t('bioTabBlocks'),
+    t('bioTabAnalytics'),
+    t('bioTabSettings'),
+  ];
+
   return (
     <div className="space-y-3.5">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -171,7 +132,7 @@ function BioStoreCanvas() {
             Bio Builder · @ebbabrobeck
           </p>
           <h3 className="mt-1 text-xl sm:text-2xl font-extrabold text-[#2B2568] font-outfit tracking-tight">
-            Link in Bio
+            {t('linkInBio')}
           </h3>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -181,7 +142,7 @@ function BioStoreCanvas() {
             className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl border border-slate-200 bg-white text-[11px] font-bold text-slate-700 pointer-events-none"
           >
             <Eye size={13} strokeWidth={2.25} />
-            Preview
+            {t('bio.preview')}
           </button>
           <button
             type="button"
@@ -189,13 +150,13 @@ function BioStoreCanvas() {
             className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3.5 rounded-xl bg-[#2B2568] text-white text-[11px] font-extrabold pointer-events-none"
           >
             <Save size={13} strokeWidth={2.25} />
-            Publish Changes
+            {t('bio.publishChanges')}
           </button>
         </div>
       </div>
 
       <div className="flex gap-0.5 overflow-x-auto scrollbar-none border-b border-slate-200/80">
-        {['Design & Theme', 'Blocks & Links', 'UTM Analytics', 'Settings'].map((tab, i) => (
+        {bioTabs.map((tab, i) => (
           <span
             key={tab}
             className={`px-3 py-2.5 text-[11px] font-bold whitespace-nowrap ${
@@ -220,20 +181,20 @@ function BioStoreCanvas() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-[12px] font-extrabold text-slate-900 leading-tight">
-                    Exclusive Themes
+                    {t('exclusiveThemes')}
                   </p>
                   <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-snug">
-                    Luxury preset selector with live swatches.
+                    {t('exclusiveThemesSub')}
                   </p>
                 </div>
               </div>
               <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 text-[10px] font-extrabold text-[#10B981] flex-shrink-0">
-                8 Presets
+                {t('presetsCount')}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {THEMES.map((theme) => (
+              {themes.map((theme) => (
                 <div
                   key={theme.name}
                   className={`relative overflow-hidden rounded-2xl border p-2 transition-all ${
@@ -276,10 +237,10 @@ function BioStoreCanvas() {
             <div className="flex items-start justify-between gap-2 mb-2.5">
               <div className="min-w-0">
                 <p className="text-[12px] font-extrabold text-slate-900 leading-tight">
-                  Header &amp; Cover Banner
+                  {t('headerCoverBanner')}
                 </p>
                 <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-snug">
-                  Optional banner image above profile avatar.
+                  {t('optionalBannerAbove')}
                 </p>
               </div>
               <span
@@ -348,15 +309,15 @@ function BioStoreCanvas() {
 
                 <div className="flex gap-1 mb-2.5 p-0.5 rounded-full bg-black/20 backdrop-blur-sm">
                   <span className="flex-1 text-center text-[8px] font-extrabold py-1.5 rounded-full bg-[#7C3AED] text-white shadow-sm">
-                    LINKS
+                    {t('bio.links')}
                   </span>
                   <span className="flex-1 text-center text-[8px] font-extrabold py-1.5 rounded-full text-white/75">
-                    STORE 🛍️
+                    {t('bio.store')} 🛍️
                   </span>
                 </div>
 
                 <div className="space-y-1.5 flex-1">
-                  {BIO_LINKS.map((link) => {
+                  {bioLinks.map((link) => {
                     const Icon = link.Icon;
                     return (
                       <div
@@ -385,7 +346,7 @@ function BioStoreCanvas() {
                 </div>
 
                 <p className="mt-2.5 text-center text-[6.5px] font-mono font-bold uppercase tracking-[0.16em] text-white/40">
-                  Powered by clikd: Studio
+                  {t('bio.poweredBy')} Studio
                 </p>
               </div>
             </div>
@@ -846,8 +807,60 @@ function PreviewCanvas({ tab }: { tab: FeatureTab }) {
 
 /** Interactive all-in-one feature showcase with live studio preview. */
 export function FeaturesSection() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<FeatureTab>('biostore');
-  const active = TABS.find((tab) => tab.key === activeTab) ?? TABS[0];
+
+  const tabs: {
+    key: FeatureTab;
+    title: string;
+    summary: string;
+    icon: ElementType;
+    iconWrap: string;
+    hrefPreview: string;
+  }[] = [
+    {
+      key: 'biostore',
+      title: t('features.bioTitle'),
+      summary: t('features.bioSummary'),
+      icon: Link2,
+      iconWrap: 'bg-[#FCE7F3] text-[#F472B6]',
+      hrefPreview: 'https://admin.clikd.app/bio-store/ebbabrobeck',
+    },
+    {
+      key: 'planner',
+      title: t('features.plannerTitle'),
+      summary: t('features.plannerSummary'),
+      icon: CalendarDays,
+      iconWrap: 'bg-[#E9D5FF]/70 text-[#2B2568]',
+      hrefPreview: 'https://admin.clikd.app/planner/ebba-creator-lab',
+    },
+    {
+      key: 'analytics',
+      title: t('features.analyticsTitle'),
+      summary: t('features.analyticsSummary'),
+      icon: BarChart3,
+      iconWrap: 'bg-sky-50 text-sky-700',
+      hrefPreview: 'https://admin.clikd.app/analytics/ebbabrobeck',
+    },
+    {
+      key: 'community',
+      title: t('features.communityTitle'),
+      summary: t('features.communitySummary'),
+      icon: Users,
+      iconWrap: 'bg-emerald-50 text-[#10B981]',
+      hrefPreview: 'https://admin.clikd.app/community/hub',
+    },
+    {
+      key: 'crm',
+      title: t('features.crmTitle'),
+      summary: t('features.crmSummary'),
+      icon: Mail,
+      iconWrap: 'bg-orange-50 text-orange-600',
+      hrefPreview: 'https://admin.clikd.app/email-crm',
+    },
+  ];
+
+  const active = tabs.find((tab) => tab.key === activeTab) ?? tabs[0];
 
   return (
     <section
@@ -868,26 +881,24 @@ export function FeaturesSection() {
         <div className="max-w-2xl mx-auto text-center mb-10 sm:mb-12">
           <span className="inline-flex items-center rounded-full bg-purple-50/80 border border-purple-200/80 px-4 py-1.5">
             <span className="font-mono text-xs font-bold text-purple-900 tracking-wide">
-              the platform
+              {t('features.eyebrow')}
             </span>
           </span>
           <h2
             id="features-heading"
             className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight font-outfit leading-tight"
           >
-            Everything to sell, post &amp; scale
+            {t('features.headline')}
           </h2>
           <p className="mt-4 text-slate-500 font-medium text-base sm:text-lg leading-relaxed font-sans">
-            Built for creators who move at the speed of social. Plan multi-channel calendars,
-            monetize your link-in-bio, and host active member communities — all in one unified
-            studio.
+            {t('features.sub')}
           </p>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-5 lg:gap-6 items-start">
           {/* Tab cards — 4/12 */}
           <div className="lg:col-span-4 space-y-2.5">
-            {TABS.map((tab) => {
+            {tabs.map((tab) => {
               const isActive = tab.key === activeTab;
               const Icon = tab.icon;
               return (
@@ -949,10 +960,10 @@ export function FeaturesSection() {
               <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#FAFAFA]/60">
                 <p className="text-sm font-medium text-slate-500">{active.summary}</p>
                 <Link
-                  href="/account/signup"
+                  href="/onboarding"
                   className="inline-flex items-center min-h-[44px] text-[#F472B6] font-bold hover:text-[#2B2568] text-sm transition-colors"
                 >
-                  Try in Admin Dashboard →
+                  {t('features.learnMore')} →
                 </Link>
               </div>
             </div>

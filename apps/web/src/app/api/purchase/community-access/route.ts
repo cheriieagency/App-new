@@ -3,11 +3,12 @@ import {
 } from '@/lib/community-access-email';
 import { listManagedCommunities } from '@/lib/mock-community-admin';
 import { sendCommunityAccessInvite } from '@/lib/mock-email-crm';
+import { sendCommunityWelcomeEmail, sendOrderReceiptEmail } from '@/lib/email/transactional';
 import { getSiteUrl } from '@/lib/site';
 
 /**
  * Public post-purchase hook: email the buyer a direct link into the community
- * they unlocked with their purchase.
+ * they unlocked with their purchase (+ optional order receipt).
  */
 export async function POST(request: Request) {
   try {
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
     const buyerName = String(body.name ?? '').trim() || buyerEmail.split('@')[0] || 'Buyer';
     const productTitle = String(body.product_title ?? 'Your purchase').trim();
     const communityId = Number(body.community_id);
+    const amountSek = Number(body.amount_sek ?? body.amount ?? 0);
 
     if (!buyerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
       return Response.json({ error: 'Valid email required' }, { status: 400 });
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
       request.headers.get('origin') ||
       getSiteUrl();
 
+    // Demo CRM ledger (always).
     const result = sendCommunityAccessInvite({
       buyerName,
       buyerEmail,
@@ -47,7 +50,6 @@ export async function POST(request: Request) {
       origin,
     });
 
-    // Also return composed content for clients that want to show a preview.
     const composed = buildCommunityAccessEmail({
       buyerName,
       buyerEmail,
@@ -57,15 +59,43 @@ export async function POST(request: Request) {
       origin,
     });
 
+    // Live Resend delivery when RESEND_API_KEY is set.
+    const welcome = await sendCommunityWelcomeEmail({
+      to: buyerEmail,
+      memberName: buyerName,
+      communityId,
+      communityName,
+      origin,
+    });
+
+    let receipt: Awaited<ReturnType<typeof sendOrderReceiptEmail>> | null = null;
+    if (Number.isFinite(amountSek) && amountSek > 0) {
+      receipt = await sendOrderReceiptEmail({
+        to: buyerEmail,
+        buyerName,
+        productTitle,
+        amountSek,
+        workspaceName: communityName,
+      });
+    }
+
     return Response.json({
       success: true,
-      demo: true,
+      demo: !welcome.ok,
       community_url: result.communityUrl,
       community_name: communityName,
       email: {
         to: buyerEmail,
         subject: composed.subject,
         preview: result.preview,
+        resend: welcome.ok
+          ? { ok: true, id: welcome.id }
+          : { ok: false, error: welcome.error, missingEnv: welcome.missingEnv },
+        receipt: receipt
+          ? receipt.ok
+            ? { ok: true, id: receipt.id }
+            : { ok: false, error: receipt.error }
+          : null,
       },
       broadcast_id: result.broadcast.id,
     });

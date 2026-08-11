@@ -62,7 +62,11 @@ import {
 } from 'lucide-react';
 import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
 import { useLocale } from '@/lib/locale-context';
-import { t } from '@/lib/i18n';
+import { t, type TranslationKey } from '@/lib/i18n';
+import {
+  filterInAppNotifications,
+  loadNotificationPrefs,
+} from '@/lib/notification-prefs';
 import useUpload from '@/utils/useUpload';
 import CommunityAdminPanel from '@/components/admin/CommunityAdminPanel';
 import {
@@ -78,10 +82,15 @@ import type { WorkspaceBioBlock } from '@/lib/mock-workspace-profiles';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import LaterAnalyticsPanel from '@/components/admin/LaterAnalyticsPanel';
+import BioPublishSuccessDialog from '@/components/admin/BioPublishSuccessDialog';
+import { bioPublicDisplay, bioPublicUrl } from '@/lib/site';
 import AdminSettingsPanel from '@/components/admin/AdminSettingsPanel';
 import SocialInboxPanel from '@/components/admin/SocialInboxPanel';
 import MediaLibraryPanel from '@/components/admin/MediaLibraryPanel';
 import ProjectsPanel from '@/components/admin/ProjectsPanel';
+import { useSubscription } from '@/components/common/useSubscription';
+import UpgradeModal from '@/components/common/UpgradeModal';
+import { PlanLockBadge } from '@/components/common/FeatureGate';
 import {
   appendUtmParams,
   buildTrackedShortUrl,
@@ -454,6 +463,12 @@ const SOCIAL_PLATFORMS: {
     label: 'Instagram',
     color: '#E1306C',
     prefix: 'https://instagram.com/',
+  },
+  {
+    id: 'facebook',
+    label: 'Facebook',
+    color: '#1877F2',
+    prefix: 'https://facebook.com/',
   },
   { id: 'tiktok', label: 'TikTok', color: '#010101', prefix: 'https://tiktok.com/@' },
   {
@@ -1598,6 +1613,14 @@ export default function AdminPage() {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const {
+    hasFeature,
+    requestUpgrade,
+    upgradeOpen,
+    setUpgradeOpen,
+    upgradeTarget,
+  } = useSubscription();
+  const canUseAi = hasFeature('aiCopilotSuite');
   const { locale } = useLocale();
   const {
     activeWorkspace,
@@ -1628,6 +1651,26 @@ export default function AdminPage() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
   const bioHydratingRef = useRef(false);
+  const [headerNotifs, setHeaderNotifs] = useState(() =>
+    filterInAppNotifications(loadNotificationPrefs(session?.user?.id))
+  );
+
+  // Keep header bell in sync with Settings → Notifications preferences.
+  useEffect(() => {
+    const refresh = () => {
+      setHeaderNotifs(
+        filterInAppNotifications(loadNotificationPrefs(session?.user?.id))
+      );
+    };
+    refresh();
+    const onPrefs = () => refresh();
+    window.addEventListener('clikd:notif-prefs', onPrefs as EventListener);
+    window.addEventListener('storage', onPrefs);
+    return () => {
+      window.removeEventListener('clikd:notif-prefs', onPrefs as EventListener);
+      window.removeEventListener('storage', onPrefs);
+    };
+  }, [session?.user?.id]);
 
   // Deep-link support for community sub-views.
   useEffect(() => {
@@ -1757,6 +1800,9 @@ export default function AdminPage() {
   const [bioLinkCopied, setBioLinkCopied] = useState(false);
   const [bioSaved, setBioSaved] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [publishDialogFirst, setPublishDialogFirst] = useState(false);
+  const [publishDialogHandle, setPublishDialogHandle] = useState('creator');
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -2056,12 +2102,31 @@ export default function AdminPage() {
   };
   const saveBioMutation = useMutation({
     mutationFn: async () => {
+      const cleanHandle = (bioHandle || activeWorkspace.handle || 'creator')
+        .replace(/^@/, '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '') || 'creator';
+
+      // Persist into workspace profile before/alongside API save.
+      updateActiveBio({
+        profile_photo: bioAvatarUrl || null,
+        display_name: bioDisplayName,
+        handle: cleanHandle,
+        bio_text: bioBioText,
+        theme: bioTheme,
+        theme_label:
+          BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)?.label ||
+          activeWorkspace.bio.theme_label,
+        blocks: blocks as WorkspaceBioBlock[],
+      });
+
       const r = await fetch('/api/admin/bio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           blocks,
-          handle: bioHandle,
+          handle: cleanHandle,
           display_name: bioDisplayName,
           bio_text: bioBioText,
           avatar_url: bioAvatarUrl,
@@ -2069,11 +2134,39 @@ export default function AdminPage() {
           theme: bioTheme,
         }),
       });
-      return r.json();
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Failed to publish');
+      return { ...data, handle: cleanHandle } as {
+        success?: boolean;
+        first_publish?: boolean;
+        handle: string;
+        demo?: boolean;
+      };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const handle = data.handle || 'creator';
+      const storageKey = `clikd_bio_published_${activeWorkspaceId || handle}`;
+      let firstPublish = Boolean(data.first_publish && !data.demo);
+      try {
+        if (typeof window !== 'undefined') {
+          const seen = window.localStorage.getItem(storageKey);
+          // Local flag covers demo mode + first-ever publish in this browser.
+          if (!seen) {
+            firstPublish = true;
+            window.localStorage.setItem(storageKey, new Date().toISOString());
+          }
+        }
+      } catch {
+        /* ignore storage */
+      }
+
+      setBioHandle(handle);
       setBioSaved(true);
-      setTimeout(() => setBioSaved(false), 2500);
+      window.setTimeout(() => setBioSaved(false), 2500);
+      setPublishDialogFirst(firstPublish);
+      setPublishDialogHandle(handle);
+      setPublishDialogOpen(true);
+      queryClient.invalidateQueries({ queryKey: ['bio'] });
     },
   });
 
@@ -2098,6 +2191,10 @@ export default function AdminPage() {
   };
 
   const runCreatorAI = async (action: string) => {
+    if (!canUseAi) {
+      requestUpgrade('pro');
+      return;
+    }
     setAiLoading(true);
     setAiOutput('');
     setAiStreamingOutput('');
@@ -2107,6 +2204,11 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, topic: aiTopic }),
       });
+      if (res.status === 403) {
+        requestUpgrade('pro');
+        setAiLoading(false);
+        return;
+      }
       if (!res.ok) throw new Error('AI request failed');
       handleAIStream(res);
     } catch (err) {
@@ -2235,11 +2337,18 @@ export default function AdminPage() {
           <LanguageSwitcher className="hidden lg:block [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:h-9 [&_button]:min-h-[36px] [&_button]:text-slate-500 [&_button]:px-2 [&_button]:text-xs [&_button]:font-semibold" />
           <button
             type="button"
-            onClick={() => setShowCreatorAI(true)}
+            onClick={() => {
+              if (!canUseAi) {
+                requestUpgrade('pro');
+                return;
+              }
+              setShowCreatorAI(true);
+            }}
             className="hidden xl:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-lg text-slate-500 text-xs font-semibold hover:bg-slate-50 hover:text-slate-800 transition-colors"
             title={t('aiCopilotTitle', locale)}
           >
             <Sparkles size={14} />
+            {!canUseAi && <PlanLockBadge minPlan="pro" className="hidden 2xl:inline-flex" />}
           </button>
           <div className="relative">
             <button
@@ -2252,7 +2361,9 @@ export default function AdminPage() {
               aria-label={t('notificationsTitle', locale)}
             >
               <Bell size={17} strokeWidth={1.75} />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#F472B6]" />
+              {headerNotifs.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#F472B6]" />
+              )}
             </button>
             {notifOpen && (
               <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-40 overflow-hidden">
@@ -2261,20 +2372,22 @@ export default function AdminPage() {
                     {t('notificationsTitle', locale)}
                   </p>
                 </div>
-                {[
-                  '3 new members in Creator Lab',
-                  'E-book purchase: Creator Starter Pack',
-                  'Broadcast open rate 62%',
-                ].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setNotifOpen(false)}
-                    className="w-full text-left px-4 py-3 text-xs font-medium text-slate-600 hover:bg-slate-50 border-b border-slate-50 last:border-0"
-                  >
-                    {n}
-                  </button>
-                ))}
+                {headerNotifs.length === 0 ? (
+                  <p className="px-4 py-4 text-xs font-medium text-slate-500">
+                    {t('notifEmpty', locale)}
+                  </p>
+                ) : (
+                  headerNotifs.map((n) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => setNotifOpen(false)}
+                      className="w-full text-left px-4 py-3 text-xs font-medium text-slate-600 hover:bg-slate-50 border-b border-slate-50 last:border-0"
+                    >
+                      {t(n.messageKey as TranslationKey, locale)}
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -3518,6 +3631,18 @@ export default function AdminPage() {
         </>
       )}
 
+      <BioPublishSuccessDialog
+        open={publishDialogOpen}
+        onOpenChange={setPublishDialogOpen}
+        firstPublish={publishDialogFirst}
+        publicDisplay={bioPublicDisplay(publishDialogHandle)}
+        publicUrl={
+          typeof window !== 'undefined'
+            ? `${window.location.origin}/@${publishDialogHandle.replace(/^@+/, '')}`
+            : bioPublicUrl(publishDialogHandle)
+        }
+      />
+
       <CreateWorkspaceModal
         open={createWsOpen}
         onOpenChange={setCreateWsOpen}
@@ -3529,6 +3654,12 @@ export default function AdminPage() {
           queryClient.invalidateQueries({ queryKey: ['admin-community'] });
           queryClient.invalidateQueries({ queryKey: ['admin-email'] });
         }}
+      />
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        minPlan={upgradeTarget}
       />
 
       <style jsx global>{`

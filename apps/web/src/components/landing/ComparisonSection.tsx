@@ -4,53 +4,13 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { Check, LayoutGrid, List, X } from 'lucide-react';
 import { useState } from 'react';
-
-const FRAGMENTED_TOOLS = [
-  {
-    title: 'Link in Bio & Store',
-    sub: 'Stan Store / Linktree',
-    cost: '~$99 / mo',
-  },
-  {
-    title: 'Community & Courses',
-    sub: 'Skool / Circle',
-    cost: '~$99 / mo',
-  },
-  {
-    title: 'Social Content Planner',
-    sub: 'Later / Planoly',
-    cost: '~$25 / mo',
-  },
-  {
-    title: 'Nordic VAT & Tax',
-    sub: 'Manual calculation & friction',
-    cost: 'Extra Time',
-  },
-];
-
-const WINNER_PILLARS = [
-  {
-    title: '1-Tap Mobile Checkout',
-    body: 'Convert mobile visitors in 10s with BankID, cards & Apple Pay.',
-  },
-  {
-    title: 'Link in Bio & Digital Store',
-    body: 'Sell e-books, courses & coaching with luxury theme presets.',
-  },
-  {
-    title: 'Social Planner & Social Sets',
-    body: 'Monthly calendar, Kanban board & multi-channel post scheduler.',
-  },
-  {
-    title: 'Automated Nordic VAT & Tax',
-    body: 'Automated 6%/25% VAT, Fortnox sync & receipt exports built-in.',
-  },
-];
+import { useLanguage } from '@/lib/i18n';
 
 type MockupView = 'bento' | 'table';
 
 /** Why Choose Us — bento comparison: fragmented stack vs clikd: Creator Studio. */
 export function ComparisonSection() {
+  const { t } = useLanguage();
   const [view, setView] = useState<MockupView>('bento');
 
   return (
@@ -63,23 +23,22 @@ export function ComparisonSection() {
         <div className="max-w-3xl mx-auto text-center mb-8 sm:mb-10">
           <span className="inline-flex items-center rounded-full bg-purple-50 border border-purple-200/80 px-3.5 py-1.5">
             <span className="font-mono text-xs font-bold text-purple-900 tracking-wide">
-              ⚡ WHY CHOOSE CLIKD:
+              {t('comparison.eyebrow')}
             </span>
           </span>
           <h2
             id="why-choose-heading"
             className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight font-outfit leading-tight"
           >
-            Stop Juggling Multiple Subscriptions
+            {t('comparison.headline')}
           </h2>
           <p className="mt-4 text-slate-500 font-medium text-base sm:text-lg leading-relaxed font-sans max-w-2xl mx-auto">
-            One unified studio replacing 4+ separate subscriptions, complex logins, and hidden
-            transaction fees.
+            {t('comparison.sub')}
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2.5">
             <span className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
-              Mockup view:
+              {t('comparison.mockupView')}
             </span>
             <div className="inline-flex flex-wrap items-center justify-center gap-2">
               <button
@@ -92,7 +51,7 @@ export function ComparisonSection() {
                 }`}
               >
                 <LayoutGrid size={13} strokeWidth={2.4} />
-                Option A: Bento Cards
+                {t('comparison.optionBento')}
                 <span
                   className={`ml-0.5 text-[9px] font-bold ${
                     view === 'bento' ? 'text-white/70' : 'text-slate-400'
@@ -111,7 +70,7 @@ export function ComparisonSection() {
                 }`}
               >
                 <List size={13} strokeWidth={2.4} />
-                Option B: Clean Glass Table
+                {t('comparison.optionTable')}
               </button>
             </div>
           </div>
@@ -140,6 +99,22 @@ export function ComparisonSection() {
 }
 
 function BentoComparison() {
+  const { t } = useLanguage();
+
+  const fragmentedTools = [
+    { title: t('comparison.toolBio'), sub: t('comparison.toolBioSub'), cost: '~$99 / mo' },
+    { title: t('comparison.toolCommunity'), sub: t('comparison.toolCommunitySub'), cost: '~$99 / mo' },
+    { title: t('comparison.toolPlanner'), sub: t('comparison.toolPlannerSub'), cost: '~$25 / mo' },
+    { title: t('comparison.toolVat'), sub: t('comparison.toolVatSub'), cost: t('comparison.extraTime') },
+  ];
+
+  const winnerPillars = [
+    { title: t('comparison.pillarCheckout'), body: t('comparison.pillarCheckoutBody') },
+    { title: t('comparison.pillarBio'), body: t('comparison.pillarBioBody') },
+    { title: t('comparison.pillarPlanner'), body: t('comparison.pillarPlannerBody') },
+    { title: t('comparison.pillarVat'), body: t('comparison.pillarVatBody') },
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 18 }}
@@ -152,7 +127,7 @@ function BentoComparison() {
       <div className="lg:col-span-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-[0_8px_30px_-16px_rgba(15,23,42,0.12)] flex flex-col">
         <div className="flex items-center justify-between gap-2 mb-4">
           <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200/70 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-rose-500">
-            ❌ The Fragmented Way
+            ❌ {t('comparison.fragmentedTitle')}
           </span>
           <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
             4 Separate Apps
@@ -167,7 +142,7 @@ function BentoComparison() {
         </p>
 
         <ul className="mt-5 space-y-2 flex-1">
-          {FRAGMENTED_TOOLS.map((tool) => (
+          {fragmentedTools.map((tool) => (
             <li
               key={tool.title}
               className="flex items-center gap-2.5 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 min-h-[52px]"
@@ -213,7 +188,7 @@ function BentoComparison() {
       >
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <span className="inline-flex items-center gap-1 rounded-full bg-[#10B981]/20 border border-[#10B981]/30 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-[#10B981]">
-            ✓ All-in-One Winner
+            ✓ {t('comparison.winnerTitle')}
           </span>
           <span className="inline-flex items-center rounded-full bg-white/10 border border-white/15 px-2.5 py-1 text-[10px] font-bold text-white/90">
             clikd<span className="text-[#F472B6]">:</span> Creator Studio
@@ -229,7 +204,7 @@ function BentoComparison() {
         </p>
 
         <div className="mt-5 grid sm:grid-cols-2 gap-2.5 flex-1">
-          {WINNER_PILLARS.map((pillar) => (
+          {winnerPillars.map((pillar) => (
             <div
               key={pillar.title}
               className="rounded-2xl bg-white/[0.06] border border-white/10 p-3.5 sm:p-4"
@@ -264,10 +239,10 @@ function BentoComparison() {
             </p>
           </div>
           <Link
-            href="/account/signup"
+            href="/onboarding"
             className="inline-flex items-center justify-center min-h-[44px] px-6 py-3.5 rounded-2xl bg-[#F472B6] hover:bg-[#e0529c] text-slate-950 font-black text-xs transition-colors shadow-lg shadow-pink-500/20"
           >
-            Start Your Free Studio →
+            {t('comparison.cta')} →
           </Link>
         </div>
       </div>

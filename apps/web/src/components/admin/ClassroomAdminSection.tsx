@@ -28,6 +28,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { FeatureGate } from '@/components/common/FeatureGate';
+import { useSubscription } from '@/components/common/useSubscription';
+import { UNLIMITED } from '@/lib/config/plans';
 
 type ClassroomResponse = {
   courses: AdminCourse[];
@@ -53,6 +56,7 @@ export default function ClassroomAdminSection({
 }) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const { hasFeature, limits, requestUpgrade } = useSubscription();
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
@@ -281,8 +285,56 @@ export default function ClassroomAdminSection({
     );
   }
 
+  // Demo storage estimate: ~0.8 GB per course video + ~0.4 GB per lesson video.
+  const usedGb =
+    Math.round(
+      (courses.filter((c) => Boolean(c.video_url)).length * 0.8 +
+        courses.reduce(
+          (sum, c) =>
+            sum + (c.lessons?.filter((l) => Boolean(l.video_url)).length ?? 0) * 0.4,
+          0
+        )) *
+        10
+    ) / 10;
+  const storageCap = limits.maxVideoStorageGb;
+  const storageNearLimit =
+    storageCap > 0 && storageCap < UNLIMITED && usedGb / storageCap >= 0.9;
+
+  if (!hasFeature('coursesAndVideoHosting')) {
+    return (
+      <FeatureGate
+        feature="coursesAndVideoHosting"
+        title="Unlock Classroom & Video Hosting"
+        description="Upgrade to Creator to host courses and upload video. Starter supports embeds only (YouTube / Vimeo / Loom)."
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {storageCap > 0 && (
+        <div
+          className={`rounded-xl border px-4 py-3 text-xs font-semibold flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 ${
+            storageNearLimit
+              ? 'border-amber-200 bg-amber-50 text-amber-900'
+              : 'border-slate-200 bg-white text-slate-600'
+          }`}
+        >
+          <span>
+            Video storage: {usedGb.toFixed(1)} GB / {storageCap} GB used
+            {storageNearLimit ? ' — approaching plan limit' : ''}
+          </span>
+          {storageNearLimit && (
+            <button
+              type="button"
+              onClick={() => requestUpgrade('pro')}
+              className="inline-flex items-center justify-center min-h-[36px] px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-bold"
+            >
+              Upgrade for more storage
+            </button>
+          )}
+        </div>
+      )}
       {/* Header + filters */}
       <div className="nc-glass rounded-[1.5rem] p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-4">

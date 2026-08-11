@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n';
 import {
   Dialog,
   DialogContent,
@@ -26,12 +27,15 @@ const PLANS: {
     name: 'Starter',
     price: '0 SEK',
     priceNote: 'Free forever',
-    desc: 'Launch your first bio link & community.',
+    desc: 'Launch your first digital product or bio link without fixed costs.',
     features: [
-      '1 Social Set & Bio Link',
-      'Community up to 25 members',
-      '1-tap mobile checkout',
-      'Basic analytics',
+      '8% Transaction Fee on Sales (No monthly sub)',
+      '1 Social Set & Bio Link Storefront',
+      '1 Free Community (Up to 25 members)',
+      'Sell digital products & downloads',
+      '1-Tap Mobile Checkout',
+      'Basic Analytics & Email CRM',
+      '1 seat in your workspace',
     ],
   },
   {
@@ -39,28 +43,31 @@ const PLANS: {
     name: 'Creator',
     price: '199 SEK',
     priceNote: 'per month',
-    desc: 'Full planner, bio studio & CRM for growing creators.',
+    desc: 'Everything you need to sell, post, and grow your community.',
     highlight: true,
     features: [
-      'Unlimited community members',
-      'Content Planner & Kanban',
-      'Bio Link Studio + Design themes',
-      'Email CRM (2,500 contacts)',
-      'Fortnox & VAT automation',
+      'Unlimited Community Members',
+      'Full Social Content Planner & Kanban',
+      'Bio Link Storefront & 1-Tap Checkout',
+      'Classroom Courses & Video Hosting (25 GB)',
+      'Email CRM & Broadcasts (2,500 contacts)',
+      'Reduced 2.5% Platform Fee',
+      '2 seats in your workspace for teammates',
     ],
   },
   {
     id: 'pro',
     name: 'Pro / Agency',
-    price: '499 SEK',
+    price: '699 SEK',
     priceNote: 'per month',
-    desc: 'Multi-brand workspaces with 0% platform fee.',
+    desc: 'For high-earning creators, educators, and multi-brand agencies.',
     features: [
-      '0% platform fee',
-      'Multiple communities & workspaces',
-      'Custom domain linking',
-      'Team invites & roles',
-      'Priority support',
+      '0% Platform Fee (Keep 100% revenue)',
+      'Multiple Communities & 3 Workspaces',
+      '5 seats in workspace (+99 kr per extra)',
+      'Custom Domain Linking (yourname.se)',
+      'AI Content & Member Copilot Suite',
+      'Priority 1:1 Onboarding & Support',
     ],
   },
 ];
@@ -91,6 +98,7 @@ export default function AdminPlanModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const { data, isLoading } = useAdminPlan();
   const current = data?.plan ?? 'creator';
@@ -111,7 +119,7 @@ export default function AdminPlanModal({
       toast.success(`Switched to ${planLabel(res.plan)}`);
       onOpenChange(false);
     },
-    onError: () => toast.error('Could not update plan'),
+    onError: () => toast.error(t('common.error')),
   });
 
   return (
@@ -126,7 +134,7 @@ export default function AdminPlanModal({
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500 font-medium">
             {isLoading
-              ? 'Loading current plan…'
+              ? t('common.loading')
               : `Current: ${planLabel(current)}. Choose a plan to upgrade or change.`}
           </DialogDescription>
         </DialogHeader>

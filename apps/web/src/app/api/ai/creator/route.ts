@@ -1,4 +1,5 @@
 import { createOpenAIChatStream } from '@/lib/config/openai';
+import { requireFeature } from '@/lib/plan-guard';
 
 const ACTION_CONFIGS: Record<string, { system: string; userPrefix: string }> = {
   'course-outline': {
@@ -21,6 +22,9 @@ const ACTION_CONFIGS: Record<string, { system: string; userPrefix: string }> = {
 
 export async function POST(request: Request) {
   try {
+    const gate = requireFeature('aiCopilotSuite');
+    if (gate) return gate;
+
     const { action, topic } = await request.json();
 
     const config = ACTION_CONFIGS[action];
