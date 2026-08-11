@@ -165,13 +165,13 @@ export default function GdprPage() {
               <td className="px-3 py-2.5">PCI-DSS Level 1 / SCCs</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
-              <td className="px-3 py-2.5">Swish (Hippo/Banker)</td>
-              <td className="px-3 py-2.5">Mobile BankID &amp; 1-Tap Swish Payments</td>
+              <td className="px-3 py-2.5">Mobile payment partner</td>
+              <td className="px-3 py-2.5">Mobile BankID &amp; 1-Tap Checkout Payments</td>
               <td className="px-3 py-2.5">Sweden</td>
               <td className="px-3 py-2.5">Swedish Banking Standards</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
-              <td className="px-3 py-2.5">Vipps MobilePay</td>
+              <td className="px-3 py-2.5">Local mobile payment partner</td>
               <td className="px-3 py-2.5">Nordic Mobile Payments</td>
               <td className="px-3 py-2.5">Norway / Denmark</td>
               <td className="px-3 py-2.5">Nordic Financial Regulation</td>

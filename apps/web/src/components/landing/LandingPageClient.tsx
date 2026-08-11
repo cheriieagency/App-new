@@ -8,7 +8,6 @@ import { ArrowRight } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { ValuePillarsSection } from '@/components/landing/ValuePillarsSection';
 import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { PlatformSuiteSection } from '@/components/landing/PlatformSuiteSection';
@@ -104,11 +103,9 @@ export function LandingPageClient() {
     <div className="nc-landing min-h-screen bg-[#FAFAFA]">
       <LandingHeader isLoggedIn={!!session} />
       <HeroSection />
-      <ValuePillarsSection />
       <PlatformSuiteSection />
       <FeaturesSection />
       <ComparisonSection />
-      <RoiCalculator />
       <PricingSection />
       <ShowcaseSection
         featured={featured}
@@ -128,6 +125,7 @@ export function LandingPageClient() {
         onGoToCommunity={() => router.push('/dashboard')}
         joinPending={joinMutation.isPending}
       />
+      <RoiCalculator />
       <FaqSection />
 
       <section className="relative py-16 sm:py-24 text-center overflow-hidden bg-[#FAFAFA]">

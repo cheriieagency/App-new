@@ -33,7 +33,7 @@ export const MOCK_POSTS = [
     user_name: 'Emma Lindqvist',
     user_image: null,
     content:
-      'Delar mitt Swish-checkout-flöde från igår — 3 köp på under 10 minuter. Tipset: lägg order bump direkt under CTA:n.',
+      'Delar mitt checkout-flöde från igår — 3 köp på under 10 minuter. Tipset: lägg order bump direkt under CTA:n.',
     tag: 'Wins',
     image_url: null,
     is_pinned: false,
@@ -78,7 +78,7 @@ export const MOCK_POSTS = [
     user_name: 'Ebba Brobeck',
     user_image: null,
     content:
-      'Ebba Live Studio: på torsdag kör vi “Sälj med Swish live”. OSA via Events-fliken — platserna tar slut fort ⚡',
+      'Ebba Live Studio: på torsdag kör vi “Sälj live”. OSA via Events-fliken — platserna tar slut fort ⚡',
     tag: 'Announcement',
     image_url: null,
     is_pinned: true,
@@ -108,7 +108,7 @@ export const MOCK_COURSES = [
   {
     id: 501,
     title: 'Creator Bootcamp — Från idé till första krona',
-    description: '6 lektioner: nisch, erbjudande, Swish-checkout och launch.',
+    description: '6 lektioner: nisch, erbjudande, checkout och launch.',
     category: 'Marknadsföring',
     community_id: 101,
     cover_image:
@@ -137,7 +137,7 @@ export const MOCK_COURSES = [
       {
         id: 603,
         course_id: 501,
-        title: 'Swish-checkout på 10 sekunder',
+        title: 'Checkout på 10 sekunder',
         description: 'Sätt upp betalning utan Stripe-krångel.',
         video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
         order: 3,
@@ -199,9 +199,9 @@ export const MOCK_COURSES = [
 export const MOCK_EVENTS = [
   {
     id: 701,
-    title: 'Sälj med Swish — Live Workshop',
+    title: 'Sälj live — Workshop',
     description:
-      'Hands-on workshop: bygg ett erbjudande live och ta emot första Swish-betalningen samma kväll.',
+      'Hands-on workshop: bygg ett erbjudande live och ta emot första betalningen samma kväll.',
     start_time: daysFromNow(2, 18),
     end_time: daysFromNow(2, 19),
     stream_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',

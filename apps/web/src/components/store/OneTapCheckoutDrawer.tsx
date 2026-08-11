@@ -60,7 +60,7 @@ export default function OneTapCheckoutDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [bumpSelected, setBumpSelected] = useState(false);
   const [paying, setPaying] = useState(false);
-  const [swishPulse, setSwishPulse] = useState(false);
+  const [mobilePulse, setMobilePulse] = useState(false);
   const [done, setDone] = useState(false);
   const [redirectIn, setRedirectIn] = useState(3);
   const [accessEmailSent, setAccessEmailSent] = useState<{
@@ -78,7 +78,7 @@ export default function OneTapCheckoutDrawer({
     setErrors({});
     setBumpSelected(false);
     setPaying(false);
-    setSwishPulse(false);
+    setMobilePulse(false);
     setDone(false);
     setRedirectIn(3);
     setAccessEmailSent(null);
@@ -122,13 +122,13 @@ export default function OneTapCheckoutDrawer({
     return Object.keys(next).length === 0;
   };
 
-  const completePurchase = async (method: 'swish' | 'card') => {
+  const completePurchase = async (method: 'checkout' | 'card') => {
     if (!validateAll()) return;
     setPaying(true);
-    if (method === 'swish') {
-      setSwishPulse(true);
+    if (method === 'checkout') {
+      setMobilePulse(true);
       await new Promise((r) => setTimeout(r, 1400));
-      setSwishPulse(false);
+      setMobilePulse(false);
     } else {
       await new Promise((r) => setTimeout(r, 900));
     }
@@ -448,28 +448,28 @@ export default function OneTapCheckoutDrawer({
             <button
               type="button"
               disabled={paying}
-              onClick={() => void completePurchase('swish')}
+              onClick={() => void completePurchase('checkout')}
               className={`relative w-full h-12 min-h-[48px] rounded-xl text-white text-sm font-extrabold flex items-center justify-center gap-2 overflow-hidden disabled:opacity-70 transition-transform active:scale-[0.98] ${
-                swishPulse ? 'scale-[1.02]' : ''
+                mobilePulse ? 'scale-[1.02]' : ''
               }`}
               style={{ background: '#002244' }}
             >
-              {swishPulse && (
+              {mobilePulse && (
                 <span
                   className="absolute inset-0 bg-white/15"
                   style={{ animation: 'livePulse 0.8s ease-in-out infinite' }}
                 />
               )}
-              {paying && swishPulse ? (
+              {paying && mobilePulse ? (
                 <>
                   <Loader2 size={16} className="animate-spin relative z-10" />
-                  <span className="relative z-10">{t('openingSwish', locale)}</span>
+                  <span className="relative z-10">{t('openingCheckout', locale)}</span>
                 </>
               ) : (
                 <>
                   <Smartphone size={16} className="relative z-10" />
                   <span className="relative z-10">
-                    {tf('payWithSwish', locale, { amount: Math.round(total) })}
+                    {tf('payInstantly', locale, { amount: Math.round(total) })}
                   </span>
                 </>
               )}
@@ -481,7 +481,7 @@ export default function OneTapCheckoutDrawer({
               onClick={() => void completePurchase('card')}
               className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-900 flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-60"
             >
-              {paying && !swishPulse ? (
+              {paying && !mobilePulse ? (
                 <Loader2 size={15} className="animate-spin" />
               ) : (
                 <CreditCard size={15} />

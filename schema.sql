@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS lesson_progress (
 );
 
 -- -----------------------------------------------------------------------------
--- 6) products + payments (Swish / Vipps / Stripe-ready)
+-- 6) products + payments (mobile / Stripe-ready)
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS products (
@@ -938,7 +938,7 @@ CROSS JOIN (
   VALUES
     ('Välkommen & setup', NULL, 1),
     ('Din första produkt', NULL, 2),
-    ('Swish-checkout på 10 sekunder', NULL, 3)
+    ('Checkout på 10 sekunder', NULL, 3)
 ) AS l(title, video_url, ord)
 WHERE c.title = 'Kom igång som kreatör'
   AND NOT EXISTS (

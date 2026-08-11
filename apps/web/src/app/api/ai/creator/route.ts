@@ -1,3 +1,5 @@
+import { createOpenAIChatStream } from '@/lib/config/openai';
+
 const ACTION_CONFIGS: Record<string, { system: string; userPrefix: string }> = {
   'course-outline': {
     system: `You are an expert course creator for digital entrepreneurs. Create structured, engaging educational content with clear modules and lesson breakdowns. Format with numbered modules and bulleted lesson titles.`,
@@ -23,7 +25,7 @@ export async function POST(request: Request) {
 
     const config = ACTION_CONFIGS[action];
     if (!config) {
-      return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400 });
+      return Response.json({ error: 'Invalid action' }, { status: 400 });
     }
 
     const topicSuffix = topic
@@ -32,32 +34,12 @@ export async function POST(request: Request) {
 
     const userMessage = config.userPrefix + topicSuffix;
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_CREATE_BASE_URL}/integrations/chat-gpt/conversationgpt4`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.ANYTHING_PROJECT_TOKEN}`,
-        },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: config.system },
-            { role: 'user', content: userMessage },
-          ],
-          stream: true,
-        }),
-      }
-    );
-
-    return new Response(response.body, {
-      headers: {
-        'Content-Type': 'text/plain',
-        'Transfer-Encoding': 'chunked',
-      },
-    });
+    return createOpenAIChatStream([
+      { role: 'system', content: config.system },
+      { role: 'user', content: userMessage },
+    ]);
   } catch (error) {
     console.error('Creator AI error:', error);
-    return new Response(JSON.stringify({ error: 'AI generation failed' }), { status: 500 });
+    return Response.json({ error: 'AI generation failed' }, { status: 500 });
   }
 }

@@ -51,7 +51,7 @@ import useUpload from '@/utils/useUpload';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
-import { clearPlatformRole } from '@/lib/use-platform-role';
+import { signOutAndRedirect } from '@/lib/sign-out-client';
 import {
   CommunitySearchAutocomplete,
   type SearchableCommunity,
@@ -534,6 +534,10 @@ function DashboardPageInner() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { locale } = useLanguage();
+
+  const handleSignOut = useCallback(() => {
+    void signOutAndRedirect('/');
+  }, []);
 
   const [sidebarView, setSidebarView] = useState<SidebarView>('home');
   const [selectedCommunity, setSelectedCommunity] = useState<any>(null);
@@ -1407,9 +1411,8 @@ function DashboardPageInner() {
           ))}
         </div>
         <button
-          onClick={() =>
-            void clearPlatformRole().then(() => authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } }))
-          }
+          type="button"
+          onClick={handleSignOut}
           className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-colors"
         >
           <LogOut size={14} /> {t('signOut', locale)}
@@ -2284,9 +2287,7 @@ function DashboardPageInner() {
         <div className="px-3 pb-4 pt-2 border-t border-slate-100">
           <button
             type="button"
-            onClick={() =>
-              void clearPlatformRole().then(() => authClient.signOut({ fetchOptions: { onSuccess: () => router.push('/') } }))
-            }
+            onClick={handleSignOut}
             className="w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 rounded-2xl text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium transition-all"
           >
             <LogOut size={18} strokeWidth={1.75} className="flex-shrink-0 opacity-90" aria-hidden />

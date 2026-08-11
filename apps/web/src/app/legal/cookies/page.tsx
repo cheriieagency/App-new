@@ -129,7 +129,7 @@ export default function CookiesPage() {
       </h3>
       <p>
         When you interact with integrated features—such as scheduling posts to connected social media
-        platforms or purchasing via payment gateways (Swish, Vipps, Stripe)—third-party partners may
+        platforms or purchasing via payment gateways (Stripe and local mobile payments)—third-party partners may
         place necessary session tokens to execute the request securely.
       </p>
 
@@ -190,10 +190,10 @@ export default function CookiesPage() {
               <td className="px-3 py-2.5">Essential / 1 Year</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
-              <td className="px-3 py-2.5 font-mono text-xs">swish_checkout_token</td>
-              <td className="px-3 py-2.5">getswish.se / Banker</td>
+              <td className="px-3 py-2.5 font-mono text-xs">checkout_session_token</td>
+              <td className="px-3 py-2.5">payment partner</td>
               <td className="px-3 py-2.5">
-                Validates active 1-tap Swish Mobile BankID transaction sessions
+                Validates active 1-tap Mobile BankID transaction sessions
               </td>
               <td className="px-3 py-2.5">Essential / Session</td>
             </tr>

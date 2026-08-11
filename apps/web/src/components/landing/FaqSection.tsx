@@ -39,10 +39,10 @@ const FILTERS: { id: FaqCategory; labelKey: TranslationKey; icon: LucideIcon }[]
 
 const FAQ_ITEMS: FaqItemDef[] = [
   {
-    id: 'swish',
+    id: 'checkout',
     category: 'payments',
-    qKey: 'faqSwishQ',
-    aKey: 'faqSwishA',
+    qKey: 'faqPaymentsQ',
+    aKey: 'faqPaymentsA',
     icon: Bolt,
     iconWrap: 'bg-[#FCE7F3] text-[#F472B6]',
   },
@@ -107,7 +107,7 @@ const FAQ_ITEMS: FaqItemDef[] = [
 export function FaqSection() {
   const { locale } = useLanguage();
   const [filter, setFilter] = useState<FaqCategory>('all');
-  const [openId, setOpenId] = useState<string | null>('swish');
+  const [openId, setOpenId] = useState<string | null>('checkout');
 
   const visible = useMemo(
     () => (filter === 'all' ? FAQ_ITEMS : FAQ_ITEMS.filter((item) => item.category === filter)),

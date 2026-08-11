@@ -15,7 +15,7 @@ import {
   Circle,
 } from 'lucide-react';
 import type { CommunityAbout } from '@/lib/community-about';
-import { SwishCheckoutDrawer } from '@/components/community/SwishCheckoutDrawer';
+import { InstantCheckoutDrawer } from '@/components/community/InstantCheckoutDrawer';
 import { authClient } from '@/lib/auth-client';
 
 type CommunityAboutViewProps = {
@@ -33,7 +33,7 @@ export function CommunityAboutView({
   const { data: session } = authClient.useSession();
   const [activeThumb, setActiveThumb] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [swishOpen, setSwishOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const price = community.monthly_price ?? 199;
   const isJoined = Boolean(community.is_joined);
@@ -236,7 +236,7 @@ export function CommunityAboutView({
                         );
                         return;
                       }
-                      setSwishOpen(true);
+                      setCheckoutOpen(true);
                     }}
                     className="w-full min-h-12 rounded-2xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-sm font-black transition-all active:scale-[0.99] shadow-lg shadow-zinc-900/20"
                   >
@@ -246,7 +246,7 @@ export function CommunityAboutView({
 
                 <p className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-zinc-400 text-center">
                   <ShieldCheck size={12} />
-                  Drivs av clikd: • Säker Swish-betalning
+                  Drivs av clikd: • Säker snabbbetalning
                 </p>
               </div>
             </div>
@@ -254,9 +254,9 @@ export function CommunityAboutView({
         </div>
       </div>
 
-      <SwishCheckoutDrawer
-        open={swishOpen}
-        onOpenChange={setSwishOpen}
+      <InstantCheckoutDrawer
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
         communityName={community.name}
         priceSek={price}
         onSuccess={() => {

@@ -284,7 +284,7 @@ export default function StoreScreen() {
             borderTopColor: '#F0F0F0',
           }}
         >
-          {['Swish Verified', 'SSL Säkrad'].map((badge) => (
+          {['Payments Verified', 'SSL Säkrad'].map((badge) => (
             <View key={badge} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Shield size={11} color="#9CA3AF" />
               <Text style={{ fontSize: 10, fontWeight: '700', color: '#9CA3AF' }}>{badge}</Text>

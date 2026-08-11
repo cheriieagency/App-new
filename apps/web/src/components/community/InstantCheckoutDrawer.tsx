@@ -12,7 +12,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 
-type SwishCheckoutDrawerProps = {
+type InstantCheckoutDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   communityName: string;
@@ -20,13 +20,14 @@ type SwishCheckoutDrawerProps = {
   onSuccess?: () => void;
 };
 
-export function SwishCheckoutDrawer({
+/** Demo 1-tap mobile checkout drawer for community join. */
+export function InstantCheckoutDrawer({
   open,
   onOpenChange,
   communityName,
   priceSek,
   onSuccess,
-}: SwishCheckoutDrawerProps) {
+}: InstantCheckoutDrawerProps) {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -39,7 +40,7 @@ export function SwishCheckoutDrawer({
 
   const pay = async () => {
     setLoading(true);
-    // Demo Swish flow — replace with real payment provider later.
+    // Demo checkout flow — replace with real payment provider later.
     await new Promise((r) => setTimeout(r, 1200));
     setLoading(false);
     setDone(true);
@@ -57,7 +58,7 @@ export function SwishCheckoutDrawer({
       <DrawerContent className="mx-auto max-w-md rounded-t-3xl">
         <DrawerHeader className="text-left px-6 pt-4">
           <DrawerTitle className="font-display text-xl font-extrabold text-zinc-900">
-            Betala med Swish
+            Betala direkt
           </DrawerTitle>
           <DrawerDescription className="text-sm text-zinc-500 font-medium">
             {communityName} · {priceSek.toLocaleString('sv-SE')} kr/mån
@@ -71,7 +72,7 @@ export function SwishCheckoutDrawer({
               <div>
                 <p className="text-sm font-black text-emerald-900">Betalning skickad</p>
                 <p className="text-xs text-[#0f766e] font-medium mt-1">
-                  Öppna Swish-appen och godkänn begäran. Du får tillgång så fort betalningen är klar.
+                  Godkänn begäran på din telefon. Du får tillgång så fort betalningen är klar.
                 </p>
               </div>
             </div>
@@ -82,7 +83,7 @@ export function SwishCheckoutDrawer({
                   <Smartphone size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-zinc-900">Säker Swish-checkout</p>
+                  <p className="text-sm font-black text-zinc-900">Säker snabbcheckout</p>
                   <p className="text-xs text-zinc-500 font-medium">
                     Vanligtvis klar på under 10 sekunder
                   </p>
@@ -115,10 +116,10 @@ export function SwishCheckoutDrawer({
             >
               {loading ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" /> Skickar Swish-begäran…
+                  <Loader2 size={16} className="animate-spin" /> Skickar betalningsbegäran…
                 </>
               ) : (
-                `Betala ${priceSek.toLocaleString('sv-SE')} kr med Swish`
+                `Betala ${priceSek.toLocaleString('sv-SE')} kr direkt`
               )}
             </button>
           ) : null}

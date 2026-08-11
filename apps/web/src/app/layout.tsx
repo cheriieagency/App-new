@@ -35,7 +35,7 @@ const firaCode = Fira_Code({
 
 const defaultTitle = 'clikd: — Build, Sell & Scale Community, Bio & Socials';
 const defaultDescription =
-  'All-in-one creator platform for the Nordics. Community, Swish Link-in-Bio, courses, social planner, and Vipps payments — where creators and fans click.';
+  'All-in-one creator platform for the Nordics. Community, Link-in-Bio, courses, social planner, and instant payments — where creators and fans click.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

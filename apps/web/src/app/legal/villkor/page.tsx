@@ -203,7 +203,7 @@ export default function VillkorPage() {
       <p>
         Depending on your subscription plan, clikd: may deduct a platform transaction fee (e.g.,
         0%–8%) on sales generated through your storefront or community, in addition to third-party
-        payment processing fees (Stripe, Swish, Vipps).
+        payment processing fees (Stripe, Checkout, Mobile).
       </p>
 
       <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">

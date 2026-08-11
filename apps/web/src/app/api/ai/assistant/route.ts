@@ -1,3 +1,5 @@
+import { createOpenAIChatStream } from '@/lib/config/openai';
+
 export async function POST(request: Request) {
   try {
     const { messages, lessonContext } = await request.json();
@@ -16,29 +18,12 @@ Guidelines:
 5. Answer as if you deeply understand the course content
 6. Be encouraging and motivating — members are learning new skills`;
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_CREATE_BASE_URL}/integrations/chat-gpt/conversationgpt4`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.ANYTHING_PROJECT_TOKEN}`,
-        },
-        body: JSON.stringify({
-          messages: [{ role: 'system', content: systemPrompt }, ...messages],
-          stream: true,
-        }),
-      }
-    );
-
-    return new Response(response.body, {
-      headers: {
-        'Content-Type': 'text/plain',
-        'Transfer-Encoding': 'chunked',
-      },
-    });
+    return createOpenAIChatStream([
+      { role: 'system', content: systemPrompt },
+      ...(Array.isArray(messages) ? messages : []),
+    ]);
   } catch (error) {
     console.error('Assistant AI error:', error);
-    return new Response(JSON.stringify({ error: 'AI assistant failed' }), { status: 500 });
+    return Response.json({ error: 'AI assistant failed' }, { status: 500 });
   }
 }

@@ -85,7 +85,7 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
   withCheckoutDefaults({
     id: 801,
     name: 'Creator Starter Pack',
-    description: 'E-bok + CapCut-templates + Swish-checklist för din första launch.',
+    description: 'E-bok + CapCut-templates + launch-checklist för din första launch.',
     price: 199,
     currency: 'SEK',
     type: 'ebook',
@@ -107,7 +107,7 @@ export const MOCK_STORE_PRODUCTS: StoreProduct[] = [
   withCheckoutDefaults({
     id: 802,
     name: 'Live Workshop Replay',
-    description: 'Inspelning + slides från Swish-workshopen.',
+    description: 'Inspelning + slides från launch-workshopen.',
     price: 349,
     currency: 'SEK',
     type: 'course',

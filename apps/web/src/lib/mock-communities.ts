@@ -48,7 +48,7 @@ export const MOCK_COMMUNITIES: SearchableCommunity[] = [
     id: 103,
     name: 'Svensk E-handel & Growth',
     slug: 'svensk-ehandel-growth',
-    description: 'Growth playbooks, Swish funnels and e-commerce tactics for Swedish brands.',
+    description: 'Growth playbooks, growth funnels and e-commerce tactics for Swedish brands.',
     category: 'E-handel',
     creator_name: 'Maja Lind',
     creator_image: null,
@@ -62,7 +62,7 @@ export const MOCK_COMMUNITIES: SearchableCommunity[] = [
     name: 'Clikd Hub',
     slug: 'nordic-creator',
     description:
-      'The ultimate community for Nordic digital creators & educators. Weekly live Q&As, course library, Swish funnel templates, and private member chat.',
+      'The ultimate community for Nordic digital creators & educators. Weekly live Q&As, course library, growth funnel templates, and private member chat.',
     category: 'Marknadsföring',
     creator_name: 'Sofia Bergström',
     creator_image: null,

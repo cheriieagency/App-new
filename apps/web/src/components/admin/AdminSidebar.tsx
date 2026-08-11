@@ -132,12 +132,16 @@ export default function AdminSidebar() {
       <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-40 w-64 flex-col justify-between bg-white border-r border-slate-200/80 text-slate-900 h-screen rounded-bl-[28px]">
         <div className="flex flex-col min-h-0 flex-1">
           <div className="px-4 pt-5 pb-4 space-y-4">
-            <div className="flex items-center gap-2.5 px-0.5">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 px-0.5 min-h-[44px] hover:opacity-90 transition-opacity"
+              aria-label="clikd: home"
+            >
               <ClikdMark size={34} className="rounded-[11px] shadow-sm" />
               <p className="font-clikd-wordmark font-extrabold text-[17px] text-slate-900 tracking-tight leading-none">
                 clikd<span className="text-[#F472B6]">:</span>
               </p>
-            </div>
+            </Link>
 
             <WorkspaceSelector
               compact

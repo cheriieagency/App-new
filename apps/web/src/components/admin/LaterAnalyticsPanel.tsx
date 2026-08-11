@@ -99,7 +99,7 @@ const ENGAGEMENT_OVERVIEW = {
 
 const TOP_PRODUCTS = [
   {
-    name: 'Gratis E-bok: Swish Funnels',
+    name: 'Gratis E-bok: Growth Funnels',
     category: 'Lead Magnet',
     clicks: 1420,
     conversion: '42.8%',
@@ -260,7 +260,7 @@ export default function LaterAnalyticsPanel() {
 
   const kpis = [
     {
-      label: t('kpiRevenueSwish', locale),
+      label: t('kpiRevenueCheckout', locale),
       value: '42,850 SEK',
       delta: '+24.5%',
       deltaTone: 'good' as const,
@@ -485,10 +485,10 @@ export default function LaterAnalyticsPanel() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
               <div>
                 <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
-                  {t('performanceSwishTitle', locale)}
+                  {t('performanceCheckoutTitle', locale)}
                 </h2>
                 <p className="text-sm text-slate-500 mt-1">
-                  {t('performanceSwishSub', locale)}
+                  {t('performanceCheckoutSub', locale)}
                 </p>
               </div>
               <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
@@ -1433,7 +1433,7 @@ type UsedHashtag = {
 const USED_HASHTAGS: UsedHashtag[] = [
   { tag: '#clikd', posts: 18, reach: 48200, er: 5.8, trend: 12 },
   { tag: '#linkinbio', posts: 14, reach: 36100, er: 4.9, trend: 8 },
-  { tag: '#swishcheckout', posts: 11, reach: 29400, er: 5.2, trend: 5 },
+  { tag: '#instantcheckout', posts: 11, reach: 29400, er: 5.2, trend: 5 },
   { tag: '#nordiccreator', posts: 9, reach: 22100, er: 4.4, trend: 3 },
   { tag: '#contentcreator', posts: 8, reach: 19800, er: 3.9, trend: -2 },
   { tag: '#digitalprodukter', posts: 7, reach: 17600, er: 4.1, trend: 6 },
@@ -1444,7 +1444,7 @@ const USED_HASHTAGS: UsedHashtag[] = [
 const AI_HASHTAG_SETS: { topic: string; tags: string[] }[] = [
   {
     topic: 'Product drop',
-    tags: ['#productlaunch', '#swishcheckout', '#nordicbrand', '#shopnow', '#clikd', '#linkinbio'],
+    tags: ['#productlaunch', '#instantcheckout', '#nordicbrand', '#shopnow', '#clikd', '#linkinbio'],
   },
   {
     topic: 'Creator tips',

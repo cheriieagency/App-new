@@ -36,7 +36,7 @@ export type ExtraKey =
   | 'landingHeroSub'
   | 'landingCtaStartFree'
   | 'landingCtaExplore'
-  | 'trustPillSwish'
+  | 'trustPillCheckout'
   | 'trustPillVat'
   | 'trustPillAi'
   | 'trustPillSocial'
@@ -103,8 +103,8 @@ export type ExtraKey =
   | 'faqEyebrow'
   | 'faqHeadline'
   | 'faqSub'
-  | 'faqSwishQ'
-  | 'faqSwishA'
+  | 'faqPaymentsQ'
+  | 'faqPaymentsA'
   | 'faqVatQ'
   | 'faqVatA'
   | 'faqBioQ'
@@ -302,8 +302,8 @@ export type ExtraKey =
   | 'communityOfWeek'
   | 'trendingCommunities'
   | 'membershipFee'
-  | 'cancelAnytimeSwish'
-  | 'instantSwishAccess'
+  | 'cancelAnytimeReady'
+  | 'instantAccessBadge'
   | 'coursesIncluded'
   | 'reviewsLabel'
   | 'joinArrow'
@@ -424,12 +424,12 @@ export type ExtraKey =
   | 'analyticsLinkinBio'
   | 'exportLabel'
   | 'last7Days'
-  | 'kpiRevenueSwish'
+  | 'kpiRevenueCheckout'
   | 'kpiFollowers'
   | 'kpiBioStoreCvr'
   | 'kpiPlannedPosts'
-  | 'performanceSwishTitle'
-  | 'performanceSwishSub'
+  | 'performanceCheckoutTitle'
+  | 'performanceCheckoutSub'
   | 'chartRevenue'
   | 'chartVisitors'
   | 'topBioProductsTitle'
@@ -537,7 +537,7 @@ export type ExtraKey =
   | 'paymentConfirmed'
   | 'redirectingTo'
   | 'continueNow'
-  | 'payWithSwish'
+  | 'payInstantly'
   | 'waitingForLive'
   | 'yourNamePlaceholder'
   | 'loadingCalendar'
@@ -754,7 +754,7 @@ export type ExtraKey =
   | 'accountMenuCreator'
   | 'accountMenuSettingsBilling'
   | 'accountMenuProfileBio'
-  | 'swishActive'
+  | 'paymentsActive'
   | 'notificationsTitle'
   | 'aiCopilotTitle'
   | 'activeBlocksTitle'
@@ -821,10 +821,10 @@ export const EXTRA_EN: ExtraDict = {
   landingHeroBadge: 'The all-in-one platform — clikd:',
   landingHeroHeadline: 'The All-in-One Creator Engine',
   landingHeroSub:
-    'Stop juggling Later, Linktree, Skool and Stripe. Sell digital products, host courses, plan social media content, and take instant Swish & Vipps payments — all in one app.',
+    'Stop juggling Later, Linktree, Skool and Stripe. Sell digital products, host courses, plan social media content, and take instant mobile payments — all in one app.',
   landingCtaStartFree: 'Start Your Free Community →',
   landingCtaExplore: 'Explore Popular Communities',
-  trustPillSwish: '⚡ Built-in Swish & Vipps',
+  trustPillCheckout: '⚡ Built-in Instant Checkout',
   trustPillVat: '🧾 Automatic Fortnox & VAT',
   trustPillAi: '🤖 3x AI Copilots Included',
   trustPillSocial: '📅 Planner, Bio & Social Sets',
@@ -873,7 +873,7 @@ export const EXTRA_EN: ExtraDict = {
     'Schedule and auto-post content across your multi-brand Social Set profiles with Kanban & Calendar views.',
   suiteBioTitle: 'Bio Link Builder',
   suiteBioSummary:
-    'Custom themes, UTM tracking, digital products, and 1-tap Swish & Vipps checkout flow.',
+    'Custom themes, UTM tracking, digital products, and 1-tap mobile checkout flow.',
   suiteAnalyticsTitle: 'In-depth Analytics',
   suiteAnalyticsSummary:
     'Growth charts, post/reel/story stats, audience demographics, and bio link sales metrics.',
@@ -904,9 +904,9 @@ export const EXTRA_EN: ExtraDict = {
   faqEyebrow: 'Help & Frequently Asked Questions',
   faqHeadline: "Got questions? We've got answers",
   faqSub: 'Payments, bio, social tagging, VAT and migrating members.',
-  faqSwishQ: 'How do Swish payments work?',
-  faqSwishA:
-    'Members pay with Swish or Vipps in checkout — often in under 10 seconds. Funds link to your creator account so you never rebuild checkout yourself.',
+  faqPaymentsQ: 'How do mobile payments work?',
+  faqPaymentsA:
+    'Members pay with mobile payment in checkout — often in under 10 seconds. Funds link to your creator account so you never rebuild checkout yourself.',
   faqVatQ: 'How is VAT and accounting handled?',
   faqVatA:
     'The platform applies correct Nordic VAT (e.g. 6% or 25%) and can generate Fortnox receipts automatically — built for Swedish and Nordic rules from day one.',
@@ -939,7 +939,7 @@ export const EXTRA_EN: ExtraDict = {
   viewCommunity: 'View Community',
   landingReadyHeadline: 'Ready for one platform — not five subscriptions?',
   landingReadySub:
-    'Social Sets, Bio Builder, post tagging, analytics, community, Swish and AI — built in from day one.',
+    'Social Sets, Bio Builder, post tagging, analytics, community, checkout and AI — built in from day one.',
   popularCategories: 'Popular categories',
   popularCommunities: 'Popular communities',
   followersLabel: 'followers',
@@ -1037,7 +1037,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   pillarPlanP3: 'Deep analytics',
   pillarSellTitle: 'Sell & Convert',
   pillarSellSub: 'Instant bio storefront with fast checkout.',
-  pillarSellP1: '1-Tap Swish & Vipps',
+  pillarSellP1: '1-Tap Mobile Checkout',
   pillarSellP2: 'Digital products',
   pillarSellP3: 'Custom storefronts',
   pillarEngageTitle: 'Engage & Retain',
@@ -1055,7 +1055,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   compareOldCost: '~$100–$250 / mo stacked fees',
   compareNewCost: 'From $0 / mo',
   compareOldPay: 'Limited gateways, high checkout friction',
-  compareNewPay: 'Swish · Vipps · Cards · Apple Pay',
+  compareNewPay: 'Mobile · Cards · Apple Pay',
   compareOldVat: 'Manual calculations & messy bookkeeping',
   compareNewVat: 'Automated Nordic VAT & Accounting Sync',
   compareOldTools: 'Disconnected bio links, schedulers & tools',
@@ -1091,11 +1091,11 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   pricingTrustMigration: 'Free migration support',
   planF1: '1 Social Set & Bio Link Storefront',
   planF2: '1 Free Community (Up to 25 members)',
-  planF3: 'Swish & Vipps 1-Tap Checkout',
+  planF3: '1-Tap Mobile Checkout',
   planF4: 'Basic Analytics & Email CRM',
   planC1: 'Unlimited Community Members',
   planC2: 'Full Social Content Planner & Kanban',
-  planC3: 'Bio Link Storefront & 1-Tap Swish',
+  planC3: 'Bio Link Storefront & 1-Tap Checkout',
   planC4: 'Classroom Courses & Video Hosting',
   planC5: 'Email CRM & Broadcasts (2,500 contacts)',
   planC6: 'Automated Fortnox & VAT (6%/25%)',
@@ -1112,8 +1112,8 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   communityOfWeek: 'Community of the Week',
   trendingCommunities: 'Trending Communities',
   membershipFee: 'Membership Fee',
-  cancelAnytimeSwish: 'Cancel anytime · Swish ready',
-  instantSwishAccess: 'Instant Swish Access',
+  cancelAnytimeReady: 'Cancel anytime · Instant access',
+  instantAccessBadge: 'Instant Access',
   coursesIncluded: '12 Courses Included',
   reviewsLabel: '4.9 · 128 reviews',
   joinArrow: 'Join →',
@@ -1121,7 +1121,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   noCommunitiesMatch: 'No communities match',
   showAllShort: 'Show all',
   faqFilterAll: 'All Questions',
-  faqFilterPayments: 'Payments & Swish',
+  faqFilterPayments: 'Payments & Checkout',
   faqFilterCommunity: 'Community & Migration',
   faqFilterVat: 'VAT & Accounting',
   faqFilterWorkspace: 'Workspace & Domain',
@@ -1142,7 +1142,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   footerBlurb: 'Engineered by creators, for creators. We built the all-in-one studio we wished existed for our own agency.',
   footerBuiltFor: 'Built for creators worldwide. Founded in Sweden.',
   footerRights: 'All rights reserved.',
-  footerBanking: 'BankID-ready · Swish & Vipps · Nordic VAT (6%/25%)',
+  footerBanking: 'BankID-ready · Instant checkout · Nordic VAT (6%/25%)',
   legalIntegritet: 'Privacy Policy',
   legalGdpr: 'GDPR & Data',
   legalVillkor: 'Terms of Service',
@@ -1234,16 +1234,16 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   analyticsLinkinBio: 'Link in bio',
   exportLabel: 'Export',
   last7Days: '7 days',
-  kpiRevenueSwish: 'Revenue (Swish)',
+  kpiRevenueCheckout: 'Revenue (Checkout)',
   kpiFollowers: 'Followers',
   kpiBioStoreCvr: 'Bio Store CVR',
   kpiPlannedPosts: 'Planned posts',
-  performanceSwishTitle: 'Performance & Swish revenue',
-  performanceSwishSub: 'Daily revenue in SEK over the last week',
+  performanceCheckoutTitle: 'Performance & checkout revenue',
+  performanceCheckoutSub: 'Daily revenue in SEK over the last week',
   chartRevenue: 'Revenue',
   chartVisitors: 'Visitors',
   topBioProductsTitle: 'Top products in Bio Store',
-  topBioProductsSub: 'Clicks, conversion and Swish revenue',
+  topBioProductsSub: 'Clicks, conversion and checkout revenue',
   newProduct: 'New product',
   colProduct: 'Product',
   colCategory: 'Category',
@@ -1353,7 +1353,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   accountMenuCreator: 'Creator',
   accountMenuSettingsBilling: 'Settings & billing',
   accountMenuProfileBio: 'Profile & bio',
-  swishActive: 'Swish Active ✓',
+  paymentsActive: 'Payments Active ✓',
   notificationsTitle: 'Notifications',
   aiCopilotTitle: 'AI Copilot',
   activeBlocksTitle: 'Active blocks',
@@ -1470,7 +1470,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   paymentConfirmed: 'Payment confirmed!',
   redirectingTo: 'Redirecting to {destination} in {seconds}s…',
   continueNow: 'Continue now',
-  payWithSwish: 'Pay with Swish · {amount} SEK',
+  payInstantly: 'Pay instantly · {amount} SEK',
   waitingForLive: 'Waiting for live…',
   yourNamePlaceholder: 'Your name',
   loadingCalendar: 'Loading calendar…',
@@ -1637,7 +1637,7 @@ export const EXTRA_SV: ExtraDict = {
     'Sluta jonglera Later, Linktree, Skool, Zoom och Stripe. Planera inlägg, tagga produkter, kör link-in-bio, bygg community, hosta events och ta nordiska betalningar — allt i en mobilförst-plattform.',
   landingCtaStartFree: 'Starta din gratis community',
   landingCtaExplore: 'Utforska populära communities',
-  trustPillSwish: '⚡ Inbyggd Swish & Vipps',
+  trustPillCheckout: '⚡ Inbyggd snabbcheckout',
   trustPillVat: '🧾 Automatisk Fortnox & moms',
   trustPillAi: '🤖 3× AI Copilots ingår',
   trustPillSocial: '📅 Planner, Bio & Social Sets',
@@ -1687,7 +1687,7 @@ export const EXTRA_SV: ExtraDict = {
     'Schemalägg och auto-posta innehåll över dina Social Set-profiler med Kanban- och kalendervy.',
   suiteBioTitle: 'Bio Link Builder',
   suiteBioSummary:
-    'Egna teman, UTM-spårning, digitala produkter och 1-trycks Swish & Vipps-checkout.',
+    'Egna teman, UTM-spårning, digitala produkter och 1-trycks mobilcheckout.',
   suiteAnalyticsTitle: 'Djupgående Analytics',
   suiteAnalyticsSummary:
     'Tillväxtgrafer, post/reel/story-statistik, demografi och bio-länkförsäljning.',
@@ -1718,9 +1718,9 @@ export const EXTRA_SV: ExtraDict = {
   faqEyebrow: 'FAQ',
   faqHeadline: 'Vanliga frågor',
   faqSub: 'Betalningar, bio, social tagging, moms och migrering av medlemmar.',
-  faqSwishQ: 'Hur fungerar Swish-betalningar?',
-  faqSwishA:
-    'Medlemmar betalar med Swish eller Vipps i kassan — ofta under 10 sekunder. Pengarna kopplas till ditt creator-konto.',
+  faqPaymentsQ: 'Hur fungerar mobilbetalningar?',
+  faqPaymentsA:
+    'Medlemmar betalar med mobilbetalning i kassan — ofta under 10 sekunder. Pengarna kopplas till ditt creator-konto.',
   faqVatQ: 'Hur hanteras moms och bokföring?',
   faqVatA:
     'Plattformen räknar rätt nordisk moms (t.ex. 6% eller 25%) och kan generera Fortnox-kvitton automatiskt.',
@@ -1752,7 +1752,7 @@ export const EXTRA_SV: ExtraDict = {
   viewCommunity: 'Visa community',
   landingReadyHeadline: 'Redo för en plattform — inte fem abonnemang?',
   landingReadySub:
-    'Social Sets, Bio Builder, post-tagging, analytics, community, Swish och AI — inbyggt från start.',
+    'Social Sets, Bio Builder, post-tagging, analytics, community, checkout och AI — inbyggt från start.',
   popularCategories: 'Populära kategorier',
   popularCommunities: 'Populära communities',
   followersLabel: 'följare',
@@ -1850,7 +1850,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   pillarPlanP3: 'Djup analytics',
   pillarSellTitle: 'Sell & Convert',
   pillarSellSub: 'Direkt bio-storefront med snabb checkout.',
-  pillarSellP1: '1-trycks Swish & Vipps',
+  pillarSellP1: '1-trycks mobilcheckout',
   pillarSellP2: 'Digitala produkter',
   pillarSellP3: 'Anpassade storefronts',
   pillarEngageTitle: 'Engage & Retain',
@@ -1868,7 +1868,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   compareOldCost: '~$100–$250 / mån staplade avgifter',
   compareNewCost: 'Från $0 / mån',
   compareOldPay: 'Begränsade gateways, hög friktion',
-  compareNewPay: 'Swish · Vipps · Kort · Apple Pay',
+  compareNewPay: 'Mobil · Kort · Apple Pay',
   compareOldVat: 'Manuell beräkning & rörig bokföring',
   compareNewVat: 'Automatisk nordisk moms & bokföringssynk',
   compareOldTools: 'Frånkopplade bio-länkar, schedulers & verktyg',
@@ -1904,11 +1904,11 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   pricingTrustMigration: 'Gratis migrationssupport',
   planF1: '1 Social Set & Bio Link Storefront',
   planF2: '1 gratis community (upp till 25 medlemmar)',
-  planF3: 'Swish & Vipps 1-trycks-checkout',
+  planF3: '1-trycks mobilcheckout',
   planF4: 'Grundläggande Analytics & Email CRM',
   planC1: 'Obegränsat antal community-medlemmar',
   planC2: 'Full Social Content Planner & Kanban',
-  planC3: 'Bio Link Storefront & 1-trycks Swish',
+  planC3: 'Bio Link Storefront & 1-trycks checkout',
   planC4: 'Classroom-kurser & videohosting',
   planC5: 'Email CRM & Broadcasts (2,500 kontakter)',
   planC6: 'Automatiserad Fortnox & moms (6%/25%)',
@@ -1925,8 +1925,8 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   communityOfWeek: 'Veckans community',
   trendingCommunities: 'Trending communities',
   membershipFee: 'Medlemsavgift',
-  cancelAnytimeSwish: 'Avsluta när som helst · Swish-redo',
-  instantSwishAccess: 'Direkt Swish-access',
+  cancelAnytimeReady: 'Avsluta när som helst · Direkt access',
+  instantAccessBadge: 'Direkt access',
   coursesIncluded: '12 kurser ingår',
   reviewsLabel: '4.9 · 128 recensioner',
   joinArrow: 'Gå med →',
@@ -1934,7 +1934,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   noCommunitiesMatch: 'Inga communities matchar',
   showAllShort: 'Visa alla',
   faqFilterAll: 'Alla frågor',
-  faqFilterPayments: 'Betalningar & Swish',
+  faqFilterPayments: 'Betalningar & Checkout',
   faqFilterCommunity: 'Community & migrering',
   faqFilterVat: 'Moms & bokföring',
   faqFilterWorkspace: 'Workspace & domän',
@@ -1955,7 +1955,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   footerBlurb: 'Engineered by creators, for creators. We built the all-in-one studio we wished existed for our own agency.',
   footerBuiltFor: 'Byggd för creators världen över. Grundad i Sverige.',
   footerRights: 'Alla rättigheter förbehållna.',
-  footerBanking: 'BankID-redo · Swish & Vipps · Nordisk moms (6%/25%)',
+  footerBanking: 'BankID-redo · Snabbcheckout · Nordisk moms (6%/25%)',
   legalIntegritet: 'Integritetspolicy',
   legalGdpr: 'GDPR & Data',
   legalVillkor: 'Användarvillkor',
@@ -2047,16 +2047,16 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   analyticsLinkinBio: 'Link in bio',
   exportLabel: 'Exportera',
   last7Days: '7 dagar',
-  kpiRevenueSwish: 'Intäkter (Swish)',
+  kpiRevenueCheckout: 'Intäkter (Checkout)',
   kpiFollowers: 'Följare',
   kpiBioStoreCvr: 'Bio Store CVR',
   kpiPlannedPosts: 'Planerade inlägg',
-  performanceSwishTitle: 'Prestanda & Swish-intäkter',
-  performanceSwishSub: 'Dagliga intäkter i SEK under senaste veckan',
+  performanceCheckoutTitle: 'Prestanda & checkout-intäkter',
+  performanceCheckoutSub: 'Dagliga intäkter i SEK under senaste veckan',
   chartRevenue: 'Intäkter',
   chartVisitors: 'Besökare',
   topBioProductsTitle: 'Topprodukter i Bio Store',
-  topBioProductsSub: 'Klick, konvertering och Swish-intäkt',
+  topBioProductsSub: 'Klick, konvertering och checkout-intäkt',
   newProduct: 'Ny produkt',
   colProduct: 'Produkt',
   colCategory: 'Kategori',
@@ -2166,7 +2166,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   accountMenuCreator: 'Creator',
   accountMenuSettingsBilling: 'Inställningar & fakturering',
   accountMenuProfileBio: 'Profil & bio',
-  swishActive: 'Swish aktiv ✓',
+  paymentsActive: 'Betalningar aktiva ✓',
   notificationsTitle: 'Aviseringar',
   aiCopilotTitle: 'AI Copilot',
   activeBlocksTitle: 'Aktiva block',
@@ -2283,7 +2283,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   paymentConfirmed: 'Betalning bekräftad!',
   redirectingTo: 'Omdirigerar till {destination} om {seconds}s…',
   continueNow: 'Fortsätt nu',
-  payWithSwish: 'Betala med Swish · {amount} SEK',
+  payInstantly: 'Betala direkt · {amount} SEK',
   waitingForLive: 'Väntar på live…',
   yourNamePlaceholder: 'Ditt namn',
   loadingCalendar: 'Laddar kalender…',
@@ -2475,7 +2475,7 @@ export const EXTRA_NO: ExtraDict = {
   viewCommunity: 'Vis community',
   landingReadyHeadline: 'Klar for én plattform — ikke fem abonnement?',
   landingReadySub:
-    'Social Sets, Bio Builder, post-tagging, analytics, community, Swish og AI — innebygd fra start.',
+    'Social Sets, Bio Builder, post-tagging, analytics, community, checkout og AI — innebygd fra start.',
   popularCategories: 'Populære kategorier',
   popularCommunities: 'Populære communities',
   followersLabel: 'følgere',
@@ -2605,7 +2605,7 @@ export const EXTRA_DA: ExtraDict = {
   viewCommunity: 'Se community',
   landingReadyHeadline: 'Klar til én platform — ikke fem abonnementer?',
   landingReadySub:
-    'Social Sets, Bio Builder, post-tagging, analytics, community, Swish og AI — indbygget fra start.',
+    'Social Sets, Bio Builder, post-tagging, analytics, community, checkout og AI — indbygget fra start.',
   popularCategories: 'Populære kategorier',
   popularCommunities: 'Populære communities',
   followersLabel: 'følgere',
@@ -2709,7 +2709,7 @@ export const EXTRA_FI: ExtraDict = {
     'Lopeta Laterin, Linktreen, Skoolin, Zoomin ja Stripen jongleeraus. Suunnittele julkaisuja, tagaa tuotteita, käytä link-in-biota, rakenna yhteisö, järjestä eventtejä ja ota pohjoismaiset maksut — kaikki yhdessä mobiili ensin -alustassa.',
   landingCtaStartFree: 'Aloita ilmainen yhteisö',
   landingCtaExplore: 'Tutustu suosittuihin yhteisöihin',
-  trustPillSwish: '⚡ Sisäänrakennettu Swish & Vipps',
+  trustPillCheckout: '⚡ Sisäänrakennettu pikamaksu',
   trustPillVat: '🧾 Automaattinen Fortnox & ALV',
   trustPillAi: '🤖 3× AI Copilot mukana',
   trustPillSocial: '📅 Planner, Bio & Social Sets',
@@ -2759,7 +2759,7 @@ export const EXTRA_FI: ExtraDict = {
     'Aikatauluta ja auto-julkaise sisältöä Social Set -profiileihisi Kanban- ja kalenterinäkymällä.',
   suiteBioTitle: 'Bio Link Builder',
   suiteBioSummary:
-    'Omat teemat, UTM-seuranta, digituotteet ja 1-napin Swish & Vipps -checkout.',
+    'Omat teemat, UTM-seuranta, digituotteet ja 1-napin mobiilimaksu.',
   suiteAnalyticsTitle: 'Syvä Analytics',
   suiteAnalyticsSummary:
     'Kasvukäyrät, post/reel/story-tilastot, demografia ja bio-linkkimyynti.',
@@ -2790,9 +2790,9 @@ export const EXTRA_FI: ExtraDict = {
   faqEyebrow: 'UKK',
   faqHeadline: 'Usein kysytyt kysymykset',
   faqSub: 'Maksut, bio, social tagging, ALV ja jäsenten migrointi.',
-  faqSwishQ: 'Miten Swish-maksut toimivat?',
-  faqSwishA:
-    'Jäsenet maksavat Swishillä tai Vippillä kassalla — usein alle 10 sekunnissa. Rahat yhdistetään creator-tiliisi.',
+  faqPaymentsQ: 'Miten mobiilimaksut toimivat?',
+  faqPaymentsA:
+    'Jäsenet maksavat mobiilimaksulla tai kortilla kassalla — usein alle 10 sekunnissa. Rahat yhdistetään creator-tiliisi.',
   faqVatQ: 'Miten ALV ja kirjanpito hoidetaan?',
   faqVatA:
     'Alusta laskee oikean pohjoismaisen ALV:n (esim. 6 % tai 25 %) ja voi luoda Fortnox-kuitit automaattisesti.',
@@ -2824,7 +2824,7 @@ export const EXTRA_FI: ExtraDict = {
   viewCommunity: 'Näytä yhteisö',
   landingReadyHeadline: 'Valmis yhdelle alustalle — etkä viidelle tilaukselle?',
   landingReadySub:
-    'Social Sets, Bio Builder, post-tagging, analytics, yhteisö, Swish ja AI — sisäänrakennettuna alusta alkaen.',
+    'Social Sets, Bio Builder, post-tagging, analytics, yhteisö, checkout ja AI — sisäänrakennettuna alusta alkaen.',
   popularCategories: 'Suositut kategoriat',
   popularCommunities: 'Suositut yhteisöt',
   followersLabel: 'seuraajaa',
@@ -2991,15 +2991,15 @@ navFeatures: 'Ominaisuudet',
   analyticsLinkinBio: 'Link in bio',
   exportLabel: 'Vie',
   last7Days: '7 päivää',
-  kpiRevenueSwish: 'Tulot (Swish)',
+  kpiRevenueCheckout: 'Tulot (Checkout)',
   kpiFollowers: 'Seuraajat',
   kpiPlannedPosts: 'Ajastetut julkaisut',
-  performanceSwishTitle: 'Suorituskyky & Swish-tulot',
-  performanceSwishSub: 'Päivittäiset tulot SEK:nä viime viikolta',
+  performanceCheckoutTitle: 'Suorituskyky & checkout-tulot',
+  performanceCheckoutSub: 'Päivittäiset tulot SEK:nä viime viikolta',
   chartRevenue: 'Tulot',
   chartVisitors: 'Vierailijat',
   topBioProductsTitle: 'Bio Storen top-tuotteet',
-  topBioProductsSub: 'Klikkaukset, konversio ja Swish-tulot',
+  topBioProductsSub: 'Klikkaukset, konversio ja checkout-tulot',
   newProduct: 'Uusi tuote',
   colProduct: 'Tuote',
   colCategory: 'Kategoria',
@@ -3040,7 +3040,7 @@ navFeatures: 'Ominaisuudet',
   paymentConfirmed: 'Maksu vahvistettu!',
   redirectingTo: 'Ohjataan kohteeseen {destination} {seconds}s…',
   continueNow: 'Jatka nyt',
-  payWithSwish: 'Maksa Swishillä · {amount} SEK',
+  payInstantly: 'Maksa heti · {amount} SEK',
   waitingForLive: 'Odotetaan liveä…',
   yourNamePlaceholder: 'Nimesi',
   loadingCalendar: 'Ladataan kalenteria…',
@@ -3261,7 +3261,7 @@ navFeatures: 'Ominaisuudet',
   accountMenuCreator: 'Creator',
   accountMenuSettingsBilling: 'Asetukset & laskutus',
   accountMenuProfileBio: 'Profiili & bio',
-  swishActive: 'Swish aktiivinen ✓',
+  paymentsActive: 'Maksut aktiivisia ✓',
   notificationsTitle: 'Ilmoitukset',
   aiCopilotTitle: 'AI Copilot',
   activeBlocksTitle: 'Aktiiviset lohkot',

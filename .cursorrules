@@ -3,7 +3,7 @@ You are an expert full-stack engineer working on Clikd. (clikd:) — a Nordic al
 BRAND (keep UI light-canvas by default):
 - Name / wordmark: clikd: (Space Grotesk + pink colon)
 - Mark: pink `c` + white `:` on midnight periwinkle `#2B2568`
-- Signature pink: `#F472B6` · Soft lilac: `#E9D5FF` · Swish mint: `#10B981`
+- Signature pink: `#F472B6` · Soft lilac: `#E9D5FF` · Mint accent: `#10B981`
 - Light canvas: `#FAFAFA` · Dark ink: `#0F172A`
 - Fonts: Space Grotesk (display), Plus Jakarta Sans (UI), Fira Code (mono / prices / `c:`)
 

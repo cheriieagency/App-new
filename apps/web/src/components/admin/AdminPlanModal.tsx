@@ -30,7 +30,7 @@ const PLANS: {
     features: [
       '1 Social Set & Bio Link',
       'Community up to 25 members',
-      'Swish & Vipps checkout',
+      '1-tap mobile checkout',
       'Basic analytics',
     ],
   },

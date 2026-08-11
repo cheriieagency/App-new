@@ -192,7 +192,7 @@ export function ShowcaseSection({
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
                       <Zap size={14} className="text-[#10B981]" aria-hidden />{' '}
-                      {t('instantSwishAccess', locale)}
+                      {t('instantAccessBadge', locale)}
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
                       <BookOpen size={14} className="text-slate-300" aria-hidden />{' '}
@@ -209,7 +209,7 @@ export function ShowcaseSection({
                     199 <span className="text-base font-bold text-slate-400 font-mono">{t('sekPerMo', locale)}</span>
                   </p>
                   <p className="text-xs font-medium text-slate-400 mb-5 font-display">
-                    {t('cancelAnytimeSwish', locale)}
+                    {t('cancelAnytimeReady', locale)}
                   </p>
                   <Link
                     href={`/communities/${hero.id}`}

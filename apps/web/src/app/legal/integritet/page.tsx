@@ -65,11 +65,11 @@ export default function IntegritetPage() {
       </h3>
       <p>
         When purchasing subscriptions, digital products, or memberships, we collect transaction
-        history, purchase amounts, and chosen payment methods (Swish, Vipps, Card, or Bank Transfer).
+        history, purchase amounts, and chosen payment methods (Mobile, Card, or Bank Transfer).
       </p>
       <p>
         Note: All card and direct payments are securely processed by our certified payment partners
-        (e.g., Stripe, Swish). clikd: never stores full credit card numbers or sensitive banking
+        (e.g., Stripe and card processors). clikd: never stores full credit card numbers or sensitive banking
         details on our servers.
       </p>
 
@@ -246,7 +246,7 @@ export default function IntegritetPage() {
           hosting within EU/EEA or approved safeguards).
         </li>
         <li>
-          <strong>Payment Gateways:</strong> Stripe Inc., Swish (Hippo/Banker), Vipps MobilePay (For
+          <strong>Payment Gateways:</strong> Stripe Inc. and local mobile payment partners (For
           secure payment processing).
         </li>
         <li>

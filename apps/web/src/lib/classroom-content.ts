@@ -381,7 +381,7 @@ export const SKOOL_CLASSROOM_COURSES: ClassroomCourse[] = [
   withFlat({
     id: 703,
     title: 'Digital Product Starter Course',
-    description: 'From idea to Swish checkout — price, package, and launch a simple digital offer.',
+    description: 'From idea to instant checkout — price, package, and launch a simple digital offer.',
     category: 'Produkt',
     community_id: 101,
     cover_image: covers.product,
@@ -443,7 +443,7 @@ export const SKOOL_CLASSROOM_COURSES: ClassroomCourse[] = [
             id: 7303,
             course_id: 703,
             module_id: '703-launch',
-            title: 'Swish checkout setup',
+            title: 'Instant checkout setup',
             order: 1,
             video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
             content_blocks: [
@@ -553,7 +553,7 @@ export const SKOOL_CLASSROOM_COURSES: ClassroomCourse[] = [
   withFlat({
     id: 501,
     title: 'Creator Bootcamp — Från idé till första krona',
-    description: '6 lektioner: nisch, erbjudande, Swish-checkout och launch.',
+    description: '6 lektioner: nisch, erbjudande, checkout och launch.',
     category: 'Marknadsföring',
     community_id: 101,
     cover_image: covers.bootcamp,
@@ -602,7 +602,7 @@ export const SKOOL_CLASSROOM_COURSES: ClassroomCourse[] = [
             id: 603,
             course_id: 501,
             module_id: '501-core',
-            title: 'Swish-checkout på 10 sekunder',
+            title: 'Checkout på 10 sekunder',
             video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
             order: 3,
             duration_sec: 600,

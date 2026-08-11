@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Bell,
   Check,
@@ -28,7 +27,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
-import { clearPlatformRole } from '@/lib/use-platform-role';
+import { signOutAndRedirect } from '@/lib/sign-out-client';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
 import { adminCardClass } from '@/components/admin/AdminUi';
@@ -142,7 +141,6 @@ function FieldRow({
 }
 
 export default function AdminSettingsPanel() {
-  const router = useRouter();
   const { locale } = useLocale();
   const { setSection } = useAdminNav();
   const { activeWorkspace, brandWorkspaces } = useWorkspace();
@@ -181,11 +179,7 @@ export default function AdminSettingsPanel() {
   };
 
   const signOut = () => {
-    void clearPlatformRole().then(() =>
-      authClient.signOut({
-        fetchOptions: { onSuccess: () => router.push('/') },
-      })
-    );
+    void signOutAndRedirect('/');
   };
 
   const closeSettings = () => setSection('analytics');

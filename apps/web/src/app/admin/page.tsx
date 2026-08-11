@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useId, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authClient } from '@/lib/auth-client';
-import { clearPlatformRole } from '@/lib/use-platform-role';
+import { signOutAndRedirect } from '@/lib/sign-out-client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -2396,11 +2396,7 @@ export default function AdminPage() {
                       role="menuitem"
                       onClick={() => {
                         setAccountMenuOpen(false);
-                        void clearPlatformRole().then(() =>
-                          authClient.signOut({
-                            fetchOptions: { onSuccess: () => router.push('/') },
-                          })
-                        );
+                        void signOutAndRedirect('/');
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
                     >

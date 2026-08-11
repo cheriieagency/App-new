@@ -20,7 +20,7 @@ const INCLUDE_SETS: string[][] = [
     'Veckovisa live-sessioner med Q&A',
     'Kursbibliotek med steg-för-steg lektioner',
     'Privat community-feed och peer feedback',
-    'Mallar, scripts och swish-ready offerter',
+    'Mallar, scripts och checkout-ready offerter',
     'Bonus: AI Copilot för innehåll & tillväxt',
   ],
   [
