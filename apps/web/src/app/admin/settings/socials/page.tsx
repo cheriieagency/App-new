@@ -1,12 +1,31 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, CalendarDays, Settings } from 'lucide-react';
+import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import SocialAccountsPanel from '@/components/planner/SocialAccountsPanel';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/lib/i18n';
+import { Suspense } from 'react';
+
+function MetaConnectToast() {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const error = searchParams.get('error');
+    if (success === 'meta_connected') {
+      toast.success('Instagram & Facebook connected');
+    } else if (error) {
+      toast.error(`Meta connection failed: ${error.replace(/_/g, ' ')}`);
+    }
+  }, [searchParams]);
+
+  return null;
+}
 
 /** Settings → Connected Social Accounts (OAuth + Demo Recording Mode). */
 export default function AdminSocialSettingsPage() {
@@ -54,7 +73,31 @@ export default function AdminSocialSettingsPage() {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20">
+      <main className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20 space-y-4">
+        <Suspense fallback={null}>
+          <MetaConnectToast />
+        </Suspense>
+
+        <div className="rounded-2xl border border-[#1877F2]/20 bg-white px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div>
+            <p className="text-sm font-extrabold text-slate-900">
+              Connect Instagram & Facebook
+            </p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Authorize Meta to publish and read insights for your Pages & IG Business accounts.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = '/api/auth/meta/login';
+            }}
+            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-bold"
+          >
+            Connect Instagram & Facebook
+          </button>
+        </div>
+
         <SocialAccountsPanel />
       </main>
     </div>

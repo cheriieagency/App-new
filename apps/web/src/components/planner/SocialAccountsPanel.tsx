@@ -171,11 +171,15 @@ export default function SocialAccountsPanel({
   });
 
   const startConnect = (platform: SocialPlatform) => {
+    // Live Meta OAuth for Instagram & Facebook when Demo Mode is off.
+    if (!demoMode && (platform === 'instagram' || platform === 'facebook')) {
+      window.location.href = '/api/auth/meta/login';
+      return;
+    }
     if (demoMode) {
       setOauthPlatform(platform);
       return;
     }
-    // Live path not fully wired — still use demo connect so the UI stays usable.
     toggle.mutate({ platform, connect: true });
   };
 
@@ -286,6 +290,29 @@ export default function SocialAccountsPanel({
         </div>
       )}
 
+      {!compact && (
+        <div className="rounded-2xl border border-[#1877F2]/25 bg-[#1877F2]/5 px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold text-slate-900">
+              Connect Instagram & Facebook
+            </p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              One Meta login links your Facebook Pages and Instagram Business accounts.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = '/api/auth/meta/login';
+            }}
+            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-bold shadow-sm transition-colors"
+          >
+            <FacebookIcon size={16} />
+            Connect Instagram & Facebook
+          </button>
+        </div>
+      )}
+
       <div className={`grid grid-cols-1 ${compact ? 'gap-3' : 'md:grid-cols-2 gap-3 sm:gap-4'}`}>
         {ORDER.map((platform) => {
           const acc = byPlatform.get(platform);
@@ -338,7 +365,8 @@ export default function SocialAccountsPanel({
                           {acc.display_name}
                         </p>
                         <p className="text-xs text-slate-500 font-medium truncate">{acc.handle}</p>
-                        {acc.page_name && platform === 'instagram' ? (
+                        {acc.page_name &&
+                        (platform === 'instagram' || platform === 'facebook') ? (
                           <p className="text-[11px] font-semibold text-slate-500 mt-0.5 truncate">
                             Page · {acc.page_name}
                           </p>
