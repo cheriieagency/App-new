@@ -1,37 +1,8 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
-import { Fira_Code, Outfit, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import './global.css';
 import { Providers } from './providers';
 import { SITE_URL } from '@/lib/site';
-
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-plus-jakarta',
-  display: 'swap',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
-});
-
-const outfit = Outfit({
-  subsets: ['latin'],
-  weight: ['500', '600', '700', '800'],
-  variable: '--font-outfit-face',
-  display: 'swap',
-});
-
-const firaCode = Fira_Code({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-fira-code',
-  display: 'swap',
-});
 
 const defaultTitle = 'clikd: — Build, Sell & Scale Community, Bio & Socials';
 const defaultDescription =
@@ -66,14 +37,31 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Load brand fonts via CSS (not next/font/google) so Turbopack/Vercel builds
+ * do not fail when Google Fonts cannot be fetched at compile time.
+ */
+const GOOGLE_FONTS_HREF =
+  'https://fonts.googleapis.com/css2?' +
+  [
+    'family=Plus+Jakarta+Sans:wght@400;500;600;700;800',
+    'family=Space+Grotesk:wght@500;600;700',
+    'family=Outfit:wght@500;600;700;800',
+    'family=Fira+Code:wght@400;500;600;700',
+  ].join('&') +
+  '&display=swap';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${plusJakarta.variable} ${spaceGrotesk.variable} ${outfit.variable} ${firaCode.variable}`}
-    >
+    <html lang="en">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link rel="stylesheet" href={GOOGLE_FONTS_HREF} />
         <link
           rel="stylesheet"
           href="/fontawesome/releases/v6.3.0/css/pro.min.css?token=2c15cc0cc7"
