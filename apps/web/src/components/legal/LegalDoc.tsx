@@ -6,7 +6,7 @@ import { t, type TranslationKey } from '@/lib/i18n';
 
 type LegalTitleKey = Extract<
   TranslationKey,
-  'legalIntegritet' | 'legalGdpr' | 'legalVillkor'
+  'legalIntegritet' | 'legalGdpr' | 'legalVillkor' | 'legalCookies'
 >;
 
 /** Shared typography for legal policy documents. */

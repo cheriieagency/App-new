@@ -18,8 +18,9 @@ const PRODUCT_LINKS: { labelKey: TranslationKey; id: string }[] = [
 
 const LEGAL_LINKS: { labelKey: TranslationKey; href: string }[] = [
   { labelKey: 'legalIntegritet', href: '/legal/integritet' },
-  { labelKey: 'legalGdpr', href: '/legal/gdpr' },
   { labelKey: 'legalVillkor', href: '/legal/villkor' },
+  { labelKey: 'legalGdpr', href: '/legal/gdpr' },
+  { labelKey: 'legalCookies', href: '/legal/cookies' },
 ];
 
 /** Informative landing footer with product, account, and legal links. */
@@ -116,9 +117,6 @@ export function LandingFooter() {
         <div className="mt-12 pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs font-medium text-slate-400">
             © {year} clikd<span className="text-[#F472B6]">:</span> — {t('footerRights', locale)}
-          </p>
-          <p className="text-xs font-medium text-slate-400 text-center sm:text-right">
-            {t('footerBanking', locale)}
           </p>
         </div>
       </div>

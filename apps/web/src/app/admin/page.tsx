@@ -2241,9 +2241,6 @@ export default function AdminPage() {
           >
             <Sparkles size={14} />
           </button>
-          <span className="hidden md:inline-flex items-center text-xs font-medium text-slate-400">
-            {t('swishActive', locale)}
-          </span>
           <div className="relative">
             <button
               type="button"
