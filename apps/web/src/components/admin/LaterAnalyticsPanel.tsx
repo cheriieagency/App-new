@@ -24,6 +24,7 @@ import {
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { AdminPageHeader, adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
+import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
 import {
   Popover,
   PopoverContent,
@@ -32,6 +33,7 @@ import {
 import { useLanguage } from '@/lib/locale-context';
 import { t, tf, localeTag, type Locale } from '@/lib/i18n';
 import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
+import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 
 type DateRangePreset = '1w' | '1m' | '3m' | '1y' | '2y' | 'custom';
 
@@ -85,53 +87,27 @@ type AnalyticsSubTab =
   | 'hashtags'
   | 'linkinbio';
 
-/** Mock engagement totals for the Analytics overview tab (last 7 days). */
+/** Empty until Meta Graph insights are synced for a connected account. */
 const ENGAGEMENT_OVERVIEW = {
-  reach: 94200,
-  views: 186400,
-  followers: 18804,
-  followersDelta: 842,
-  likes: 12480,
-  comments: 1862,
-  shares: 940,
-  saves: 2110,
-  engagementRate: 4.8,
+  reach: 0,
+  views: 0,
+  followers: 0,
+  followersDelta: 0,
+  likes: 0,
+  comments: 0,
+  shares: 0,
+  saves: 0,
+  engagementRate: 0,
 };
 
-const TOP_PRODUCTS = [
-  {
-    name: 'Gratis E-bok: Growth Funnels',
-    category: 'Lead Magnet',
-    clicks: 1420,
-    conversion: '42.8%',
-    revenue: '0 SEK',
-    live: true,
-  },
-  {
-    name: '1:1 Coaching Call',
-    category: 'Tjänst',
-    clicks: 510,
-    conversion: '18.2%',
-    revenue: '12,200 SEK',
-    live: true,
-  },
-  {
-    name: 'VIP Community Access',
-    category: 'Medlemskap',
-    clicks: 390,
-    conversion: '22.0%',
-    revenue: '7,850 SEK',
-    live: true,
-  },
-  {
-    name: 'Creator Starter Pack',
-    category: 'Digital produkt',
-    clicks: 842,
-    conversion: '12.4%',
-    revenue: '18,400 SEK',
-    live: true,
-  },
-];
+const TOP_PRODUCTS: {
+  name: string;
+  category: string;
+  clicks: number;
+  conversion: string;
+  revenue: string;
+  live: boolean;
+}[] = [];
 
 /** Dual-line performance chart — solid revenue + dashed visitors, pink end highlight. */
 function PerformanceChart({
@@ -219,6 +195,7 @@ export default function LaterAnalyticsPanel() {
   const { locale } = useLanguage();
   const { activeWorkspace } = useWorkspace();
   const { setSection } = useAdminNav();
+  const { hasConnectedSocials, isLoading: socialsLoading } = useConnectedSocials();
   const [sub, setSub] = useState<AnalyticsSubTab>('analytics');
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
   const [rangeOpen, setRangeOpen] = useState(false);
@@ -227,10 +204,11 @@ export default function LaterAnalyticsPanel() {
   const [exportOpen, setExportOpen] = useState(false);
   const chart = activeWorkspace.analytics.revenue_chart;
 
-  const revenue = useMemo(
-    () => (chart.length >= 7 ? chart.slice(0, 7) : [42, 55, 48, 62, 70, 58, 78]),
-    [chart]
-  );
+  // No fake chart data until a social account is connected.
+  const revenue = useMemo(() => {
+    if (!hasConnectedSocials) return [0, 0, 0, 0, 0, 0, 0];
+    return chart.length >= 7 ? chart.slice(0, 7) : [0, 0, 0, 0, 0, 0, 0];
+  }, [chart, hasConnectedSocials]);
   const visitors = useMemo(
     () => revenue.map((v, i) => Math.round(v * (0.55 + (i % 3) * 0.08))),
     [revenue]
@@ -260,34 +238,41 @@ export default function LaterAnalyticsPanel() {
   const activeTabLabel =
     subTabs.find((tab) => tab.key === sub)?.label ?? t('analyticsTab', locale);
 
-  const kpis = [
+  // Placeholder KPIs until Meta insights sync is wired; shown only after socials connect.
+  const kpis: {
+    label: string;
+    value: string;
+    delta: string;
+    deltaTone: 'good' | 'neutral';
+    meta: string;
+  }[] = [
     {
       label: t('kpiRevenueCheckout', locale),
-      value: '42,850 SEK',
-      delta: '+24.5%',
-      deltaTone: 'good' as const,
-      meta: '142',
+      value: '0 SEK',
+      delta: '—',
+      deltaTone: 'neutral',
+      meta: '0',
     },
     {
       label: t('kpiFollowers', locale),
-      value: '18,804',
-      delta: '+842',
-      deltaTone: 'neutral' as const,
-      meta: '3',
+      value: '0',
+      delta: '—',
+      deltaTone: 'neutral',
+      meta: '0',
     },
     {
       label: t('kpiBioStoreCvr', locale),
-      value: '34.8%',
-      delta: '+2.1%',
-      deltaTone: 'good' as const,
-      meta: '2,410',
+      value: '0%',
+      delta: '—',
+      deltaTone: 'neutral',
+      meta: '0',
     },
     {
       label: t('kpiPlannedPosts', locale),
-      value: '131',
-      delta: '4',
-      deltaTone: 'neutral' as const,
-      meta: '100%',
+      value: '0',
+      delta: '—',
+      deltaTone: 'neutral',
+      meta: '0%',
     },
   ];
 
@@ -299,6 +284,21 @@ export default function LaterAnalyticsPanel() {
     t('colRevenue', locale),
     t('colStatus', locale),
   ];
+
+  if (!socialsLoading && !hasConnectedSocials) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          eyebrow={t('analyticsAndRevenue', locale)}
+          title={activeTabLabel}
+        />
+        <ConnectSocialsEmpty
+          title="No analytics yet"
+          description="Connect Instagram or Facebook to pull reach, views, followers, and revenue into this workspace."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -1443,31 +1443,9 @@ type UsedHashtag = {
   trend: number;
 };
 
-const USED_HASHTAGS: UsedHashtag[] = [
-  { tag: '#clikd', posts: 18, reach: 48200, er: 5.8, trend: 12 },
-  { tag: '#linkinbio', posts: 14, reach: 36100, er: 4.9, trend: 8 },
-  { tag: '#instantcheckout', posts: 11, reach: 29400, er: 5.2, trend: 5 },
-  { tag: '#nordiccreator', posts: 9, reach: 22100, er: 4.4, trend: 3 },
-  { tag: '#contentcreator', posts: 8, reach: 19800, er: 3.9, trend: -2 },
-  { tag: '#digitalprodukter', posts: 7, reach: 17600, er: 4.1, trend: 6 },
-  { tag: '#creatorlife', posts: 6, reach: 14200, er: 3.6, trend: -1 },
-  { tag: '#reelsidea', posts: 5, reach: 12800, er: 5.5, trend: 9 },
-];
+const USED_HASHTAGS: UsedHashtag[] = [];
 
-const AI_HASHTAG_SETS: { topic: string; tags: string[] }[] = [
-  {
-    topic: 'Product drop',
-    tags: ['#productlaunch', '#instantcheckout', '#nordicbrand', '#shopnow', '#clikd', '#linkinbio'],
-  },
-  {
-    topic: 'Creator tips',
-    tags: ['#creatortips', '#contentstrategy', '#reelsidea', '#growoninstagram', '#nordiccreator'],
-  },
-  {
-    topic: 'Community & live',
-    tags: ['#livewithme', '#communityfirst', '#creatorcommunity', '#behindthescenes', '#clikd'],
-  },
-];
+const AI_HASHTAG_SETS: { topic: string; tags: string[] }[] = [];
 
 function HashtagsAnalyticsTab({
   locale,
@@ -1780,7 +1758,7 @@ function AudienceInsights({
           {[
             { label: t('kpiFollowers', locale), value: '18,804' },
             { label: t('accounts', locale), value: '3' },
-            { label: t('reach7d', locale), value: '94.2k' },
+            { label: t('reach7d', locale), value: '0' },
           ].map((m) => (
             <div key={m.label} className="rounded-xl bg-slate-50 border border-slate-100 p-4">
               <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">

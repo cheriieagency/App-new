@@ -68,29 +68,24 @@ import {
   loadNotificationPrefs,
 } from '@/lib/notification-prefs';
 import useUpload from '@/utils/useUpload';
-import CommunityAdminPanel from '@/components/admin/CommunityAdminPanel';
+import dynamic from 'next/dynamic';
 import {
   getMockCommunityAdminPayload,
   listManagedCommunities,
   type ManagedCommunity,
 } from '@/lib/mock-community-admin';
-import EmailAdminPanel from '@/components/admin/EmailAdminPanel';
 import WorkspaceSelector from '@/components/planner/WorkspaceSelector';
 import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import type { WorkspaceBioBlock } from '@/lib/mock-workspace-profiles';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import LaterAnalyticsPanel from '@/components/admin/LaterAnalyticsPanel';
 import BioPublishSuccessDialog from '@/components/admin/BioPublishSuccessDialog';
 import { bioPublicDisplay, bioPublicUrl } from '@/lib/site';
-import AdminSettingsPanel from '@/components/admin/AdminSettingsPanel';
-import SocialInboxPanel from '@/components/admin/SocialInboxPanel';
-import MediaLibraryPanel from '@/components/admin/MediaLibraryPanel';
-import ProjectsPanel from '@/components/admin/ProjectsPanel';
 import { useSubscription } from '@/components/common/useSubscription';
 import UpgradeModal from '@/components/common/UpgradeModal';
-import { PlanLockBadge } from '@/components/common/FeatureGate';
+import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
+import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import {
   appendUtmParams,
   buildTrackedShortUrl,
@@ -115,6 +110,39 @@ import {
   SOCIAL_BRAND_ICONS,
   type SocialBrandId,
 } from '@/components/icons/SocialBrandIcons';
+
+const PanelFallback = () => (
+  <div className="py-16 text-center text-sm font-semibold text-slate-400">Loading…</div>
+);
+
+const LaterAnalyticsPanel = dynamic(
+  () => import('@/components/admin/LaterAnalyticsPanel'),
+  { loading: PanelFallback }
+);
+const AdminSettingsPanel = dynamic(
+  () => import('@/components/admin/AdminSettingsPanel'),
+  { loading: PanelFallback }
+);
+const SocialInboxPanel = dynamic(
+  () => import('@/components/admin/SocialInboxPanel'),
+  { loading: PanelFallback }
+);
+const MediaLibraryPanel = dynamic(
+  () => import('@/components/admin/MediaLibraryPanel'),
+  { loading: PanelFallback }
+);
+const ProjectsPanel = dynamic(
+  () => import('@/components/admin/ProjectsPanel'),
+  { loading: PanelFallback }
+);
+const CommunityAdminPanel = dynamic(
+  () => import('@/components/admin/CommunityAdminPanel'),
+  { loading: PanelFallback }
+);
+const EmailAdminPanel = dynamic(
+  () => import('@/components/admin/EmailAdminPanel'),
+  { loading: PanelFallback }
+);
 
 type BioSubTab = 'blocks' | 'design' | 'analytics' | 'settings';
 
@@ -1632,6 +1660,7 @@ export default function AdminPage() {
   } = useWorkspace();
   const adminCommunityId = activeWorkspace.community.community_id;
   const { section, setSection } = useAdminNav();
+  const { hasConnectedSocials, isLoading: socialsLoading } = useConnectedSocials();
 
   // Planner is its own route — never show the admin interstitial for ?tab=calendar.
   useEffect(() => {
@@ -2348,7 +2377,6 @@ export default function AdminPage() {
             title={t('aiCopilotTitle', locale)}
           >
             <Sparkles size={14} />
-            {!canUseAi && <PlanLockBadge minPlan="pro" className="hidden 2xl:inline-flex" />}
           </button>
           <div className="relative">
             <button
@@ -2525,11 +2553,23 @@ export default function AdminPage() {
       </header>
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 py-8 pb-24 md:pb-16">
+        {section === 'settings' ? (
+          <AdminSettingsPanel />
+        ) : socialsLoading ? (
+          <div className="py-16 text-center text-sm font-semibold text-slate-400">
+            Loading…
+          </div>
+        ) : !hasConnectedSocials ? (
+          <ConnectSocialsEmpty
+            title="Connect Instagram & Facebook"
+            description="Admin stays empty until you connect a social account. Analytics, inbox, community, email, bio, and media fill in automatically after OAuth."
+          />
+        ) : (
+          <>
         {section === 'analytics' && <LaterAnalyticsPanel />}
         {section === 'media' && <MediaLibraryPanel />}
         {section === 'projects' && <ProjectsPanel />}
         {section === 'inbox' && <SocialInboxPanel />}
-        {section === 'settings' && <AdminSettingsPanel />}
 
         {/* ── COMMUNITY (includes Event + Sänd Live) ── */}
         {section === 'community' && (
@@ -3492,6 +3532,8 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+        )}
+          </>
         )}
       </main>
 

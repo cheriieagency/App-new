@@ -59,7 +59,7 @@ export type CommunitySubTab =
 
 type CommunityAdminResponse = {
   communities: ManagedCommunity[];
-  community: ManagedCommunity;
+  community: ManagedCommunity | null;
   overview: {
     member_count: number;
     post_count: number;
@@ -749,6 +749,24 @@ export default function CommunityAdminPanel({
   }
 
   const { community, overview, communities } = data;
+
+  if (!community) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader
+          eyebrow={t('adminNavCommunity', locale)}
+          title={t('adminNavCommunity', locale)}
+          description="No community yet — create one when you're ready."
+        />
+        <div className={`${adminCardClass} p-12 text-center`}>
+          <p className="text-sm font-semibold text-slate-500">
+            Your community space is empty.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const recentMembers = [...data.members]
     .sort((a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime())
     .slice(0, 5);

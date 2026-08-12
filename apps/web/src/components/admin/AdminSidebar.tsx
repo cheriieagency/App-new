@@ -27,6 +27,11 @@ import { useLanguage } from '@/lib/i18n';
 import type { NestedKey } from '@/lib/i18n';
 import type { CampaignLabel } from '@/lib/mock-content-planner';
 import { MEDIA_LIBRARY_ROOT_ID } from '@/lib/mock-media-library';
+import {
+  PLAN_DISPLAY_NAME,
+  normalizeWorkspacePlan,
+  type WorkspacePlan,
+} from '@/lib/config/plans';
 
 type NavItem = {
   key: AdminSection;
@@ -41,7 +46,7 @@ const NAV: NavItem[] = [
   { key: 'calendar', labelKey: 'admin.planner', icon: CalendarDays, href: '/planner' },
   { key: 'media', labelKey: 'admin.mediaLibrary', icon: ImageIcon, href: '/admin?tab=media' },
   { key: 'projects', labelKey: 'admin.projects', icon: FolderKanban, href: '/admin?tab=projects' },
-  { key: 'inbox', labelKey: 'admin.socialInbox', icon: Inbox, href: '/admin?tab=inbox', badge: '3' },
+  { key: 'inbox', labelKey: 'admin.socialInbox', icon: Inbox, href: '/admin?tab=inbox' },
   { key: 'analytics', labelKey: 'admin.analytics', icon: BarChart3, href: '/admin?tab=analytics' },
   { key: 'biobuilder', labelKey: 'admin.bioBuilder', icon: Link2, href: '/admin?tab=biobuilder' },
   { key: 'community', labelKey: 'admin.community', icon: Users, href: '/admin?tab=community' },
@@ -49,14 +54,14 @@ const NAV: NavItem[] = [
   { key: 'settings', labelKey: 'admin.settings', icon: Settings, href: '/admin?tab=settings' },
 ];
 
-function planName(plan: string) {
-  if (plan === 'starter') return 'Starter';
-  if (plan === 'pro') return 'Pro Plan';
-  return 'Pro Plan';
+function planName(plan: WorkspacePlan) {
+  return `${PLAN_DISPLAY_NAME[plan]} Plan`;
 }
 
-function planPrice(_plan: string) {
-  return 'see plan';
+function planPrice(plan: WorkspacePlan) {
+  if (plan === 'starter') return '8% fee';
+  if (plan === 'creator') return '199 kr';
+  return '699 kr';
 }
 
 export default function AdminSidebar() {
@@ -85,7 +90,7 @@ export default function AdminSidebar() {
   const [projectsOpen, setProjectsOpen] = useState(section === 'projects');
   const [mediaOpen, setMediaOpen] = useState(section === 'media');
   const { data: planData } = useAdminPlan();
-  const plan = planData?.plan ?? 'creator';
+  const plan = normalizeWorkspacePlan(planData?.plan);
 
   const { data: campaignsData } = useQuery<{ campaigns: CampaignLabel[] }>({
     queryKey: ['planner-campaigns'],
@@ -407,6 +412,7 @@ export default function AdminSidebar() {
                     // Planner lives on /planner — don't rewrite the admin URL to ?tab=calendar.
                     if (key !== 'calendar') setSection(key);
                   }}
+                  prefetch={true}
                   className={className}
                   aria-current={active ? 'page' : undefined}
                 >

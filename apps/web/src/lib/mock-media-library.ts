@@ -35,81 +35,12 @@ export function isMediaLibraryRoot(id: string | null | undefined): boolean {
   return id === MEDIA_LIBRARY_ROOT_ID;
 }
 
-const folders: MediaFolder[] = [
-  {
-    id: 'folder-covers',
-    name: 'Covers & logos',
-    color: '#9089F0',
-    description: 'Logos, covers, and reusable brand creatives.',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'folder-product',
-    name: 'Product shots',
-    color: '#F472B6',
-    description: 'Product photography and flatlays.',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'folder-reels',
-    name: 'Reels & B-roll',
-    color: '#10B981',
-    description: 'Short-form clips and supporting footage.',
-    created_at: new Date().toISOString(),
-  },
-];
+const folders: MediaFolder[] = [];
 
-const assets: MediaAsset[] = [
-  {
-    id: 'm1',
-    folder_id: 'folder-product',
-    label: 'Glow essentials flatlay',
-    platform: 'Instagram',
-    kind: 'image',
-    image:
-      'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&q=80',
-  },
-  {
-    id: 'm2',
-    folder_id: 'folder-reels',
-    label: 'Routine demo',
-    platform: 'TikTok',
-    kind: 'video',
-    image:
-      'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&q=80',
-  },
-  {
-    id: 'm3',
-    folder_id: 'folder-reels',
-    label: 'Studio B-roll',
-    platform: 'Instagram',
-    kind: 'video',
-    image:
-      'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=400&q=80',
-  },
-  {
-    id: 'm4',
-    folder_id: 'folder-covers',
-    label: 'Cover gradient',
-    platform: 'Instagram',
-    kind: 'image',
-    image:
-      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
-  },
-  {
-    id: 'm5',
-    folder_id: 'folder-product',
-    label: 'Hero bottle still',
-    platform: 'LinkedIn',
-    kind: 'image',
-    image:
-      'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&q=80',
-  },
-];
+const assets: MediaAsset[] = [];
 
-/** Organizable folders only (excludes the permanent root). */
 export function listMediaFolders(): MediaFolder[] {
-  return [...folders];
+  return [MEDIA_LIBRARY_ROOT, ...folders];
 }
 
 export function getMediaFolder(id: string): MediaFolder | null {

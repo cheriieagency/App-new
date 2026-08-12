@@ -70,34 +70,7 @@ export type ManagedCommunity = {
   channels: SocialPlatform[];
 };
 
-export const MOCK_MANAGED_COMMUNITIES: ManagedCommunity[] = [
-  {
-    id: 101,
-    name: 'Ebba Creator Lab',
-    slug: 'ebba-creator-lab',
-    description: 'Feed, kurser, events och medlemsfunktioner.',
-    category: 'Marknadsföring',
-    cover_color: '#0f766e',
-    member_count: 48,
-    is_published: true,
-    handle: '@ebbacreator',
-    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-creator-lab',
-    channels: ['instagram', 'tiktok', 'linkedin', 'youtube'],
-  },
-  {
-    id: 102,
-    name: 'Ebba Live Studio',
-    slug: 'ebba-live-studio',
-    description: 'Live-webbinarier, RSVP och realtidschatt.',
-    category: 'Coaching',
-    cover_color: '#0369a1',
-    member_count: 32,
-    is_published: true,
-    handle: '@ebbalive',
-    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-live-studio',
-    channels: ['instagram', 'linkedin', 'youtube'],
-  },
-];
+export const MOCK_MANAGED_COMMUNITIES: ManagedCommunity[] = [];
 
 /** Map a managed community to the planner workspace shape for the shared selector. */
 export function managedCommunityAsWorkspace(c: ManagedCommunity): BrandWorkspace {
@@ -298,7 +271,26 @@ function sortPostsPinnedFirst(posts: CommunityAdminPost[]) {
 export function getMockCommunityAdminPayload(communityId?: number) {
   const communities = MOCK_MANAGED_COMMUNITIES;
   const selected =
-    communities.find((c) => c.id === communityId) ?? communities[0];
+    communities.find((c) => c.id === communityId) ?? communities[0] ?? null;
+
+  if (!selected) {
+    return {
+      communities: [] as ManagedCommunity[],
+      community: null,
+      overview: {
+        member_count: 0,
+        post_count: 0,
+        comment_count: 0,
+        joined_this_week: 0,
+        moderator_count: 0,
+        like_count: 0,
+      },
+      members: [] as CommunityAdminMember[],
+      posts: [] as CommunityAdminPost[],
+      demo: true as const,
+    };
+  }
+
   const members =
     selected.id === 102 ? MOCK_MEMBERS_102 : MOCK_MEMBERS_101;
   const posts = sortPostsPinnedFirst(postsForCommunity(selected.id));
