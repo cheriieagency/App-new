@@ -25,6 +25,7 @@ export const META_OAUTH_SCOPES = [
   'instagram_basic',
   'instagram_content_publish',
   'instagram_manage_insights',
+  'business_management',
 ] as const;
 
 export function parseMetaOAuthTarget(raw: string | null | undefined): MetaOAuthTarget {
@@ -162,6 +163,7 @@ export type MetaPageAccount = {
   id: string;
   name: string;
   access_token: string;
+  category?: string;
   tasks?: string[];
   instagram_business_account?: MetaIgBusinessAccount;
 };
@@ -170,19 +172,37 @@ export type MetaAccountsResponse = {
   data?: MetaPageAccount[];
 };
 
+export type MetaBusinessPortfolioResponse = {
+  id?: string;
+  name?: string;
+  instagram_business_account?: MetaIgBusinessAccount;
+  accounts?: {
+    data?: MetaPageAccount[];
+  };
+  error?: { message?: string };
+};
+
+export type ResolvedMetaGraphAccounts = {
+  pages: MetaPageAccount[];
+  /** IG found on a Page or via Business Portfolio /me fallback. */
+  instagram: MetaIgBusinessAccount | null;
+  /** Page that owns the IG (null when IG came from user portfolio only). */
+  instagramPage: MetaPageAccount | null;
+  source: 'me_accounts' | 'business_portfolio' | 'mixed';
+};
+
+const PAGE_ACCOUNT_FIELDS =
+  'id,name,access_token,category,tasks,instagram_business_account{id,username,profile_picture_url,name,followers_count,media_count}';
+
 /**
- * Fetch Facebook Pages + linked Instagram Business accounts.
- * Graph v19: /me/accounts?fields=id,name,access_token,tasks,instagram_business_account{…}
- * Searches every returned page — IG may be linked to a non-primary page.
+ * Step B — Fetch Facebook Pages + linked Instagram Business accounts.
+ * Graph v19: /me/accounts?fields=id,name,access_token,category,tasks,instagram_business_account{…}
  */
 export async function fetchMetaPagesWithInstagram(
   userAccessToken: string
 ): Promise<MetaPageAccount[]> {
   const url = new URL(`${GRAPH_BASE}/me/accounts`);
-  url.searchParams.set(
-    'fields',
-    'id,name,access_token,tasks,instagram_business_account{id,username,profile_picture_url,name,followers_count,media_count}'
-  );
+  url.searchParams.set('fields', PAGE_ACCOUNT_FIELDS);
   url.searchParams.set('access_token', userAccessToken);
 
   const res = await fetch(url.toString());
@@ -194,8 +214,6 @@ export async function fetchMetaPagesWithInstagram(
   }
 
   const pages = data.data ?? [];
-  // Prefer pages that already expose a linked IG Business account first,
-  // without dropping pages that only have Facebook Page tokens.
   return [...pages].sort((a, b) => {
     const aIg = a.instagram_business_account?.id ? 1 : 0;
     const bIg = b.instagram_business_account?.id ? 1 : 0;
@@ -203,7 +221,34 @@ export async function fetchMetaPagesWithInstagram(
   });
 }
 
-/** First Instagram Business account found across any /me/accounts page. */
+/**
+ * Step C — Fallback for Meta Business Portfolios / Business Manager assets.
+ * Graph: /me?fields=id,name,instagram_business_account{…},accounts{…}
+ */
+export async function fetchMetaBusinessPortfolio(
+  userAccessToken: string
+): Promise<MetaBusinessPortfolioResponse> {
+  const url = new URL(`${GRAPH_BASE}/me`);
+  url.searchParams.set(
+    'fields',
+    [
+      'id',
+      'name',
+      'instagram_business_account{id,username,profile_picture_url,name,followers_count,media_count}',
+      `accounts{${PAGE_ACCOUNT_FIELDS}}`,
+    ].join(',')
+  );
+  url.searchParams.set('access_token', userAccessToken);
+
+  const res = await fetch(url.toString());
+  const data = (await res.json()) as MetaBusinessPortfolioResponse;
+  if (!res.ok) {
+    throw new Error(data.error?.message || 'Failed to fetch Meta business portfolio');
+  }
+  return data;
+}
+
+/** First Instagram Business account found across any page list. */
 export function findInstagramAcrossPages(
   pages: MetaPageAccount[]
 ): { page: MetaPageAccount; ig: MetaIgBusinessAccount } | null {
@@ -212,4 +257,76 @@ export function findInstagramAcrossPages(
     if (ig?.id) return { page, ig };
   }
   return null;
+}
+
+/**
+ * Resolve Pages + IG via /me/accounts, then Business Portfolio fallback when
+ * pages are empty or no Instagram Business account is attached.
+ */
+export async function resolveMetaPagesAndInstagram(
+  userAccessToken: string
+): Promise<ResolvedMetaGraphAccounts> {
+  let pages: MetaPageAccount[] = [];
+  try {
+    pages = await fetchMetaPagesWithInstagram(userAccessToken);
+  } catch (error) {
+    console.warn('[meta/oauth] /me/accounts failed, trying portfolio fallback', error);
+  }
+
+  let igMatch = findInstagramAcrossPages(pages);
+  let source: ResolvedMetaGraphAccounts['source'] = 'me_accounts';
+
+  if (!pages.length || !igMatch) {
+    try {
+      const portfolio = await fetchMetaBusinessPortfolio(userAccessToken);
+      const portfolioPages = portfolio.accounts?.data ?? [];
+
+      // Merge portfolio pages (by id) into the primary list.
+      const byId = new Map<string, MetaPageAccount>();
+      for (const p of pages) byId.set(p.id, p);
+      for (const p of portfolioPages) {
+        const existing = byId.get(p.id);
+        byId.set(p.id, {
+          ...existing,
+          ...p,
+          access_token: p.access_token || existing?.access_token || '',
+          instagram_business_account:
+            p.instagram_business_account || existing?.instagram_business_account,
+        });
+      }
+      pages = [...byId.values()].sort((a, b) => {
+        const aIg = a.instagram_business_account?.id ? 1 : 0;
+        const bIg = b.instagram_business_account?.id ? 1 : 0;
+        return bIg - aIg;
+      });
+
+      igMatch = findInstagramAcrossPages(pages);
+
+      // Direct user-level IG Business account (portfolio-linked, no Page edge).
+      if (!igMatch && portfolio.instagram_business_account?.id) {
+        const syntheticPage: MetaPageAccount = {
+          id: `user-${portfolio.id || 'portfolio'}`,
+          name: portfolio.name || 'Meta Business Portfolio',
+          access_token: '',
+          instagram_business_account: portfolio.instagram_business_account,
+        };
+        pages = [syntheticPage, ...pages];
+        igMatch = {
+          page: syntheticPage,
+          ig: portfolio.instagram_business_account,
+        };
+      }
+
+      source = pages.length && igMatch ? 'mixed' : 'business_portfolio';
+    } catch (error) {
+      console.warn('[meta/oauth] business portfolio fallback failed', error);
+    }
+  }
+
+  return {
+    pages,
+    instagram: igMatch?.ig ?? null,
+    instagramPage: igMatch?.page ?? null,
+    source,
+  };
 }

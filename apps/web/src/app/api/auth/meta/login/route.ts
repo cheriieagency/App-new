@@ -1,10 +1,10 @@
 /**
  * GET /api/auth/meta/login?target=instagram|facebook|both
- * Starts Meta OAuth with full Pages + Instagram scopes; persists target in state cookie.
+ * Starts Meta OAuth with full Pages + Instagram + Business Manager scopes.
  *
  * Scope string (explicit):
  * public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts,
- * instagram_basic,instagram_content_publish,instagram_manage_insights
+ * instagram_basic,instagram_content_publish,instagram_manage_insights,business_management
  *
  * Always sends auth_type=rerequest + prompt=consent so Meta re-asks page permissions.
  */
@@ -54,7 +54,10 @@ export async function GET(request: Request) {
     loginUrl = parsed.toString();
   } catch (error) {
     console.error('[meta/login]', error);
-    return Response.json({ error: 'Failed to build Meta login URL' }, { status: 500 });
+    const dest = new URL('/admin/settings/socials', request.url);
+    dest.searchParams.set('error', 'meta_fetch_failed');
+    dest.searchParams.set('detail', 'failed_to_build_login_url');
+    return NextResponse.redirect(dest);
   }
 
   const res = NextResponse.redirect(loginUrl);

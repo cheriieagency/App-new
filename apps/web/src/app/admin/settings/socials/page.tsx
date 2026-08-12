@@ -62,7 +62,14 @@ function MetaConnectToast() {
       void invalidate();
     } else if (error === 'no_instagram_business_account') {
       toast.error(
-        'No Instagram Business account was linked to the selected Facebook Page.'
+        'No Instagram Business account was linked to the selected Facebook Page or Business Portfolio.'
+      );
+    } else if (error === 'meta_fetch_failed') {
+      const detail = searchParams.get('detail');
+      toast.error(
+        detail
+          ? `Meta connection failed: ${detail}`
+          : 'Meta connection failed while fetching Pages / Instagram Business accounts. Try again and grant Page + Business access.'
       );
     } else if (error === 'no_youtube_channel') {
       toast.error('No YouTube channel was found for this Google account.');

@@ -1,7 +1,14 @@
 /**
  * GET /api/auth/callback/meta
- * OAuth callback — code → long-lived token → Graph me/accounts →
- * upsert social_accounts filtered by OAuth target → sync → redirect.
+ *
+ * A) Exchange code → long-lived user token
+ * B) /me/accounts (Pages + IG)
+ * C) Business Portfolio fallback via /me?fields=…accounts…
+ * D) Persist Instagram Business account → social_accounts
+ * E) Persist Facebook Pages → social_accounts
+ * F) Redirect /admin/settings/socials?success=meta_connected
+ *
+ * Errors never hard-500 — soft redirect with ?error=meta_fetch_failed&detail=…
  */
 
 import { NextResponse } from 'next/server';
@@ -12,8 +19,7 @@ import {
   decodeMetaOAuthState,
   exchangeCodeForShortLivedToken,
   exchangeForLongLivedToken,
-  fetchMetaPagesWithInstagram,
-  findInstagramAcrossPages,
+  resolveMetaPagesAndInstagram,
   type MetaOAuthTarget,
 } from '@/lib/meta/oauth';
 import { upsertMetaSocialAccounts } from '@/lib/meta/social-accounts';
@@ -35,38 +41,55 @@ function successLabel(target: MetaOAuthTarget): string {
   return 'meta_connected';
 }
 
+function failRedirect(
+  origin: string,
+  reason: string,
+  detail?: string
+): NextResponse {
+  const dest = new URL('/admin/settings/socials', origin);
+  dest.searchParams.set('error', reason);
+  if (detail) {
+    dest.searchParams.set('detail', detail.slice(0, 180));
+  }
+  const res = NextResponse.redirect(dest);
+  clearOAuthState(res);
+  return res;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const oauthError = url.searchParams.get('error');
+  const oauthErrorDesc = url.searchParams.get('error_description');
   const origin = url.origin;
 
-  const failRedirect = (reason: string) => {
-    const dest = new URL('/admin/settings/socials', origin);
-    dest.searchParams.set('error', reason);
-    const res = NextResponse.redirect(dest);
-    clearOAuthState(res);
-    return res;
-  };
-
   if (oauthError) {
-    return failRedirect(oauthError);
+    return failRedirect(
+      origin,
+      'meta_fetch_failed',
+      oauthErrorDesc || oauthError
+    );
   }
   if (!code) {
-    return failRedirect('missing_code');
+    return failRedirect(origin, 'meta_fetch_failed', 'missing_code');
   }
 
   const jar = await cookies();
   const expectedState = jar.get(META_OAUTH_STATE_COOKIE)?.value;
   if (!state || !expectedState || state !== expectedState) {
-    return failRedirect('invalid_state');
+    return failRedirect(origin, 'meta_fetch_failed', 'invalid_state');
   }
 
   const decoded = decodeMetaOAuthState(state);
   const target: MetaOAuthTarget = decoded?.target ?? 'both';
 
-  const session = await auth.api.getSession({ headers: await headers() });
+  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
+  try {
+    session = await auth.api.getSession({ headers: await headers() });
+  } catch (error) {
+    console.warn('[meta/callback] session read failed', error);
+  }
   if (!session?.user) {
     const signIn = new URL('/account/signin', origin);
     signIn.searchParams.set('callbackUrl', '/admin/settings/socials');
@@ -74,42 +97,77 @@ export async function GET(request: Request) {
   }
 
   try {
-    const shortLived = await exchangeCodeForShortLivedToken(code, origin);
-    const longLived = await exchangeForLongLivedToken(shortLived.access_token);
-    // Graph: /v19.0/me/accounts?fields=id,name,access_token,tasks,instagram_business_account{…}
-    const pages = await fetchMetaPagesWithInstagram(longLived.access_token);
-
-    if (!pages.length) {
-      const dest = new URL('/admin/settings/socials', origin);
-      dest.searchParams.set('error', 'no_pages');
-      const res = NextResponse.redirect(dest);
-      clearOAuthState(res);
-      return res;
+    // Step A — code → short-lived → long-lived user access token
+    let longLived: { access_token: string; expires_in?: number };
+    try {
+      const shortLived = await exchangeCodeForShortLivedToken(code, origin);
+      longLived = await exchangeForLongLivedToken(shortLived.access_token);
+    } catch (error) {
+      console.error('[meta/callback] token exchange failed', error);
+      return failRedirect(
+        origin,
+        'meta_fetch_failed',
+        error instanceof Error ? error.message : 'token_exchange_failed'
+      );
     }
 
-    // Search every page — IG is often linked to a non-primary Page, not pages[0].
-    const igMatch = findInstagramAcrossPages(pages);
-    const hasIg = Boolean(igMatch?.ig.id);
+    // Step B + C — /me/accounts, then Business Portfolio fallback
+    let resolved: Awaited<ReturnType<typeof resolveMetaPagesAndInstagram>>;
+    try {
+      resolved = await resolveMetaPagesAndInstagram(longLived.access_token);
+    } catch (error) {
+      console.error('[meta/callback] graph fetch failed', error);
+      return failRedirect(
+        origin,
+        'meta_fetch_failed',
+        error instanceof Error ? error.message : 'graph_fetch_failed'
+      );
+    }
 
-    // Instagram-only connect requires a linked IG Business account on any Page.
+    const realPages = resolved.pages.filter(
+      (p) => p.access_token && !String(p.id).startsWith('user-')
+    );
+    const hasIg = Boolean(resolved.instagram?.id);
+    const hasFb = realPages.length > 0;
+
+    if (!hasIg && !hasFb) {
+      return failRedirect(
+        origin,
+        'meta_fetch_failed',
+        'no_pages_or_instagram_business_account'
+      );
+    }
+
     if (target === 'instagram' && !hasIg) {
-      const dest = new URL('/admin/settings/socials', origin);
-      dest.searchParams.set('error', 'no_instagram_business_account');
-      const res = NextResponse.redirect(dest);
-      clearOAuthState(res);
-      return res;
+      return failRedirect(
+        origin,
+        'no_instagram_business_account',
+        'Instagram Business account not found on Pages or Business Portfolio'
+      );
     }
 
-    await upsertMetaSocialAccounts({
-      userId: session.user.id,
-      pages,
-      expiresIn: longLived.expires_in,
-      target,
-      workspaceId: jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null,
-    });
+    // Step D + E — persist Instagram / Facebook into public.social_accounts
+    try {
+      await upsertMetaSocialAccounts({
+        userId: session.user.id,
+        pages: resolved.pages,
+        userAccessToken: longLived.access_token,
+        expiresIn: longLived.expires_in,
+        target,
+        workspaceId: jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null,
+        instagram: resolved.instagram,
+        instagramPage: resolved.instagramPage,
+      });
+    } catch (error) {
+      console.error('[meta/callback] persist failed', error);
+      return failRedirect(
+        origin,
+        'meta_fetch_failed',
+        error instanceof Error ? error.message : 'persist_failed'
+      );
+    }
 
-    const shouldSync = target === 'instagram' || target === 'both' ? hasIg : false;
-    if (shouldSync) {
+    if ((target === 'instagram' || target === 'both') && hasIg) {
       try {
         const { syncMetaDataForUser } = await import('@/lib/meta/sync');
         await syncMetaDataForUser(session.user.id);
@@ -118,16 +176,24 @@ export async function GET(request: Request) {
       }
     }
 
+    // Step F — soft success redirect (never 500)
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', successLabel(target));
-    if ((target === 'both' || target === 'facebook') && !hasIg && target === 'both') {
+    if (target === 'both' && hasFb && !hasIg) {
       dest.searchParams.set('warning', 'no_instagram');
+    }
+    if (resolved.source !== 'me_accounts') {
+      dest.searchParams.set('source', resolved.source);
     }
     const res = NextResponse.redirect(dest);
     clearOAuthState(res);
     return res;
   } catch (error) {
     console.error('[meta/callback]', error);
-    return failRedirect('meta_oauth_failed');
+    return failRedirect(
+      origin,
+      'meta_fetch_failed',
+      error instanceof Error ? error.message : 'unknown_error'
+    );
   }
 }

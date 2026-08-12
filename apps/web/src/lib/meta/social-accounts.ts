@@ -138,23 +138,34 @@ async function upsertProfileFromInstagram(input: {
 export async function upsertMetaSocialAccounts(input: {
   userId: string;
   pages: MetaPageAccount[];
+  /** Long-lived user token — used when a page token is missing (portfolio IG). */
+  userAccessToken?: string | null;
   /** Long-lived user token expiry (seconds from now), if known. */
   expiresIn?: number;
   /** Which platforms to persist — default both. */
   target?: MetaOAuthTarget;
   /** Active workspace id (optional). */
   workspaceId?: string | null;
+  /** Pre-resolved IG (from page or Business Portfolio fallback). */
+  instagram?: MetaPageAccount['instagram_business_account'] | null;
+  instagramPage?: MetaPageAccount | null;
 }): Promise<StoredSocialAccount[]> {
   const target: MetaOAuthTarget = input.target ?? 'both';
   const storeInstagram = target === 'instagram' || target === 'both';
   const storeFacebook = target === 'facebook' || target === 'both';
   const workspaceId = input.workspaceId?.trim() || null;
+  const userToken = input.userAccessToken?.trim() || '';
 
   const rows: StoredSocialAccount[] = [];
   let primaryIg: MetaPageAccount['instagram_business_account'] | undefined;
   let primaryPage: MetaPageAccount | undefined;
 
-  for (const page of input.pages) {
+  // Real Facebook Pages only (skip synthetic portfolio shells without page tokens).
+  const facebookPages = input.pages.filter(
+    (p) => p.access_token && !String(p.id).startsWith('user-')
+  );
+
+  for (const page of facebookPages) {
     if (storeFacebook && !rows.some((r) => r.platform === 'facebook')) {
       // One Facebook row per user (UNIQUE user_id, platform) — keep first page.
       const saved = await upsertSocialAccountRow({
@@ -168,6 +179,7 @@ export async function upsertMetaSocialAccounts(input: {
         pageId: page.id,
         pageName: page.name,
         handle: page.name,
+        meta: page.category ? { category: page.category } : null,
       });
       rows.push({
         id: `fb-${page.id}`,
@@ -186,50 +198,73 @@ export async function upsertMetaSocialAccounts(input: {
         connected_at: saved.connected_at || new Date().toISOString(),
       });
     }
+  }
 
-    const ig = page.instagram_business_account;
-    if (storeInstagram && ig?.id && !primaryIg) {
-      primaryIg = ig;
-      primaryPage = page;
-      const handle = ig.username
-        ? `@${ig.username.replace(/^@/, '')}`
-        : null;
-      const saved = await upsertSocialAccountRow({
-        userId: input.userId,
-        platform: 'instagram',
-        platformUserId: ig.id,
-        platformUserName: ig.name || ig.username || page.name,
-        accessToken: page.access_token,
-        expiresIn: input.expiresIn,
-        avatarUrl: ig.profile_picture_url || null,
-        handle,
-        workspaceId,
-        pageId: page.id,
-        pageName: page.name,
-        followersCount:
-          typeof ig.followers_count === 'number' ? ig.followers_count : null,
-        meta: {
-          media_count: ig.media_count ?? null,
-          followers_count: ig.followers_count ?? null,
-        },
-      });
-      rows.push({
-        id: `ig-${ig.id}`,
-        user_id: input.userId,
-        platform: 'instagram',
-        external_id: ig.id,
-        handle: saved.handle,
-        display_name: saved.display_name,
-        avatar_url: saved.avatar_url,
-        followers_count: saved.follower_count ?? null,
-        media_count: typeof ig.media_count === 'number' ? ig.media_count : null,
-        access_token: page.access_token,
-        token_expires_at: null,
-        page_id: page.id,
-        page_name: page.name,
-        connected_at: saved.connected_at || new Date().toISOString(),
-      });
+  // Prefer pre-resolved IG (portfolio-aware), else scan every page.
+  const resolvedIg =
+    input.instagram?.id
+      ? {
+          ig: input.instagram,
+          page: input.instagramPage ?? null,
+        }
+      : (() => {
+          for (const page of input.pages) {
+            const ig = page.instagram_business_account;
+            if (ig?.id) return { ig, page };
+          }
+          return null;
+        })();
+
+  if (storeInstagram && resolvedIg?.ig.id) {
+    const ig = resolvedIg.ig;
+    const page = resolvedIg.page;
+    primaryIg = ig;
+    primaryPage = page ?? undefined;
+    const handle = ig.username
+      ? `@${ig.username.replace(/^@/, '')}`
+      : null;
+    // Page token when available; otherwise long-lived user token (Business Portfolio).
+    const accessToken =
+      (page?.access_token && page.access_token.trim()) || userToken;
+    if (!accessToken) {
+      throw new Error('No page or user access token available for Instagram');
     }
+    const saved = await upsertSocialAccountRow({
+      userId: input.userId,
+      platform: 'instagram',
+      platformUserId: ig.id,
+      platformUserName: ig.username || ig.name || page?.name || 'Instagram',
+      accessToken,
+      expiresIn: input.expiresIn,
+      avatarUrl: ig.profile_picture_url || null,
+      handle,
+      workspaceId,
+      pageId: page && !String(page.id).startsWith('user-') ? page.id : null,
+      pageName: page && !String(page.id).startsWith('user-') ? page.name : null,
+      followersCount:
+        typeof ig.followers_count === 'number' ? ig.followers_count : null,
+      meta: {
+        media_count: ig.media_count ?? null,
+        followers_count: ig.followers_count ?? null,
+        token_source: page?.access_token ? 'page' : 'user_long_lived',
+      },
+    });
+    rows.push({
+      id: `ig-${ig.id}`,
+      user_id: input.userId,
+      platform: 'instagram',
+      external_id: ig.id,
+      handle: saved.handle,
+      display_name: saved.display_name,
+      avatar_url: saved.avatar_url,
+      followers_count: saved.follower_count ?? null,
+      media_count: typeof ig.media_count === 'number' ? ig.media_count : null,
+      access_token: accessToken,
+      token_expires_at: null,
+      page_id: page && !String(page.id).startsWith('user-') ? page.id : null,
+      page_name: page && !String(page.id).startsWith('user-') ? page.name : null,
+      connected_at: saved.connected_at || new Date().toISOString(),
+    });
   }
 
   if (primaryIg) {
