@@ -6,7 +6,11 @@
 import sql from '@/app/api/utils/sql';
 import type { MetaOAuthTarget, MetaPageAccount } from '@/lib/meta/oauth';
 import type { ConnectedSocialAccount, SocialPlatform } from '@/lib/mock-content-planner';
-import { ensureUserProfile } from '@/lib/social/persist';
+import {
+  deleteSocialAccountRow,
+  ensureUserProfile,
+  upsertSocialAccountRow,
+} from '@/lib/social/persist';
 
 export type StoredSocialAccount = {
   id: string;
@@ -55,9 +59,14 @@ function mapDbRow(row: Record<string, unknown>): StoredSocialAccount {
     id: String(row.id),
     user_id: String(row.user_id),
     platform: row.platform as 'instagram' | 'facebook',
-    external_id: String(row.external_id),
+    external_id: String(
+      row.platform_user_id ?? row.external_id ?? ''
+    ),
     handle: (row.handle as string) || null,
-    display_name: (row.display_name as string) || null,
+    display_name:
+      (row.display_name as string) ||
+      (row.platform_user_name as string) ||
+      null,
     avatar_url: (row.avatar_url as string) || null,
     followers_count:
       typeof row.followers_count === 'number'
@@ -65,10 +74,16 @@ function mapDbRow(row: Record<string, unknown>): StoredSocialAccount {
         : followersFromMeta,
     media_count: mediaFromMeta,
     access_token: String(row.access_token),
-    token_expires_at: row.token_expires_at ? String(row.token_expires_at) : null,
+    token_expires_at: row.expires_at
+      ? String(row.expires_at)
+      : row.token_expires_at
+        ? String(row.token_expires_at)
+        : null,
     page_id: (row.page_id as string) || null,
     page_name: (row.page_name as string) || null,
-    connected_at: String(row.connected_at),
+    connected_at: String(
+      row.connected_at || row.created_at || new Date().toISOString()
+    ),
   };
 }
 
@@ -135,176 +150,101 @@ export async function upsertMetaSocialAccounts(input: {
   const storeFacebook = target === 'facebook' || target === 'both';
   const workspaceId = input.workspaceId?.trim() || null;
 
-  // Critical: FK social_accounts.user_id → profiles.id
-  await ensureUserProfile({ userId: input.userId });
-
-  const expiresAt =
-    typeof input.expiresIn === 'number'
-      ? new Date(Date.now() + input.expiresIn * 1000).toISOString()
-      : null;
-
   const rows: StoredSocialAccount[] = [];
   let primaryIg: MetaPageAccount['instagram_business_account'] | undefined;
+  let primaryPage: MetaPageAccount | undefined;
 
   for (const page of input.pages) {
-    if (storeFacebook) {
+    if (storeFacebook && !rows.some((r) => r.platform === 'facebook')) {
+      // One Facebook row per user (UNIQUE user_id, platform) — keep first page.
+      const saved = await upsertSocialAccountRow({
+        userId: input.userId,
+        platform: 'facebook',
+        platformUserId: page.id,
+        platformUserName: page.name,
+        accessToken: page.access_token,
+        expiresIn: input.expiresIn,
+        workspaceId,
+        pageId: page.id,
+        pageName: page.name,
+        handle: page.name,
+      });
       rows.push({
         id: `fb-${page.id}`,
         user_id: input.userId,
         platform: 'facebook',
         external_id: page.id,
-        handle: page.name,
-        display_name: page.name,
-        avatar_url: null,
+        handle: saved.handle,
+        display_name: saved.display_name,
+        avatar_url: saved.avatar_url,
         followers_count: null,
         media_count: null,
         access_token: page.access_token,
-        token_expires_at: expiresAt,
+        token_expires_at: null,
         page_id: page.id,
         page_name: page.name,
-        connected_at: new Date().toISOString(),
+        connected_at: saved.connected_at || new Date().toISOString(),
       });
     }
 
     const ig = page.instagram_business_account;
-    if (storeInstagram && ig?.id) {
-      if (!primaryIg) primaryIg = ig;
+    if (storeInstagram && ig?.id && !primaryIg) {
+      primaryIg = ig;
+      primaryPage = page;
       const handle = ig.username
         ? `@${ig.username.replace(/^@/, '')}`
         : null;
+      const saved = await upsertSocialAccountRow({
+        userId: input.userId,
+        platform: 'instagram',
+        platformUserId: ig.id,
+        platformUserName: ig.name || ig.username || page.name,
+        accessToken: page.access_token,
+        expiresIn: input.expiresIn,
+        avatarUrl: ig.profile_picture_url || null,
+        handle,
+        workspaceId,
+        pageId: page.id,
+        pageName: page.name,
+        followersCount:
+          typeof ig.followers_count === 'number' ? ig.followers_count : null,
+        meta: {
+          media_count: ig.media_count ?? null,
+          followers_count: ig.followers_count ?? null,
+        },
+      });
       rows.push({
         id: `ig-${ig.id}`,
         user_id: input.userId,
         platform: 'instagram',
         external_id: ig.id,
-        handle,
-        display_name: ig.name || ig.username || page.name,
-        avatar_url: ig.profile_picture_url || null,
-        followers_count:
-          typeof ig.followers_count === 'number' ? ig.followers_count : null,
+        handle: saved.handle,
+        display_name: saved.display_name,
+        avatar_url: saved.avatar_url,
+        followers_count: saved.follower_count ?? null,
         media_count: typeof ig.media_count === 'number' ? ig.media_count : null,
-        // Page token is used for IG Content Publishing API
         access_token: page.access_token,
-        token_expires_at: expiresAt,
+        token_expires_at: null,
         page_id: page.id,
         page_name: page.name,
-        connected_at: new Date().toISOString(),
+        connected_at: saved.connected_at || new Date().toISOString(),
       });
     }
   }
 
-  if (!process.env.DATABASE_URL?.trim()) {
-    // Merge into demo store so Instagram-only connect doesn't wipe Facebook.
-    const existing = demoByUser.get(input.userId) ?? [];
-    const kept = existing.filter((row) => {
-      if (storeInstagram && row.platform === 'instagram') return false;
-      if (storeFacebook && row.platform === 'facebook') return false;
-      return true;
+  if (primaryIg) {
+    await ensureUserProfile({
+      userId: input.userId,
+      displayName: primaryIg.name || primaryIg.username,
+      handle: primaryIg.username
+        ? `@${primaryIg.username.replace(/^@/, '')}`
+        : null,
+      avatarUrl: primaryIg.profile_picture_url,
     });
-    demoByUser.set(input.userId, [...kept, ...rows]);
-    return rows;
   }
 
-  try {
-    for (const row of rows) {
-      const metaJson = JSON.stringify({
-        followers_count: row.followers_count,
-        media_count: row.media_count,
-      });
-
-      try {
-        await sql`
-          INSERT INTO social_accounts (
-            user_id, platform, external_id, handle, display_name, avatar_url,
-            followers_count, access_token, token_expires_at, page_id, page_name,
-            workspace_id, meta, connected_at, updated_at
-          )
-          VALUES (
-            ${row.user_id},
-            ${row.platform},
-            ${row.external_id},
-            ${row.handle},
-            ${row.display_name},
-            ${row.avatar_url},
-            ${row.followers_count},
-            ${row.access_token},
-            ${row.token_expires_at},
-            ${row.page_id},
-            ${row.page_name},
-            ${workspaceId},
-            ${metaJson},
-            now(),
-            now()
-          )
-          ON CONFLICT (user_id, platform, external_id) DO UPDATE SET
-            handle = EXCLUDED.handle,
-            display_name = EXCLUDED.display_name,
-            avatar_url = EXCLUDED.avatar_url,
-            followers_count = EXCLUDED.followers_count,
-            access_token = EXCLUDED.access_token,
-            token_expires_at = EXCLUDED.token_expires_at,
-            page_id = EXCLUDED.page_id,
-            page_name = EXCLUDED.page_name,
-            workspace_id = COALESCE(EXCLUDED.workspace_id, social_accounts.workspace_id),
-            meta = EXCLUDED.meta,
-            connected_at = now(),
-            updated_at = now()
-        `;
-      } catch {
-        // Schema without followers_count / workspace_id — store metrics in meta jsonb.
-        await sql`
-          INSERT INTO social_accounts (
-            user_id, platform, external_id, handle, display_name, avatar_url,
-            access_token, token_expires_at, page_id, page_name, meta, connected_at, updated_at
-          )
-          VALUES (
-            ${row.user_id},
-            ${row.platform},
-            ${row.external_id},
-            ${row.handle},
-            ${row.display_name},
-            ${row.avatar_url},
-            ${row.access_token},
-            ${row.token_expires_at},
-            ${row.page_id},
-            ${row.page_name},
-            ${metaJson},
-            now(),
-            now()
-          )
-          ON CONFLICT (user_id, platform, external_id) DO UPDATE SET
-            handle = EXCLUDED.handle,
-            display_name = EXCLUDED.display_name,
-            avatar_url = EXCLUDED.avatar_url,
-            access_token = EXCLUDED.access_token,
-            token_expires_at = EXCLUDED.token_expires_at,
-            page_id = EXCLUDED.page_id,
-            page_name = EXCLUDED.page_name,
-            meta = EXCLUDED.meta,
-            connected_at = now(),
-            updated_at = now()
-        `;
-      }
-    }
-
-    if (primaryIg && storeInstagram) {
-      await upsertProfileFromInstagram({
-        userId: input.userId,
-        username: primaryIg.username,
-        avatarUrl: primaryIg.profile_picture_url,
-        followersCount: primaryIg.followers_count,
-        displayName: primaryIg.name || primaryIg.username,
-      });
-    }
-
-    return rows;
-  } catch (error) {
-    console.error('[social_accounts] upsert failed after profile ensure', error);
-    // Do NOT silently fall back to ephemeral memory when DATABASE_URL is set —
-    // that caused "connected then gone on navigation". Retry once after profile ensure.
-    await ensureUserProfile({ userId: input.userId });
-    throw error;
-  }
+  void primaryPage;
+  return rows;
 }
 
 /** Refresh followers / avatar on an existing IG row after Graph profile sync. */
@@ -350,25 +290,33 @@ export async function updateStoredInstagramProfile(input: {
         UPDATE social_accounts SET
           handle = COALESCE(${handle}, handle),
           display_name = COALESCE(${input.displayName ?? null}, display_name),
+          platform_user_name = COALESCE(${input.displayName ?? handle}, platform_user_name),
           avatar_url = COALESCE(${input.avatarUrl ?? null}, avatar_url),
           followers_count = COALESCE(${input.followersCount ?? null}, followers_count),
           meta = ${metaJson},
           updated_at = now()
         WHERE user_id = ${input.userId}
           AND platform = 'instagram'
-          AND external_id = ${input.externalId}
+          AND (
+            platform_user_id = ${input.externalId}
+            OR platform_user_id IS NULL
+          )
       `;
     } catch {
       await sql`
         UPDATE social_accounts SET
           handle = COALESCE(${handle}, handle),
           display_name = COALESCE(${input.displayName ?? null}, display_name),
+          platform_user_name = COALESCE(${input.displayName ?? handle}, platform_user_name),
           avatar_url = COALESCE(${input.avatarUrl ?? null}, avatar_url),
           meta = ${metaJson},
           updated_at = now()
         WHERE user_id = ${input.userId}
           AND platform = 'instagram'
-          AND external_id = ${input.externalId}
+          AND (
+            platform_user_id = ${input.externalId}
+            OR platform_user_id IS NULL
+          )
       `;
     }
 
@@ -393,12 +341,12 @@ export async function listMetaSocialAccountsForUser(
 
   try {
     const rows = await sql`
-      SELECT platform, external_id, handle, display_name, avatar_url, page_name, connected_at,
-             followers_count, meta
+      SELECT platform, platform_user_id, handle, display_name, platform_user_name,
+             avatar_url, page_name, connected_at, created_at, followers_count, meta
       FROM social_accounts
       WHERE user_id = ${userId}
         AND platform IN ('instagram', 'facebook')
-      ORDER BY platform ASC, connected_at DESC
+      ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
     `;
     if (!Array.isArray(rows) || rows.length === 0) {
       return (demoByUser.get(userId) ?? []).map(toConnected);
@@ -419,14 +367,14 @@ export async function listMetaSocialAccountsForUser(
     }
     return [...byPlatform.values()];
   } catch (error) {
-    // Column followers_count may be missing — retry without it.
+    // Older schemas may lack some columns — retry with a minimal SELECT *.
     try {
       const rows = await sql`
-        SELECT platform, external_id, handle, display_name, avatar_url, page_name, connected_at, meta
+        SELECT *
         FROM social_accounts
         WHERE user_id = ${userId}
           AND platform IN ('instagram', 'facebook')
-        ORDER BY platform ASC, connected_at DESC
+        ORDER BY created_at DESC
       `;
       if (!Array.isArray(rows) || rows.length === 0) {
         return (demoByUser.get(userId) ?? []).map(toConnected);
@@ -464,7 +412,7 @@ export async function listStoredMetaAccounts(
       FROM social_accounts
       WHERE user_id = ${userId}
         AND platform IN ('instagram', 'facebook')
-      ORDER BY platform ASC, connected_at DESC
+      ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
     `;
     if (!Array.isArray(rows) || rows.length === 0) {
       return [...(demoByUser.get(userId) ?? [])];
@@ -499,7 +447,10 @@ export async function getMetaAccessToken(input: {
           FROM social_accounts
           WHERE user_id = ${input.userId}
             AND platform = ${input.platform}
-            AND external_id = ${input.externalId}
+            AND (
+              platform_user_id = ${input.externalId}
+              OR platform_user_id IS NULL
+            )
           LIMIT 1
         `
       : await sql`
@@ -507,7 +458,7 @@ export async function getMetaAccessToken(input: {
           FROM social_accounts
           WHERE user_id = ${input.userId}
             AND platform = ${input.platform}
-          ORDER BY connected_at DESC
+          ORDER BY COALESCE(connected_at, created_at) DESC
           LIMIT 1
         `;
     const row = Array.isArray(rows) ? (rows[0] as Record<string, unknown>) : null;
@@ -527,41 +478,11 @@ export async function deleteMetaSocialAccount(input: {
   platform: 'instagram' | 'facebook';
   platformUserId: string;
 }): Promise<{ deleted: boolean }> {
-  const externalId = input.platformUserId.trim();
-  if (!externalId) return { deleted: false };
-
-  if (!process.env.DATABASE_URL?.trim()) {
-    const list = demoByUser.get(input.userId) ?? [];
-    const next = list.filter(
-      (a) =>
-        !(a.platform === input.platform && a.external_id === externalId)
-    );
-    const deleted = next.length !== list.length;
-    demoByUser.set(input.userId, next);
-    return { deleted };
-  }
-
-  try {
-    const rows = await sql`
-      DELETE FROM social_accounts
-      WHERE user_id = ${input.userId}
-        AND platform = ${input.platform}
-        AND external_id = ${externalId}
-      RETURNING id
-    `;
-    return { deleted: Array.isArray(rows) && rows.length > 0 };
-  } catch (error) {
-    console.error('[social_accounts] delete failed', error);
-    // Fall back to demo store cleanup if DB delete fails.
-    const list = demoByUser.get(input.userId) ?? [];
-    const next = list.filter(
-      (a) =>
-        !(a.platform === input.platform && a.external_id === externalId)
-    );
-    const deleted = next.length !== list.length;
-    demoByUser.set(input.userId, next);
-    return { deleted };
-  }
+  return deleteSocialAccountRow({
+    userId: input.userId,
+    platform: input.platform,
+    platformUserId: input.platformUserId,
+  });
 }
 
 /**
@@ -571,28 +492,9 @@ export async function deleteMetaSocialPlatform(input: {
   userId: string;
   platform: 'instagram' | 'facebook';
 }): Promise<{ deleted: number }> {
-  if (!process.env.DATABASE_URL?.trim()) {
-    const list = demoByUser.get(input.userId) ?? [];
-    const next = list.filter((a) => a.platform !== input.platform);
-    const deleted = list.length - next.length;
-    demoByUser.set(input.userId, next);
-    return { deleted };
-  }
-
-  try {
-    const rows = await sql`
-      DELETE FROM social_accounts
-      WHERE user_id = ${input.userId}
-        AND platform = ${input.platform}
-      RETURNING id
-    `;
-    return { deleted: Array.isArray(rows) ? rows.length : 0 };
-  } catch (error) {
-    console.error('[social_accounts] delete platform failed', error);
-    const list = demoByUser.get(input.userId) ?? [];
-    const next = list.filter((a) => a.platform !== input.platform);
-    const deleted = list.length - next.length;
-    demoByUser.set(input.userId, next);
-    return { deleted };
-  }
+  const result = await deleteSocialAccountRow({
+    userId: input.userId,
+    platform: input.platform,
+  });
+  return { deleted: result.deleted ? 1 : 0 };
 }

@@ -141,16 +141,20 @@ function ConnectOrConnectedButton({
   connected,
   account,
   onConnect,
+  onDisconnect,
   idleLabel,
   idleClassName,
   icon,
+  disconnectLabel = 'Disconnect',
 }: {
   connected: boolean;
   account?: ConnectedSocialAccount | null;
   onConnect: () => void;
+  onDisconnect?: () => void;
   idleLabel: string;
   idleClassName: string;
   icon: ReactNode;
+  disconnectLabel?: string;
 }) {
   if (connected && account) {
     return (
@@ -162,9 +166,19 @@ function ConnectOrConnectedButton({
           className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold cursor-default"
         >
           <CheckCircle2 size={16} strokeWidth={2.5} />
-          Connected
+          Connected ✓
         </button>
         <ConnectedAccountChip account={account} />
+        {onDisconnect ? (
+          <button
+            type="button"
+            onClick={onDisconnect}
+            className="mt-2 w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-rose-200 bg-white text-rose-600 text-xs font-semibold hover:bg-rose-50 transition-colors"
+          >
+            <Unplug size={14} />
+            {disconnectLabel}
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -440,6 +454,10 @@ export default function SocialAccountsPanel({
               connected={Boolean(byPlatform.get('instagram')?.connected)}
               account={byPlatform.get('instagram') ?? null}
               onConnect={() => startMetaConnect('instagram')}
+              onDisconnect={() =>
+                setDisconnectTarget(byPlatform.get('instagram') ?? null)
+              }
+              disconnectLabel={t('socials.disconnectAccount')}
               idleLabel="Connect Instagram Only"
               idleClassName="bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-95"
               icon={<InstagramIcon size={16} />}
@@ -448,6 +466,10 @@ export default function SocialAccountsPanel({
               connected={Boolean(byPlatform.get('facebook')?.connected)}
               account={byPlatform.get('facebook') ?? null}
               onConnect={() => startMetaConnect('facebook')}
+              onDisconnect={() =>
+                setDisconnectTarget(byPlatform.get('facebook') ?? null)
+              }
+              disconnectLabel={t('socials.disconnectAccount')}
               idleLabel="Connect Facebook Page Only"
               idleClassName="bg-[#1877F2] hover:bg-[#166fe5]"
               icon={<FacebookIcon size={16} />}
@@ -462,7 +484,7 @@ export default function SocialAccountsPanel({
                   className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold cursor-default"
                 >
                   <CheckCircle2 size={16} strokeWidth={2.5} />
-                  Connected
+                  Connected ✓
                 </button>
                 <div className="mt-2 space-y-1.5 px-1">
                   <p className="text-[11px] font-semibold text-slate-500">
@@ -507,6 +529,10 @@ export default function SocialAccountsPanel({
               onConnect={() => {
                 window.location.href = '/api/auth/youtube/login';
               }}
+              onDisconnect={() =>
+                setDisconnectTarget(byPlatform.get('youtube') ?? null)
+              }
+              disconnectLabel={t('socials.disconnectAccount')}
               idleLabel="Connect YouTube"
               idleClassName="bg-[#FF0000] hover:bg-[#e60000]"
               icon={<YouTubeIcon size={16} />}
@@ -517,6 +543,10 @@ export default function SocialAccountsPanel({
               onConnect={() => {
                 window.location.href = '/api/auth/linkedin/login';
               }}
+              onDisconnect={() =>
+                setDisconnectTarget(byPlatform.get('linkedin') ?? null)
+              }
+              disconnectLabel={t('socials.disconnectAccount')}
               idleLabel="Connect LinkedIn"
               idleClassName="bg-[#0A66C2] hover:bg-[#0958a8]"
               icon={<LinkedInIcon size={16} />}
@@ -538,6 +568,8 @@ export default function SocialAccountsPanel({
         </div>
       )}
 
+      {/* Platform cards only in Demo Mode / compact modal — live settings use the strips above. */}
+      {(compact || demoMode) && (
       <div className={`grid grid-cols-1 ${compact ? 'gap-3' : 'md:grid-cols-2 gap-3 sm:gap-4'}`}>
         {ORDER.map((platform) => {
           const acc = byPlatform.get(platform);
@@ -565,7 +597,7 @@ export default function SocialAccountsPanel({
                     {connected ? (
                       <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border text-emerald-700 bg-emerald-50 border-emerald-200/80">
                         <CheckCircle2 size={10} strokeWidth={2.75} />
-                        {t('socials.activeOauth')}
+                        Connected ✓
                       </span>
                     ) : (
                       <span className="inline-flex items-center font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border text-slate-400 bg-slate-50 border-slate-200/80">
@@ -659,6 +691,7 @@ export default function SocialAccountsPanel({
           );
         })}
       </div>
+      )}
 
       {/* Simulated OAuth authorization popup */}
       <Dialog open={Boolean(oauthPlatform)} onOpenChange={(open) => !open && setOauthPlatform(null)}>
