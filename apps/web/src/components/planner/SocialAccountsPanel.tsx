@@ -17,6 +17,7 @@ import {
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
+import IgBusinessRequiredBanner from '@/components/admin/IgBusinessRequiredBanner';
 import {
   PLATFORM_META,
   type ConnectedSocialAccount,
@@ -140,7 +141,12 @@ export default function SocialAccountsPanel({
     }
   };
 
-  const { data, isLoading } = useQuery<{ accounts: ConnectedSocialAccount[]; demo?: boolean }>({
+  const { data, isLoading } = useQuery<{
+    accounts: ConnectedSocialAccount[];
+    demo?: boolean;
+    meta_connected?: boolean;
+    needs_ig_business?: boolean;
+  }>({
     queryKey: ['planner-socials'],
     queryFn: async () => {
       const r = await fetch('/api/planner/socials');
@@ -223,6 +229,11 @@ export default function SocialAccountsPanel({
   }
 
   const byPlatform = new Map((data?.accounts ?? []).map((a) => [a.platform, a]));
+  const needsIgBusiness =
+    Boolean(data?.needs_ig_business) ||
+    (Boolean(byPlatform.get('facebook')?.connected) &&
+      !byPlatform.get('instagram')?.connected &&
+      Boolean(data?.meta_connected));
 
   return (
     <div className="space-y-5">
@@ -290,6 +301,7 @@ export default function SocialAccountsPanel({
         </div>
       )}
 
+      {needsIgBusiness ? <IgBusinessRequiredBanner /> : null}
       {!compact && (
         <div className="rounded-2xl border border-[#1877F2]/25 bg-[#1877F2]/5 px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <div className="min-w-0">

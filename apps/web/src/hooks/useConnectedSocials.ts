@@ -7,6 +7,7 @@ import type { ConnectedSocialAccount } from '@/lib/mock-content-planner';
 type SocialsResponse = {
   accounts: ConnectedSocialAccount[];
   meta_connected?: boolean;
+  needs_ig_business?: boolean;
   demo?: boolean;
 };
 
@@ -40,6 +41,22 @@ export function useConnectedSocials() {
     () => accounts.some((a) => a.platform === 'facebook' && a.connected),
     [accounts]
   );
+  /** FB Page connected via Meta but no IG Business account linked. */
+  const needsIgBusiness = useMemo(
+    () =>
+      Boolean(query.data?.needs_ig_business) ||
+      (hasFacebook && !hasInstagram && Boolean(query.data?.meta_connected)),
+    [
+      query.data?.needs_ig_business,
+      query.data?.meta_connected,
+      hasFacebook,
+      hasInstagram,
+    ]
+  );
+  const instagramAccount = useMemo(
+    () => accounts.find((a) => a.platform === 'instagram' && a.connected) ?? null,
+    [accounts]
+  );
 
   return {
     ...query,
@@ -47,5 +64,7 @@ export function useConnectedSocials() {
     hasConnectedSocials,
     hasInstagram,
     hasFacebook,
+    needsIgBusiness,
+    instagramAccount,
   };
 }

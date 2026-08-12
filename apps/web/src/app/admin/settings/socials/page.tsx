@@ -25,7 +25,9 @@ function MetaConnectToast() {
     if (success === 'meta_connected') {
       toast.success('Instagram & Facebook connected');
       if (warning === 'no_instagram') {
-        toast.message('No Instagram Business account was linked to the selected Pages.');
+        toast.message(
+          'Please convert your Instagram account to a Creator/Business account and link it to a Facebook Page to fetch analytics.'
+        );
       }
       // Pull Graph data into Analytics / Inbox / Planner and unlock gated tabs.
       void (async () => {

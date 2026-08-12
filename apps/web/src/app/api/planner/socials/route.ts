@@ -28,10 +28,13 @@ export async function GET() {
 
   const meta = await listMetaSocialAccountsForUser(session.user.id);
   const accounts = mergeAccounts(base, meta);
+  const hasIg = meta.some((a) => a.platform === 'instagram' && a.connected);
+  const hasFb = meta.some((a) => a.platform === 'facebook' && a.connected);
   return Response.json({
     accounts,
     demo: !process.env.DATABASE_URL?.trim() && meta.length === 0,
     meta_connected: meta.length > 0,
+    needs_ig_business: hasFb && !hasIg,
   });
 }
 

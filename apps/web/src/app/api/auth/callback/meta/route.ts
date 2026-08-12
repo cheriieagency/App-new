@@ -21,7 +21,8 @@ function clearOAuthState(res: NextResponse) {
 
 /**
  * GET /api/auth/callback/meta
- * OAuth callback — code → long-lived token → pages/IG → social_accounts → redirect.
+ * OAuth callback — code → long-lived token → Graph me/accounts (IG Business
+ * profile metadata) → upsert social_accounts + profiles → sync analytics → redirect.
  * Empty page/IG lists redirect softly (no throw, session kept).
  */
 export async function GET(request: Request) {
@@ -62,9 +63,11 @@ export async function GET(request: Request) {
   try {
     const shortLived = await exchangeCodeForShortLivedToken(code, origin);
     const longLived = await exchangeForLongLivedToken(shortLived.access_token);
+
+    // Graph: Pages + IG Business {id,username,name,profile_picture_url,followers_count,media_count}
     const pages = await fetchMetaPagesWithInstagram(longLived.access_token);
 
-    // Soft path: OAuth succeeded but user selected no Pages / has no IG Business.
+    // Soft path: OAuth succeeded but user selected no Pages.
     if (!pages.length) {
       const dest = new URL('/admin/settings/socials', origin);
       dest.searchParams.set('error', 'no_pages');
@@ -81,11 +84,13 @@ export async function GET(request: Request) {
     });
 
     // Pull Graph insights / media / comments into Analytics, Inbox, Planner.
-    try {
-      const { syncMetaDataForUser } = await import('@/lib/meta/sync');
-      await syncMetaDataForUser(session.user.id);
-    } catch (syncError) {
-      console.warn('[meta/callback] sync skipped', syncError);
+    if (hasIg) {
+      try {
+        const { syncMetaDataForUser } = await import('@/lib/meta/sync');
+        await syncMetaDataForUser(session.user.id);
+      } catch (syncError) {
+        console.warn('[meta/callback] sync skipped', syncError);
+      }
     }
 
     const dest = new URL('/admin/settings/socials', origin);

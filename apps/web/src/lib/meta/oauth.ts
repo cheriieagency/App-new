@@ -106,7 +106,10 @@ export async function exchangeForLongLivedToken(
 export type MetaIgBusinessAccount = {
   id: string;
   username?: string;
+  name?: string;
   profile_picture_url?: string;
+  followers_count?: number;
+  media_count?: number;
 };
 
 export type MetaPageAccount = {
@@ -120,14 +123,17 @@ export type MetaAccountsResponse = {
   data?: MetaPageAccount[];
 };
 
-/** Fetch Facebook Pages + linked Instagram Business accounts. */
+/**
+ * Fetch Facebook Pages + linked Instagram Business accounts (profile metadata).
+ * Graph: me/accounts?fields=id,name,access_token,instagram_business_account{…}
+ */
 export async function fetchMetaPagesWithInstagram(
   userAccessToken: string
 ): Promise<MetaPageAccount[]> {
   const url = new URL(`${GRAPH_BASE}/me/accounts`);
   url.searchParams.set(
     'fields',
-    'id,name,access_token,instagram_business_account{id,username,profile_picture_url}'
+    'id,name,access_token,instagram_business_account{id,username,name,profile_picture_url,followers_count,media_count}'
   );
   url.searchParams.set('access_token', userAccessToken);
 

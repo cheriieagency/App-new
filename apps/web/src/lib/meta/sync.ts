@@ -190,6 +190,20 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
 
   try {
     profile = await fetchInstagramProfile(ig.external_id, ig.access_token);
+    if (profile) {
+      const { updateStoredInstagramProfile } = await import(
+        '@/lib/meta/social-accounts'
+      );
+      await updateStoredInstagramProfile({
+        userId,
+        externalId: ig.external_id,
+        username: profile.username,
+        displayName: profile.name || profile.username,
+        avatarUrl: profile.profile_picture_url,
+        followersCount: profile.followers_count ?? null,
+        mediaCount: profile.media_count ?? null,
+      });
+    }
   } catch (error) {
     console.warn('[meta/sync] profile failed', error);
   }
@@ -238,8 +252,8 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
           username: ig.handle?.replace(/^@/, ''),
           name: ig.display_name || undefined,
           profile_picture_url: ig.avatar_url || undefined,
-          followers_count: 0,
-          media_count: media.length,
+          followers_count: ig.followers_count ?? 0,
+          media_count: ig.media_count ?? media.length,
         },
     facebook_pages: fbPages,
     insights: {
@@ -248,7 +262,8 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
       profile_views: insights?.profile_views ?? 0,
       likes,
       comments,
-      followers: profile?.followers_count ?? 0,
+      followers:
+        profile?.followers_count ?? ig.followers_count ?? 0,
     },
     media,
     inbox_threads: commentsToThreads(media, commentsByMedia),

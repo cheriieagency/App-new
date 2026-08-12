@@ -35,6 +35,8 @@ import { t, tf, localeTag, type Locale } from '@/lib/i18n';
 import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import { useMetaSync } from '@/hooks/useMetaSync';
+import IgBusinessRequiredBanner from '@/components/admin/IgBusinessRequiredBanner';
+import { InstagramIcon } from '@/components/icons/SocialBrandIcons';
 
 type DateRangePreset = '1w' | '1m' | '3m' | '1y' | '2y' | 'custom';
 
@@ -208,8 +210,14 @@ export default function LaterAnalyticsPanel() {
   const { locale } = useLanguage();
   const { activeWorkspace } = useWorkspace();
   const { setSection } = useAdminNav();
-  const { hasConnectedSocials, isLoading: socialsLoading } = useConnectedSocials();
-  const { data: metaSync } = useMetaSync(hasConnectedSocials);
+  const {
+    hasConnectedSocials,
+    hasInstagram,
+    needsIgBusiness,
+    instagramAccount,
+    isLoading: socialsLoading,
+  } = useConnectedSocials();
+  const { data: metaSync } = useMetaSync(hasInstagram);
   const [sub, setSub] = useState<AnalyticsSubTab>('analytics');
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
   const [rangeOpen, setRangeOpen] = useState(false);
@@ -218,14 +226,37 @@ export default function LaterAnalyticsPanel() {
   const [exportOpen, setExportOpen] = useState(false);
   const chart = activeWorkspace.analytics.revenue_chart;
 
+  const igProfile = useMemo(() => {
+    const snap = metaSync?.snapshot?.instagram;
+    const handle =
+      (snap?.username ? `@${snap.username.replace(/^@/, '')}` : null) ||
+      instagramAccount?.handle ||
+      null;
+    const avatar =
+      snap?.profile_picture_url || instagramAccount?.avatar_url || null;
+    const followers =
+      snap?.followers_count ??
+      instagramAccount?.follower_count ??
+      0;
+    const displayName =
+      snap?.name ||
+      instagramAccount?.display_name ||
+      handle ||
+      'Instagram';
+    return { handle, avatar, followers, displayName };
+  }, [metaSync?.snapshot?.instagram, instagramAccount]);
+
   const engagement = useMemo(() => {
     const snap = metaSync?.snapshot;
-    if (!snap) return { ...EMPTY_ENGAGEMENT };
-    const likes = snap.insights.likes;
-    const comments = snap.insights.comments;
-    const reach = snap.insights.reach;
-    const impressions = snap.insights.impressions;
-    const followers = snap.insights.followers;
+    if (!snap && !instagramAccount) return { ...EMPTY_ENGAGEMENT };
+    const likes = snap?.insights.likes ?? 0;
+    const comments = snap?.insights.comments ?? 0;
+    const reach = snap?.insights.reach ?? 0;
+    const impressions = snap?.insights.impressions ?? 0;
+    const followers =
+      snap?.insights.followers ??
+      igProfile.followers ??
+      0;
     const engagementTotal = likes + comments;
     return {
       reach,
@@ -239,7 +270,7 @@ export default function LaterAnalyticsPanel() {
       engagementRate:
         reach > 0 ? Math.round((engagementTotal / reach) * 1000) / 10 : 0,
     };
-  }, [metaSync?.snapshot]);
+  }, [metaSync?.snapshot, instagramAccount, igProfile.followers]);
 
   /** Map synced IG media into Posts / Reels performance rows (empty until connect). */
   const { bestPosts, worstPosts, bestReels, worstReels } = useMemo(() => {
@@ -346,10 +377,10 @@ export default function LaterAnalyticsPanel() {
     },
     {
       label: t('kpiFollowers', locale),
-      value: formatCompact(engagement.followers, locale),
+      value: formatCompact(engagement.followers || igProfile.followers, locale),
       delta: '—',
       deltaTone: 'neutral',
-      meta: String(metaSync?.snapshot?.instagram?.media_count ?? 0),
+      meta: igProfile.handle ?? String(metaSync?.snapshot?.instagram?.media_count ?? 0),
     },
     {
       label: t('kpiBioStoreCvr', locale),
@@ -521,6 +552,42 @@ export default function LaterAnalyticsPanel() {
           </>
         }
       />
+
+      {needsIgBusiness ? (
+        <IgBusinessRequiredBanner showSettingsLink />
+      ) : null}
+
+      {hasInstagram && igProfile.handle ? (
+        <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 sm:px-5 flex items-center gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          {igProfile.avatar ? (
+            <img
+              src={igProfile.avatar}
+              alt=""
+              className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-full object-cover border-2 border-[#E9D5FF]"
+            />
+          ) : (
+            <span className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] inline-flex items-center justify-center text-white">
+              <InstagramIcon size={18} />
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-extrabold text-slate-900 truncate">
+              {igProfile.displayName}
+            </p>
+            <p className="text-xs text-slate-500 font-medium font-mono truncate">
+              {igProfile.handle}
+            </p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              {t('kpiFollowers', locale)}
+            </p>
+            <p className="text-lg font-extrabold tabular-nums text-slate-900">
+              {formatCompact(igProfile.followers, locale)}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <AnalyticsExportDialog
         open={exportOpen}
