@@ -100,6 +100,20 @@ export const youtubeEnv = {
   oauthRequiredKeys: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const,
 };
 
+/**
+ * Public app origin for OAuth redirect_uri builders.
+ * Falls back to local Next.js port 4000 when NEXT_PUBLIC_APP_URL is unset.
+ */
+export function appBaseUrl(requestOrigin?: string | null): string {
+  const fromEnv = readEnv('NEXT_PUBLIC_APP_URL');
+  const candidate = fromEnv || requestOrigin?.trim() || 'http://localhost:4000';
+  try {
+    return new URL(candidate).origin;
+  } catch {
+    return 'http://localhost:4000';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 6. Payments & Checkout (Stripe)
 // ---------------------------------------------------------------------------

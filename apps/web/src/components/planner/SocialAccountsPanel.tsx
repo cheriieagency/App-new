@@ -181,13 +181,21 @@ export default function SocialAccountsPanel({
   });
 
   const startConnect = (platform: SocialPlatform) => {
-    // Live Meta OAuth — platform-specific target when Demo Mode is off.
+    // Live OAuth when Demo Mode is off.
     if (!demoMode && platform === 'instagram') {
       window.location.href = '/api/auth/meta/login?target=instagram';
       return;
     }
     if (!demoMode && platform === 'facebook') {
       window.location.href = '/api/auth/meta/login?target=facebook';
+      return;
+    }
+    if (!demoMode && platform === 'youtube') {
+      window.location.href = '/api/auth/youtube/login';
+      return;
+    }
+    if (!demoMode && platform === 'linkedin') {
+      window.location.href = '/api/auth/linkedin/login';
       return;
     }
     if (demoMode) {
@@ -213,13 +221,17 @@ export default function SocialAccountsPanel({
     const account = disconnectTarget;
     setDisconnectTarget(null);
 
-    // Live Meta rows: delete only that platform via dedicated disconnect API.
-    if (
-      !demoMode &&
-      (account.platform === 'instagram' || account.platform === 'facebook')
-    ) {
+    const livePlatforms = new Set([
+      'instagram',
+      'facebook',
+      'youtube',
+      'linkedin',
+    ]);
+
+    // Live OAuth rows: delete only that platform via unified disconnect API.
+    if (!demoMode && livePlatforms.has(account.platform)) {
       try {
-        const r = await fetch('/api/auth/meta/disconnect', {
+        const r = await fetch('/api/auth/disconnect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -377,6 +389,41 @@ export default function SocialAccountsPanel({
         </div>
       )}
 
+      {!compact && !demoMode && (
+        <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3">
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold text-slate-900">
+              Connect YouTube & LinkedIn
+            </p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
+              Link your YouTube channel and LinkedIn profile for publishing and analytics.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = '/api/auth/youtube/login';
+              }}
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#FF0000] hover:bg-[#e60000] text-white text-sm font-bold shadow-sm transition-colors"
+            >
+              <YouTubeIcon size={16} />
+              Connect YouTube
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = '/api/auth/linkedin/login';
+              }}
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#0A66C2] hover:bg-[#0958a8] text-white text-sm font-bold shadow-sm transition-colors"
+            >
+              <LinkedInIcon size={16} />
+              Connect LinkedIn
+            </button>
+          </div>
+        </div>
+      )}
+
       {!compact && demoMode && (
         <div className="rounded-2xl border border-[#1877F2]/25 bg-[#1877F2]/5 px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <div className="min-w-0">
@@ -384,7 +431,7 @@ export default function SocialAccountsPanel({
               Demo Mode — simulated OAuth
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Turn Demo Mode off to use live Instagram / Facebook Page connections.
+              Turn Demo Mode off to use live Instagram, Facebook, YouTube, and LinkedIn connections.
             </p>
           </div>
         </div>

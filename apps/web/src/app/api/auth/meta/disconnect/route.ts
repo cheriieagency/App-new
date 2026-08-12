@@ -1,7 +1,6 @@
 /**
  * POST /api/auth/meta/disconnect
- * Body: { platform: 'instagram' | 'facebook', platformUserId: string }
- * Deletes ONLY that platform row from social_accounts for the signed-in user.
+ * Alias kept for Meta-specific callers — delegates to unified disconnect logic.
  */
 
 import { headers } from 'next/headers';
@@ -55,7 +54,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Fallback: disconnect all rows for that platform for this user.
     const result = await deleteMetaSocialPlatform({
       userId: session.user.id,
       platform,

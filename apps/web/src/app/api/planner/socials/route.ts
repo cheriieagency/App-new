@@ -7,13 +7,14 @@ import {
   type SocialPlatform,
 } from '@/lib/mock-content-planner';
 import { listMetaSocialAccountsForUser } from '@/lib/meta/social-accounts';
+import { listOAuthSocialAccountsForUser } from '@/lib/social/oauth-accounts';
 
 function mergeAccounts(
   base: ConnectedSocialAccount[],
-  meta: ConnectedSocialAccount[]
+  connected: ConnectedSocialAccount[]
 ): ConnectedSocialAccount[] {
   const map = new Map(base.map((a) => [a.platform, a]));
-  for (const m of meta) {
+  for (const m of connected) {
     map.set(m.platform, m);
   }
   return [...map.values()];
@@ -26,13 +27,17 @@ export async function GET() {
     return Response.json({ accounts: base, demo: true });
   }
 
-  const meta = await listMetaSocialAccountsForUser(session.user.id);
-  const accounts = mergeAccounts(base, meta);
+  const [meta, oauth] = await Promise.all([
+    listMetaSocialAccountsForUser(session.user.id),
+    listOAuthSocialAccountsForUser(session.user.id, ['youtube', 'linkedin']),
+  ]);
+  const live = [...meta, ...oauth];
+  const accounts = mergeAccounts(base, live);
   const hasIg = meta.some((a) => a.platform === 'instagram' && a.connected);
   const hasFb = meta.some((a) => a.platform === 'facebook' && a.connected);
   return Response.json({
     accounts,
-    demo: !process.env.DATABASE_URL?.trim() && meta.length === 0,
+    demo: !process.env.DATABASE_URL?.trim() && live.length === 0,
     meta_connected: meta.length > 0,
     needs_ig_business: hasFb && !hasIg,
   });
@@ -48,7 +53,7 @@ export async function POST(request: Request) {
     }
 
     // Demo OAuth: instantly toggles connection state.
-    // Live Instagram/Facebook connect uses GET /api/auth/meta/login instead.
+    // Live connects use /api/auth/{meta,youtube,linkedin}/login instead.
     const account = setSocialConnection(platform, connect);
     return Response.json({ account, accounts: listSocialAccounts() });
   } catch (error) {

@@ -38,12 +38,18 @@ function MetaConnectToast() {
     if (
       success === 'meta_connected' ||
       success === 'instagram_connected' ||
-      success === 'facebook_connected'
+      success === 'facebook_connected' ||
+      success === 'youtube_connected' ||
+      success === 'linkedin_connected'
     ) {
       if (success === 'instagram_connected') {
         toast.success('Instagram connected');
       } else if (success === 'facebook_connected') {
         toast.success('Facebook Page connected');
+      } else if (success === 'youtube_connected') {
+        toast.success('YouTube channel connected');
+      } else if (success === 'linkedin_connected') {
+        toast.success('LinkedIn profile connected');
       } else {
         toast.success('Instagram & Facebook connected');
       }
@@ -57,12 +63,14 @@ function MetaConnectToast() {
       toast.error(
         'No Instagram Business account was linked to the selected Facebook Page.'
       );
+    } else if (error === 'no_youtube_channel') {
+      toast.error('No YouTube channel was found for this Google account.');
     } else if (error === 'no_pages') {
       toast.message(
         'Meta login succeeded, but no Facebook Pages were returned. Grant Page access and try again.'
       );
     } else if (error) {
-      toast.error(`Meta connection failed: ${error.replace(/_/g, ' ')}`);
+      toast.error(`Connection failed: ${error.replace(/_/g, ' ')}`);
     }
   }, [searchParams, queryClient]);
 
