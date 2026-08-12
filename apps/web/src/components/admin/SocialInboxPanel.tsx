@@ -67,10 +67,7 @@ export default function SocialInboxPanel() {
           title={t('socialInboxTitle', locale)}
           description={t('instagramNotConnected', locale)}
         />
-        <ConnectSocialsEmpty
-          title="Inbox is empty"
-          description="Connect Instagram to sync DMs into Social Inbox. Messages appear here automatically after you authorize Meta."
-        />
+        <ConnectSocialsEmpty />
       </div>
     );
   }

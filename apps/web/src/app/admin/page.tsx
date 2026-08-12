@@ -2560,10 +2560,7 @@ export default function AdminPage() {
             Loading…
           </div>
         ) : !hasConnectedSocials ? (
-          <ConnectSocialsEmpty
-            title="Connect Instagram & Facebook"
-            description="Admin stays empty until you connect a social account. Analytics, inbox, community, email, bio, and media fill in automatically after OAuth."
-          />
+          <ConnectSocialsEmpty />
         ) : (
           <>
         {section === 'analytics' && <LaterAnalyticsPanel />}

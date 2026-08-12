@@ -18,10 +18,7 @@ export default function PlannerPage() {
   if (!hasConnectedSocials) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-10">
-        <ConnectSocialsEmpty
-          title="Connect a social account to plan content"
-          description="The planner stays empty until you connect Instagram or Facebook. Posts and schedules appear after OAuth."
-        />
+        <ConnectSocialsEmpty />
       </div>
     );
   }

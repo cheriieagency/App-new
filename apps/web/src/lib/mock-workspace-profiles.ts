@@ -9,7 +9,8 @@ import type { UtmClickStat } from '@/lib/bio-utm';
 import { buildTrackedShortUrl } from '@/lib/bio-utm';
 
 export const NC_WORKSPACE_STORAGE_KEY = 'nc_active_workspace_id';
-const NC_PROFILES_STORAGE_KEY = 'nc_workspace_profiles_v1';
+/** v2 drops seeded Ebba / demo brand profiles from older local sessions. */
+const NC_PROFILES_STORAGE_KEY = 'nc_workspace_profiles_v2';
 
 export type WorkspaceBioBlock = {
   id: string;
@@ -209,123 +210,65 @@ const liveStudioBlocks: WorkspaceBioBlock[] = [
 ];
 
 function buildProfiles(): WorkspaceProfile[] {
-  const nordic = applyBioPreset('nordic-minimal');
-  const midnight = applyBioPreset('midnight-glass');
-
-  const labUtm = [
-    utm('starter-pack-lab', 'Creator Starter Pack', 186, 142, 'https://example.com/starter-pack'),
-    utm('coaching-lab', '1:1 Coaching', 64, 51, 'https://example.com/coaching'),
-    utm('ebook-lab', 'Gratis E-bok', 312, 248, 'https://example.com/ebook'),
-  ];
-  const liveUtm = [
-    utm('hook-pack-live', 'Live Studio Hook Pack', 94, 71, 'https://example.com/hook-pack'),
-    utm('webinar-replay', 'Webinar Replay Pack', 128, 97, 'https://example.com/replay'),
-  ];
-
-  return [
-    {
-      id: '101',
-      name: 'Ebba Creator Lab',
-      handle: '@ebbacreator',
-      avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-creator-lab',
-      color: '#0f766e',
-      channels: ['instagram', 'tiktok', 'linkedin', 'youtube'],
-      bio: {
-        profile_photo:
-          'https://api.dicebear.com/7.x/avataaars/svg?seed=EbbaCreator',
-        display_name: 'Ebba Creator Lab',
-        handle: 'ebbacreator',
-        bio_text: 'Nordic creator tools, kurser och community för tillväxt.',
-        theme: nordic,
-        theme_label: 'Nordic Minimal',
-        blocks: creatorLabBlocks,
-      },
-      analytics: {
-        revenue_sek: 0,
-        active_members: 0,
-        event_rsvps: 0,
-        products: 0,
-        revenue_chart: [0, 0, 0, 0, 0, 0, 0],
-        utm_links: labUtm,
-        utm_total_clicks: 0,
-        recent_emails: [],
-      },
-      community: {
-        community_id: 101,
-        community_name: 'Ebba Creator Lab',
-        total_members: 0,
-        posts: 0,
-        comments: 0,
-        active_moderators: 0,
-        recent_members: [],
-      },
-      email: {
-        total_subscribers: 0,
-        average_open_rate: 0,
-        broadcasts_sent: 0,
-        subscriber_preview: [],
-      },
-      planner: {
-        kanban_count: 0,
-        calendar_events: 0,
-        scheduled_posts: 0,
-        project_name: 'Ebba Creator Lab',
-      },
-    },
-    {
-      id: '102',
-      name: 'Ebba Live Studio',
-      handle: '@ebbalive',
-      avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-live-studio',
-      color: '#0369a1',
-      channels: ['instagram', 'linkedin', 'youtube'],
-      bio: {
-        profile_photo:
-          'https://api.dicebear.com/7.x/avataaars/svg?seed=EbbaLive',
-        display_name: 'Ebba Live Studio',
-        handle: 'ebbalive',
-        bio_text: 'Live-webbinarier, RSVP och realtidschatt för creators.',
-        theme: midnight,
-        theme_label: 'Midnight Glass',
-        blocks: liveStudioBlocks,
-      },
-      analytics: {
-        revenue_sek: 0,
-        active_members: 0,
-        event_rsvps: 0,
-        products: 0,
-        revenue_chart: [0, 0, 0, 0, 0, 0, 0],
-        utm_links: liveUtm,
-        utm_total_clicks: 0,
-        recent_emails: [],
-      },
-      community: {
-        community_id: 102,
-        community_name: 'Ebba Live Studio',
-        total_members: 0,
-        posts: 0,
-        comments: 0,
-        active_moderators: 0,
-        recent_members: [],
-      },
-      email: {
-        total_subscribers: 0,
-        average_open_rate: 0,
-        broadcasts_sent: 0,
-        subscriber_preview: [],
-      },
-      planner: {
-        kanban_count: 0,
-        calendar_events: 0,
-        scheduled_posts: 0,
-        project_name: 'Ebba Live Studio',
-      },
-    },
-  ];
+  // Fresh creators start with zero social spaces — create via the workspace picker.
+  return [];
 }
 
 let profiles: WorkspaceProfile[] = buildProfiles();
 let profilesHydrated = false;
+
+/** In-memory blank profile so admin UI can render before the first social space exists. */
+export function blankWorkspaceProfile(): WorkspaceProfile {
+  const theme = applyBioPreset('nordic-minimal');
+  return {
+    id: '',
+    name: 'Your brand',
+    handle: '@',
+    avatar_url: null,
+    color: '#2B2568',
+    channels: [],
+    bio: {
+      profile_photo: null,
+      display_name: '',
+      handle: '',
+      bio_text: '',
+      theme,
+      theme_label: 'Nordic Minimal',
+      blocks: [],
+    },
+    analytics: {
+      revenue_sek: 0,
+      active_members: 0,
+      event_rsvps: 0,
+      products: 0,
+      revenue_chart: [0, 0, 0, 0, 0, 0, 0],
+      utm_links: [],
+      utm_total_clicks: 0,
+      recent_emails: [],
+    },
+    community: {
+      community_id: 0,
+      community_name: '',
+      total_members: 0,
+      posts: 0,
+      comments: 0,
+      active_moderators: 0,
+      recent_members: [],
+    },
+    email: {
+      total_subscribers: 0,
+      average_open_rate: 0,
+      broadcasts_sent: 0,
+      subscriber_preview: [],
+    },
+    planner: {
+      kanban_count: 0,
+      calendar_events: 0,
+      scheduled_posts: 0,
+      project_name: '',
+    },
+  };
+}
 
 function hydrateProfilesFromStorage() {
   if (profilesHydrated || typeof window === 'undefined') return;
@@ -446,16 +389,14 @@ export function createWorkspaceProfile(input: {
   }
   let handle = (input.handle ?? '').trim() || input.name.replace(/\s+/g, '').toLowerCase();
   handle = handle.replace(/^@/, '');
-  const theme = applyBioPreset('nordic');
+  const theme = applyBioPreset('nordic-minimal');
   const profile: WorkspaceProfile = {
     id,
     name: input.name.trim() || 'Ny Team-yta',
     handle: `@${handle}`,
     avatar_url: `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(input.name)}`,
     color: input.color || '#E11D48',
-    channels: input.channels?.length
-      ? input.channels
-      : ['instagram', 'tiktok', 'linkedin'],
+    channels: input.channels?.length ? input.channels : [],
     bio: {
       profile_photo: null,
       display_name: input.name.trim() || 'Ny Team-yta',
@@ -467,7 +408,7 @@ export function createWorkspaceProfile(input: {
     },
     analytics: {
       revenue_sek: 0,
-      active_members: 1,
+      active_members: 0,
       event_rsvps: 0,
       products: 0,
       revenue_chart: [0, 0, 0, 0, 0, 0, 0],

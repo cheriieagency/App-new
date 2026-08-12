@@ -80,7 +80,31 @@ export default function WorkspaceSelector({
     );
   }, [workspaces, query]);
 
-  if (!active) return null;
+  if (!active) {
+    const emptyCreate = (
+      <button
+        type="button"
+        onClick={onCreateNew}
+        className={
+          compact
+            ? 'flex items-center justify-center gap-2 w-full h-11 min-h-[44px] rounded-2xl border border-dashed border-slate-300 bg-white px-3 text-[13px] font-semibold text-[#2B2568] hover:border-[#F472B6] hover:bg-[#FCE7F3]/40 transition-colors'
+            : 'flex items-center justify-center gap-2 h-10 min-h-[40px] rounded-xl border border-dashed border-slate-300 bg-white px-3 text-xs font-bold text-[#2B2568] hover:border-[#F472B6] hover:bg-[#FCE7F3]/40 transition-colors'
+        }
+      >
+        <Plus size={15} className="text-[#F472B6]" strokeWidth={2} />
+        {t('createTeamWorkspace', locale)}
+      </button>
+    );
+    if (!compact) return emptyCreate;
+    return (
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-0.5">
+          {t('socialSpaces', locale)}
+        </p>
+        {emptyCreate}
+      </div>
+    );
+  }
 
   const selector = (
     <Popover

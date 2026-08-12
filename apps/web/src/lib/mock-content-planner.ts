@@ -183,53 +183,7 @@ let commentSeq = 300;
 let teamSeq = 10;
 let workspaceSeq = 10;
 
-const brandWorkspaces: BrandWorkspace[] = [
-  {
-    id: '101',
-    name: 'Ebba Creator Lab',
-    handle: '@ebbacreator',
-    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-creator-lab',
-    color: '#0f766e',
-    channels: ['instagram', 'tiktok', 'linkedin', 'youtube'],
-    created_at: new Date(now - 90 * day).toISOString(),
-  },
-  {
-    id: '102',
-    name: 'Ebba Live Studio',
-    handle: '@ebbalive',
-    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=ebba-live-studio',
-    color: '#0369a1',
-    channels: ['instagram', 'linkedin', 'youtube'],
-    created_at: new Date(now - 60 * day).toISOString(),
-  },
-  {
-    id: 'ws-nordic',
-    name: 'Clikd Launch',
-    handle: '@nordiccreator',
-    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=nordic',
-    color: '#E11D48',
-    channels: ['instagram', 'tiktok', 'linkedin', 'youtube'],
-    created_at: new Date(now - 90 * day).toISOString(),
-  },
-  {
-    id: 'ws-cherii',
-    name: 'Cherii Media Agency',
-    handle: '@cheriie.agency',
-    avatar_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=cherii',
-    color: '#0F766E',
-    channels: ['instagram', 'tiktok', 'linkedin'],
-    created_at: new Date(now - 45 * day).toISOString(),
-  },
-  {
-    id: 'ws-evergreen',
-    name: 'Evergreen Content',
-    handle: '@evergreen.nc',
-    avatar_url: null,
-    color: '#4F46E5',
-    channels: ['instagram', 'linkedin'],
-    created_at: new Date(now - 30 * day).toISOString(),
-  },
-];
+const brandWorkspaces: BrandWorkspace[] = [];
 
 /** Legacy alias — names mirror brand workspaces. */
 export const PLANNER_PROJECTS: PlannerProject[] = brandWorkspaces.map((w) => ({
@@ -292,63 +246,7 @@ export function workspaceChannelLabel(
 /** Demo workspace subscription — Pro unlocks planner invites. */
 let workspacePlan: WorkspacePlan = 'starter';
 
-const teamMembers: PlannerTeamMember[] = [
-  {
-    id: 'u-ebba',
-    name: 'Ebba',
-    email: 'ebbabrobeck@test.se',
-    role: 'owner',
-    project: 'Ebba Creator Lab',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ebba',
-    planner_access: true,
-    status: 'active',
-    invited_at: new Date(now - 60 * day).toISOString(),
-  },
-  {
-    id: 'u-alex',
-    name: 'Alex',
-    email: 'alex@clikd.app',
-    role: 'editor',
-    project: 'Ebba Creator Lab',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex',
-    planner_access: true,
-    status: 'active',
-    invited_at: new Date(now - 40 * day).toISOString(),
-  },
-  {
-    id: 'u-mira',
-    name: 'Mira',
-    email: 'mira@cherii.se',
-    role: 'editor',
-    project: 'Cherii Media Agency',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mira',
-    planner_access: true,
-    status: 'active',
-    invited_at: new Date(now - 25 * day).toISOString(),
-  },
-  {
-    id: 'u-sara',
-    name: 'Sara',
-    email: 'sara@clikd.app',
-    role: 'approver',
-    project: 'Ebba Live Studio',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sara',
-    planner_access: true,
-    status: 'active',
-    invited_at: new Date(now - 20 * day).toISOString(),
-  },
-  {
-    id: 'u-noah',
-    name: 'Noah',
-    email: 'noah@cherii.se',
-    role: 'editor',
-    project: 'Cherii Media Agency',
-    avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=noah',
-    planner_access: true,
-    status: 'active',
-    invited_at: new Date(now - 12 * day).toISOString(),
-  },
-];
+const teamMembers: PlannerTeamMember[] = [];
 
 /** Assignees derived from workspace team (used across studio / cards). */
 export function getPlannerTeam(): PlannerAssignee[] {

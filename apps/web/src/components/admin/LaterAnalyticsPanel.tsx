@@ -292,10 +292,7 @@ export default function LaterAnalyticsPanel() {
           eyebrow={t('analyticsAndRevenue', locale)}
           title={activeTabLabel}
         />
-        <ConnectSocialsEmpty
-          title="No analytics yet"
-          description="Connect Instagram or Facebook to pull reach, views, followers, and revenue into this workspace."
-        />
+        <ConnectSocialsEmpty />
       </div>
     );
   }

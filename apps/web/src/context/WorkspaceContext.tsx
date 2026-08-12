@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner';
 import {
+  blankWorkspaceProfile,
   createWorkspaceProfile,
   listWorkspaceProfiles,
   NC_WORKSPACE_STORAGE_KEY,
@@ -46,13 +47,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [workspaces, setWorkspaces] = useState<WorkspaceProfile[]>(() =>
     listWorkspaceProfiles()
   );
-  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState('101');
+  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState('');
 
   // Hydrate active id from localStorage after mount (SSR-safe).
   useEffect(() => {
-    const stored = readStoredId(workspaces[0]?.id ?? '101');
-    if (workspaces.some((w) => w.id === stored)) {
+    const stored = readStoredId(workspaces[0]?.id ?? '');
+    if (stored && workspaces.some((w) => w.id === stored)) {
       setActiveWorkspaceIdState(stored);
+    } else if (workspaces[0]) {
+      setActiveWorkspaceIdState(workspaces[0].id);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -77,7 +80,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return (
       workspaces.find((w) => w.id === activeWorkspaceId) ||
       workspaces[0] ||
-      listWorkspaceProfiles()[0]
+      blankWorkspaceProfile()
     );
   }, [workspaces, activeWorkspaceId]);
 
@@ -92,6 +95,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const updateActiveBio = useCallback(
     (patch: Partial<WorkspaceBioData>) => {
+      if (!activeWorkspaceId) return;
       const updated = updateWorkspaceBio(activeWorkspaceId, patch);
       if (!updated) return;
       setWorkspaces(listWorkspaceProfiles());

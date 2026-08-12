@@ -5,10 +5,14 @@ import Link from 'next/link';
 import { Link2 } from 'lucide-react';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 
+const DEFAULT_TITLE = 'Connect your social media';
+const DEFAULT_DESCRIPTION =
+  'This section stays empty until you connect a social media account. Analytics, inbox, community, email, bio, and media fill in automatically after OAuth.';
+
 /** Empty state prompting creators to connect social accounts before data appears. */
 export default function ConnectSocialsEmpty({
-  title = 'Connect a social account',
-  description = 'This section stays empty until you connect Instagram or Facebook. Data fills in automatically after OAuth.',
+  title = DEFAULT_TITLE,
+  description = DEFAULT_DESCRIPTION,
 }: {
   title?: string;
   description?: string;
@@ -26,7 +30,7 @@ export default function ConnectSocialsEmpty({
         href="/admin/settings/socials"
         className="inline-flex items-center justify-center min-h-[44px] mt-6 px-5 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-bold"
       >
-        Connect Instagram & Facebook
+        Connect now
       </Link>
     </div>
   );
