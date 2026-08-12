@@ -106,7 +106,7 @@ export default function SocialAccountsPanel({
 }) {
   const { t, language } = useLanguage();
   const queryClient = useQueryClient();
-  const [demoMode, setDemoMode] = useState(true);
+  const [demoMode, setDemoMode] = useState(false);
 
   const connectLabel = (platform: SocialPlatform) => {
     const keys = {
@@ -125,10 +125,14 @@ export default function SocialAccountsPanel({
   useEffect(() => {
     try {
       const stored = localStorage.getItem(DEMO_MODE_KEY);
-      if (stored === '0') setDemoMode(false);
+      // Default is live OAuth (off). Only enable Demo Mode when explicitly stored as on.
       if (stored === '1') setDemoMode(true);
+      else {
+        setDemoMode(false);
+        if (stored !== '0') localStorage.setItem(DEMO_MODE_KEY, '0');
+      }
     } catch {
-      /* ignore */
+      setDemoMode(false);
     }
   }, []);
 
