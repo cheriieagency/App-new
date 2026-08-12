@@ -6,19 +6,65 @@ import { metaEnv } from '@/lib/config/env';
 import { getSiteUrl } from '@/lib/site';
 import { GRAPH_BASE } from '@/lib/meta/graph-api';
 
-export const META_OAUTH_SCOPES = [
+/** Which Meta products the user asked to connect. */
+export type MetaOAuthTarget = 'instagram' | 'facebook' | 'both';
+
+export const META_OAUTH_STATE_COOKIE = 'clikd_meta_oauth_state';
+export const META_OAUTH_TARGET_COOKIE = 'clikd_meta_oauth_target';
+
+const INSTAGRAM_SCOPES = [
   'public_profile',
-  'email',
-  'pages_show_list',
-  'pages_manage_posts',
-  'pages_read_engagement',
   'instagram_basic',
   'instagram_content_publish',
   'instagram_manage_insights',
   'instagram_manage_comments',
+  'pages_show_list',
+  'pages_read_engagement',
 ] as const;
 
-export const META_OAUTH_STATE_COOKIE = 'clikd_meta_oauth_state';
+const FACEBOOK_SCOPES = [
+  'public_profile',
+  'pages_show_list',
+  'pages_manage_posts',
+  'pages_read_engagement',
+] as const;
+
+/** @deprecated Prefer scopesForMetaTarget — kept for callers expecting the full suite. */
+export const META_OAUTH_SCOPES = [
+  ...new Set([...INSTAGRAM_SCOPES, ...FACEBOOK_SCOPES, 'email']),
+] as const;
+
+export function parseMetaOAuthTarget(raw: string | null | undefined): MetaOAuthTarget {
+  if (raw === 'instagram' || raw === 'facebook' || raw === 'both') return raw;
+  return 'both';
+}
+
+/** Scopes for the chosen connect target. */
+export function scopesForMetaTarget(target: MetaOAuthTarget): string[] {
+  if (target === 'instagram') return [...INSTAGRAM_SCOPES];
+  if (target === 'facebook') return [...FACEBOOK_SCOPES];
+  return [...new Set([...INSTAGRAM_SCOPES, ...FACEBOOK_SCOPES])];
+}
+
+/**
+ * Encode nonce + target into the OAuth `state` (and cookie) so the callback
+ * knows whether to store Instagram, Facebook, or both.
+ */
+export function encodeMetaOAuthState(nonce: string, target: MetaOAuthTarget): string {
+  return `${nonce}.${target}`;
+}
+
+export function decodeMetaOAuthState(state: string | null | undefined): {
+  nonce: string;
+  target: MetaOAuthTarget;
+} | null {
+  if (!state || !state.includes('.')) return null;
+  const idx = state.lastIndexOf('.');
+  const nonce = state.slice(0, idx);
+  const target = parseMetaOAuthTarget(state.slice(idx + 1));
+  if (!nonce) return null;
+  return { nonce, target };
+}
 
 export function getMetaCallbackUrl(requestOrigin?: string | null): string {
   const base =
@@ -32,7 +78,11 @@ export function getMetaCallbackUrl(requestOrigin?: string | null): string {
   }
 }
 
-export function buildMetaLoginUrl(state: string, requestOrigin?: string | null): string {
+export function buildMetaLoginUrl(
+  state: string,
+  requestOrigin?: string | null,
+  target: MetaOAuthTarget = 'both'
+): string {
   const appId = metaEnv.appId();
   if (!appId) throw new Error('META_APP_ID is not configured');
 
@@ -41,7 +91,7 @@ export function buildMetaLoginUrl(state: string, requestOrigin?: string | null):
   url.searchParams.set('redirect_uri', getMetaCallbackUrl(requestOrigin));
   url.searchParams.set('state', state);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', META_OAUTH_SCOPES.join(','));
+  url.searchParams.set('scope', scopesForMetaTarget(target).join(','));
   // Always re-prompt permissions + page selection (even if previously granted).
   url.searchParams.set('auth_type', 'rerequest');
   url.searchParams.set('prompt', 'consent');

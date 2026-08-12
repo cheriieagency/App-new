@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,9 +8,9 @@ import { ArrowLeft, CalendarDays, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import SocialAccountsPanel from '@/components/planner/SocialAccountsPanel';
+import IgBusinessRequiredBanner from '@/components/admin/IgBusinessRequiredBanner';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/lib/i18n';
-import { Suspense } from 'react';
 import { refreshMetaSync } from '@/hooks/useMetaSync';
 
 function MetaConnectToast() {
@@ -22,26 +22,41 @@ function MetaConnectToast() {
     const error = searchParams.get('error');
     const warning = searchParams.get('warning');
 
-    if (success === 'meta_connected') {
-      toast.success('Instagram & Facebook connected');
+    const invalidate = async () => {
+      try {
+        await refreshMetaSync();
+      } catch {
+        /* callback may already have synced */
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
+        queryClient.invalidateQueries({ queryKey: ['meta-sync'] }),
+        queryClient.invalidateQueries({ queryKey: ['planner-posts'] }),
+      ]);
+    };
+
+    if (
+      success === 'meta_connected' ||
+      success === 'instagram_connected' ||
+      success === 'facebook_connected'
+    ) {
+      if (success === 'instagram_connected') {
+        toast.success('Instagram connected');
+      } else if (success === 'facebook_connected') {
+        toast.success('Facebook Page connected');
+      } else {
+        toast.success('Instagram & Facebook connected');
+      }
       if (warning === 'no_instagram') {
         toast.message(
           'Please convert your Instagram account to a Creator/Business account and link it to a Facebook Page to fetch analytics.'
         );
       }
-      // Pull Graph data into Analytics / Inbox / Planner and unlock gated tabs.
-      void (async () => {
-        try {
-          await refreshMetaSync();
-        } catch {
-          /* callback already synced; GET will hydrate next */
-        }
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
-          queryClient.invalidateQueries({ queryKey: ['meta-sync'] }),
-          queryClient.invalidateQueries({ queryKey: ['planner-posts'] }),
-        ]);
-      })();
+      void invalidate();
+    } else if (error === 'no_instagram_business_account') {
+      toast.error(
+        'No Instagram Business account was linked to the selected Facebook Page.'
+      );
     } else if (error === 'no_pages') {
       toast.message(
         'Meta login succeeded, but no Facebook Pages were returned. Grant Page access and try again.'
@@ -52,6 +67,12 @@ function MetaConnectToast() {
   }, [searchParams, queryClient]);
 
   return null;
+}
+
+function NoInstagramBusinessBanner() {
+  const searchParams = useSearchParams();
+  if (searchParams.get('error') !== 'no_instagram_business_account') return null;
+  return <IgBusinessRequiredBanner />;
 }
 
 /** Settings → Connected Social Accounts (OAuth + Demo Recording Mode). */
@@ -103,6 +124,7 @@ export default function AdminSocialSettingsPage() {
       <main className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20 space-y-4">
         <Suspense fallback={null}>
           <MetaConnectToast />
+          <NoInstagramBusinessBanner />
         </Suspense>
 
         <SocialAccountsPanel />

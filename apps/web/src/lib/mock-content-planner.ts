@@ -121,6 +121,8 @@ export type ConnectedSocialAccount = {
   page_name?: string | null;
   /** LinkedIn company page URL */
   company_url?: string | null;
+  /** Meta / platform external id (for targeted disconnect). */
+  external_id?: string | null;
 };
 
 export type AiContentIdea = {

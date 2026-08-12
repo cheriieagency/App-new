@@ -4,7 +4,7 @@
  */
 
 import sql from '@/app/api/utils/sql';
-import type { MetaPageAccount } from '@/lib/meta/oauth';
+import type { MetaOAuthTarget, MetaPageAccount } from '@/lib/meta/oauth';
 import type { ConnectedSocialAccount, SocialPlatform } from '@/lib/mock-content-planner';
 
 export type StoredSocialAccount = {
@@ -36,6 +36,7 @@ function toConnected(row: StoredSocialAccount): ConnectedSocialAccount {
     connected_at: row.connected_at,
     page_name: row.page_name,
     follower_count: row.followers_count,
+    external_id: row.external_id,
   };
 }
 
@@ -117,13 +118,19 @@ async function upsertProfileFromInstagram(input: {
   }
 }
 
-/** Upsert FB pages + IG business accounts from OAuth callback. */
+/** Upsert FB pages + IG business accounts from OAuth callback (target-filtered). */
 export async function upsertMetaSocialAccounts(input: {
   userId: string;
   pages: MetaPageAccount[];
   /** Long-lived user token expiry (seconds from now), if known. */
   expiresIn?: number;
+  /** Which platforms to persist — default both. */
+  target?: MetaOAuthTarget;
 }): Promise<StoredSocialAccount[]> {
+  const target: MetaOAuthTarget = input.target ?? 'both';
+  const storeInstagram = target === 'instagram' || target === 'both';
+  const storeFacebook = target === 'facebook' || target === 'both';
+
   const expiresAt =
     typeof input.expiresIn === 'number'
       ? new Date(Date.now() + input.expiresIn * 1000).toISOString()
@@ -133,25 +140,27 @@ export async function upsertMetaSocialAccounts(input: {
   let primaryIg: MetaPageAccount['instagram_business_account'] | undefined;
 
   for (const page of input.pages) {
-    rows.push({
-      id: `fb-${page.id}`,
-      user_id: input.userId,
-      platform: 'facebook',
-      external_id: page.id,
-      handle: page.name,
-      display_name: page.name,
-      avatar_url: null,
-      followers_count: null,
-      media_count: null,
-      access_token: page.access_token,
-      token_expires_at: expiresAt,
-      page_id: page.id,
-      page_name: page.name,
-      connected_at: new Date().toISOString(),
-    });
+    if (storeFacebook) {
+      rows.push({
+        id: `fb-${page.id}`,
+        user_id: input.userId,
+        platform: 'facebook',
+        external_id: page.id,
+        handle: page.name,
+        display_name: page.name,
+        avatar_url: null,
+        followers_count: null,
+        media_count: null,
+        access_token: page.access_token,
+        token_expires_at: expiresAt,
+        page_id: page.id,
+        page_name: page.name,
+        connected_at: new Date().toISOString(),
+      });
+    }
 
     const ig = page.instagram_business_account;
-    if (ig?.id) {
+    if (storeInstagram && ig?.id) {
       if (!primaryIg) primaryIg = ig;
       const handle = ig.username
         ? `@${ig.username.replace(/^@/, '')}`
@@ -178,7 +187,14 @@ export async function upsertMetaSocialAccounts(input: {
   }
 
   if (!process.env.DATABASE_URL?.trim()) {
-    demoByUser.set(input.userId, rows);
+    // Merge into demo store so Instagram-only connect doesn't wipe Facebook.
+    const existing = demoByUser.get(input.userId) ?? [];
+    const kept = existing.filter((row) => {
+      if (storeInstagram && row.platform === 'instagram') return false;
+      if (storeFacebook && row.platform === 'facebook') return false;
+      return true;
+    });
+    demoByUser.set(input.userId, [...kept, ...rows]);
     return rows;
   }
 
@@ -262,7 +278,7 @@ export async function upsertMetaSocialAccounts(input: {
       }
     }
 
-    if (primaryIg) {
+    if (primaryIg && storeInstagram) {
       await upsertProfileFromInstagram({
         userId: input.userId,
         username: primaryIg.username,
@@ -366,7 +382,7 @@ export async function listMetaSocialAccountsForUser(
 
   try {
     const rows = await sql`
-      SELECT platform, handle, display_name, avatar_url, page_name, connected_at,
+      SELECT platform, external_id, handle, display_name, avatar_url, page_name, connected_at,
              followers_count, meta
       FROM social_accounts
       WHERE user_id = ${userId}
@@ -386,7 +402,6 @@ export async function listMetaSocialAccountsForUser(
         id: `${platform}-list`,
         user_id: userId,
         access_token: '',
-        external_id: '',
         ...r,
       });
       byPlatform.set(platform, toConnected(mapped));
@@ -396,7 +411,7 @@ export async function listMetaSocialAccountsForUser(
     // Column followers_count may be missing — retry without it.
     try {
       const rows = await sql`
-        SELECT platform, handle, display_name, avatar_url, page_name, connected_at, meta
+        SELECT platform, external_id, handle, display_name, avatar_url, page_name, connected_at, meta
         FROM social_accounts
         WHERE user_id = ${userId}
           AND platform IN ('instagram', 'facebook')
@@ -413,7 +428,6 @@ export async function listMetaSocialAccountsForUser(
           id: `${platform}-list`,
           user_id: userId,
           access_token: '',
-          external_id: '',
           ...r,
         });
         byPlatform.set(platform, toConnected(mapped));
@@ -490,5 +504,84 @@ export async function getMetaAccessToken(input: {
     return mapDbRow(row);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Delete a single Meta platform row for the user.
+ * Does not remove the other platform (Instagram vs Facebook stay independent).
+ */
+export async function deleteMetaSocialAccount(input: {
+  userId: string;
+  platform: 'instagram' | 'facebook';
+  platformUserId: string;
+}): Promise<{ deleted: boolean }> {
+  const externalId = input.platformUserId.trim();
+  if (!externalId) return { deleted: false };
+
+  if (!process.env.DATABASE_URL?.trim()) {
+    const list = demoByUser.get(input.userId) ?? [];
+    const next = list.filter(
+      (a) =>
+        !(a.platform === input.platform && a.external_id === externalId)
+    );
+    const deleted = next.length !== list.length;
+    demoByUser.set(input.userId, next);
+    return { deleted };
+  }
+
+  try {
+    const rows = await sql`
+      DELETE FROM social_accounts
+      WHERE user_id = ${input.userId}
+        AND platform = ${input.platform}
+        AND external_id = ${externalId}
+      RETURNING id
+    `;
+    return { deleted: Array.isArray(rows) && rows.length > 0 };
+  } catch (error) {
+    console.error('[social_accounts] delete failed', error);
+    // Fall back to demo store cleanup if DB delete fails.
+    const list = demoByUser.get(input.userId) ?? [];
+    const next = list.filter(
+      (a) =>
+        !(a.platform === input.platform && a.external_id === externalId)
+    );
+    const deleted = next.length !== list.length;
+    demoByUser.set(input.userId, next);
+    return { deleted };
+  }
+}
+
+/**
+ * Delete all rows for a platform for the user (when external id unknown).
+ */
+export async function deleteMetaSocialPlatform(input: {
+  userId: string;
+  platform: 'instagram' | 'facebook';
+}): Promise<{ deleted: number }> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    const list = demoByUser.get(input.userId) ?? [];
+    const next = list.filter((a) => a.platform !== input.platform);
+    const deleted = list.length - next.length;
+    demoByUser.set(input.userId, next);
+    return { deleted };
+  }
+
+  try {
+    const rows = await sql`
+      DELETE FROM social_accounts
+      WHERE user_id = ${input.userId}
+        AND platform = ${input.platform}
+      RETURNING id
+    `;
+    return { deleted: Array.isArray(rows) ? rows.length : 0 };
+  } catch (error) {
+    console.error('[social_accounts] delete platform failed', error);
+    const list = demoByUser.get(input.userId) ?? [];
+    const next = list.filter((a) => a.platform !== input.platform);
+    const deleted = list.length - next.length;
+    demoByUser.set(input.userId, next);
+    return { deleted };
   }
 }

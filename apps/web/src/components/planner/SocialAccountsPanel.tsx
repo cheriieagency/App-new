@@ -177,9 +177,13 @@ export default function SocialAccountsPanel({
   });
 
   const startConnect = (platform: SocialPlatform) => {
-    // Live Meta OAuth for Instagram & Facebook when Demo Mode is off.
-    if (!demoMode && (platform === 'instagram' || platform === 'facebook')) {
-      window.location.href = '/api/auth/meta/login';
+    // Live Meta OAuth — platform-specific target when Demo Mode is off.
+    if (!demoMode && platform === 'instagram') {
+      window.location.href = '/api/auth/meta/login?target=instagram';
+      return;
+    }
+    if (!demoMode && platform === 'facebook') {
+      window.location.href = '/api/auth/meta/login?target=facebook';
       return;
     }
     if (demoMode) {
@@ -187,6 +191,10 @@ export default function SocialAccountsPanel({
       return;
     }
     toggle.mutate({ platform, connect: true });
+  };
+
+  const startMetaConnect = (target: 'instagram' | 'facebook' | 'both') => {
+    window.location.href = `/api/auth/meta/login?target=${target}`;
   };
 
   const grantPermission = () => {
@@ -201,7 +209,30 @@ export default function SocialAccountsPanel({
     const account = disconnectTarget;
     setDisconnectTarget(null);
 
-    await toggle.mutateAsync({ platform: account.platform, connect: false });
+    // Live Meta rows: delete only that platform via dedicated disconnect API.
+    if (
+      !demoMode &&
+      (account.platform === 'instagram' || account.platform === 'facebook')
+    ) {
+      try {
+        const r = await fetch('/api/auth/meta/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            platform: account.platform,
+            platformUserId: account.external_id ?? '',
+          }),
+        });
+        if (!r.ok) throw new Error('Disconnect failed');
+        await queryClient.invalidateQueries({ queryKey: ['planner-socials'] });
+        await queryClient.invalidateQueries({ queryKey: ['meta-sync'] });
+      } catch {
+        /* fall through to demo toggle for local state */
+        await toggle.mutateAsync({ platform: account.platform, connect: false });
+      }
+    } else {
+      await toggle.mutateAsync({ platform: account.platform, connect: false });
+    }
 
     // Mandatory App Review data-deletion callback.
     try {
@@ -302,26 +333,56 @@ export default function SocialAccountsPanel({
       )}
 
       {needsIgBusiness ? <IgBusinessRequiredBanner /> : null}
-      {!compact && (
+
+      {!compact && !demoMode && (
+        <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3">
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold text-slate-900">
+              Connect Meta accounts
+            </p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
+              Connect Instagram and Facebook separately, or link both in one Meta Suite login.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => startMetaConnect('instagram')}
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-95 text-white text-sm font-bold shadow-sm transition-opacity"
+            >
+              <InstagramIcon size={16} />
+              Connect Instagram Only
+            </button>
+            <button
+              type="button"
+              onClick={() => startMetaConnect('facebook')}
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-bold shadow-sm transition-colors"
+            >
+              <FacebookIcon size={16} />
+              Connect Facebook Page Only
+            </button>
+            <button
+              type="button"
+              onClick={() => startMetaConnect('both')}
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white text-sm font-bold shadow-sm transition-colors"
+            >
+              <FacebookIcon size={16} />
+              Connect Meta Suite (Both)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!compact && demoMode && (
         <div className="rounded-2xl border border-[#1877F2]/25 bg-[#1877F2]/5 px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-extrabold text-slate-900">
-              Connect Instagram & Facebook
+              Demo Mode — simulated OAuth
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              One Meta login links your Facebook Pages and Instagram Business accounts.
+              Turn Demo Mode off to use live Instagram / Facebook Page connections.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              window.location.href = '/api/auth/meta/login';
-            }}
-            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-bold shadow-sm transition-colors"
-          >
-            <FacebookIcon size={16} />
-            Connect Instagram & Facebook
-          </button>
         </div>
       )}
 

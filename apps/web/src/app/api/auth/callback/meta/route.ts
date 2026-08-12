@@ -1,11 +1,19 @@
+/**
+ * GET /api/auth/callback/meta
+ * OAuth callback — code → long-lived token → Graph me/accounts →
+ * upsert social_accounts filtered by OAuth target → sync → redirect.
+ */
+
 import { NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import {
   META_OAUTH_STATE_COOKIE,
+  decodeMetaOAuthState,
   exchangeCodeForShortLivedToken,
   exchangeForLongLivedToken,
   fetchMetaPagesWithInstagram,
+  type MetaOAuthTarget,
 } from '@/lib/meta/oauth';
 import { upsertMetaSocialAccounts } from '@/lib/meta/social-accounts';
 
@@ -19,12 +27,12 @@ function clearOAuthState(res: NextResponse) {
   });
 }
 
-/**
- * GET /api/auth/callback/meta
- * OAuth callback — code → long-lived token → Graph me/accounts (IG Business
- * profile metadata) → upsert social_accounts + profiles → sync analytics → redirect.
- * Empty page/IG lists redirect softly (no throw, session kept).
- */
+function successLabel(target: MetaOAuthTarget): string {
+  if (target === 'instagram') return 'instagram_connected';
+  if (target === 'facebook') return 'facebook_connected';
+  return 'meta_connected';
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -53,6 +61,9 @@ export async function GET(request: Request) {
     return failRedirect('invalid_state');
   }
 
+  const decoded = decodeMetaOAuthState(state);
+  const target: MetaOAuthTarget = decoded?.target ?? 'both';
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     const signIn = new URL('/account/signin', origin);
@@ -63,11 +74,8 @@ export async function GET(request: Request) {
   try {
     const shortLived = await exchangeCodeForShortLivedToken(code, origin);
     const longLived = await exchangeForLongLivedToken(shortLived.access_token);
-
-    // Graph: Pages + IG Business {id,username,name,profile_picture_url,followers_count,media_count}
     const pages = await fetchMetaPagesWithInstagram(longLived.access_token);
 
-    // Soft path: OAuth succeeded but user selected no Pages.
     if (!pages.length) {
       const dest = new URL('/admin/settings/socials', origin);
       dest.searchParams.set('error', 'no_pages');
@@ -77,14 +85,25 @@ export async function GET(request: Request) {
     }
 
     const hasIg = pages.some((p) => Boolean(p.instagram_business_account?.id));
+
+    // Instagram-only connect requires a linked IG Business account on a Page.
+    if (target === 'instagram' && !hasIg) {
+      const dest = new URL('/admin/settings/socials', origin);
+      dest.searchParams.set('error', 'no_instagram_business_account');
+      const res = NextResponse.redirect(dest);
+      clearOAuthState(res);
+      return res;
+    }
+
     await upsertMetaSocialAccounts({
       userId: session.user.id,
       pages,
       expiresIn: longLived.expires_in,
+      target,
     });
 
-    // Pull Graph insights / media / comments into Analytics, Inbox, Planner.
-    if (hasIg) {
+    const shouldSync = target === 'instagram' || target === 'both' ? hasIg : false;
+    if (shouldSync) {
       try {
         const { syncMetaDataForUser } = await import('@/lib/meta/sync');
         await syncMetaDataForUser(session.user.id);
@@ -94,8 +113,8 @@ export async function GET(request: Request) {
     }
 
     const dest = new URL('/admin/settings/socials', origin);
-    dest.searchParams.set('success', 'meta_connected');
-    if (!hasIg) {
+    dest.searchParams.set('success', successLabel(target));
+    if ((target === 'both' || target === 'facebook') && !hasIg && target === 'both') {
       dest.searchParams.set('warning', 'no_instagram');
     }
     const res = NextResponse.redirect(dest);
