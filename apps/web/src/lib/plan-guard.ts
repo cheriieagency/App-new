@@ -4,7 +4,8 @@
 
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import { getWorkspacePlan } from '@/lib/mock-content-planner';
+import { getWorkspacePlan, setWorkspacePlan } from '@/lib/mock-content-planner';
+import { getProfileSubscription } from '@/lib/subscription-profile';
 import { isProUnlockedEmail } from '@/lib/test-accounts';
 import {
   checkLimit,
@@ -24,18 +25,67 @@ export type UpgradeRequiredBody = {
   message?: string;
 };
 
-/** Resolve plan for the current request session (Pro-unlock emails always get pro). */
+/**
+ * Resolve plan for the current request session.
+ * Priority: Pro-unlock email → profiles.subscription_plan → in-memory fallback.
+ */
 export async function resolveWorkspacePlan(
   requestHeaders?: Headers
 ): Promise<WorkspacePlan> {
   try {
     const h = requestHeaders ?? (await headers());
     const session = await auth.api.getSession({ headers: h });
-    if (isProUnlockedEmail(session?.user?.email)) return 'pro';
+    if (!session?.user) return getWorkspacePlan();
+
+    if (isProUnlockedEmail(session.user.email)) {
+      setWorkspacePlan('pro');
+      return 'pro';
+    }
+
+    const sub = await getProfileSubscription({
+      userId: session.user.id,
+      email: session.user.email,
+    });
+    setWorkspacePlan(sub.plan);
+    return sub.plan;
   } catch {
     /* fall through */
   }
   return getWorkspacePlan();
+}
+
+/** Full subscription payload for admin hydration. */
+export async function resolveSubscription(requestHeaders?: Headers) {
+  try {
+    const h = requestHeaders ?? (await headers());
+    const session = await auth.api.getSession({ headers: h });
+    if (!session?.user) {
+      return {
+        plan: getWorkspacePlan() as WorkspacePlan,
+        subscription_status: 'inactive',
+        subscription_plan: getWorkspacePlan(),
+        onboarding_completed: false,
+        email: null as string | null,
+        pro_unlocked: false,
+      };
+    }
+    const sub = await getProfileSubscription({
+      userId: session.user.id,
+      email: session.user.email,
+    });
+    setWorkspacePlan(sub.plan);
+    return sub;
+  } catch {
+    const plan = getWorkspacePlan();
+    return {
+      plan,
+      subscription_status: plan === 'starter' ? 'inactive' : 'active',
+      subscription_plan: plan,
+      onboarding_completed: false,
+      email: null as string | null,
+      pro_unlocked: plan === 'pro',
+    };
+  }
 }
 
 /** @deprecated Prefer resolveWorkspacePlan — sync path cannot see Pro-unlock emails. */

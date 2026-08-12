@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConnectedSocialAccount } from '@/lib/mock-content-planner';
+import { useSession } from '@/lib/auth-client';
 import { NC_WORKSPACE_STORAGE_KEY } from '@/lib/mock-workspace-profiles';
 
 export type SocialAccountsResponse = {
@@ -47,12 +49,19 @@ function readOAuthSuccessParam(): string | null {
  */
 export function useSocialAccounts(enabled = true) {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const { data: session } = useSession();
   const workspaceId = readWorkspaceId();
   const success =
     typeof window !== 'undefined' ? readOAuthSuccessParam() : null;
 
   const query = useQuery<SocialAccountsResponse>({
-    queryKey: ['social-accounts', workspaceId ?? 'default', success ?? ''],
+    queryKey: [
+      'social-accounts',
+      workspaceId ?? 'default',
+      success ?? '',
+      session?.user?.id ?? 'anon',
+    ],
     enabled,
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -80,6 +89,13 @@ export function useSocialAccounts(enabled = true) {
     void queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
     void query.refetch();
   }, [queryClient, query, success]);
+
+  // Revalidate when navigating across admin pages or auth user changes.
+  useEffect(() => {
+    if (!enabled) return;
+    if (pathname && !pathname.startsWith('/admin')) return;
+    void queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
+  }, [pathname, session?.user?.id, enabled, queryClient]);
 
   const accounts = query.data?.accounts ?? [];
   const connectedAccounts = useMemo(

@@ -13,15 +13,19 @@ import { getPlanLimits } from '@/lib/config/plans';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const project = searchParams.get('project') || undefined;
-  const { resolveWorkspacePlan } = await import('@/lib/plan-guard');
-  const plan = await resolveWorkspacePlan(request.headers);
+  const { resolveSubscription } = await import('@/lib/plan-guard');
+  const sub = await resolveSubscription(request.headers);
+  const plan = sub.plan;
   return Response.json({
     members: listTeamMembers(project),
     all_members: listTeamMembers(),
     plan,
     limits: getPlanLimits(plan),
-    demo: true,
-    pro_unlocked: plan === 'pro',
+    demo: false,
+    pro_unlocked: sub.pro_unlocked || plan === 'pro',
+    subscription_status: sub.subscription_status,
+    subscription_plan: sub.subscription_plan,
+    onboarding_completed: sub.onboarding_completed,
   });
 }
 
@@ -33,22 +37,48 @@ export async function POST(request: Request) {
     if (action === 'set_plan') {
       const { isProUnlockedEmail } = await import('@/lib/test-accounts');
       const { auth } = await import('@/lib/auth');
+      const { setProfileSubscription } = await import(
+        '@/lib/subscription-profile'
+      );
       const session = await auth.api.getSession({ headers: request.headers });
       // VIP / QA accounts stay on Pro — ignore downgrade attempts.
       if (isProUnlockedEmail(session?.user?.email)) {
+        if (session?.user) {
+          await setProfileSubscription({
+            userId: session.user.id,
+            email: session.user.email,
+            plan: 'pro',
+            status: 'active',
+            onboardingCompleted: true,
+          });
+        }
         return Response.json({
           plan: 'pro' as WorkspacePlan,
           members: listTeamMembers(),
           pro_unlocked: true,
+          subscription_status: 'active',
+          subscription_plan: 'pro',
         });
       }
       const plan = body.plan as WorkspacePlan;
       if (!['starter', 'creator', 'pro'].includes(plan)) {
         return Response.json({ error: 'Invalid plan' }, { status: 400 });
       }
+      if (session?.user) {
+        await setProfileSubscription({
+          userId: session.user.id,
+          email: session.user.email,
+          plan,
+          status: plan === 'starter' ? 'inactive' : 'active',
+          onboardingCompleted: true,
+        });
+      }
       return Response.json({
         plan: setWorkspacePlan(plan),
         members: listTeamMembers(),
+        subscription_status: plan === 'starter' ? 'inactive' : 'active',
+        subscription_plan: plan,
+        pro_unlocked: plan === 'pro',
       });
     }
 

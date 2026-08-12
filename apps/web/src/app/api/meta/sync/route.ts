@@ -42,13 +42,18 @@ export async function POST() {
     const snapshot = await syncMetaDataForUser(session.user.id);
     return Response.json({ synced: true, snapshot });
   } catch (error) {
-    console.error('[api/meta/sync] POST failed', error);
-    return Response.json(
-      {
-        synced: false,
-        error: error instanceof Error ? error.message : 'Sync failed',
-      },
-      { status: 500 }
+    console.warn(
+      '[Analytics API] No social accounts found for user. Returning onboarding fallback data.',
+      error
     );
+    // Soft-fail — never crash Analytics / Inbox hydration in production.
+    return Response.json({
+      synced: false,
+      snapshot: null,
+      error: error instanceof Error ? error.message : 'Sync failed',
+      message:
+        'Connect an Instagram Business account under Settings → Socials to load live analytics.',
+      cta: { label: 'Connect social accounts', href: '/admin/settings/socials' },
+    });
   }
 }

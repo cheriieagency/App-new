@@ -12,12 +12,17 @@ export const CLIKD_QA_ACCOUNT = {
 
 /** Same credentials work for Community (member) and Creator/Admin studio. */
 export const DUAL_ACCESS_EMAILS = [
+  'ebbabrobeck@gmail.com',
   'ebbabrobeck@test.se',
   CLIKD_QA_ACCOUNT.email,
 ] as const;
 
 /** Always treated as Pro — FeatureGate / plan-guard never block upgrades. */
-export const PRO_UNLOCK_EMAILS = [CLIKD_QA_ACCOUNT.email] as const;
+export const PRO_UNLOCK_EMAILS = [
+  'ebbabrobeck@gmail.com',
+  'ebbabrobeck@test.se',
+  CLIKD_QA_ACCOUNT.email,
+] as const;
 
 function normalizeEmail(email: string | null | undefined): string {
   return (email ?? '').trim().toLowerCase();

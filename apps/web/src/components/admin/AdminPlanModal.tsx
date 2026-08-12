@@ -79,13 +79,31 @@ function planLabel(plan: WorkspacePlan) {
 }
 
 export function useAdminPlan() {
-  return useQuery<{ plan: WorkspacePlan; pro_unlocked?: boolean }>({
+  return useQuery<{
+    plan: WorkspacePlan;
+    pro_unlocked?: boolean;
+    subscription_status?: string;
+    subscription_plan?: string;
+    onboarding_completed?: boolean;
+  }>({
     queryKey: ['admin-workspace-plan'],
     queryFn: async () => {
-      const r = await fetch('/api/planner/team');
+      // Prefer dedicated subscription endpoint; fall back to planner/team.
+      const primary = await fetch('/api/subscription', {
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      if (primary.ok) return primary.json();
+      const r = await fetch('/api/planner/team', {
+        credentials: 'include',
+        cache: 'no-store',
+      });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
+    staleTime: 5_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 }
 

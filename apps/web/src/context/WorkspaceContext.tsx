@@ -9,6 +9,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner';
 import {
   blankWorkspaceProfile,
@@ -34,6 +36,10 @@ type WorkspaceContextValue = {
     channels?: SocialPlatform[];
   }) => WorkspaceProfile;
   refreshWorkspaces: () => void;
+  /** Active subscription plan hydrated from /api/subscription on /admin/* */
+  plan: string;
+  subscriptionStatus: string;
+  refreshPlan: () => void;
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -44,10 +50,39 @@ function readStoredId(fallback: string) {
 }
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const queryClient = useQueryClient();
   const [workspaces, setWorkspaces] = useState<WorkspaceProfile[]>(() =>
     listWorkspaceProfiles()
   );
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState('');
+  const [plan, setPlan] = useState('starter');
+  const [subscriptionStatus, setSubscriptionStatus] = useState('inactive');
+
+  const refreshPlan = useCallback(() => {
+    void (async () => {
+      try {
+        const r = await fetch('/api/subscription', {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (!r.ok) return;
+        const json = (await r.json()) as {
+          plan?: string;
+          subscription_status?: string;
+          pro_unlocked?: boolean;
+        };
+        setPlan(json.plan || 'starter');
+        setSubscriptionStatus(
+          json.subscription_status ||
+            (json.pro_unlocked || json.plan === 'pro' ? 'active' : 'inactive')
+        );
+        void queryClient.invalidateQueries({ queryKey: ['admin-workspace-plan'] });
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [queryClient]);
 
   // Hydrate active id from localStorage after mount (SSR-safe).
   useEffect(() => {
@@ -68,6 +103,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refresh plan/status whenever the admin shell mounts or the route changes.
+  useEffect(() => {
+    if (!pathname?.startsWith('/admin')) return;
+    refreshPlan();
+  }, [pathname, refreshPlan]);
 
   const setActiveWorkspaceId = useCallback(
     (id: string) => {
@@ -135,6 +176,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       updateActiveBio,
       createWorkspace,
       refreshWorkspaces,
+      plan,
+      subscriptionStatus,
+      refreshPlan,
     }),
     [
       workspaces,
@@ -145,6 +189,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       updateActiveBio,
       createWorkspace,
       refreshWorkspaces,
+      plan,
+      subscriptionStatus,
+      refreshPlan,
     ]
   );
 
