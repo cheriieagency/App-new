@@ -6,6 +6,7 @@
 import sql from '@/app/api/utils/sql';
 import type { MetaOAuthTarget, MetaPageAccount } from '@/lib/meta/oauth';
 import type { ConnectedSocialAccount, SocialPlatform } from '@/lib/mock-content-planner';
+import { ensureUserProfile } from '@/lib/social/persist';
 
 export type StoredSocialAccount = {
   id: string;
@@ -126,10 +127,16 @@ export async function upsertMetaSocialAccounts(input: {
   expiresIn?: number;
   /** Which platforms to persist — default both. */
   target?: MetaOAuthTarget;
+  /** Active workspace id (optional). */
+  workspaceId?: string | null;
 }): Promise<StoredSocialAccount[]> {
   const target: MetaOAuthTarget = input.target ?? 'both';
   const storeInstagram = target === 'instagram' || target === 'both';
   const storeFacebook = target === 'facebook' || target === 'both';
+  const workspaceId = input.workspaceId?.trim() || null;
+
+  // Critical: FK social_accounts.user_id → profiles.id
+  await ensureUserProfile({ userId: input.userId });
 
   const expiresAt =
     typeof input.expiresIn === 'number'
@@ -210,7 +217,7 @@ export async function upsertMetaSocialAccounts(input: {
           INSERT INTO social_accounts (
             user_id, platform, external_id, handle, display_name, avatar_url,
             followers_count, access_token, token_expires_at, page_id, page_name,
-            meta, connected_at, updated_at
+            workspace_id, meta, connected_at, updated_at
           )
           VALUES (
             ${row.user_id},
@@ -224,6 +231,7 @@ export async function upsertMetaSocialAccounts(input: {
             ${row.token_expires_at},
             ${row.page_id},
             ${row.page_name},
+            ${workspaceId},
             ${metaJson},
             now(),
             now()
@@ -237,12 +245,13 @@ export async function upsertMetaSocialAccounts(input: {
             token_expires_at = EXCLUDED.token_expires_at,
             page_id = EXCLUDED.page_id,
             page_name = EXCLUDED.page_name,
+            workspace_id = COALESCE(EXCLUDED.workspace_id, social_accounts.workspace_id),
             meta = EXCLUDED.meta,
             connected_at = now(),
             updated_at = now()
         `;
       } catch {
-        // Schema without followers_count column — store metrics in meta jsonb.
+        // Schema without followers_count / workspace_id — store metrics in meta jsonb.
         await sql`
           INSERT INTO social_accounts (
             user_id, platform, external_id, handle, display_name, avatar_url,
@@ -290,9 +299,11 @@ export async function upsertMetaSocialAccounts(input: {
 
     return rows;
   } catch (error) {
-    console.error('[social_accounts] upsert failed, using demo store', error);
-    demoByUser.set(input.userId, rows);
-    return rows;
+    console.error('[social_accounts] upsert failed after profile ensure', error);
+    // Do NOT silently fall back to ephemeral memory when DATABASE_URL is set —
+    // that caused "connected then gone on navigation". Retry once after profile ensure.
+    await ensureUserProfile({ userId: input.userId });
+    throw error;
   }
 }
 

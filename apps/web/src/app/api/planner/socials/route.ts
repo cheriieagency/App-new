@@ -1,45 +1,62 @@
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import {
-  listSocialAccounts,
   setSocialConnection,
   type ConnectedSocialAccount,
   type SocialPlatform,
 } from '@/lib/mock-content-planner';
-import { listMetaSocialAccountsForUser } from '@/lib/meta/social-accounts';
-import { listOAuthSocialAccountsForUser } from '@/lib/social/oauth-accounts';
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  listLiveSocialAccountsForUser,
+  SOCIAL_PLATFORMS,
+} from '@/lib/social/persist';
 
-function mergeAccounts(
-  base: ConnectedSocialAccount[],
-  connected: ConnectedSocialAccount[]
-): ConnectedSocialAccount[] {
-  const map = new Map(base.map((a) => [a.platform, a]));
-  for (const m of connected) {
-    map.set(m.platform, m);
-  }
-  return [...map.values()];
+function disconnectedStub(platform: SocialPlatform): ConnectedSocialAccount {
+  return {
+    platform,
+    connected: false,
+    handle: null,
+    display_name: null,
+    avatar_url: null,
+    connected_at: null,
+  };
 }
 
-export async function GET() {
-  const base = listSocialAccounts();
+export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
-    return Response.json({ accounts: base, demo: true });
+    return Response.json({
+      accounts: SOCIAL_PLATFORMS.map(disconnectedStub),
+      demo: true,
+      meta_connected: false,
+      needs_ig_business: false,
+    });
   }
 
-  const [meta, oauth] = await Promise.all([
-    listMetaSocialAccountsForUser(session.user.id),
-    listOAuthSocialAccountsForUser(session.user.id, ['youtube', 'linkedin']),
-  ]);
-  const live = [...meta, ...oauth];
-  const accounts = mergeAccounts(base, live);
-  const hasIg = meta.some((a) => a.platform === 'instagram' && a.connected);
-  const hasFb = meta.some((a) => a.platform === 'facebook' && a.connected);
+  const url = new URL(request.url);
+  const jar = await cookies();
+  const workspaceId =
+    url.searchParams.get('workspaceId')?.trim() ||
+    request.headers.get('x-workspace-id')?.trim() ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+    null;
+
+  // Authenticated: always read live social_accounts — no mock merge.
+  const accounts = await listLiveSocialAccountsForUser({
+    userId: session.user.id,
+    workspaceId,
+  });
+  const connected = accounts.filter((a) => a.connected);
+  const hasIg = connected.some((a) => a.platform === 'instagram');
+  const hasFb = connected.some((a) => a.platform === 'facebook');
+
   return Response.json({
     accounts,
-    demo: !process.env.DATABASE_URL?.trim() && live.length === 0,
-    meta_connected: meta.length > 0,
+    demo: false,
+    meta_connected: hasIg || hasFb,
     needs_ig_business: hasFb && !hasIg,
+    workspace_id: workspaceId,
+    source: 'social_accounts',
   });
 }
 
@@ -52,10 +69,9 @@ export async function POST(request: Request) {
       return Response.json({ error: 'platform required' }, { status: 400 });
     }
 
-    // Demo OAuth: instantly toggles connection state.
-    // Live connects use /api/auth/{meta,youtube,linkedin}/login instead.
+    // Demo OAuth toggle only — live connects use /api/auth/*/login.
     const account = setSocialConnection(platform, connect);
-    return Response.json({ account, accounts: listSocialAccounts() });
+    return Response.json({ account });
   } catch (error) {
     console.error(error);
     return Response.json({ error: 'Failed' }, { status: 500 });

@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Loader2,
@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { localeTag, useLanguage } from '@/lib/i18n';
+import { useSocialAccounts } from '@/hooks/useSocialAccounts';
 
 const DEMO_MODE_KEY = 'clikd_oauth_demo_recording_mode';
 
@@ -98,6 +99,88 @@ function formatCount(n: number, language: ReturnType<typeof useLanguage>['langua
   return n.toLocaleString(localeTag(language));
 }
 
+/** Account label shown under a Connected quick-action button. */
+function ConnectedAccountChip({
+  account,
+}: {
+  account: ConnectedSocialAccount;
+}) {
+  const label =
+    account.display_name ||
+    account.handle ||
+    account.page_name ||
+    'Connected account';
+  return (
+    <div className="flex items-center gap-2 min-w-0 mt-2 px-1">
+      {account.avatar_url ? (
+        <img
+          src={account.avatar_url}
+          alt=""
+          className="w-7 h-7 rounded-full object-cover border border-emerald-200 flex-shrink-0"
+        />
+      ) : (
+        <span className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-200 flex-shrink-0" />
+      )}
+      <div className="min-w-0">
+        <p className="text-xs font-extrabold text-slate-900 truncate">{label}</p>
+        {account.handle && account.handle !== label ? (
+          <p className="text-[11px] font-medium text-slate-500 truncate font-mono">
+            {account.handle}
+          </p>
+        ) : account.page_name && account.page_name !== label ? (
+          <p className="text-[11px] font-medium text-slate-500 truncate">
+            Page · {account.page_name}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ConnectOrConnectedButton({
+  connected,
+  account,
+  onConnect,
+  idleLabel,
+  idleClassName,
+  icon,
+}: {
+  connected: boolean;
+  account?: ConnectedSocialAccount | null;
+  onConnect: () => void;
+  idleLabel: string;
+  idleClassName: string;
+  icon: ReactNode;
+}) {
+  if (connected && account) {
+    return (
+      <div className="min-w-0 sm:min-w-[200px] flex-1 sm:flex-none">
+        <button
+          type="button"
+          disabled
+          aria-pressed="true"
+          className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold cursor-default"
+        >
+          <CheckCircle2 size={16} strokeWidth={2.5} />
+          Connected
+        </button>
+        <ConnectedAccountChip account={account} />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onConnect}
+      className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl text-white text-sm font-bold shadow-sm transition-colors ${idleClassName}`}
+    >
+      {icon}
+      {idleLabel}
+    </button>
+  );
+}
+
 export default function SocialAccountsPanel({
   compact = false,
 }: {
@@ -145,19 +228,7 @@ export default function SocialAccountsPanel({
     }
   };
 
-  const { data, isLoading } = useQuery<{
-    accounts: ConnectedSocialAccount[];
-    demo?: boolean;
-    meta_connected?: boolean;
-    needs_ig_business?: boolean;
-  }>({
-    queryKey: ['planner-socials'],
-    queryFn: async () => {
-      const r = await fetch('/api/planner/socials');
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
-    },
-  });
+  const { data, isLoading, accounts: liveAccounts } = useSocialAccounts();
 
   const toggle = useMutation({
     mutationFn: async ({
@@ -176,6 +247,7 @@ export default function SocialAccountsPanel({
       return r.json() as Promise<{ account: ConnectedSocialAccount }>;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
       queryClient.invalidateQueries({ queryKey: ['planner-socials'] });
     },
   });
@@ -240,6 +312,7 @@ export default function SocialAccountsPanel({
           }),
         });
         if (!r.ok) throw new Error('Disconnect failed');
+        await queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
         await queryClient.invalidateQueries({ queryKey: ['planner-socials'] });
         await queryClient.invalidateQueries({ queryKey: ['meta-sync'] });
       } catch {
@@ -275,7 +348,9 @@ export default function SocialAccountsPanel({
     );
   }
 
-  const byPlatform = new Map((data?.accounts ?? []).map((a) => [a.platform, a]));
+  const byPlatform = new Map(
+    (data?.accounts ?? liveAccounts ?? []).map((a) => [a.platform, a])
+  );
   const needsIgBusiness =
     Boolean(data?.needs_ig_business) ||
     (Boolean(byPlatform.get('facebook')?.connected) &&
@@ -360,31 +435,57 @@ export default function SocialAccountsPanel({
               Connect Instagram and Facebook separately, or link both in one Meta Suite login.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => startMetaConnect('instagram')}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-95 text-white text-sm font-bold shadow-sm transition-opacity"
-            >
-              <InstagramIcon size={16} />
-              Connect Instagram Only
-            </button>
-            <button
-              type="button"
-              onClick={() => startMetaConnect('facebook')}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-bold shadow-sm transition-colors"
-            >
-              <FacebookIcon size={16} />
-              Connect Facebook Page Only
-            </button>
-            <button
-              type="button"
-              onClick={() => startMetaConnect('both')}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white text-sm font-bold shadow-sm transition-colors"
-            >
-              <FacebookIcon size={16} />
-              Connect Meta Suite (Both)
-            </button>
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
+            <ConnectOrConnectedButton
+              connected={Boolean(byPlatform.get('instagram')?.connected)}
+              account={byPlatform.get('instagram') ?? null}
+              onConnect={() => startMetaConnect('instagram')}
+              idleLabel="Connect Instagram Only"
+              idleClassName="bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-95"
+              icon={<InstagramIcon size={16} />}
+            />
+            <ConnectOrConnectedButton
+              connected={Boolean(byPlatform.get('facebook')?.connected)}
+              account={byPlatform.get('facebook') ?? null}
+              onConnect={() => startMetaConnect('facebook')}
+              idleLabel="Connect Facebook Page Only"
+              idleClassName="bg-[#1877F2] hover:bg-[#166fe5]"
+              icon={<FacebookIcon size={16} />}
+            />
+            {byPlatform.get('instagram')?.connected &&
+            byPlatform.get('facebook')?.connected ? (
+              <div className="min-w-0 sm:min-w-[200px] flex-1 sm:flex-none">
+                <button
+                  type="button"
+                  disabled
+                  aria-pressed="true"
+                  className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold cursor-default"
+                >
+                  <CheckCircle2 size={16} strokeWidth={2.5} />
+                  Connected
+                </button>
+                <div className="mt-2 space-y-1.5 px-1">
+                  <p className="text-[11px] font-semibold text-slate-500">
+                    Meta Suite · both linked
+                  </p>
+                  {byPlatform.get('instagram') ? (
+                    <ConnectedAccountChip account={byPlatform.get('instagram')!} />
+                  ) : null}
+                  {byPlatform.get('facebook') ? (
+                    <ConnectedAccountChip account={byPlatform.get('facebook')!} />
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => startMetaConnect('both')}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white text-sm font-bold shadow-sm transition-colors"
+              >
+                <FacebookIcon size={16} />
+                Connect Meta Suite (Both)
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -399,27 +500,27 @@ export default function SocialAccountsPanel({
               Link your YouTube channel and LinkedIn profile for publishing and analytics.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
+            <ConnectOrConnectedButton
+              connected={Boolean(byPlatform.get('youtube')?.connected)}
+              account={byPlatform.get('youtube') ?? null}
+              onConnect={() => {
                 window.location.href = '/api/auth/youtube/login';
               }}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#FF0000] hover:bg-[#e60000] text-white text-sm font-bold shadow-sm transition-colors"
-            >
-              <YouTubeIcon size={16} />
-              Connect YouTube
-            </button>
-            <button
-              type="button"
-              onClick={() => {
+              idleLabel="Connect YouTube"
+              idleClassName="bg-[#FF0000] hover:bg-[#e60000]"
+              icon={<YouTubeIcon size={16} />}
+            />
+            <ConnectOrConnectedButton
+              connected={Boolean(byPlatform.get('linkedin')?.connected)}
+              account={byPlatform.get('linkedin') ?? null}
+              onConnect={() => {
                 window.location.href = '/api/auth/linkedin/login';
               }}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#0A66C2] hover:bg-[#0958a8] text-white text-sm font-bold shadow-sm transition-colors"
-            >
-              <LinkedInIcon size={16} />
-              Connect LinkedIn
-            </button>
+              idleLabel="Connect LinkedIn"
+              idleClassName="bg-[#0A66C2] hover:bg-[#0958a8]"
+              icon={<LinkedInIcon size={16} />}
+            />
           </div>
         </div>
       )}

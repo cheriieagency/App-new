@@ -5,6 +5,7 @@
 
 import sql from '@/app/api/utils/sql';
 import type { ConnectedSocialAccount, SocialPlatform } from '@/lib/mock-content-planner';
+import { ensureUserProfile } from '@/lib/social/persist';
 
 export type OAuthSocialPlatform = 'youtube' | 'linkedin' | 'tiktok' | 'instagram' | 'facebook';
 
@@ -21,6 +22,7 @@ export type UpsertOAuthSocialAccountInput = {
   refreshToken?: string | null;
   expiresIn?: number | null;
   companyUrl?: string | null;
+  workspaceId?: string | null;
 };
 
 type DemoRow = UpsertOAuthSocialAccountInput & { connected_at: string };
@@ -82,11 +84,20 @@ function toConnected(row: DemoRow | Record<string, unknown>): ConnectedSocialAcc
 export async function upsertOAuthSocialAccount(
   input: UpsertOAuthSocialAccountInput
 ): Promise<ConnectedSocialAccount> {
+  // Critical: FK social_accounts.user_id → profiles.id
+  await ensureUserProfile({
+    userId: input.userId,
+    displayName: input.displayName,
+    handle: input.handle,
+    avatarUrl: input.avatarUrl,
+  });
+
   const expiresAt =
     typeof input.expiresIn === 'number'
       ? new Date(Date.now() + input.expiresIn * 1000).toISOString()
       : null;
   const connectedAt = new Date().toISOString();
+  const workspaceId = input.workspaceId?.trim() || null;
   const metaJson = JSON.stringify({
     refresh_token: input.refreshToken ?? null,
     subscriber_count: input.subscriberCount ?? null,
@@ -114,7 +125,8 @@ export async function upsertOAuthSocialAccount(
       await sql`
         INSERT INTO social_accounts (
           user_id, platform, external_id, handle, display_name, avatar_url,
-          followers_count, access_token, token_expires_at, meta, connected_at, updated_at
+          followers_count, access_token, refresh_token, token_expires_at,
+          workspace_id, meta, connected_at, updated_at
         )
         VALUES (
           ${input.userId},
@@ -125,7 +137,9 @@ export async function upsertOAuthSocialAccount(
           ${input.avatarUrl ?? null},
           ${followers},
           ${input.accessToken},
+          ${input.refreshToken ?? null},
           ${expiresAt},
+          ${workspaceId},
           ${metaJson},
           now(),
           now()
@@ -136,7 +150,9 @@ export async function upsertOAuthSocialAccount(
           avatar_url = EXCLUDED.avatar_url,
           followers_count = EXCLUDED.followers_count,
           access_token = EXCLUDED.access_token,
+          refresh_token = COALESCE(EXCLUDED.refresh_token, social_accounts.refresh_token),
           token_expires_at = EXCLUDED.token_expires_at,
+          workspace_id = COALESCE(EXCLUDED.workspace_id, social_accounts.workspace_id),
           meta = EXCLUDED.meta,
           connected_at = now(),
           updated_at = now()
@@ -173,15 +189,8 @@ export async function upsertOAuthSocialAccount(
     }
     return toConnected(demoRow);
   } catch (error) {
-    console.error('[oauth-accounts] upsert failed, using demo store', error);
-    const list = demoByUser.get(input.userId) ?? [];
-    const next = list.filter(
-      (r) =>
-        !(r.platform === input.platform && r.externalId === input.externalId)
-    );
-    next.push(demoRow);
-    demoByUser.set(input.userId, next);
-    return toConnected(demoRow);
+    console.error('[oauth-accounts] upsert failed after profile ensure', error);
+    throw error;
   }
 }
 
