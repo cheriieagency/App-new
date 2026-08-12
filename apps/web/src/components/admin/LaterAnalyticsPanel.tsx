@@ -35,6 +35,7 @@ import { t, tf, localeTag, type Locale } from '@/lib/i18n';
 import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import { useMetaSync } from '@/hooks/useMetaSync';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import IgBusinessRequiredBanner from '@/components/admin/IgBusinessRequiredBanner';
 import { InstagramIcon } from '@/components/icons/SocialBrandIcons';
 
@@ -218,6 +219,8 @@ export default function LaterAnalyticsPanel() {
     isLoading: socialsLoading,
   } = useConnectedSocials();
   const { data: metaSync } = useMetaSync(hasInstagram);
+  // Soft analytics API — never crashes when Graph sync is empty in production.
+  const { data: analyticsApi } = useAnalytics(hasConnectedSocials);
   const [sub, setSub] = useState<AnalyticsSubTab>('analytics');
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
   const [rangeOpen, setRangeOpen] = useState(false);
@@ -248,13 +251,15 @@ export default function LaterAnalyticsPanel() {
 
   const engagement = useMemo(() => {
     const snap = metaSync?.snapshot;
-    if (!snap && !instagramAccount) return { ...EMPTY_ENGAGEMENT };
-    const likes = snap?.insights.likes ?? 0;
-    const comments = snap?.insights.comments ?? 0;
-    const reach = snap?.insights.reach ?? 0;
-    const impressions = snap?.insights.impressions ?? 0;
+    const api = analyticsApi?.metrics;
+    if (!snap && !instagramAccount && !api) return { ...EMPTY_ENGAGEMENT };
+    const likes = snap?.insights.likes ?? api?.likes ?? 0;
+    const comments = snap?.insights.comments ?? api?.comments ?? 0;
+    const reach = snap?.insights.reach ?? api?.reach ?? 0;
+    const impressions = snap?.insights.impressions ?? api?.impressions ?? 0;
     const followers =
       snap?.insights.followers ??
+      api?.followers ??
       igProfile.followers ??
       0;
     const engagementTotal = likes + comments;
@@ -268,9 +273,15 @@ export default function LaterAnalyticsPanel() {
       shares: 0,
       saves: 0,
       engagementRate:
-        reach > 0 ? Math.round((engagementTotal / reach) * 1000) / 10 : 0,
+        api?.engagement_rate ??
+        (reach > 0 ? Math.round((engagementTotal / reach) * 1000) / 10 : 0),
     };
-  }, [metaSync?.snapshot, instagramAccount, igProfile.followers]);
+  }, [
+    metaSync?.snapshot,
+    analyticsApi?.metrics,
+    instagramAccount,
+    igProfile.followers,
+  ]);
 
   /** Map synced IG media into Posts / Reels performance rows (empty until connect). */
   const { bestPosts, worstPosts, bestReels, worstReels } = useMemo(() => {
