@@ -284,13 +284,15 @@ export default function AdminSettingsPanel() {
   const { data: socialsData, isLoading: socialsLoading } = useQuery<{
     accounts: ConnectedSocialAccount[];
   }>({
-    queryKey: ['planner-socials'],
+    queryKey: ['social-accounts'],
     queryFn: async () => {
-      const r = await fetch('/api/planner/socials');
+      const r = await fetch('/api/socials/accounts', { credentials: 'include' });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
     enabled: tab === 'integrations',
+    staleTime: 15_000,
+    refetchOnMount: 'always',
   });
 
   const { data: teamData } = useQuery<{

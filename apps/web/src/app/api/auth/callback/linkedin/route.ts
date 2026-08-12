@@ -12,6 +12,7 @@ import {
   fetchLinkedInProfile,
 } from '@/lib/linkedin/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
+import { ACTIVE_WORKSPACE_COOKIE } from '@/lib/social/persist';
 
 function clearState(res: NextResponse) {
   res.cookies.set(LINKEDIN_OAUTH_STATE_COOKIE, '', {
@@ -66,6 +67,7 @@ export async function GET(request: Request) {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? null,
       expiresIn: tokens.expires_in ?? null,
+      workspaceId: jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null,
     });
 
     const dest = new URL('/admin/settings/socials', origin);

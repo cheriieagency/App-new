@@ -54,8 +54,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const stored = readStoredId(workspaces[0]?.id ?? '');
     if (stored && workspaces.some((w) => w.id === stored)) {
       setActiveWorkspaceIdState(stored);
+      try {
+        document.cookie = `nc_active_workspace_id=${encodeURIComponent(stored)}; path=/; max-age=31536000; samesite=lax`;
+      } catch {
+        /* ignore */
+      }
     } else if (workspaces[0]) {
       setActiveWorkspaceIdState(workspaces[0].id);
+      try {
+        document.cookie = `nc_active_workspace_id=${encodeURIComponent(workspaces[0].id)}; path=/; max-age=31536000; samesite=lax`;
+      } catch {
+        /* ignore */
+      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -64,6 +74,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setActiveWorkspaceIdState(id);
       try {
         localStorage.setItem(NC_WORKSPACE_STORAGE_KEY, id);
+        // Mirror into a cookie so OAuth callbacks / API routes can bind workspace_id.
+        document.cookie = `nc_active_workspace_id=${encodeURIComponent(id)}; path=/; max-age=31536000; samesite=lax`;
         const ws = workspaces.find((w) => w.id === id);
         if (ws) {
           localStorage.setItem('nc_active_workspace_name', ws.name);

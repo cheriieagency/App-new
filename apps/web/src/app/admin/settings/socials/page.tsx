@@ -29,6 +29,7 @@ function MetaConnectToast() {
         /* callback may already have synced */
       }
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['social-accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
         queryClient.invalidateQueries({ queryKey: ['meta-sync'] }),
         queryClient.invalidateQueries({ queryKey: ['planner-posts'] }),

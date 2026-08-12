@@ -16,6 +16,7 @@ import {
   type MetaOAuthTarget,
 } from '@/lib/meta/oauth';
 import { upsertMetaSocialAccounts } from '@/lib/meta/social-accounts';
+import { ACTIVE_WORKSPACE_COOKIE } from '@/lib/social/persist';
 
 function clearOAuthState(res: NextResponse) {
   res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
@@ -100,6 +101,7 @@ export async function GET(request: Request) {
       pages,
       expiresIn: longLived.expires_in,
       target,
+      workspaceId: jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null,
     });
 
     const shouldSync = target === 'instagram' || target === 'both' ? hasIg : false;
