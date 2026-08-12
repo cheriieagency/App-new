@@ -12,26 +12,19 @@ export type MetaOAuthTarget = 'instagram' | 'facebook' | 'both';
 export const META_OAUTH_STATE_COOKIE = 'clikd_meta_oauth_state';
 export const META_OAUTH_TARGET_COOKIE = 'clikd_meta_oauth_target';
 
-const INSTAGRAM_SCOPES = [
+/**
+ * Canonical Meta OAuth scopes — must include Pages + Instagram permissions
+ * so /me/accounts returns pages with linked IG Business accounts.
+ */
+export const META_OAUTH_SCOPES = [
   'public_profile',
+  'email',
+  'pages_show_list',
+  'pages_read_engagement',
+  'pages_manage_posts',
   'instagram_basic',
   'instagram_content_publish',
   'instagram_manage_insights',
-  'instagram_manage_comments',
-  'pages_show_list',
-  'pages_read_engagement',
-] as const;
-
-const FACEBOOK_SCOPES = [
-  'public_profile',
-  'pages_show_list',
-  'pages_manage_posts',
-  'pages_read_engagement',
-] as const;
-
-/** @deprecated Prefer scopesForMetaTarget — kept for callers expecting the full suite. */
-export const META_OAUTH_SCOPES = [
-  ...new Set([...INSTAGRAM_SCOPES, ...FACEBOOK_SCOPES, 'email']),
 ] as const;
 
 export function parseMetaOAuthTarget(raw: string | null | undefined): MetaOAuthTarget {
@@ -39,11 +32,10 @@ export function parseMetaOAuthTarget(raw: string | null | undefined): MetaOAuthT
   return 'both';
 }
 
-/** Scopes for the chosen connect target. */
-export function scopesForMetaTarget(target: MetaOAuthTarget): string[] {
-  if (target === 'instagram') return [...INSTAGRAM_SCOPES];
-  if (target === 'facebook') return [...FACEBOOK_SCOPES];
-  return [...new Set([...INSTAGRAM_SCOPES, ...FACEBOOK_SCOPES])];
+/** Scopes for the chosen connect target (full Pages+IG set for every target). */
+export function scopesForMetaTarget(_target: MetaOAuthTarget): string[] {
+  void _target;
+  return [...META_OAUTH_SCOPES];
 }
 
 /**
@@ -91,8 +83,12 @@ export function buildMetaLoginUrl(
   url.searchParams.set('redirect_uri', getMetaCallbackUrl(requestOrigin));
   url.searchParams.set('state', state);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', scopesForMetaTarget(target).join(','));
-  // Always re-prompt permissions + page selection (even if previously granted).
+  // Explicit comma-joined scope string (Pages + Instagram + email).
+  url.searchParams.set(
+    'scope',
+    scopesForMetaTarget(target).join(',')
+  );
+  // Force Meta to re-prompt page/IG permissions on every Connect click.
   url.searchParams.set('auth_type', 'rerequest');
   url.searchParams.set('prompt', 'consent');
   return url.toString();
@@ -166,6 +162,7 @@ export type MetaPageAccount = {
   id: string;
   name: string;
   access_token: string;
+  tasks?: string[];
   instagram_business_account?: MetaIgBusinessAccount;
 };
 
@@ -174,8 +171,9 @@ export type MetaAccountsResponse = {
 };
 
 /**
- * Fetch Facebook Pages + linked Instagram Business accounts (profile metadata).
- * Graph: me/accounts?fields=id,name,access_token,instagram_business_account{…}
+ * Fetch Facebook Pages + linked Instagram Business accounts.
+ * Graph v19: /me/accounts?fields=id,name,access_token,tasks,instagram_business_account{…}
+ * Searches every returned page — IG may be linked to a non-primary page.
  */
 export async function fetchMetaPagesWithInstagram(
   userAccessToken: string
@@ -183,7 +181,7 @@ export async function fetchMetaPagesWithInstagram(
   const url = new URL(`${GRAPH_BASE}/me/accounts`);
   url.searchParams.set(
     'fields',
-    'id,name,access_token,instagram_business_account{id,username,name,profile_picture_url,followers_count,media_count}'
+    'id,name,access_token,tasks,instagram_business_account{id,username,profile_picture_url,name,followers_count,media_count}'
   );
   url.searchParams.set('access_token', userAccessToken);
 
@@ -194,5 +192,24 @@ export async function fetchMetaPagesWithInstagram(
   if (!res.ok) {
     throw new Error(data.error?.message || 'Failed to fetch Meta pages');
   }
-  return data.data ?? [];
+
+  const pages = data.data ?? [];
+  // Prefer pages that already expose a linked IG Business account first,
+  // without dropping pages that only have Facebook Page tokens.
+  return [...pages].sort((a, b) => {
+    const aIg = a.instagram_business_account?.id ? 1 : 0;
+    const bIg = b.instagram_business_account?.id ? 1 : 0;
+    return bIg - aIg;
+  });
+}
+
+/** First Instagram Business account found across any /me/accounts page. */
+export function findInstagramAcrossPages(
+  pages: MetaPageAccount[]
+): { page: MetaPageAccount; ig: MetaIgBusinessAccount } | null {
+  for (const page of pages) {
+    const ig = page.instagram_business_account;
+    if (ig?.id) return { page, ig };
+  }
+  return null;
 }

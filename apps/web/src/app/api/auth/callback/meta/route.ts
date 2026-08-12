@@ -13,6 +13,7 @@ import {
   exchangeCodeForShortLivedToken,
   exchangeForLongLivedToken,
   fetchMetaPagesWithInstagram,
+  findInstagramAcrossPages,
   type MetaOAuthTarget,
 } from '@/lib/meta/oauth';
 import { upsertMetaSocialAccounts } from '@/lib/meta/social-accounts';
@@ -75,6 +76,7 @@ export async function GET(request: Request) {
   try {
     const shortLived = await exchangeCodeForShortLivedToken(code, origin);
     const longLived = await exchangeForLongLivedToken(shortLived.access_token);
+    // Graph: /v19.0/me/accounts?fields=id,name,access_token,tasks,instagram_business_account{…}
     const pages = await fetchMetaPagesWithInstagram(longLived.access_token);
 
     if (!pages.length) {
@@ -85,9 +87,11 @@ export async function GET(request: Request) {
       return res;
     }
 
-    const hasIg = pages.some((p) => Boolean(p.instagram_business_account?.id));
+    // Search every page — IG is often linked to a non-primary Page, not pages[0].
+    const igMatch = findInstagramAcrossPages(pages);
+    const hasIg = Boolean(igMatch?.ig.id);
 
-    // Instagram-only connect requires a linked IG Business account on a Page.
+    // Instagram-only connect requires a linked IG Business account on any Page.
     if (target === 'instagram' && !hasIg) {
       const dest = new URL('/admin/settings/socials', origin);
       dest.searchParams.set('error', 'no_instagram_business_account');
