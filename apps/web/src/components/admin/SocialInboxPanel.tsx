@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Inbox, Send } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
@@ -9,6 +9,7 @@ import { InstagramIcon } from '@/components/icons/SocialBrandIcons';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
+import { useMetaSync } from '@/hooks/useMetaSync';
 
 type DmMessage = {
   id: string;
@@ -35,24 +36,44 @@ function formatInstagramHandle(raw: string | null | undefined): string | null {
   return `@${cleaned}`;
 }
 
-/** Instagram DM inbox — empty until Meta is connected; threads sync in after OAuth. */
+/** Instagram inbox — comments synced from Meta Graph after OAuth. */
 export default function SocialInboxPanel() {
   const { locale } = useLocale();
   const { activeWorkspace } = useWorkspace();
   const { hasInstagram, accounts, isLoading } = useConnectedSocials();
-  const [threads] = useState<DmThread[]>([]);
+  const { data: metaSync } = useMetaSync(hasInstagram);
+  const threads = useMemo<DmThread[]>(
+    () =>
+      (metaSync?.snapshot?.inbox_threads ?? []).map((thread) => ({
+        id: thread.id,
+        name: thread.name,
+        handle: thread.handle,
+        preview: thread.preview,
+        time: thread.time,
+        unread: thread.unread,
+        messages: thread.messages,
+      })),
+    [metaSync?.snapshot?.inbox_threads]
+  );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+
+  // Select first thread once sync lands.
+  useEffect(() => {
+    if (!activeId && threads.length > 0) setActiveId(threads[0].id);
+  }, [activeId, threads]);
 
   const instagramHandle = useMemo(() => {
     if (!hasInstagram) return null;
     const ig = accounts.find((a) => a.platform === 'instagram');
+    const synced = metaSync?.snapshot?.instagram?.username;
     return (
       formatInstagramHandle(activeWorkspace.handle) ||
+      formatInstagramHandle(synced) ||
       formatInstagramHandle(ig?.handle) ||
       null
     );
-  }, [hasInstagram, accounts, activeWorkspace.handle]);
+  }, [hasInstagram, accounts, activeWorkspace.handle, metaSync?.snapshot?.instagram?.username]);
 
   const active = useMemo(
     () => threads.find((thread) => thread.id === activeId) ?? null,

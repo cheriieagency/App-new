@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, CalendarDays, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
@@ -10,9 +11,11 @@ import SocialAccountsPanel from '@/components/planner/SocialAccountsPanel';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/lib/i18n';
 import { Suspense } from 'react';
+import { refreshMetaSync } from '@/hooks/useMetaSync';
 
 function MetaConnectToast() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -24,6 +27,19 @@ function MetaConnectToast() {
       if (warning === 'no_instagram') {
         toast.message('No Instagram Business account was linked to the selected Pages.');
       }
+      // Pull Graph data into Analytics / Inbox / Planner and unlock gated tabs.
+      void (async () => {
+        try {
+          await refreshMetaSync();
+        } catch {
+          /* callback already synced; GET will hydrate next */
+        }
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
+          queryClient.invalidateQueries({ queryKey: ['meta-sync'] }),
+          queryClient.invalidateQueries({ queryKey: ['planner-posts'] }),
+        ]);
+      })();
     } else if (error === 'no_pages') {
       toast.message(
         'Meta login succeeded, but no Facebook Pages were returned. Grant Page access and try again.'
@@ -31,7 +47,7 @@ function MetaConnectToast() {
     } else if (error) {
       toast.error(`Meta connection failed: ${error.replace(/_/g, ' ')}`);
     }
-  }, [searchParams]);
+  }, [searchParams, queryClient]);
 
   return null;
 }

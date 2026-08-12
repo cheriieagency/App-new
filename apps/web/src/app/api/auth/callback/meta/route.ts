@@ -80,6 +80,14 @@ export async function GET(request: Request) {
       expiresIn: longLived.expires_in,
     });
 
+    // Pull Graph insights / media / comments into Analytics, Inbox, Planner.
+    try {
+      const { syncMetaDataForUser } = await import('@/lib/meta/sync');
+      await syncMetaDataForUser(session.user.id);
+    } catch (syncError) {
+      console.warn('[meta/callback] sync skipped', syncError);
+    }
+
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', 'meta_connected');
     if (!hasIg) {

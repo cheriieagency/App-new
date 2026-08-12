@@ -87,6 +87,7 @@ export type InstagramInsights = {
   impressions?: number;
   reach?: number;
   profile_views?: number;
+  follower_count?: number;
   raw: unknown;
 };
 
@@ -115,6 +116,85 @@ export async function fetchInstagramInsights(
     if (metric.name === 'profile_views') out.profile_views = value;
   }
   return out;
+}
+
+export type InstagramProfile = {
+  id: string;
+  username?: string;
+  name?: string;
+  profile_picture_url?: string;
+  followers_count?: number;
+  media_count?: number;
+  biography?: string;
+};
+
+/** IG Business profile fields used after OAuth sync. */
+export async function fetchInstagramProfile(
+  igUserId: string,
+  accessToken: string
+): Promise<InstagramProfile> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(igUserId)}`);
+  url.searchParams.set(
+    'fields',
+    'id,username,name,profile_picture_url,followers_count,media_count,biography'
+  );
+  url.searchParams.set('access_token', accessToken);
+  return graphJson<InstagramProfile>(url.toString());
+}
+
+export type InstagramMediaItem = {
+  id: string;
+  caption?: string;
+  media_type?: string;
+  media_url?: string;
+  thumbnail_url?: string;
+  permalink?: string;
+  timestamp?: string;
+  like_count?: number;
+  comments_count?: number;
+};
+
+/** Recent Instagram media (posts / reels) for Planner + Analytics. */
+export async function fetchInstagramMedia(
+  igUserId: string,
+  accessToken: string,
+  limit = 25
+): Promise<InstagramMediaItem[]> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(igUserId)}/media`);
+  url.searchParams.set(
+    'fields',
+    'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count'
+  );
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('access_token', accessToken);
+  const data = await graphJson<{ data?: InstagramMediaItem[] }>(url.toString());
+  return data.data ?? [];
+}
+
+export type InstagramComment = {
+  id: string;
+  text?: string;
+  username?: string;
+  timestamp?: string;
+  like_count?: number;
+};
+
+/** Comments on a media item — used to seed Social Inbox after connect. */
+export async function fetchInstagramMediaComments(
+  mediaId: string,
+  accessToken: string,
+  limit = 20
+): Promise<InstagramComment[]> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(mediaId)}/comments`);
+  url.searchParams.set('fields', 'id,text,username,timestamp,like_count');
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('access_token', accessToken);
+  try {
+    const data = await graphJson<{ data?: InstagramComment[] }>(url.toString());
+    return data.data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export { GRAPH_BASE };

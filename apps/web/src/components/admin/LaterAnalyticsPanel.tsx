@@ -34,6 +34,7 @@ import { useLanguage } from '@/lib/locale-context';
 import { t, tf, localeTag, type Locale } from '@/lib/i18n';
 import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
+import { useMetaSync } from '@/hooks/useMetaSync';
 
 type DateRangePreset = '1w' | '1m' | '3m' | '1y' | '2y' | 'custom';
 
@@ -87,8 +88,20 @@ type AnalyticsSubTab =
   | 'hashtags'
   | 'linkinbio';
 
-/** Empty until Meta Graph insights are synced for a connected account. */
-const ENGAGEMENT_OVERVIEW = {
+type PostPerfRow = {
+  id: string;
+  title: string;
+  platform: string;
+  image: string;
+  er: number;
+  impressions: number;
+  likes: number;
+  comments: number;
+  shares: number;
+};
+
+/** Empty engagement shape until Meta Graph insights sync. */
+const EMPTY_ENGAGEMENT = {
   reach: 0,
   views: 0,
   followers: 0,
@@ -196,6 +209,7 @@ export default function LaterAnalyticsPanel() {
   const { activeWorkspace } = useWorkspace();
   const { setSection } = useAdminNav();
   const { hasConnectedSocials, isLoading: socialsLoading } = useConnectedSocials();
+  const { data: metaSync } = useMetaSync(hasConnectedSocials);
   const [sub, setSub] = useState<AnalyticsSubTab>('analytics');
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
   const [rangeOpen, setRangeOpen] = useState(false);
@@ -204,11 +218,88 @@ export default function LaterAnalyticsPanel() {
   const [exportOpen, setExportOpen] = useState(false);
   const chart = activeWorkspace.analytics.revenue_chart;
 
-  // No fake chart data until a social account is connected.
+  const engagement = useMemo(() => {
+    const snap = metaSync?.snapshot;
+    if (!snap) return { ...EMPTY_ENGAGEMENT };
+    const likes = snap.insights.likes;
+    const comments = snap.insights.comments;
+    const reach = snap.insights.reach;
+    const impressions = snap.insights.impressions;
+    const followers = snap.insights.followers;
+    const engagementTotal = likes + comments;
+    return {
+      reach,
+      views: impressions,
+      followers,
+      followersDelta: 0,
+      likes,
+      comments,
+      shares: 0,
+      saves: 0,
+      engagementRate:
+        reach > 0 ? Math.round((engagementTotal / reach) * 1000) / 10 : 0,
+    };
+  }, [metaSync?.snapshot]);
+
+  /** Map synced IG media into Posts / Reels performance rows (empty until connect). */
+  const { bestPosts, worstPosts, bestReels, worstReels } = useMemo(() => {
+    const media = metaSync?.snapshot?.media ?? [];
+    const toRow = (item: (typeof media)[number]): PostPerfRow => {
+      const likes = item.like_count ?? 0;
+      const comments = item.comments_count ?? 0;
+      const impressions = Math.max(likes + comments, likes * 8);
+      const er =
+        impressions > 0
+          ? Math.round(((likes + comments) / impressions) * 1000) / 10
+          : 0;
+      const title =
+        item.caption?.split('\n')[0]?.slice(0, 48) ||
+        `IG ${item.media_type || 'post'}`;
+      return {
+        id: item.id,
+        title,
+        platform: 'Instagram',
+        image: item.thumbnail_url || item.media_url || '',
+        er,
+        impressions,
+        likes,
+        comments,
+        shares: 0,
+      };
+    };
+    const feed = media
+      .filter((m) => m.media_type !== 'VIDEO' && m.media_type !== 'REELS')
+      .map(toRow)
+      .sort((a, b) => b.er - a.er);
+    const reels = media
+      .filter((m) => m.media_type === 'VIDEO' || m.media_type === 'REELS')
+      .map(toRow)
+      .sort((a, b) => b.er - a.er);
+    const split = (rows: PostPerfRow[]) => {
+      if (rows.length === 0) return { best: [] as PostPerfRow[], worst: [] as PostPerfRow[] };
+      if (rows.length === 1) return { best: rows, worst: [] as PostPerfRow[] };
+      const mid = Math.max(1, Math.ceil(rows.length / 2));
+      return { best: rows.slice(0, mid), worst: [...rows].reverse().slice(0, rows.length - mid) };
+    };
+    const postsSplit = split(feed.length ? feed : media.map(toRow).sort((a, b) => b.er - a.er));
+    const reelsSplit = split(reels);
+    return {
+      bestPosts: postsSplit.best,
+      worstPosts: postsSplit.worst,
+      bestReels: reelsSplit.best,
+      worstReels: reelsSplit.worst,
+    };
+  }, [metaSync?.snapshot?.media]);
+
+  // Chart from Meta media activity (likes per day proxy) or zeros.
   const revenue = useMemo(() => {
     if (!hasConnectedSocials) return [0, 0, 0, 0, 0, 0, 0];
+    const media = metaSync?.snapshot?.media ?? [];
+    if (media.length >= 7) {
+      return media.slice(0, 7).map((m) => m.like_count ?? 0).reverse();
+    }
     return chart.length >= 7 ? chart.slice(0, 7) : [0, 0, 0, 0, 0, 0, 0];
-  }, [chart, hasConnectedSocials]);
+  }, [chart, hasConnectedSocials, metaSync?.snapshot?.media]);
   const visitors = useMemo(
     () => revenue.map((v, i) => Math.round(v * (0.55 + (i % 3) * 0.08))),
     [revenue]
@@ -238,7 +329,7 @@ export default function LaterAnalyticsPanel() {
   const activeTabLabel =
     subTabs.find((tab) => tab.key === sub)?.label ?? t('analyticsTab', locale);
 
-  // Placeholder KPIs until Meta insights sync is wired; shown only after socials connect.
+  // KPIs from Meta sync (followers / media) + bio revenue when available.
   const kpis: {
     label: string;
     value: string;
@@ -248,17 +339,17 @@ export default function LaterAnalyticsPanel() {
   }[] = [
     {
       label: t('kpiRevenueCheckout', locale),
-      value: '0 SEK',
+      value: `${activeWorkspace.analytics.revenue_sek || 0} SEK`,
       delta: '—',
       deltaTone: 'neutral',
-      meta: '0',
+      meta: String(activeWorkspace.analytics.utm_total_clicks || 0),
     },
     {
       label: t('kpiFollowers', locale),
-      value: '0',
+      value: formatCompact(engagement.followers, locale),
       delta: '—',
       deltaTone: 'neutral',
-      meta: '0',
+      meta: String(metaSync?.snapshot?.instagram?.media_count ?? 0),
     },
     {
       label: t('kpiBioStoreCvr', locale),
@@ -269,10 +360,14 @@ export default function LaterAnalyticsPanel() {
     },
     {
       label: t('kpiPlannedPosts', locale),
-      value: '0',
+      value: String(
+        metaSync?.snapshot?.planner_imported ??
+          metaSync?.snapshot?.media.length ??
+          0
+      ),
       delta: '—',
       deltaTone: 'neutral',
-      meta: '0%',
+      meta: 'Meta',
     },
   ];
 
@@ -434,7 +529,7 @@ export default function LaterAnalyticsPanel() {
         rangeLabel={formatRangeLabel(dateRange, locale)}
         kpis={kpis}
         topProducts={TOP_PRODUCTS}
-        engagement={ENGAGEMENT_OVERVIEW}
+        engagement={engagement}
       />
 
       {/* Quiet sub-nav — only shown when drilling into detail tabs */}
@@ -463,6 +558,7 @@ export default function LaterAnalyticsPanel() {
           locale={locale}
           workspaceName={activeWorkspace.name}
           rangeLabel={formatRangeLabel(dateRange, locale)}
+          engagement={engagement}
         />
       )}
 
@@ -596,8 +692,8 @@ export default function LaterAnalyticsPanel() {
           rangeLabel={formatRangeLabel(dateRange, locale)}
           compareKey="postsPerformanceCompare"
           reachLabelKey="metricImpressions"
-          best={BEST_POSTS}
-          worst={WORST_POSTS}
+          best={bestPosts}
+          worst={worstPosts}
         />
       )}
       {sub === 'reels' && (
@@ -606,8 +702,8 @@ export default function LaterAnalyticsPanel() {
           rangeLabel={formatRangeLabel(dateRange, locale)}
           compareKey="reelsPerformanceCompare"
           reachLabelKey="metricPlays"
-          best={BEST_REELS}
-          worst={WORST_REELS}
+          best={bestReels}
+          worst={worstReels}
         />
       )}
       {sub === 'stories' && (
@@ -616,8 +712,8 @@ export default function LaterAnalyticsPanel() {
           rangeLabel={formatRangeLabel(dateRange, locale)}
           compareKey="storiesPerformanceCompare"
           reachLabelKey="metricImpressions"
-          best={BEST_STORIES}
-          worst={WORST_STORIES}
+          best={[]}
+          worst={[]}
         />
       )}
       {sub === 'hashtags' && (
@@ -813,12 +909,14 @@ function AnalyticsOverviewTab({
   locale,
   workspaceName,
   rangeLabel,
+  engagement,
 }: {
   locale: Locale;
   workspaceName: string;
   rangeLabel: string;
+  engagement: typeof EMPTY_ENGAGEMENT;
 }) {
-  const data = ENGAGEMENT_OVERVIEW;
+  const data = engagement;
   const totalEngagement = data.likes + data.comments + data.shares + data.saves;
 
   const primaryMetrics = [
@@ -826,28 +924,28 @@ function AnalyticsOverviewTab({
       key: 'reach',
       label: t('metricReach', locale),
       value: formatCompact(data.reach, locale),
-      delta: '+12.4%',
+      delta: '—',
       icon: Users,
     },
     {
       key: 'views',
       label: t('metricViews', locale),
       value: formatCompact(data.views, locale),
-      delta: '+18.1%',
+      delta: '—',
       icon: Eye,
     },
     {
       key: 'followers',
       label: t('kpiFollowers', locale),
       value: formatCompact(data.followers, locale),
-      delta: `+${data.followersDelta}`,
+      delta: data.followersDelta ? `+${data.followersDelta}` : '—',
       icon: Users,
     },
     {
       key: 'er',
       label: t('metricEngagementRate', locale),
       value: `${data.engagementRate}%`,
-      delta: '+0.4%',
+      delta: '—',
       icon: Activity,
     },
   ];
@@ -1029,252 +1127,6 @@ function AnalyticsOverviewTab({
   );
 }
 
-type PostPerfRow = {
-  id: string;
-  title: string;
-  platform: string;
-  image: string;
-  er: number;
-  impressions: number;
-  likes: number;
-  comments: number;
-  shares: number;
-};
-
-const BEST_POSTS: PostPerfRow[] = [
-  {
-    id: 'bp1',
-    title: 'Behind the scenes reel',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400&q=80',
-    er: 6.1,
-    impressions: 18200,
-    likes: 1420,
-    comments: 186,
-    shares: 94,
-  },
-  {
-    id: 'bp2',
-    title: 'Launch teaser carousel',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
-    er: 5.4,
-    impressions: 15400,
-    likes: 1180,
-    comments: 142,
-    shares: 71,
-  },
-  {
-    id: 'bp3',
-    title: 'Creator tips carousel',
-    platform: 'LinkedIn',
-    image:
-      'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&q=80',
-    er: 4.9,
-    impressions: 12100,
-    likes: 890,
-    comments: 210,
-    shares: 128,
-  },
-];
-
-const WORST_POSTS: PostPerfRow[] = [
-  {
-    id: 'wp1',
-    title: 'Product drop announcement',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=400&q=80',
-    er: 1.4,
-    impressions: 9100,
-    likes: 210,
-    comments: 18,
-    shares: 6,
-  },
-  {
-    id: 'wp2',
-    title: 'Static quote graphic',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&q=80',
-    er: 1.1,
-    impressions: 6400,
-    likes: 98,
-    comments: 7,
-    shares: 2,
-  },
-  {
-    id: 'wp3',
-    title: 'Repost — event reminder',
-    platform: 'TikTok',
-    image:
-      'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&q=80',
-    er: 0.8,
-    impressions: 4200,
-    likes: 54,
-    comments: 3,
-    shares: 1,
-  },
-];
-
-const BEST_REELS: PostPerfRow[] = [
-  {
-    id: 'br1',
-    title: 'GRWM morning routine',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80',
-    er: 7.2,
-    impressions: 42000,
-    likes: 2840,
-    comments: 312,
-    shares: 2100,
-  },
-  {
-    id: 'br2',
-    title: '3 tips in 15s',
-    platform: 'TikTok',
-    image:
-      'https://images.unsplash.com/photo-1492707892479-7bc8d5a4ee93?w=400&q=80',
-    er: 6.4,
-    impressions: 31000,
-    likes: 2210,
-    comments: 198,
-    shares: 890,
-  },
-  {
-    id: 'br3',
-    title: 'Product unboxing ASMR',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=400&q=80',
-    er: 5.8,
-    impressions: 27400,
-    likes: 1980,
-    comments: 164,
-    shares: 640,
-  },
-];
-
-const WORST_REELS: PostPerfRow[] = [
-  {
-    id: 'wr1',
-    title: 'Soft launch teaser',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&q=80',
-    er: 1.6,
-    impressions: 8200,
-    likes: 180,
-    comments: 12,
-    shares: 8,
-  },
-  {
-    id: 'wr2',
-    title: 'Office tour — draft cut',
-    platform: 'TikTok',
-    image:
-      'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80',
-    er: 1.2,
-    impressions: 5600,
-    likes: 96,
-    comments: 5,
-    shares: 3,
-  },
-  {
-    id: 'wr3',
-    title: 'Repost — old trend audio',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400&q=80',
-    er: 0.9,
-    impressions: 3900,
-    likes: 48,
-    comments: 2,
-    shares: 1,
-  },
-];
-
-const BEST_STORIES: PostPerfRow[] = [
-  {
-    id: 'bs1',
-    title: 'Poll: which shade?',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&q=80',
-    er: 8.4,
-    impressions: 12400,
-    likes: 980,
-    comments: 240,
-    shares: 64,
-  },
-  {
-    id: 'bs2',
-    title: 'Link sticker — shop',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=400&q=80',
-    er: 7.1,
-    impressions: 9800,
-    likes: 720,
-    comments: 88,
-    shares: 42,
-  },
-  {
-    id: 'bs3',
-    title: 'Q&A — creator tips',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80',
-    er: 6.6,
-    impressions: 8600,
-    likes: 640,
-    comments: 310,
-    shares: 28,
-  },
-];
-
-const WORST_STORIES: PostPerfRow[] = [
-  {
-    id: 'ws1',
-    title: 'Morning coffee dump',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80',
-    er: 1.8,
-    impressions: 4100,
-    likes: 86,
-    comments: 4,
-    shares: 1,
-  },
-  {
-    id: 'ws2',
-    title: 'Reminder — livestream',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400&q=80',
-    er: 1.3,
-    impressions: 3200,
-    likes: 52,
-    comments: 2,
-    shares: 0,
-  },
-  {
-    id: 'ws3',
-    title: 'Repost — brand story',
-    platform: 'Instagram',
-    image:
-      'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&q=80',
-    er: 0.9,
-    impressions: 2100,
-    likes: 28,
-    comments: 1,
-    shares: 0,
-  },
-];
-
 function PostPerfRowItem({
   post,
   locale,
@@ -1391,16 +1243,20 @@ function ContentPerformanceTab({
             </p>
           </div>
           <div className="divide-y divide-slate-100">
-            {best.map((post, i) => (
-              <PostPerfRowItem
-                key={post.id}
-                post={post}
-                locale={locale}
-                tone="best"
-                rank={i + 1}
-                reachLabelKey={reachLabelKey}
-              />
-            ))}
+            {best.length === 0 ? (
+              <p className="px-3.5 py-8 text-sm text-slate-400 text-center">—</p>
+            ) : (
+              best.map((post, i) => (
+                <PostPerfRowItem
+                  key={post.id}
+                  post={post}
+                  locale={locale}
+                  tone="best"
+                  rank={i + 1}
+                  reachLabelKey={reachLabelKey}
+                />
+              ))
+            )}
           </div>
         </section>
 
@@ -1415,16 +1271,20 @@ function ContentPerformanceTab({
             </p>
           </div>
           <div className="divide-y divide-slate-100">
-            {worst.map((post, i) => (
-              <PostPerfRowItem
-                key={post.id}
-                post={post}
-                locale={locale}
-                tone="worst"
-                rank={i + 1}
-                reachLabelKey={reachLabelKey}
-              />
-            ))}
+            {worst.length === 0 ? (
+              <p className="px-3.5 py-8 text-sm text-slate-400 text-center">—</p>
+            ) : (
+              worst.map((post, i) => (
+                <PostPerfRowItem
+                  key={post.id}
+                  post={post}
+                  locale={locale}
+                  tone="worst"
+                  rank={i + 1}
+                  reachLabelKey={reachLabelKey}
+                />
+              ))
+            )}
           </div>
         </section>
       </div>

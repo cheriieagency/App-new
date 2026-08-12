@@ -738,7 +738,7 @@ export function upsertPlannerPost(
   const wsName = input.project ?? brandWorkspaces[0]?.name ?? 'Clikd Launch';
 
   const post: PlannerPost = {
-    id: `post-${++postSeq}`,
+    id: input.id?.trim() || `post-${++postSeq}`,
     title,
     caption: input.caption ?? '',
     hashtags: input.hashtags ?? '',
@@ -754,7 +754,7 @@ export function upsertPlannerPost(
     idea_title: input.idea_title ?? title,
     project: wsName,
     campaigns: input.campaigns ?? [],
-    assignees: input.assignees ?? [PLANNER_TEAM[0]],
+    assignees: input.assignees ?? (PLANNER_TEAM[0] ? [PLANNER_TEAM[0]] : []),
     subtasks: input.subtasks ?? [],
     auto_post: input.auto_post ?? false,
     activity: [

@@ -174,6 +174,44 @@ export async function listMetaSocialAccountsForUser(
   }
 }
 
+export async function listStoredMetaAccounts(
+  userId: string
+): Promise<StoredSocialAccount[]> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return [...(demoByUser.get(userId) ?? [])];
+  }
+
+  try {
+    const rows = await sql`
+      SELECT *
+      FROM social_accounts
+      WHERE user_id = ${userId}
+        AND platform IN ('instagram', 'facebook')
+      ORDER BY platform ASC, connected_at DESC
+    `;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return [...(demoByUser.get(userId) ?? [])];
+    }
+    return rows.map((row: Record<string, unknown>) => ({
+      id: String(row.id),
+      user_id: String(row.user_id),
+      platform: row.platform as 'instagram' | 'facebook',
+      external_id: String(row.external_id),
+      handle: (row.handle as string) || null,
+      display_name: (row.display_name as string) || null,
+      avatar_url: (row.avatar_url as string) || null,
+      access_token: String(row.access_token),
+      token_expires_at: row.token_expires_at ? String(row.token_expires_at) : null,
+      page_id: (row.page_id as string) || null,
+      page_name: (row.page_name as string) || null,
+      connected_at: String(row.connected_at),
+    }));
+  } catch (error) {
+    console.error('[social_accounts] listStored failed', error);
+    return [...(demoByUser.get(userId) ?? [])];
+  }
+}
+
 export async function getMetaAccessToken(input: {
   userId: string;
   platform: 'instagram' | 'facebook';
