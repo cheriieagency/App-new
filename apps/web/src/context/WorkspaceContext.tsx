@@ -15,6 +15,8 @@ import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner'
 import {
   blankWorkspaceProfile,
   createWorkspaceProfile,
+  deleteWorkspaceProfile,
+  ensureDefaultWorkspace,
   listWorkspaceProfiles,
   NC_WORKSPACE_STORAGE_KEY,
   profileAsBrandWorkspace,
@@ -35,6 +37,7 @@ type WorkspaceContextValue = {
     handle?: string;
     channels?: SocialPlatform[];
   }) => WorkspaceProfile;
+  deleteWorkspace: (id: string) => void;
   refreshWorkspaces: () => void;
   /** Active subscription plan hydrated from /api/subscription on /admin/* */
   plan: string;
@@ -84,25 +87,32 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     })();
   }, [queryClient]);
 
-  // Hydrate active id from localStorage after mount (SSR-safe).
+  // Hydrate profiles + seed default "My workspace" on first visit.
   useEffect(() => {
-    const stored = readStoredId(workspaces[0]?.id ?? '');
-    if (stored && workspaces.some((w) => w.id === stored)) {
-      setActiveWorkspaceIdState(stored);
-      try {
-        document.cookie = `nc_active_workspace_id=${encodeURIComponent(stored)}; path=/; max-age=31536000; samesite=lax`;
-      } catch {
-        /* ignore */
+    const seeded = ensureDefaultWorkspace();
+    const list = listWorkspaceProfiles();
+    setWorkspaces(list);
+
+    const stored = readStoredId(seeded.id);
+    const activeId =
+      stored && list.some((w) => w.id === stored)
+        ? stored
+        : list[0]?.id || seeded.id;
+
+    setActiveWorkspaceIdState(activeId);
+    try {
+      localStorage.setItem(NC_WORKSPACE_STORAGE_KEY, activeId);
+      document.cookie = `nc_active_workspace_id=${encodeURIComponent(activeId)}; path=/; max-age=31536000; samesite=lax`;
+      document.cookie = `active_workspace_id=${encodeURIComponent(activeId)}; path=/; max-age=31536000; samesite=lax`;
+      const ws = list.find((w) => w.id === activeId);
+      if (ws) {
+        localStorage.setItem('nc_active_workspace_name', ws.name);
+        localStorage.setItem('nc_active_workspace_handle', ws.handle);
       }
-    } else if (workspaces[0]) {
-      setActiveWorkspaceIdState(workspaces[0].id);
-      try {
-        document.cookie = `nc_active_workspace_id=${encodeURIComponent(workspaces[0].id)}; path=/; max-age=31536000; samesite=lax`;
-      } catch {
-        /* ignore */
-      }
+    } catch {
+      /* ignore */
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Refresh plan/status whenever the admin shell mounts or the route changes.
   useEffect(() => {
@@ -115,8 +125,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setActiveWorkspaceIdState(id);
       try {
         localStorage.setItem(NC_WORKSPACE_STORAGE_KEY, id);
-        // Mirror into a cookie so OAuth callbacks / API routes can bind workspace_id.
+        // Mirror into cookies so OAuth callbacks / API routes bind workspace_id.
         document.cookie = `nc_active_workspace_id=${encodeURIComponent(id)}; path=/; max-age=31536000; samesite=lax`;
+        document.cookie = `active_workspace_id=${encodeURIComponent(id)}; path=/; max-age=31536000; samesite=lax`;
         const ws = workspaces.find((w) => w.id === id);
         if (ws) {
           localStorage.setItem('nc_active_workspace_name', ws.name);
@@ -166,6 +177,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [setActiveWorkspaceId]
   );
 
+  const deleteWorkspace = useCallback(
+    (id: string) => {
+      const { remaining } = deleteWorkspaceProfile(id);
+      setWorkspaces(remaining);
+      const nextId = remaining[0]?.id;
+      if (nextId) setActiveWorkspaceId(nextId);
+    },
+    [setActiveWorkspaceId]
+  );
+
   const value = useMemo(
     () => ({
       workspaces,
@@ -175,6 +196,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setActiveWorkspaceId,
       updateActiveBio,
       createWorkspace,
+      deleteWorkspace,
       refreshWorkspaces,
       plan,
       subscriptionStatus,
@@ -188,6 +210,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setActiveWorkspaceId,
       updateActiveBio,
       createWorkspace,
+      deleteWorkspace,
       refreshWorkspaces,
       plan,
       subscriptionStatus,

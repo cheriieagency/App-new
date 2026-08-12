@@ -1,13 +1,33 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
+import { useWorkspaceOptional } from '@/context/WorkspaceContext';
+import { NC_WORKSPACE_STORAGE_KEY } from '@/lib/mock-workspace-profiles';
+
+export type AnalyticsHashtag = {
+  tag: string;
+  posts: number;
+  reach: number;
+  er: number;
+  trend: number;
+};
+
+export type AnalyticsPlatformSlice = {
+  connected: boolean;
+  followers: number;
+  handle: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+};
 
 export type AnalyticsApiResponse = {
   ok: boolean;
   source?: string;
   connected?: boolean;
   reason?: string;
+  workspace_id?: string | null;
   message?: string | null;
   cta?: { label: string; href: string } | null;
   metrics?: {
@@ -16,8 +36,20 @@ export type AnalyticsApiResponse = {
     likes: number;
     comments: number;
     followers: number;
+    profile_views?: number;
+    engagement_rate: number;
+    accounts?: number;
+  };
+  totals?: {
+    followers: number;
+    accounts: number;
+    reach: number;
+    impressions: number;
+    likes: number;
+    comments: number;
     engagement_rate: number;
   };
+  by_platform?: Record<string, AnalyticsPlatformSlice>;
   accounts?: Array<{
     platform: string;
     handle?: string | null;
@@ -27,18 +59,61 @@ export type AnalyticsApiResponse = {
   }>;
   insights?: Record<string, number> | null;
   instagram?: Record<string, unknown> | null;
-  media?: unknown[];
+  media?: Array<{
+    id: string;
+    caption?: string | null;
+    media_type?: string | null;
+    media_url?: string | null;
+    thumbnail_url?: string | null;
+    like_count?: number | null;
+    comments_count?: number | null;
+    timestamp?: string | null;
+  }>;
+  hashtags?: AnalyticsHashtag[];
+  planner_imported?: number;
   synced_at?: string | null;
 };
 
-/** Hydrates /api/analytics with soft onboarding fallback (never crashes the page). */
+function readStoredWorkspaceId(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(NC_WORKSPACE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Hydrates /api/analytics for the ACTIVE workspace (all connected APIs). */
 export function useAnalytics(enabled = true) {
   const pathname = usePathname();
-  return useQuery<AnalyticsApiResponse>({
-    queryKey: ['analytics', pathname ?? ''],
-    enabled,
+  const queryClient = useQueryClient();
+  const workspaceCtx = useWorkspaceOptional();
+  const workspaceId =
+    workspaceCtx?.activeWorkspaceId || readStoredWorkspaceId() || null;
+
+  const query = useQuery<AnalyticsApiResponse>({
+    queryKey: ['analytics', workspaceId ?? 'none', pathname ?? ''],
+    enabled: enabled && Boolean(workspaceId),
     queryFn: async () => {
-      const r = await fetch('/api/analytics', {
+      const ws = workspaceId || readStoredWorkspaceId();
+      if (!ws) {
+        return {
+          ok: true,
+          connected: false,
+          reason: 'no_workspace',
+          accounts: [],
+          media: [],
+          hashtags: [],
+        };
+      }
+      const params = new URLSearchParams();
+      params.set('workspaceId', ws);
+      params.set('_', String(Date.now()));
+      const r = await fetch(`/api/analytics?${params}`, {
+        headers: {
+          'x-workspace-id': ws,
+          'x-active-workspace-id': ws,
+        },
         credentials: 'include',
         cache: 'no-store',
       });
@@ -49,4 +124,12 @@ export function useAnalytics(enabled = true) {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
+
+  // Re-fetch whenever the active workspace changes.
+  useEffect(() => {
+    if (!enabled || !workspaceId) return;
+    void queryClient.invalidateQueries({ queryKey: ['analytics'] });
+  }, [workspaceId, enabled, queryClient]);
+
+  return query;
 }

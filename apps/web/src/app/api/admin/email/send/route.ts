@@ -25,6 +25,7 @@ type RecipientFilter = string;
 
 type SendPayload = {
   workspaceId?: string;
+  communityId?: number | string | null;
   subject?: string;
   bodyContent?: string;
   recipientFilter?: RecipientFilter;
@@ -67,23 +68,37 @@ function filterSubscribers(
 
 async function loadWorkspaceSubscribers(
   creatorId: string,
-  recipientFilter: string
+  recipientFilter: string,
+  communityId?: number
 ): Promise<EmailSubscriber[]> {
   if (!process.env.DATABASE_URL?.trim()) {
-    return filterSubscribers(listEmailSubscribers(), recipientFilter);
+    return filterSubscribers(
+      listEmailSubscribers({ community_id: communityId }),
+      recipientFilter
+    );
   }
 
   try {
-    const rows = await sql`
-      SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
-      FROM email_subscribers
-      WHERE creator_id = ${creatorId}
-      ORDER BY subscribed_at DESC
-      LIMIT 2000
-    `;
+    const rows = communityId
+      ? await sql`
+          SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
+          FROM email_subscribers
+          WHERE creator_id = ${creatorId}
+            AND community_id = ${communityId}
+          ORDER BY subscribed_at DESC
+          LIMIT 2000
+        `
+      : await sql`
+          SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
+          FROM email_subscribers
+          WHERE creator_id = ${creatorId}
+          ORDER BY subscribed_at DESC
+          LIMIT 2000
+        `;
 
     if (!Array.isArray(rows) || rows.length === 0) {
-      return filterSubscribers(listEmailSubscribers(), recipientFilter);
+      // Empty real list — do not invent seed recipients for live sends.
+      return [];
     }
 
     const mapped: EmailSubscriber[] = (rows as Array<Record<string, unknown>>).map((r) => ({
@@ -102,7 +117,7 @@ async function loadWorkspaceSubscribers(
     return filterSubscribers(mapped, recipientFilter);
   } catch (err) {
     console.error('[email/send] subscriber query failed', err);
-    return filterSubscribers(listEmailSubscribers(), recipientFilter);
+    return [];
   }
 }
 
@@ -134,6 +149,13 @@ export async function POST(request: Request) {
   const bodyContent = String(body.bodyContent ?? '').trim();
   const recipientFilter = String(body.recipientFilter ?? 'all').trim() || 'all';
   const workspaceId = String(body.workspaceId ?? 'default').trim();
+  const communityIdRaw = body.communityId;
+  const communityId =
+    communityIdRaw != null && communityIdRaw !== ''
+      ? Number(communityIdRaw)
+      : undefined;
+  const scopedCommunityId =
+    communityId != null && !Number.isNaN(communityId) ? communityId : undefined;
   const isTest = Boolean(body.test);
   const imageUrl =
     typeof body.imageUrl === 'string' && body.imageUrl.trim() ? body.imageUrl.trim() : null;
@@ -154,7 +176,11 @@ export async function POST(request: Request) {
     }
     recipients = [{ email: adminEmail, name: adminName }];
   } else {
-    const subscribers = await loadWorkspaceSubscribers(session.user.id, recipientFilter);
+    const subscribers = await loadWorkspaceSubscribers(
+      session.user.id,
+      recipientFilter,
+      scopedCommunityId
+    );
     recipients = subscribers
       .map((s) => ({ email: s.email.toLowerCase().trim(), name: s.name }))
       .filter((s) => Boolean(s.email));

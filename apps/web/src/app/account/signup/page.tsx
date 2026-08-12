@@ -84,6 +84,16 @@ function SignUpForm() {
 				clearRememberedAuth();
 			}
 
+			// Seed the default personal workspace for new accounts.
+			try {
+				const { ensureDefaultWorkspace } = await import(
+					'@/lib/mock-workspace-profiles'
+				);
+				ensureDefaultWorkspace();
+			} catch {
+				/* ignore */
+			}
+
 			const home = await persistPlatformRole(role);
 
 			// Creators complete the onboarding questionnaire before admin.

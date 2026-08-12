@@ -123,6 +123,14 @@ export default function OnboardingForm() {
         setLoading(false);
         return;
       }
+      try {
+        const { ensureDefaultWorkspace } = await import(
+          '@/lib/mock-workspace-profiles'
+        );
+        ensureDefaultWorkspace();
+      } catch {
+        /* ignore */
+      }
       await persistPlatformRole('creator');
       setStep(1);
     } catch (err) {

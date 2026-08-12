@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConnectedSocialAccount } from '@/lib/mock-content-planner';
 import { useSession } from '@/lib/auth-client';
+import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { NC_WORKSPACE_STORAGE_KEY } from '@/lib/mock-workspace-profiles';
 
 export type SocialAccountsResponse = {
@@ -23,9 +24,10 @@ const SUCCESS_PARAMS = new Set([
   'facebook_connected',
   'youtube_connected',
   'linkedin_connected',
+  'tiktok_connected',
 ]);
 
-function readWorkspaceId(): string | null {
+function readStoredWorkspaceId(): string | null {
   if (typeof window === 'undefined') return null;
   try {
     return localStorage.getItem(NC_WORKSPACE_STORAGE_KEY);
@@ -44,33 +46,45 @@ function readOAuthSuccessParam(): string | null {
 }
 
 /**
- * Unified live social_accounts fetch for the active user/workspace.
- * Immediately refetches when returning from OAuth (?success=…).
+ * Unified live social_accounts fetch for the ACTIVE workspace only.
+ * Revalidates when workspace changes or OAuth returns with ?success=…
  */
 export function useSocialAccounts(enabled = true) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const { data: session } = useSession();
-  const workspaceId = readWorkspaceId();
+  const workspaceCtx = useWorkspaceOptional();
+  const workspaceId =
+    workspaceCtx?.activeWorkspaceId || readStoredWorkspaceId() || null;
   const success =
     typeof window !== 'undefined' ? readOAuthSuccessParam() : null;
 
   const query = useQuery<SocialAccountsResponse>({
     queryKey: [
       'social-accounts',
-      workspaceId ?? 'default',
+      workspaceId ?? 'none',
       success ?? '',
       session?.user?.id ?? 'anon',
     ],
-    enabled,
+    enabled: enabled && Boolean(workspaceId),
     queryFn: async () => {
+      const ws = workspaceId || readStoredWorkspaceId();
+      if (!ws) {
+        return {
+          accounts: [],
+          connected_count: 0,
+          workspace_id: null,
+          source: 'no_workspace',
+        };
+      }
       const params = new URLSearchParams();
-      const ws = readWorkspaceId();
-      if (ws) params.set('workspaceId', ws);
+      params.set('workspaceId', ws);
       params.set('_', String(Date.now()));
-      const qs = params.toString();
-      const r = await fetch(`/api/socials/accounts?${qs}`, {
-        headers: ws ? { 'x-workspace-id': ws } : undefined,
+      const r = await fetch(`/api/socials/accounts?${params}`, {
+        headers: {
+          'x-workspace-id': ws,
+          'x-active-workspace-id': ws,
+        },
         credentials: 'include',
         cache: 'no-store',
       });
@@ -82,7 +96,6 @@ export function useSocialAccounts(enabled = true) {
     refetchOnWindowFocus: true,
   });
 
-  // Force hydrate as soon as OAuth redirects back with ?success=
   useEffect(() => {
     const param = readOAuthSuccessParam();
     if (!param || !SUCCESS_PARAMS.has(param)) return;
@@ -90,7 +103,12 @@ export function useSocialAccounts(enabled = true) {
     void query.refetch();
   }, [queryClient, query, success]);
 
-  // Revalidate when navigating across admin pages or auth user changes.
+  // Re-fetch whenever the active workspace changes.
+  useEffect(() => {
+    if (!enabled || !workspaceId) return;
+    void queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
+  }, [workspaceId, enabled, queryClient]);
+
   useEffect(() => {
     if (!enabled) return;
     if (pathname && !pathname.startsWith('/admin')) return;
@@ -107,6 +125,7 @@ export function useSocialAccounts(enabled = true) {
   const hasFacebook = connectedAccounts.some((a) => a.platform === 'facebook');
   const hasYouTube = connectedAccounts.some((a) => a.platform === 'youtube');
   const hasLinkedIn = connectedAccounts.some((a) => a.platform === 'linkedin');
+  const hasTikTok = connectedAccounts.some((a) => a.platform === 'tiktok');
   const needsIgBusiness = Boolean(
     query.data?.needs_ig_business || (hasFacebook && !hasInstagram)
   );
@@ -128,6 +147,7 @@ export function useSocialAccounts(enabled = true) {
     hasFacebook,
     hasYouTube,
     hasLinkedIn,
+    hasTikTok,
     needsIgBusiness,
     instagramAccount,
     workspaceId,

@@ -25,6 +25,7 @@ export const META_OAUTH_SCOPES = [
   'instagram_basic',
   'instagram_content_publish',
   'instagram_manage_insights',
+  'instagram_manage_comments',
   'business_management',
 ] as const;
 

@@ -192,9 +192,32 @@ export async function fetchInstagramMediaComments(
   try {
     const data = await graphJson<{ data?: InstagramComment[] }>(url.toString());
     return data.data ?? [];
-  } catch {
+  } catch (error) {
+    console.warn('[graph] fetchInstagramMediaComments failed', mediaId, error);
     return [];
   }
+}
+
+/** Reply to an Instagram media comment (Inbox reply). */
+export async function replyToInstagramComment(
+  commentId: string,
+  message: string,
+  accessToken: string
+): Promise<{ id: string }> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(commentId)}/replies`);
+  const body = new URLSearchParams();
+  body.set('message', message);
+  body.set('access_token', accessToken);
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  const json = (await res.json()) as { id?: string; error?: { message?: string } };
+  if (!res.ok || !json.id) {
+    throw new Error(json.error?.message || 'Failed to reply to Instagram comment');
+  }
+  return { id: json.id };
 }
 
 export { GRAPH_BASE };

@@ -41,7 +41,8 @@ function MetaConnectToast() {
       success === 'instagram_connected' ||
       success === 'facebook_connected' ||
       success === 'youtube_connected' ||
-      success === 'linkedin_connected'
+      success === 'linkedin_connected' ||
+      success === 'tiktok_connected'
     ) {
       if (success === 'instagram_connected') {
         toast.success('Instagram connected');
@@ -51,6 +52,8 @@ function MetaConnectToast() {
         toast.success('YouTube channel connected');
       } else if (success === 'linkedin_connected') {
         toast.success('LinkedIn profile connected');
+      } else if (success === 'tiktok_connected') {
+        toast.success('TikTok account connected');
       } else {
         toast.success('Instagram & Facebook connected');
       }

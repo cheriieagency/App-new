@@ -24,14 +24,13 @@ export async function GET() {
   });
 }
 
+/**
+ * Secondary sync for managed communities.
+ * The admin UI creates workspaces client-side (localStorage) via WorkspaceContext;
+ * this route mirrors a community record and enforces plan seat limits.
+ */
 export async function POST(request: Request) {
   try {
-    // Workspace / brand count gated by plan (Starter/Creator = 1, Pro = 3).
-    const existing =
-      listWorkspaceProfiles().length || listManagedCommunities().length;
-    const limitGate = await requireLimit('maxWorkspaces', existing, request.headers);
-    if (limitGate) return limitGate;
-
     const body = await request.json();
     const name = String(body.name ?? '').trim();
     const handle = String(body.handle ?? '').trim();
@@ -41,10 +40,26 @@ export async function POST(request: Request) {
     if (!name) {
       return Response.json({ error: 'name required' }, { status: 400 });
     }
+
+    // Prefer client-reported count (server memory is not shared with the browser store).
+    const existingCount =
+      typeof body.existingCount === 'number'
+        ? body.existingCount
+        : listWorkspaceProfiles().length || listManagedCommunities().length;
+
+    const limitGate = await requireLimit(
+      'maxWorkspaces',
+      existingCount,
+      request.headers
+    );
+    if (limitGate) return limitGate;
+
     const community = createManagedCommunity({ name, handle, channels });
     return Response.json({
+      ok: true,
       workspace: managedCommunityAsWorkspace(community),
       community,
+      clientWorkspaceId: body.clientWorkspaceId ?? null,
       workspaces: listManagedCommunities().map(managedCommunityAsWorkspace),
     });
   } catch (error) {

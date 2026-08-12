@@ -162,6 +162,12 @@ export type NestedDict = {
     disconnectTitle: string;
     disconnectBody: string;
     confirmDisconnect: string;
+    workspaceGuideTitle: string;
+    workspaceGuideStep1: string;
+    workspaceGuideStep2: string;
+    workspaceGuideStep3: string;
+    workspaceGuidePerWorkspace: string;
+    workspaceGuideEditMeta: string;
   };
   legal: {
     privacyTitle: string;
@@ -333,6 +339,13 @@ export const DICT_EN: NestedDict = {
     disconnectTitle: 'Disconnect account?',
     disconnectBody: 'You can reconnect anytime. Scheduled posts for this channel will pause.',
     confirmDisconnect: 'Disconnect',
+    workspaceGuideTitle: 'Connecting different social accounts to different workspaces?',
+    workspaceGuideStep1: 'Select your active workspace from the left sidebar or top workspace switcher.',
+    workspaceGuideStep2: "Click Connect for the platform you want to link to this workspace.",
+    workspaceGuideStep3:
+      "If Meta auto-selects a previous account, click “Edit previous settings” (Redigera tidigare inställningar) in Meta’s login popup to choose the Instagram Business account and Facebook Page for this workspace.",
+    workspaceGuidePerWorkspace: 'Supports separate accounts per workspace.',
+    workspaceGuideEditMeta: 'Edit previous settings',
   },
   legal: {
     privacyTitle: 'Privacy Policy',
@@ -506,6 +519,13 @@ export const DICT_SV: NestedDict = {
     disconnectTitle: 'Koppla från konto?',
     disconnectBody: 'Du kan ansluta igen när som helst. Schemalagda inlägg för kanalen pausas.',
     confirmDisconnect: 'Koppla från',
+    workspaceGuideTitle: 'Vill du koppla olika sociala konton till olika arbetsytor?',
+    workspaceGuideStep1: 'Välj aktiv arbetsyta i vänstermenyn eller arbetsyteväljaren högst upp.',
+    workspaceGuideStep2: 'Klicka på Anslut för plattformen du vill koppla till den här arbetsytan.',
+    workspaceGuideStep3:
+      'Om Meta automatiskt väljer ett tidigare konto: klicka på “Redigera tidigare inställningar” (Edit previous settings) i Meta-inloggningen och välj rätt Instagram Business-konto och Facebook-sida för den här arbetsytan.',
+    workspaceGuidePerWorkspace: 'Stöder separata konton per arbetsyta.',
+    workspaceGuideEditMeta: 'Redigera tidigare inställningar',
   },
   legal: {
     privacyTitle: 'Integritetspolicy',
@@ -887,6 +907,13 @@ export const DICT_FI: NestedDict = {
     disconnectTitle: 'Irrota tili?',
     disconnectBody: 'Voit yhdistää uudelleen milloin tahansa. Kanavan ajastetut julkaisut keskeytetään.',
     confirmDisconnect: 'Irrota',
+    workspaceGuideTitle: 'Haluatko yhdistää eri some-tilejä eri työtiloihin?',
+    workspaceGuideStep1: 'Valitse aktiivinen työtila vasemmasta sivupalkista tai yläreunan työtilavalitsimesta.',
+    workspaceGuideStep2: 'Napsauta Yhdistä sille alustalle, jonka haluat linkittää tähän työtilaan.',
+    workspaceGuideStep3:
+      'Jos Meta valitsee automaattisesti aiemman tilin, napsauta “Muokkaa aiempia asetuksia” (Edit previous settings / Redigera tidigare inställningar) Meta-kirjautumisessa ja valitse tämän työtilan Instagram Business -tili sekä Facebook-sivu.',
+    workspaceGuidePerWorkspace: 'Tukee erillisiä tilejä työtilaa kohti.',
+    workspaceGuideEditMeta: 'Muokkaa aiempia asetuksia',
   },
   legal: {
     privacyTitle: 'Tietosuojakäytäntö',

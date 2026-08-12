@@ -33,8 +33,17 @@ import {
 } from '@/components/ui/dialog';
 import { localeTag, useLanguage } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
+import { useWorkspaceOptional } from '@/context/WorkspaceContext';
+import WorkspaceOAuthGuideBanner from '@/components/admin/WorkspaceOAuthGuideBanner';
 
 const DEMO_MODE_KEY = 'clikd_oauth_demo_recording_mode';
+
+function withWorkspaceQuery(path: string, workspaceId: string | null | undefined) {
+  if (!workspaceId) return path;
+  const url = new URL(path, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+  url.searchParams.set('workspaceId', workspaceId);
+  return `${url.pathname}?${url.searchParams.toString()}`;
+}
 
 const PLATFORM_TITLES: Record<SocialPlatform, string> = {
   instagram: 'Meta / Instagram Graph API',
@@ -54,9 +63,9 @@ const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
   ],
   tiktok: [
     'user.info.basic',
-    'video.upload',
-    'video.publish',
+    'user.info.stats',
     'video.list',
+    'video.upload',
   ],
   youtube: [
     'youtube.upload',
@@ -146,6 +155,7 @@ function ConnectOrConnectedButton({
   idleClassName,
   icon,
   disconnectLabel = 'Disconnect',
+  helperHint,
 }: {
   connected: boolean;
   account?: ConnectedSocialAccount | null;
@@ -155,6 +165,8 @@ function ConnectOrConnectedButton({
   idleClassName: string;
   icon: ReactNode;
   disconnectLabel?: string;
+  /** Small tip under the connect CTA (e.g. per-workspace support). */
+  helperHint?: string;
 }) {
   if (connected && account) {
     return (
@@ -184,14 +196,22 @@ function ConnectOrConnectedButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={onConnect}
-      className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl text-white text-sm font-bold shadow-sm transition-colors ${idleClassName}`}
-    >
-      {icon}
-      {idleLabel}
-    </button>
+    <div className="min-w-0 sm:min-w-[200px] flex-1 sm:flex-none flex flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={onConnect}
+        title={helperHint}
+        className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl text-white text-sm font-bold shadow-sm transition-colors ${idleClassName}`}
+      >
+        {icon}
+        {idleLabel}
+      </button>
+      {helperHint ? (
+        <p className="px-1 text-[10px] font-semibold text-slate-500 leading-snug">
+          {helperHint}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -203,6 +223,9 @@ export default function SocialAccountsPanel({
 }) {
   const { t, language } = useLanguage();
   const queryClient = useQueryClient();
+  const workspaceCtx = useWorkspaceOptional();
+  const activeWorkspace = workspaceCtx?.activeWorkspace;
+  const activeWorkspaceId = workspaceCtx?.activeWorkspaceId || null;
   const [demoMode, setDemoMode] = useState(false);
 
   const connectLabel = (platform: SocialPlatform) => {
@@ -255,7 +278,11 @@ export default function SocialAccountsPanel({
       const r = await fetch('/api/planner/socials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform, connect }),
+        body: JSON.stringify({
+          platform,
+          connect,
+          workspaceId: activeWorkspaceId,
+        }),
       });
       if (!r.ok) throw new Error('Failed');
       return r.json() as Promise<{ account: ConnectedSocialAccount }>;
@@ -267,21 +294,40 @@ export default function SocialAccountsPanel({
   });
 
   const startConnect = (platform: SocialPlatform) => {
-    // Live OAuth when Demo Mode is off.
+    // Live OAuth when Demo Mode is off — always bind to active workspace.
     if (!demoMode && platform === 'instagram') {
-      window.location.href = '/api/auth/meta/login?target=instagram';
+      window.location.href = withWorkspaceQuery(
+        '/api/auth/meta/login?target=instagram',
+        activeWorkspaceId
+      );
       return;
     }
     if (!demoMode && platform === 'facebook') {
-      window.location.href = '/api/auth/meta/login?target=facebook';
+      window.location.href = withWorkspaceQuery(
+        '/api/auth/meta/login?target=facebook',
+        activeWorkspaceId
+      );
       return;
     }
     if (!demoMode && platform === 'youtube') {
-      window.location.href = '/api/auth/youtube/login';
+      window.location.href = withWorkspaceQuery(
+        '/api/auth/youtube/login',
+        activeWorkspaceId
+      );
       return;
     }
     if (!demoMode && platform === 'linkedin') {
-      window.location.href = '/api/auth/linkedin/login';
+      window.location.href = withWorkspaceQuery(
+        '/api/auth/linkedin/login',
+        activeWorkspaceId
+      );
+      return;
+    }
+    if (!demoMode && platform === 'tiktok') {
+      window.location.href = withWorkspaceQuery(
+        '/api/auth/tiktok/login',
+        activeWorkspaceId
+      );
       return;
     }
     if (demoMode) {
@@ -292,7 +338,10 @@ export default function SocialAccountsPanel({
   };
 
   const startMetaConnect = (target: 'instagram' | 'facebook' | 'both') => {
-    window.location.href = `/api/auth/meta/login?target=${target}`;
+    window.location.href = withWorkspaceQuery(
+      `/api/auth/meta/login?target=${target}`,
+      activeWorkspaceId
+    );
   };
 
   const grantPermission = () => {
@@ -312,6 +361,7 @@ export default function SocialAccountsPanel({
       'facebook',
       'youtube',
       'linkedin',
+      'tiktok',
     ]);
 
     // Live OAuth rows: delete only that platform via unified disconnect API.
@@ -323,6 +373,7 @@ export default function SocialAccountsPanel({
           body: JSON.stringify({
             platform: account.platform,
             platformUserId: account.external_id ?? '',
+            workspaceId: activeWorkspaceId,
           }),
         });
         if (!r.ok) throw new Error('Disconnect failed');
@@ -373,6 +424,25 @@ export default function SocialAccountsPanel({
 
   return (
     <div className="space-y-5">
+      {!compact && activeWorkspace ? (
+        <div className="rounded-2xl border border-[#E9D5FF]/80 bg-[#FAFAFA] px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+              Managing API Connections for
+            </p>
+            <p className="text-sm font-extrabold text-slate-900 truncate mt-0.5">
+              {activeWorkspace.name}{' '}
+              <span className="font-mono text-xs font-semibold text-slate-500">
+                {activeWorkspace.handle}
+              </span>
+            </p>
+          </div>
+          <p className="text-[11px] font-medium text-slate-500">
+            Connections stay private to this workspace.
+          </p>
+        </div>
+      ) : null}
+
       {!compact && (
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="min-w-0">
@@ -439,6 +509,8 @@ export default function SocialAccountsPanel({
 
       {needsIgBusiness ? <IgBusinessRequiredBanner /> : null}
 
+      {!compact && !demoMode ? <WorkspaceOAuthGuideBanner /> : null}
+
       {!compact && !demoMode && (
         <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3">
           <div className="min-w-0">
@@ -447,6 +519,9 @@ export default function SocialAccountsPanel({
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
               Connect Instagram and Facebook separately, or link both in one Meta Suite login.
+            </p>
+            <p className="text-[10px] font-semibold text-slate-500 leading-snug mt-1.5">
+              {t('socials.workspaceGuidePerWorkspace')}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
@@ -513,44 +588,104 @@ export default function SocialAccountsPanel({
       )}
 
       {!compact && !demoMode && (
-        <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3">
-          <div className="min-w-0">
-            <p className="text-sm font-extrabold text-slate-900">
-              Connect YouTube & LinkedIn
-            </p>
-            <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
-              Link your YouTube channel and LinkedIn profile for publishing and analytics.
-            </p>
+        <div className="space-y-3 sm:space-y-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3 w-full">
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold text-slate-900">
+                Connect TikTok Account
+              </p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
+                Link TikTok for Display API analytics and Content Posting.
+              </p>
+              <p className="text-[10px] font-semibold text-slate-500 leading-snug mt-1.5">
+                {t('socials.workspaceGuidePerWorkspace')}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
+              <ConnectOrConnectedButton
+                connected={Boolean(byPlatform.get('tiktok')?.connected)}
+                account={byPlatform.get('tiktok') ?? null}
+                onConnect={() => {
+                  window.location.href = withWorkspaceQuery(
+                    '/api/auth/tiktok/login',
+                    activeWorkspaceId
+                  );
+                }}
+                onDisconnect={() =>
+                  setDisconnectTarget(byPlatform.get('tiktok') ?? null)
+                }
+                disconnectLabel={t('socials.disconnectAccount')}
+                idleLabel="Connect TikTok Account"
+                idleClassName="bg-[#0F172A] hover:bg-[#1e293b]"
+                icon={<TikTokIcon size={16} />}
+              />
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
-            <ConnectOrConnectedButton
-              connected={Boolean(byPlatform.get('youtube')?.connected)}
-              account={byPlatform.get('youtube') ?? null}
-              onConnect={() => {
-                window.location.href = '/api/auth/youtube/login';
-              }}
-              onDisconnect={() =>
-                setDisconnectTarget(byPlatform.get('youtube') ?? null)
-              }
-              disconnectLabel={t('socials.disconnectAccount')}
-              idleLabel="Connect YouTube"
-              idleClassName="bg-[#FF0000] hover:bg-[#e60000]"
-              icon={<YouTubeIcon size={16} />}
-            />
-            <ConnectOrConnectedButton
-              connected={Boolean(byPlatform.get('linkedin')?.connected)}
-              account={byPlatform.get('linkedin') ?? null}
-              onConnect={() => {
-                window.location.href = '/api/auth/linkedin/login';
-              }}
-              onDisconnect={() =>
-                setDisconnectTarget(byPlatform.get('linkedin') ?? null)
-              }
-              disconnectLabel={t('socials.disconnectAccount')}
-              idleLabel="Connect LinkedIn"
-              idleClassName="bg-[#0A66C2] hover:bg-[#0958a8]"
-              icon={<LinkedInIcon size={16} />}
-            />
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3 w-full">
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold text-slate-900">
+                Connect YouTube
+              </p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
+                Link your YouTube channel for publishing and analytics.
+              </p>
+              <p className="text-[10px] font-semibold text-slate-500 leading-snug mt-1.5">
+                {t('socials.workspaceGuidePerWorkspace')}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
+              <ConnectOrConnectedButton
+                connected={Boolean(byPlatform.get('youtube')?.connected)}
+                account={byPlatform.get('youtube') ?? null}
+                onConnect={() => {
+                  window.location.href = withWorkspaceQuery(
+                    '/api/auth/youtube/login',
+                    activeWorkspaceId
+                  );
+                }}
+                onDisconnect={() =>
+                  setDisconnectTarget(byPlatform.get('youtube') ?? null)
+                }
+                disconnectLabel={t('socials.disconnectAccount')}
+                idleLabel="Connect YouTube"
+                idleClassName="bg-[#FF0000] hover:bg-[#e60000]"
+                icon={<YouTubeIcon size={16} />}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3 w-full">
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold text-slate-900">
+                Connect LinkedIn
+              </p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
+                Link your LinkedIn profile for publishing and analytics.
+              </p>
+              <p className="text-[10px] font-semibold text-slate-500 leading-snug mt-1.5">
+                {t('socials.workspaceGuidePerWorkspace')}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
+              <ConnectOrConnectedButton
+                connected={Boolean(byPlatform.get('linkedin')?.connected)}
+                account={byPlatform.get('linkedin') ?? null}
+                onConnect={() => {
+                  window.location.href = withWorkspaceQuery(
+                    '/api/auth/linkedin/login',
+                    activeWorkspaceId
+                  );
+                }}
+                onDisconnect={() =>
+                  setDisconnectTarget(byPlatform.get('linkedin') ?? null)
+                }
+                disconnectLabel={t('socials.disconnectAccount')}
+                idleLabel="Connect LinkedIn"
+                idleClassName="bg-[#0A66C2] hover:bg-[#0958a8]"
+                icon={<LinkedInIcon size={16} />}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -562,7 +697,7 @@ export default function SocialAccountsPanel({
               Demo Mode — simulated OAuth
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Turn Demo Mode off to use live Instagram, Facebook, YouTube, and LinkedIn connections.
+              Turn Demo Mode off to use live Instagram, Facebook, TikTok, YouTube, and LinkedIn connections.
             </p>
           </div>
         </div>

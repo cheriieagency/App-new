@@ -54,7 +54,7 @@ export function toCommunityAbout(c: SearchableCommunity): CommunityAbout {
   return {
     ...c,
     monthly_price: price,
-    privacy: Number(c.id) % 3 === 0 ? 'public' : 'private',
+    privacy: 'public',
     pitch:
       c.description ||
       `Gå med i ${c.name} och få tillgång till kurser, live och ett engagerat community.`,
@@ -77,7 +77,16 @@ export async function fetchCommunityAbout(idOrSlug: string): Promise<CommunityAb
   };
 
   try {
-    const res = await fetch('/api/communities');
+    // Prefer direct lookup so newly created communities resolve immediately.
+    const direct = await fetch(`/api/communities/${encodeURIComponent(idOrSlug)}`, {
+      cache: 'no-store',
+    });
+    if (direct.ok) {
+      const payload = (await direct.json()) as { community?: SearchableCommunity | null };
+      if (payload.community) return toCommunityAbout(payload.community);
+    }
+
+    const res = await fetch('/api/communities', { cache: 'no-store' });
     const data = await res.json();
     const list = normalizeCommunities(Array.isArray(data) ? data : []);
     const found =

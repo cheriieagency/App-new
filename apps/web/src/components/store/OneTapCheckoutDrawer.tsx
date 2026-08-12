@@ -16,6 +16,7 @@ import {
 } from '@/lib/store-collect-fields';
 import { useLanguage } from '@/lib/i18n';
 import { listManagedCommunities } from '@/lib/mock-community-admin';
+import { authClient } from '@/lib/auth-client';
 
 type Props = {
   open: boolean;
@@ -55,6 +56,7 @@ export default function OneTapCheckoutDrawer({
   onSuccess,
 }: Props) {
   const { t } = useLanguage();
+  const { data: session } = authClient.useSession();
   const fields = useMemo(
     () => (product ? visibleCollectFields(product.collect_fields ?? []) : []),
     [product]
@@ -77,6 +79,11 @@ export default function OneTapCheckoutDrawer({
     for (const f of visibleCollectFields(product.collect_fields ?? [])) {
       initial[f.id] = '';
     }
+    // Prefill from authenticated member session for 1-click checkout.
+    if (session?.user) {
+      initial.name = session.user.name || initial.name || '';
+      initial.email = session.user.email || initial.email || '';
+    }
     setValues(initial);
     setErrors({});
     setBumpSelected(false);
@@ -85,7 +92,7 @@ export default function OneTapCheckoutDrawer({
     setDone(false);
     setRedirectIn(3);
     setAccessEmailSent(null);
-  }, [open, product?.id]);
+  }, [open, product?.id, session?.user?.email, session?.user?.name]);
 
   useEffect(() => {
     if (!done || accessEmailSent) return;
@@ -136,6 +143,11 @@ export default function OneTapCheckoutDrawer({
       await new Promise((r) => setTimeout(r, 900));
     }
 
+    // Prefer session identity for logged-in community members (1-click).
+    const buyerName =
+      values.name || session?.user?.name || values.email || 'Member';
+    const buyerEmail = values.email || session?.user?.email || undefined;
+
     // Sync buyer into Email CRM (demo).
     const accessCommunityId =
       product.grants_community_access && product.access_community_id
@@ -158,8 +170,8 @@ export default function OneTapCheckoutDrawer({
         body: JSON.stringify({
           action: 'sync',
           source,
-          name: values.name || values.email || 'Buyer',
-          email: values.email || undefined,
+          name: buyerName,
+          email: buyerEmail,
           community_id: accessCommunityId ?? communityId ?? product.community_id,
           tags: [
             product.type === 'ebook'
@@ -175,7 +187,7 @@ export default function OneTapCheckoutDrawer({
     }
 
     // Automated email with a direct link into the unlocked community.
-    if (accessCommunityId && values.email) {
+    if (accessCommunityId && buyerEmail) {
       const communityName =
         listManagedCommunities().find((c) => c.id === accessCommunityId)?.name ||
         t('community');
@@ -184,8 +196,8 @@ export default function OneTapCheckoutDrawer({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: values.email,
-            name: values.name || values.email,
+            email: buyerEmail,
+            name: buyerName,
             product_title: product.name,
             community_id: accessCommunityId,
             community_name: communityName,
@@ -213,7 +225,11 @@ export default function OneTapCheckoutDrawer({
     setDone(true);
     onSuccess?.({
       product,
-      values,
+      values: {
+        ...values,
+        name: buyerName,
+        email: buyerEmail || '',
+      },
       bumpSelected,
       total,
     });
@@ -338,12 +354,25 @@ export default function OneTapCheckoutDrawer({
                 </div>
               </div>
 
-              {/* Collect info form */}
+              {/* Collect info — skipped for logged-in members when defaults are hidden */}
               <div className="space-y-3">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                  {t('yourInfo')}
-                </p>
-                {fields.map((field) => (
+                {fields.length === 0 ? (
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3">
+                    <p className="text-xs font-extrabold text-emerald-800">
+                      1-click member checkout
+                    </p>
+                    <p className="text-[11px] font-medium text-emerald-700/90 mt-0.5">
+                      {session?.user?.email
+                        ? `Paying as ${session.user.name || session.user.email} — contact details already on file.`
+                        : 'Sign in as a community member to buy without re-entering contact info.'}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                      {t('yourInfo')}
+                    </p>
+                    {fields.map((field) => (
                   <label key={field.id} className="block space-y-1">
                     <span className="text-xs font-bold text-slate-600">
                       {field.label}
@@ -411,7 +440,9 @@ export default function OneTapCheckoutDrawer({
                       </span>
                     )}
                   </label>
-                ))}
+                    ))}
+                  </>
+                )}
               </div>
 
               {/* Order bump — title/description are product data */}

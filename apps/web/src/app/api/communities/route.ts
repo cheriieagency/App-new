@@ -1,8 +1,17 @@
+/**
+ * GET /api/communities — public catalog for site users (search, join, about).
+ * POST /api/communities — join / leave membership.
+ */
+
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { getMockCommunitiesForUser } from '@/lib/mock-communities';
 import { syncSubscriber } from '@/lib/mock-email-crm';
+import {
+  listPublicCatalogCommunities,
+  publishCommunityToPublicCatalog,
+} from '@/lib/public-communities-store';
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
@@ -11,6 +20,10 @@ export async function GET() {
   const name = session?.user?.name ?? null;
 
   try {
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json(getMockCommunitiesForUser({ email, name }));
+    }
+
     let communities;
     if (userId) {
       communities = await sql`
@@ -20,24 +33,47 @@ export async function GET() {
         FROM communities c
         LEFT JOIN community_memberships cm
           ON cm.community_id = c.id AND cm.user_id = ${userId}
-        ORDER BY c.is_featured DESC, c.member_count DESC
+        WHERE COALESCE(c.is_published, true) = true
+        ORDER BY c.is_featured DESC, c.member_count DESC, c.created_at DESC
       `;
     } else {
       communities = await sql`
         SELECT c.*, false AS is_joined
         FROM communities c
-        ORDER BY c.is_featured DESC, c.member_count DESC
+        WHERE COALESCE(c.is_published, true) = true
+        ORDER BY c.is_featured DESC, c.member_count DESC, c.created_at DESC
       `;
     }
 
-    if (!Array.isArray(communities) || communities.length === 0) {
-      return Response.json(getMockCommunitiesForUser({ email, name }));
+    if (Array.isArray(communities) && communities.length > 0) {
+      // Keep catalog warm for about-page fallbacks.
+      for (const raw of communities) {
+        const c = raw as Record<string, unknown>;
+        publishCommunityToPublicCatalog({
+          id: Number(c.id),
+          name: String(c.name ?? 'Community'),
+          description: String(c.description ?? ''),
+          category: String(c.category ?? 'Community'),
+          creator_name: String(c.creator_name ?? ''),
+          creator_image: (c.creator_image as string | null) ?? null,
+          cover_color: (c.cover_color as string | null) ?? '#2B2568',
+          member_count: Number(c.member_count ?? 0),
+          is_featured: Boolean(c.is_featured),
+          is_joined: Boolean(c.is_joined),
+          slug: (c.slug as string | null) ?? null,
+          monthly_price: null,
+          price: null,
+        });
+      }
+      return Response.json(communities);
     }
 
-    return Response.json(communities);
+    // DB empty — include any in-memory / demo published communities.
+    const catalog = listPublicCatalogCommunities({ email, name, userId });
+    if (catalog.length > 0) return Response.json(catalog);
+    return Response.json(getMockCommunitiesForUser({ email, name }));
   } catch (error) {
-    console.error(error);
-    // Local/demo: return mocks so Ebba can test without DATABASE_URL.
+    console.error('[GET /api/communities]', error);
     return Response.json(getMockCommunitiesForUser({ email, name }));
   }
 }
@@ -57,9 +93,9 @@ export async function POST(request: Request) {
 
     if (action === 'join') {
       await sql`
-        INSERT INTO community_memberships (user_id, community_id)
-        VALUES (${session.user.id}, ${community_id})
-        ON CONFLICT DO NOTHING
+        INSERT INTO community_memberships (user_id, community_id, role)
+        VALUES (${session.user.id}, ${community_id}, 'member')
+        ON CONFLICT (user_id, community_id) DO NOTHING
       `;
       await sql`
         UPDATE communities SET member_count = member_count + 1 WHERE id = ${community_id}

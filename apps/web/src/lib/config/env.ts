@@ -102,15 +102,16 @@ export const youtubeEnv = {
 
 /**
  * Public app origin for OAuth redirect_uri builders.
- * Falls back to local Next.js port 4000 when NEXT_PUBLIC_APP_URL is unset.
+ * Prefers NEXT_PUBLIC_APP_URL, then the request origin, then production clikd:.
  */
 export function appBaseUrl(requestOrigin?: string | null): string {
   const fromEnv = readEnv('NEXT_PUBLIC_APP_URL');
-  const candidate = fromEnv || requestOrigin?.trim() || 'http://localhost:4000';
+  const candidate =
+    fromEnv || requestOrigin?.trim() || 'https://clikd.app';
   try {
     return new URL(candidate).origin;
   } catch {
-    return 'http://localhost:4000';
+    return 'https://clikd.app';
   }
 }
 

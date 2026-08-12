@@ -67,6 +67,8 @@ type EmailResponse = {
   tags: string[];
   audiences: typeof AUDIENCE_OPTIONS;
   demo?: boolean;
+  email_provider_ready?: boolean;
+  error?: string;
 };
 
 function sourceBadgeClass(source: string) {
@@ -243,6 +245,7 @@ export default function EmailAdminPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
+          communityId: workspaceCommunityId,
           subject,
           bodyContent: body,
           recipientFilter: audience,
@@ -276,6 +279,40 @@ export default function EmailAdminPanel() {
     onError: (err) => {
       const msg = err instanceof Error ? err.message : 'Send failed';
       setFlash(msg);
+      setTimeout(() => setFlash(''), 4500);
+    },
+  });
+
+  const importMembersMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch('/api/admin/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync_community_members',
+          community_id: workspaceCommunityId,
+        }),
+      });
+      const payload = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        throw new Error(
+          typeof payload.error === 'string' ? payload.error : 'Import failed'
+        );
+      }
+      return payload as { imported?: number };
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-email'] });
+      const n = Number(res.imported ?? 0);
+      setFlash(
+        n > 0
+          ? `Imported ${n} community member${n === 1 ? '' : 's'} into Email CRM`
+          : 'No community members to import yet'
+      );
+      setTimeout(() => setFlash(''), 3500);
+    },
+    onError: (err) => {
+      setFlash(err instanceof Error ? err.message : 'Import failed');
       setTimeout(() => setFlash(''), 4500);
     },
   });
@@ -433,11 +470,45 @@ export default function EmailAdminPanel() {
     );
   }
 
+  const subscriberCount = data?.total_subscribers ?? 0;
+
   return (
     <div className="space-y-6">
       {flash && !composerOpen && (
         <div className="rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold inline-flex items-center gap-2">
           <CheckCircle2 size={14} /> {flash}
+        </div>
+      )}
+      {data?.email_provider_ready === false && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm">
+          <p className="font-semibold">Email delivery is not configured</p>
+          <p className="mt-1 text-amber-800/90">
+            Add <code className="font-mono text-xs">RESEND_API_KEY</code> (and a verified{' '}
+            <code className="font-mono text-xs">RESEND_FROM_EMAIL</code>) to{' '}
+            <code className="font-mono text-xs">apps/web/.env.local</code>, then restart the
+            dev server. Broadcasts will stay blocked until Resend is connected.
+          </p>
+        </div>
+      )}
+      {!data?.demo && subscriberCount === 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p>
+            No subscribers yet for this workspace. Import existing community members, or wait
+            for joins / purchases / RSVPs. Open rate stays at 0% until Resend reports opens.
+          </p>
+          <button
+            type="button"
+            disabled={importMembersMutation.isPending || !workspaceCommunityId}
+            onClick={() => importMembersMutation.mutate()}
+            className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-4 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 shrink-0"
+          >
+            {importMembersMutation.isPending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Users size={14} />
+            )}
+            Import community members
+          </button>
         </div>
       )}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -452,20 +523,35 @@ export default function EmailAdminPanel() {
             {activeWorkspace.name} ({activeWorkspace.handle}) — {t('workspaceScopedData', locale)}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (!canBroadcast) {
-              requestUpgrade('creator');
-              return;
-            }
-            setComposerOpen(true);
-          }}
-          className="inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
-        >
-          <Plus size={14} /> {t('createEmailBroadcast', locale).replace(/^\+\s*/, '')}
-          {!canBroadcast && <PlanLockBadge minPlan="creator" className="ml-1 normal-case" />}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            disabled={importMembersMutation.isPending || !workspaceCommunityId}
+            onClick={() => importMembersMutation.mutate()}
+            className="inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50"
+          >
+            {importMembersMutation.isPending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Users size={14} />
+            )}
+            Sync members
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!canBroadcast) {
+                requestUpgrade('creator');
+                return;
+              }
+              setComposerOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
+          >
+            <Plus size={14} /> {t('createEmailBroadcast', locale).replace(/^\+\s*/, '')}
+            {!canBroadcast && <PlanLockBadge minPlan="creator" className="ml-1 normal-case" />}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

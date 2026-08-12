@@ -2,10 +2,16 @@
 
 import {
   DEFAULT_COLLECT_FIELDS,
+  DEFAULT_FULFILLMENT,
   DEFAULT_ORDER_BUMP,
+  MEMBER_ONE_CLICK_COLLECT_FIELDS,
+  normalizeBillingInterval,
   normalizeCollectFields,
+  normalizeFulfillment,
   normalizeOrderBump,
+  type BillingInterval,
   type CollectField,
+  type OfferFulfillment,
   type OrderBump,
 } from '@/lib/store-collect-fields';
 
@@ -20,6 +26,9 @@ export type StoreProductType =
   | 'community'
   | 'other';
 
+/** High-level offer pill in Community Store admin. */
+export type OfferTypePill = 'digital' | 'course' | 'coaching';
+
 export type StoreProduct = {
   id: number;
   name: string;
@@ -30,19 +39,19 @@ export type StoreProduct = {
   kind: StoreKind;
   image_url: string | null;
   community_id: number | null;
+  workspace_id?: string | null;
   is_published: boolean;
   created_at: string;
-  /** Creator-configured checkout form fields. */
   collect_fields: CollectField[];
-  /** Optional order bump upsell at checkout. */
   order_bump: OrderBump | null;
-  /** Purchase unlocks membership; buyer gets an automated community email. */
+  billing_interval?: BillingInterval;
+  fulfillment?: OfferFulfillment;
+  require_custom_fields?: boolean;
   grants_community_access?: boolean;
-  /** Community the buyer is invited to when grants_community_access is true. */
   access_community_id?: number | null;
 };
 
-export type { CollectField, OrderBump };
+export type { CollectField, OrderBump, BillingInterval, OfferFulfillment };
 
 export const PRODUCT_TYPES: StoreProductType[] = [
   'ebook',
@@ -57,6 +66,23 @@ export const SERVICE_TYPES: StoreProductType[] = [
   'other',
 ];
 
+export function offerPillFromProduct(p: Pick<StoreProduct, 'type' | 'kind'>): OfferTypePill {
+  if (p.type === 'course') return 'course';
+  if (p.kind === 'service' || p.type === 'coaching' || p.type === 'service') {
+    return 'coaching';
+  }
+  return 'digital';
+}
+
+export function productFieldsFromOfferPill(pill: OfferTypePill): {
+  kind: StoreKind;
+  type: StoreProductType;
+} {
+  if (pill === 'course') return { kind: 'product', type: 'course' };
+  if (pill === 'coaching') return { kind: 'service', type: 'coaching' };
+  return { kind: 'product', type: 'digital' };
+}
+
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
@@ -67,17 +93,27 @@ const deletedIds = new Set<number>();
 let nextId = 900;
 
 function withCheckoutDefaults(
-  product: Omit<StoreProduct, 'collect_fields' | 'order_bump'> & {
+  product: Omit<StoreProduct, 'collect_fields' | 'order_bump' | 'fulfillment' | 'billing_interval'> & {
     collect_fields?: CollectField[];
     order_bump?: OrderBump | null;
+    fulfillment?: OfferFulfillment;
+    billing_interval?: BillingInterval;
+    require_custom_fields?: boolean;
   }
 ): StoreProduct {
   return {
     ...product,
-    collect_fields: normalizeCollectFields(product.collect_fields),
+    collect_fields: normalizeCollectFields(
+      product.collect_fields ?? MEMBER_ONE_CLICK_COLLECT_FIELDS
+    ),
     order_bump: product.order_bump
       ? normalizeOrderBump(product.order_bump)
       : { ...DEFAULT_ORDER_BUMP },
+    fulfillment: normalizeFulfillment(product.fulfillment ?? DEFAULT_FULFILLMENT),
+    billing_interval: normalizeBillingInterval(
+      product.billing_interval ?? 'one_time'
+    ),
+    require_custom_fields: Boolean(product.require_custom_fields),
   };
 }
 
@@ -254,10 +290,14 @@ export function demoCreateStoreProduct(input: {
   kind?: StoreKind;
   image_url?: string | null;
   community_id?: number | null;
+  workspace_id?: string | null;
   is_published?: boolean;
   currency?: string;
   collect_fields?: CollectField[];
   order_bump?: OrderBump | null;
+  billing_interval?: BillingInterval;
+  fulfillment?: OfferFulfillment;
+  require_custom_fields?: boolean;
 }): StoreProduct {
   const product = withCheckoutDefaults({
     id: nextId++,
@@ -269,10 +309,14 @@ export function demoCreateStoreProduct(input: {
     kind: input.kind ?? kindForType(input.type),
     image_url: input.image_url ?? null,
     community_id: input.community_id ?? null,
+    workspace_id: input.workspace_id ?? null,
     is_published: input.is_published ?? true,
     created_at: new Date().toISOString(),
-    collect_fields: input.collect_fields,
+    collect_fields: input.collect_fields ?? MEMBER_ONE_CLICK_COLLECT_FIELDS,
     order_bump: input.order_bump ?? { ...DEFAULT_ORDER_BUMP },
+    billing_interval: input.billing_interval ?? 'one_time',
+    fulfillment: input.fulfillment ?? { ...DEFAULT_FULFILLMENT },
+    require_custom_fields: input.require_custom_fields ?? false,
   });
   demoOverrides.set(product.id, product);
   return product;

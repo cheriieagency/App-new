@@ -1,13 +1,14 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { resendEnv } from '@/lib/config/env';
 import {
+  AUDIENCE_OPTIONS,
   applyMergeTags,
   createBroadcast,
   getMockEmailCrmPayload,
   listCommunityAutomationEmails,
   listEmailAutomations,
-  listEmailSubscribers,
   setEmailAutomationStatus,
   syncSubscriber,
   upsertEmailAutomation,
@@ -19,6 +20,22 @@ async function requireSession() {
   return auth.api.getSession({ headers: await headers() });
 }
 
+function emptyEmailCrmPayload(cid?: number) {
+  return {
+    total_subscribers: 0,
+    average_open_rate: 0,
+    total_broadcasts: 0,
+    subscribers: [] as unknown[],
+    broadcasts: [] as unknown[],
+    automations: listEmailAutomations({ community_id: cid }),
+    community_emails: listCommunityAutomationEmails({ community_id: cid }),
+    audiences: AUDIENCE_OPTIONS,
+    tags: ['all'],
+    demo: false as const,
+    email_provider_ready: Boolean(resendEnv.apiKey()),
+  };
+}
+
 export async function GET(request: Request) {
   const session = await requireSession();
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -28,21 +45,37 @@ export async function GET(request: Request) {
   const q = searchParams.get('q') ?? undefined;
   const communityId = searchParams.get('community_id');
   const cid = communityId ? Number(communityId) : undefined;
+  const providerReady = Boolean(resendEnv.apiKey());
 
   if (!process.env.DATABASE_URL?.trim()) {
-    return Response.json(getMockEmailCrmPayload({ tag, q, community_id: cid }));
+    return Response.json({
+      ...getMockEmailCrmPayload({ tag, q, community_id: cid }),
+      email_provider_ready: providerReady,
+    });
   }
 
   try {
-    const rows = await sql`
-      SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
-      FROM email_subscribers
-      WHERE creator_id = ${session.user.id}
-      ORDER BY subscribed_at DESC
-      LIMIT 500
-    `;
+    // Scope by creator; when a community is selected, prefer that brand's contacts.
+    const rows = cid
+      ? await sql`
+          SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
+          FROM email_subscribers
+          WHERE creator_id = ${session.user.id}
+            AND community_id = ${cid}
+          ORDER BY subscribed_at DESC
+          LIMIT 500
+        `
+      : await sql`
+          SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
+          FROM email_subscribers
+          WHERE creator_id = ${session.user.id}
+          ORDER BY subscribed_at DESC
+          LIMIT 500
+        `;
+
     if (!Array.isArray(rows) || rows.length === 0) {
-      return Response.json(getMockEmailCrmPayload({ tag, q, community_id: cid }));
+      // Real empty CRM — do not inject seed/mock contacts when DB is configured.
+      return Response.json(emptyEmailCrmPayload(cid));
     }
 
     const broadcasts = await sql`
@@ -93,13 +126,17 @@ export async function GET(request: Request) {
       broadcasts,
       automations: listEmailAutomations({ community_id: cid }),
       community_emails: listCommunityAutomationEmails({ community_id: cid }),
-      audiences: getMockEmailCrmPayload().audiences,
+      audiences: AUDIENCE_OPTIONS,
       tags: ['all', ...Array.from(new Set(subscribers.flatMap((s) => s.tags)))],
       demo: false,
+      email_provider_ready: providerReady,
     });
   } catch (error) {
-    console.error(error);
-    return Response.json(getMockEmailCrmPayload({ tag, q, community_id: cid }));
+    console.error('[GET /api/admin/email]', error);
+    return Response.json({
+      ...emptyEmailCrmPayload(cid),
+      error: 'load_failed',
+    });
   }
 }
 
@@ -139,16 +176,119 @@ export async function POST(request: Request) {
       return Response.json({ success: true, automation, demo: true });
     }
 
+    // Import existing community members into this creator's Email CRM.
+    if (action === 'sync_community_members') {
+      const communityId = Number(body.community_id);
+      if (!communityId || Number.isNaN(communityId)) {
+        return Response.json({ error: 'community_id required' }, { status: 400 });
+      }
+      if (!process.env.DATABASE_URL?.trim()) {
+        return Response.json({
+          success: true,
+          imported: 0,
+          demo: true,
+          message: 'No DATABASE_URL — nothing to import',
+        });
+      }
+
+      const owned = await sql`
+        SELECT id FROM communities
+        WHERE id = ${communityId} AND creator_id = ${session.user.id}
+        LIMIT 1
+      `;
+      if (!Array.isArray(owned) || owned.length === 0) {
+        return Response.json({ error: 'Community not found for this workspace' }, { status: 404 });
+      }
+
+      const members = await sql`
+        SELECT u.id AS user_id, u.name, u.email, u.image
+        FROM community_memberships m
+        JOIN "user" u ON u.id = m.user_id
+        WHERE m.community_id = ${communityId}
+          AND u.email IS NOT NULL
+          AND TRIM(u.email) <> ''
+      `;
+
+      let imported = 0;
+      for (const row of members as Array<Record<string, unknown>>) {
+        const email = String(row.email ?? '')
+          .toLowerCase()
+          .trim();
+        if (!email) continue;
+        const name = String(row.name ?? email.split('@')[0] ?? 'Member');
+        const userId = (row.user_id as string) ?? null;
+        const image = (row.image as string) ?? null;
+        syncSubscriber({
+          email,
+          name,
+          user_id: userId,
+          image,
+          source: 'community_member',
+          community_id: communityId,
+          extra_tags: ['Community Member'],
+        });
+        try {
+          await sql`
+            INSERT INTO email_subscribers (
+              creator_id, user_id, name, email, image, source, tags, community_id
+            )
+            VALUES (
+              ${session.user.id},
+              ${userId},
+              ${name},
+              ${email},
+              ${image},
+              'community_member',
+              ${['Community Member']},
+              ${communityId}
+            )
+            ON CONFLICT (creator_id, email) DO UPDATE SET
+              name = EXCLUDED.name,
+              user_id = COALESCE(EXCLUDED.user_id, email_subscribers.user_id),
+              tags = (
+                SELECT ARRAY(SELECT DISTINCT unnest(email_subscribers.tags || EXCLUDED.tags))
+              ),
+              community_id = COALESCE(EXCLUDED.community_id, email_subscribers.community_id),
+              updated_at = now()
+          `;
+          imported += 1;
+        } catch (e) {
+          console.error('[email sync_community_members]', e);
+        }
+      }
+
+      return Response.json({ success: true, imported, community_id: communityId, demo: false });
+    }
+
     // Auto-sync from join / purchase flows.
     if (action === 'sync') {
       const source = (body.source as SubscriberSource) || 'community_member';
+      const communityId =
+        body.community_id != null && body.community_id !== ''
+          ? Number(body.community_id)
+          : null;
+
+      // Attribute the contact to the community creator (seller), not the buyer session.
+      let creatorId = session.user.id;
+      if (communityId && process.env.DATABASE_URL?.trim()) {
+        try {
+          const owners = await sql`
+            SELECT creator_id FROM communities WHERE id = ${communityId} LIMIT 1
+          `;
+          const ownerId = owners?.[0]?.creator_id as string | undefined;
+          if (ownerId) creatorId = ownerId;
+        } catch (e) {
+          console.error('[email sync] creator lookup failed', e);
+        }
+      }
+
       const subscriber = syncSubscriber({
         email: String(body.email || session.user.email),
         name: String(body.name || session.user.name || 'Medlem'),
         user_id: body.user_id ?? session.user.id,
         image: body.image ?? session.user.image ?? null,
         source,
-        community_id: body.community_id != null ? Number(body.community_id) : null,
+        community_id: communityId,
         extra_tags: Array.isArray(body.tags) ? body.tags : undefined,
       });
 
@@ -159,7 +299,7 @@ export async function POST(request: Request) {
               creator_id, user_id, name, email, image, source, tags, community_id
             )
             VALUES (
-              ${session.user.id},
+              ${creatorId},
               ${subscriber.user_id},
               ${subscriber.name},
               ${subscriber.email},
@@ -260,6 +400,3 @@ export function syncEmailSubscriberDemo(input: {
 }) {
   return syncSubscriber(input);
 }
-
-// silence unused import warning for list in GET fallback paths
-void listEmailSubscribers;

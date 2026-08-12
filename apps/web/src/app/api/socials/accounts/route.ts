@@ -8,6 +8,7 @@ import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import {
   ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
   listLiveSocialAccountsForUser,
 } from '@/lib/social/persist';
 
@@ -22,9 +23,12 @@ export async function GET(request: Request) {
   const workspaceId =
     url.searchParams.get('workspaceId')?.trim() ||
     request.headers.get('x-workspace-id')?.trim() ||
+    request.headers.get('x-active-workspace-id')?.trim() ||
     jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
     null;
 
+  // Strict workspace filter — never leak another brand's connections.
   const accounts = await listLiveSocialAccountsForUser({
     userId: session.user.id,
     workspaceId,

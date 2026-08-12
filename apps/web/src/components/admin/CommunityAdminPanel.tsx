@@ -30,6 +30,7 @@ import {
   Calendar,
   Radio,
   Link2,
+  Plus,
 } from 'lucide-react';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
@@ -38,15 +39,21 @@ import ClassroomAdminSection from '@/components/admin/ClassroomAdminSection';
 import StoreAdminSection from '@/components/admin/StoreAdminSection';
 import { AdminPageHeader, adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import { communityPublicUrl } from '@/lib/site';
+import { registerManagedCommunity } from '@/lib/mock-community-admin';
 import type {
   CommunityAdminComment,
   CommunityAdminMember,
   CommunityAdminPost,
   ManagedCommunity,
 } from '@/lib/mock-community-admin';
+import { updateWorkspaceCommunity } from '@/lib/mock-workspace-profiles';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useSubscription } from '@/components/common/useSubscription';
 import UpgradeModal from '@/components/common/UpgradeModal';
+import CreateCommunityModal from '@/components/admin/CreateCommunityModal';
+import { useCommunities } from '@/hooks/useCommunities';
+import CommunityPostsTab from '@/components/admin/community/CommunityPostsTab';
+import { toast } from 'sonner';
 
 export type CommunitySubTab =
   | 'overview'
@@ -505,7 +512,7 @@ export default function CommunityAdminPanel({
 }) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const { activeWorkspace, setActiveWorkspaceId } = useWorkspace();
+  const { activeWorkspace, setActiveWorkspaceId, refreshWorkspaces } = useWorkspace();
   const {
     checkLimit,
     requestUpgrade,
@@ -516,10 +523,31 @@ export default function CommunityAdminPanel({
   } = useSubscription();
   const [subTab, setSubTab] = useState<CommunitySubTab>(initialSubTab);
   const [linkCopied, setLinkCopied] = useState(false);
-  // Community scope follows the global Team Workspace / Brand Profile.
-  const communityId = activeWorkspace.community.community_id;
   const [memberSearch, setMemberSearch] = useState('');
   const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  // Workspace-scoped communities (only the community bound to this brand).
+  const {
+    community: workspaceCommunity,
+    communities: workspaceCommunities,
+    refetchCommunities,
+    isLoading: communitiesLoading,
+  } = useCommunities(true);
+
+  // Only bind to the community owned by this workspace (ignore stale profile ids).
+  const [overrideCommunityId, setOverrideCommunityId] = useState<number | null>(
+    null
+  );
+  const communityId =
+    overrideCommunityId ||
+    workspaceCommunity?.id ||
+    0;
+
+  // Reset local override when the active workspace community changes.
+  useEffect(() => {
+    setOverrideCommunityId(null);
+  }, [activeWorkspace.id, workspaceCommunity?.id]);
 
   // Honor deep-links / parent tab remaps (e.g. ?tab=event → community/event).
   useEffect(() => {
@@ -527,7 +555,8 @@ export default function CommunityAdminPanel({
   }, [initialSubTab]);
 
   const { data, isLoading, isError } = useQuery<CommunityAdminResponse>({
-    queryKey: ['admin-community', communityId],
+    queryKey: ['admin-community', communityId, activeWorkspace.id],
+    enabled: Boolean(communityId),
     queryFn: async () => {
       const qs = `?community_id=${communityId}`;
       const r = await fetch(`/api/admin/community${qs}`);
@@ -537,6 +566,37 @@ export default function CommunityAdminPanel({
   });
 
   const selectedId = communityId;
+
+  const handleCommunityCreated = (community: ManagedCommunity) => {
+    registerManagedCommunity(community);
+    if (activeWorkspace.id) {
+      updateWorkspaceCommunity(activeWorkspace.id, {
+        community_id: community.id,
+        community_name: community.name,
+        total_members: 1,
+        posts: 0,
+        comments: 0,
+        active_moderators: 0,
+        recent_members: [],
+      });
+    }
+    // Immediate hydrate so empty state flips to dashboard without waiting on network.
+    queryClient.setQueryData(
+      ['admin-communities', activeWorkspace.id],
+      {
+        communities: [community],
+        community,
+        workspace_id: activeWorkspace.id,
+      }
+    );
+    refreshWorkspaces();
+    void refetchCommunities();
+    void queryClient.invalidateQueries({ queryKey: ['admin-communities'] });
+    void queryClient.invalidateQueries({ queryKey: ['admin-community'] });
+    void queryClient.invalidateQueries({ queryKey: ['communities'] });
+    void queryClient.invalidateQueries({ queryKey: ['communities-public'] });
+    toast.message('Community dashboard unlocked for this workspace');
+  };
 
   const mutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
@@ -551,7 +611,7 @@ export default function CommunityAdminPanel({
     onSuccess: (_res, variables) => {
       // Optimistic cache update so demo mode feels instant.
       queryClient.setQueryData<CommunityAdminResponse>(
-        ['admin-community', communityId],
+        ['admin-community', communityId, activeWorkspace.id],
         (prev) => {
           if (!prev) return prev;
           const action = String(variables.action);
@@ -718,7 +778,7 @@ export default function CommunityAdminPanel({
   );
 
   // Event / Live don't depend on community API — keep them reachable while loading.
-  if ((isLoading || isError || !data) && (subTab === 'event' || subTab === 'broadcast')) {
+  if ((isLoading || communitiesLoading || isError || !data) && (subTab === 'event' || subTab === 'broadcast')) {
     return (
       <div className="space-y-5">
         <AdminPageHeader
@@ -732,7 +792,8 @@ export default function CommunityAdminPanel({
     );
   }
 
-  if (isLoading) {
+  // Wait for workspace community list before showing empty vs dashboard.
+  if (communitiesLoading || (communityId && isLoading)) {
     return (
       <div className={`${adminCardClass} p-12 text-center text-sm font-medium text-slate-400`}>
         {t('loading', locale)}
@@ -740,7 +801,7 @@ export default function CommunityAdminPanel({
     );
   }
 
-  if (isError || !data) {
+  if (communityId && (isError || !data)) {
     return (
       <div className={`${adminCardClass} p-12 text-center text-sm font-medium text-rose-500`}>
         {t('communityLoadError', locale)}
@@ -748,9 +809,29 @@ export default function CommunityAdminPanel({
     );
   }
 
-  const { community, overview, communities } = data;
+  const community = data?.community ?? workspaceCommunity ?? null;
+  const overview = data?.overview ?? {
+    member_count: 0,
+    post_count: 0,
+    comment_count: 0,
+    joined_this_week: 0,
+    moderator_count: 0,
+    like_count: 0,
+  };
+  const communities =
+    data?.communities?.length
+      ? data.communities
+      : workspaceCommunities.length
+        ? workspaceCommunities
+        : community
+          ? [community]
+          : [];
 
   if (!community) {
+    const defaultName =
+      activeWorkspace.community.community_name ||
+      activeWorkspace.name ||
+      'My community';
     return (
       <div className="space-y-6">
         <AdminPageHeader
@@ -758,16 +839,40 @@ export default function CommunityAdminPanel({
           title={t('adminNavCommunity', locale)}
           description="No community yet — create one when you're ready."
         />
-        <div className={`${adminCardClass} p-12 text-center`}>
-          <p className="text-sm font-semibold text-slate-500">
-            Your community space is empty.
-          </p>
+        <div className={`${adminCardClass} p-8 sm:p-12 text-center space-y-5`}>
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-[#E9D5FF]/60 border border-[#E9D5FF] flex items-center justify-center">
+            <Users size={22} className="text-[#2B2568]" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-sm font-semibold text-slate-700">
+              Your community space is empty.
+            </p>
+            <p className="text-xs font-medium text-slate-400 max-w-sm mx-auto leading-relaxed">
+              Create a community for this workspace to manage members, feed, classroom, and store.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-colors"
+          >
+            <Plus size={16} />
+            Create community
+          </button>
         </div>
+
+        <CreateCommunityModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          defaultName={defaultName}
+          onCreated={handleCommunityCreated}
+        />
       </div>
     );
   }
 
-  const recentMembers = [...data.members]
+  const recentMembers = [...(data?.members ?? [])]
     .sort((a, b) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime())
     .slice(0, 5);
 
@@ -778,7 +883,7 @@ export default function CommunityAdminPanel({
         title={community.name}
         description={community.description || undefined}
         actions={
-          data.demo ? (
+          data?.demo ? (
             <span className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-100">
               <Sparkles size={11} /> Demo
             </span>
@@ -801,7 +906,18 @@ export default function CommunityAdminPanel({
             </label>
             <select
               value={selectedId ?? ''}
-              onChange={(e) => setActiveWorkspaceId(String(e.target.value))}
+              onChange={(e) => {
+                const nextId = Number(e.target.value);
+                if (!Number.isFinite(nextId) || nextId <= 0) return;
+                // Select among communities — never write community id into workspace id.
+                setOverrideCommunityId(nextId);
+                const picked =
+                  communities.find((c) => c.id === nextId) ||
+                  workspaceCommunities.find((c) => c.id === nextId);
+                if (picked?.workspace_id) {
+                  setActiveWorkspaceId(String(picked.workspace_id));
+                }
+              }}
               className="w-full sm:max-w-xs h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
               aria-label={t('chooseCommunity', locale)}
             >
@@ -992,7 +1108,7 @@ export default function CommunityAdminPanel({
       {subTab === 'members' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {(() => {
-            const memberCount = data?.members.length ?? 0;
+            const memberCount = data?.members?.length ?? 0;
             const memberLimit = checkLimit('maxCommunityMembers', memberCount);
             if (memberLimit.allowed && memberCount < memberLimit.limit) return null;
             if (memberLimit.unlimited) return null;
@@ -1020,7 +1136,7 @@ export default function CommunityAdminPanel({
                 <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                   <Users size={14} className="text-blue-500" />
                   {t('members', locale)}
-                  <span className="text-slate-400 font-bold">({data.members.length})</span>
+                  <span className="text-slate-400 font-bold">({(data?.members ?? []).length})</span>
                   {limits.maxCommunityMembers < 999999 && (
                     <span className="text-[10px] font-bold text-slate-400">
                       / {limits.maxCommunityMembers}
@@ -1230,122 +1346,7 @@ export default function CommunityAdminPanel({
 
       {/* Posts & comments */}
       {subTab === 'feed' && (
-        <div className="space-y-3">
-          {posts.length === 0 ? (
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] py-14 text-center">
-              <FileText size={28} className="text-slate-200 mx-auto mb-2" />
-              <p className="text-sm font-bold text-slate-400">{t('noPostsYet', locale)}</p>
-            </div>
-          ) : (
-            posts.map((post) => {
-              const open = expandedPostId === post.id;
-              return (
-                <div
-                  key={post.id}
-                  className={`bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden ${
-                    post.is_pinned ? 'ring-1 ring-[#ffe0d4]' : ''
-                  }`}
-                >
-                  <div className="p-4 sm:p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-sm font-extrabold text-slate-600 flex-shrink-0">
-                        {post.user_name?.[0] ?? '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <p className="text-sm font-extrabold text-slate-900">{post.user_name}</p>
-                          {post.is_pinned && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#F472B6] bg-[#E9D5FF]/70 px-1.5 py-0.5 rounded-full">
-                              <Pin size={9} /> {t('pinned', locale)}
-                            </span>
-                          )}
-                          {post.tag && (
-                            <span className="text-[9px] font-extrabold uppercase tracking-wide bg-[#E9D5FF]/70 text-[#6b5bb8] px-1.5 py-0.5 rounded-full">
-                              {post.tag}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-slate-300 font-bold">
-                            {formatRelative(post.created_at, locale)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-900 leading-relaxed whitespace-pre-wrap">
-                          {post.content}
-                        </p>
-                        <div className="flex items-center gap-3 mt-3 text-[11px] font-bold text-slate-400 flex-wrap">
-                          <span className="inline-flex items-center gap-1">
-                            <Heart size={12} /> {post.like_count}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MessageCircle size={12} /> {post.comments?.length ?? post.comment_count}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1 flex-shrink-0">
-                        <button
-                          type="button"
-                          disabled={mutation.isPending}
-                          onClick={() =>
-                            mutation.mutate({
-                              action: post.is_pinned ? 'unpin_post' : 'pin_post',
-                              post_id: post.id,
-                            })
-                          }
-                          className={`h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 ${
-                            post.is_pinned
-                              ? 'bg-[#E9D5FF]/70 text-[#F472B6] hover:bg-[#E9D5FF]/70'
-                              : 'bg-slate-50 text-slate-400 hover:bg-[#E9D5FF]/70 hover:text-[#F472B6]'
-                          }`}
-                          title={
-                            post.is_pinned
-                              ? t('unpinComment', locale)
-                              : t('pinComment', locale)
-                          }
-                        >
-                          <Pin size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={mutation.isPending}
-                          onClick={() => {
-                            if (!window.confirm(t('confirmDeletePost', locale))) return;
-                            mutation.mutate({ action: 'delete_post', post_id: post.id });
-                          }}
-                          className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors disabled:opacity-50"
-                          title={t('deletePost', locale)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setExpandedPostId(open ? null : post.id)}
-                      className="mt-3 flex items-center gap-1.5 h-11 min-h-[44px] px-2 text-xs font-extrabold text-[#F472B6]"
-                    >
-                      {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      {t('comments', locale)} ({post.comments?.length ?? 0})
-                    </button>
-                  </div>
-
-                  {open && (
-                    <AdminPostComments
-                      post={post}
-                      communityQueryKey={['admin-community', communityId]}
-                      deletePending={mutation.isPending}
-                      onDeleteComment={(commentId) =>
-                        mutation.mutate({
-                          action: 'delete_comment',
-                          comment_id: commentId,
-                        })
-                      }
-                    />
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+        <CommunityPostsTab communityId={selectedId} />
       )}
 
       <UpgradeModal

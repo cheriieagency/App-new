@@ -11,10 +11,20 @@ import {
   type BioTheme,
 } from '@/lib/bio-theme';
 import type { WorkspaceBioBlock, WorkspaceProfile } from '@/lib/mock-workspace-profiles';
+import { syncWorkspaceBioAnalytics } from '@/lib/mock-workspace-profiles';
 import type { StoreProduct } from '@/lib/mock-store';
 import { DEFAULT_COLLECT_FIELDS } from '@/lib/store-collect-fields';
 import OneTapCheckoutDrawer from '@/components/store/OneTapCheckoutDrawer';
 import { localeTag, useLanguage } from '@/lib/i18n';
+import {
+  effectiveUnitPrice,
+  recordBioSale,
+} from '@/lib/bio-sales';
+import {
+  recordDemoClick,
+  registerDemoDestination,
+  slugifyBioProduct,
+} from '@/lib/bio-utm';
 
 type Category = 'links' | 'store';
 
@@ -112,9 +122,12 @@ function BlockRow({
     theme.bgType === 'liquid';
   const pill = pricePill(block, freeLabel, language);
   const href = block.destination_url || block.url || '#';
+  // Priced Bio Builder blocks + community unlocks sell through 1-tap checkout (Revenue).
+  const hasPrice = typeof block.price === 'number' && block.price >= 0;
   const usesCheckout =
-    Boolean(block.grants_community_access && block.access_community_id) &&
-    typeof onCheckout === 'function';
+    typeof onCheckout === 'function' &&
+    (Boolean(block.grants_community_access && block.access_community_id) ||
+      hasPrice);
 
   const inner = (
     <>
@@ -214,6 +227,7 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
   const theme = useMemo(() => normalizeBioTheme(bio.theme), [bio.theme]);
   const [tab, setTab] = useState<Category>('links');
   const [checkoutProduct, setCheckoutProduct] = useState<StoreProduct | null>(null);
+  const [checkoutBlock, setCheckoutBlock] = useState<WorkspaceBioBlock | null>(null);
   const handle = (bio.handle || profile.handle || 'creator').replace(/^@/, '');
   const visible = bio.blocks.filter((b) => b.visible !== false);
   const links = visible.filter((b) => b.category !== 'store');
@@ -230,6 +244,44 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
     'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80';
   const avatarRadius = theme.avatarShape === 'squircle' ? '1.5rem' : '9999px';
   const fontFamily = getBioFontFamily(theme.fontId);
+
+  const openCheckout = (block: WorkspaceBioBlock) => {
+    const slug =
+      block.utm_slug || slugifyBioProduct(block.title || 'product', block.id);
+    recordDemoClick(slug, 'bio-visitor');
+    if (block.destination_url || block.url) {
+      registerDemoDestination(slug, {
+        destination: String(block.destination_url || block.url),
+        handle,
+        title: block.title || 'Product',
+      });
+    }
+    setCheckoutBlock(block);
+    setCheckoutProduct(bioBlockAsCheckoutProduct(block));
+  };
+
+  const handleCheckoutSuccess = (payload: {
+    product: StoreProduct;
+    values: Record<string, string>;
+    bumpSelected: boolean;
+    total: number;
+  }) => {
+    const block = checkoutBlock;
+    const blockId = block?.id || String(payload.product.id);
+    recordBioSale({
+      workspaceId: profile.id,
+      blockId,
+      productTitle: payload.product.name || block?.title || 'Product',
+      category:
+        block?.category === 'store' || block?.type === 'store'
+          ? 'Store'
+          : block?.type || 'Link',
+      amountSek: payload.total || effectiveUnitPrice(block || ({ price: payload.product.price } as WorkspaceBioBlock)),
+      currency: payload.product.currency || 'SEK',
+      buyerEmail: payload.values.email || null,
+    });
+    syncWorkspaceBioAnalytics(profile.id);
+  };
 
   useEffect(() => {
     const href = getBioGoogleFontsHref(theme.fontId);
@@ -345,7 +397,7 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
                 theme={theme}
                 freeLabel={t('bio.free')}
                 language={language}
-                onCheckout={(b) => setCheckoutProduct(bioBlockAsCheckoutProduct(b))}
+                onCheckout={openCheckout}
               />
             ))
           )}
@@ -364,7 +416,11 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
         open={Boolean(checkoutProduct)}
         product={checkoutProduct}
         communityId={checkoutProduct?.access_community_id ?? null}
-        onClose={() => setCheckoutProduct(null)}
+        onClose={() => {
+          setCheckoutProduct(null);
+          setCheckoutBlock(null);
+        }}
+        onSuccess={handleCheckoutSuccess}
       />
     </div>
   );

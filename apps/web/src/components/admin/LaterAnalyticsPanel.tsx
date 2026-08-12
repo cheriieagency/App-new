@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   CalendarDays,
@@ -35,9 +35,46 @@ import { t, tf, localeTag, type Locale } from '@/lib/i18n';
 import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import { useMetaSync } from '@/hooks/useMetaSync';
-import { useAnalytics } from '@/hooks/useAnalytics';
+import {
+  useAnalytics,
+  type AnalyticsHashtag,
+  type AnalyticsPlatformSlice,
+} from '@/hooks/useAnalytics';
 import IgBusinessRequiredBanner from '@/components/admin/IgBusinessRequiredBanner';
-import { InstagramIcon } from '@/components/icons/SocialBrandIcons';
+import {
+  FacebookIcon,
+  InstagramIcon,
+  LinkedInIcon,
+  TikTokIcon,
+  YouTubeIcon,
+} from '@/components/icons/SocialBrandIcons';
+import {
+  bioClicksChart,
+  bioRevenueChart,
+  buildBioProductPerformance,
+  buildBioUtmLinks,
+  sumBioRevenueSek,
+} from '@/lib/bio-sales';
+import { syncWorkspaceBioAnalytics } from '@/lib/mock-workspace-profiles';
+
+const PLATFORM_LABEL: Record<string, string> = {
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  youtube: 'YouTube',
+  linkedin: 'LinkedIn',
+  tiktok: 'TikTok',
+};
+
+const PLATFORM_ICON: Record<
+  string,
+  React.ComponentType<{ size?: number; className?: string }>
+> = {
+  instagram: InstagramIcon,
+  facebook: FacebookIcon,
+  youtube: YouTubeIcon,
+  linkedin: LinkedInIcon,
+  tiktok: TikTokIcon,
+};
 
 type DateRangePreset = '1w' | '1m' | '3m' | '1y' | '2y' | 'custom';
 
@@ -115,15 +152,6 @@ const EMPTY_ENGAGEMENT = {
   saves: 0,
   engagementRate: 0,
 };
-
-const TOP_PRODUCTS: {
-  name: string;
-  category: string;
-  clicks: number;
-  conversion: string;
-  revenue: string;
-  live: boolean;
-}[] = [];
 
 /** Dual-line performance chart — solid revenue + dashed visitors, pink end highlight. */
 function PerformanceChart({
@@ -209,17 +237,18 @@ function PerformanceChart({
 
 export default function LaterAnalyticsPanel() {
   const { locale } = useLanguage();
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, refreshWorkspaces } = useWorkspace();
   const { setSection } = useAdminNav();
   const {
     hasConnectedSocials,
     hasInstagram,
     needsIgBusiness,
     instagramAccount,
+    connectedAccounts,
     isLoading: socialsLoading,
   } = useConnectedSocials();
   const { data: metaSync } = useMetaSync(hasInstagram);
-  // Soft analytics API — never crashes when Graph sync is empty in production.
+  // Workspace-scoped analytics — aggregates every connected API for this brand.
   const { data: analyticsApi } = useAnalytics(hasConnectedSocials);
   const [sub, setSub] = useState<AnalyticsSubTab>('analytics');
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
@@ -227,41 +256,124 @@ export default function LaterAnalyticsPanel() {
   const [draftFrom, setDraftFrom] = useState(dateRange.from);
   const [draftTo, setDraftTo] = useState(dateRange.to);
   const [exportOpen, setExportOpen] = useState(false);
+  const [bioTick, setBioTick] = useState(0);
+
+  // Keep Revenue / Link-in-bio in sync with Bio Builder products + checkout sales.
+  useEffect(() => {
+    if (!activeWorkspace.id) return;
+    syncWorkspaceBioAnalytics(activeWorkspace.id, {
+      from: dateRange.from,
+      to: dateRange.to,
+    });
+    refreshWorkspaces();
+    setBioTick((n) => n + 1);
+  }, [
+    activeWorkspace.id,
+    activeWorkspace.bio.blocks.length,
+    dateRange.from,
+    dateRange.to,
+    refreshWorkspaces,
+  ]);
+
+  const bioUtmLinks = useMemo(
+    () => buildBioUtmLinks(activeWorkspace),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bioTick forces recompute after sales/sync
+    [activeWorkspace, bioTick]
+  );
+  const bioTotalClicks = useMemo(
+    () => bioUtmLinks.reduce((n, r) => n + r.clicks, 0),
+    [bioUtmLinks]
+  );
+  const bioRevenueSek = useMemo(
+    () =>
+      sumBioRevenueSek(activeWorkspace.id, {
+        from: dateRange.from,
+        to: dateRange.to,
+      }),
+    [activeWorkspace.id, dateRange.from, dateRange.to, bioTick]
+  );
+  const bioProducts = useMemo(
+    () =>
+      buildBioProductPerformance(activeWorkspace, {
+        from: dateRange.from,
+        to: dateRange.to,
+      }),
+    [activeWorkspace, dateRange.from, dateRange.to, bioTick]
+  );
+  const bioStoreCvr = useMemo(() => {
+    const purchases = bioProducts.reduce((n, p) => n + p.purchases, 0);
+    if (bioTotalClicks <= 0) return purchases > 0 ? 100 : 0;
+    return Math.round((purchases / bioTotalClicks) * 1000) / 10;
+  }, [bioProducts, bioTotalClicks]);
+
   const chart = activeWorkspace.analytics.revenue_chart;
+
+  const liveMedia = useMemo(() => {
+    const fromApi = analyticsApi?.media;
+    if (fromApi && fromApi.length > 0) return fromApi;
+    return metaSync?.snapshot?.media ?? [];
+  }, [analyticsApi?.media, metaSync?.snapshot?.media]);
+
+  const platformSlices = useMemo(() => {
+    const fromApi = analyticsApi?.by_platform;
+    if (fromApi && Object.keys(fromApi).length > 0) return fromApi;
+    const fallback: Record<string, AnalyticsPlatformSlice> = {};
+    for (const a of connectedAccounts) {
+      fallback[a.platform] = {
+        connected: true,
+        followers: Number(a.follower_count) || 0,
+        handle: a.handle ?? null,
+        display_name: a.display_name ?? null,
+        avatar_url: a.avatar_url ?? null,
+      };
+    }
+    return fallback;
+  }, [analyticsApi?.by_platform, connectedAccounts]);
+
+  const totalFollowers = useMemo(() => {
+    const fromTotals = analyticsApi?.totals?.followers ?? analyticsApi?.metrics?.followers;
+    if (typeof fromTotals === 'number' && fromTotals > 0) return fromTotals;
+    return Object.values(platformSlices).reduce((s, p) => s + (p.followers || 0), 0);
+  }, [analyticsApi?.totals?.followers, analyticsApi?.metrics?.followers, platformSlices]);
 
   const igProfile = useMemo(() => {
     const snap = metaSync?.snapshot?.instagram;
+    const slice = platformSlices.instagram;
     const handle =
       (snap?.username ? `@${snap.username.replace(/^@/, '')}` : null) ||
+      slice?.handle ||
       instagramAccount?.handle ||
       null;
     const avatar =
-      snap?.profile_picture_url || instagramAccount?.avatar_url || null;
+      snap?.profile_picture_url ||
+      slice?.avatar_url ||
+      instagramAccount?.avatar_url ||
+      null;
     const followers =
       snap?.followers_count ??
+      slice?.followers ??
       instagramAccount?.follower_count ??
       0;
     const displayName =
       snap?.name ||
+      slice?.display_name ||
       instagramAccount?.display_name ||
       handle ||
       'Instagram';
     return { handle, avatar, followers, displayName };
-  }, [metaSync?.snapshot?.instagram, instagramAccount]);
+  }, [metaSync?.snapshot?.instagram, instagramAccount, platformSlices.instagram]);
 
   const engagement = useMemo(() => {
     const snap = metaSync?.snapshot;
     const api = analyticsApi?.metrics;
-    if (!snap && !instagramAccount && !api) return { ...EMPTY_ENGAGEMENT };
+    if (!snap && connectedAccounts.length === 0 && !api) {
+      return { ...EMPTY_ENGAGEMENT };
+    }
     const likes = snap?.insights.likes ?? api?.likes ?? 0;
     const comments = snap?.insights.comments ?? api?.comments ?? 0;
     const reach = snap?.insights.reach ?? api?.reach ?? 0;
     const impressions = snap?.insights.impressions ?? api?.impressions ?? 0;
-    const followers =
-      snap?.insights.followers ??
-      api?.followers ??
-      igProfile.followers ??
-      0;
+    const followers = totalFollowers || api?.followers || igProfile.followers || 0;
     const engagementTotal = likes + comments;
     return {
       reach,
@@ -279,13 +391,14 @@ export default function LaterAnalyticsPanel() {
   }, [
     metaSync?.snapshot,
     analyticsApi?.metrics,
-    instagramAccount,
+    connectedAccounts.length,
+    totalFollowers,
     igProfile.followers,
   ]);
 
-  /** Map synced IG media into Posts / Reels performance rows (empty until connect). */
+  /** Map synced IG media into Posts / Reels rows (from workspace analytics API). */
   const { bestPosts, worstPosts, bestReels, worstReels } = useMemo(() => {
-    const media = metaSync?.snapshot?.media ?? [];
+    const media = liveMedia;
     const toRow = (item: (typeof media)[number]): PostPerfRow => {
       const likes = item.like_count ?? 0;
       const comments = item.comments_count ?? 0;
@@ -331,17 +444,59 @@ export default function LaterAnalyticsPanel() {
       bestReels: reelsSplit.best,
       worstReels: reelsSplit.worst,
     };
-  }, [metaSync?.snapshot?.media]);
+  }, [liveMedia]);
 
-  // Chart from Meta media activity (likes per day proxy) or zeros.
-  const revenue = useMemo(() => {
-    if (!hasConnectedSocials) return [0, 0, 0, 0, 0, 0, 0];
-    const media = metaSync?.snapshot?.media ?? [];
-    if (media.length >= 7) {
-      return media.slice(0, 7).map((m) => m.like_count ?? 0).reverse();
+  const usedHashtags = useMemo<AnalyticsHashtag[]>(() => {
+    if (analyticsApi?.hashtags && analyticsApi.hashtags.length > 0) {
+      return analyticsApi.hashtags;
     }
-    return chart.length >= 7 ? chart.slice(0, 7) : [0, 0, 0, 0, 0, 0, 0];
-  }, [chart, hasConnectedSocials, metaSync?.snapshot?.media]);
+    // Client-side fallback from captions when API omits hashtags.
+    const map = new Map<string, AnalyticsHashtag>();
+    for (const item of liveMedia) {
+      const matches = (item.caption || '').match(/#[\p{L}\p{N}_]+/gu) || [];
+      for (const raw of matches) {
+        const tag = raw.toLowerCase();
+        const prev = map.get(tag) || { tag, posts: 0, reach: 0, er: 0, trend: 0 };
+        prev.posts += 1;
+        prev.reach += Math.max(item.like_count ?? 0, 1);
+        map.set(tag, prev);
+      }
+    }
+    return [...map.values()]
+      .map((h) => ({
+        ...h,
+        er:
+          h.reach > 0
+            ? Math.round(((h.posts * 2) / h.reach) * 1000) / 10
+            : 0,
+      }))
+      .sort((a, b) => b.posts - a.posts)
+      .slice(0, 40);
+  }, [analyticsApi?.hashtags, liveMedia]);
+
+  // Social engagement chart (Analytics tab) from Meta media; Revenue tab uses bio checkout series.
+  const socialActivity = useMemo(() => {
+    if (!hasConnectedSocials) return [0, 0, 0, 0, 0, 0, 0];
+    if (liveMedia.length >= 7) {
+      return liveMedia.slice(0, 7).map((m) => m.like_count ?? 0).reverse();
+    }
+    return [0, 0, 0, 0, 0, 0, 0];
+  }, [hasConnectedSocials, liveMedia]);
+
+  const checkoutRevenueSeries = useMemo(() => {
+    const live = bioRevenueChart(activeWorkspace.id, 7);
+    if (live.some((v) => v > 0)) return live;
+    if (chart.length >= 7 && chart.some((v) => v > 0)) return chart.slice(0, 7);
+    return live;
+  }, [activeWorkspace.id, chart, bioTick]);
+
+  const checkoutVisitorSeries = useMemo(
+    () => bioClicksChart(bioUtmLinks, 7),
+    [bioUtmLinks]
+  );
+
+  // Legacy aliases used by Analytics engagement chart.
+  const revenue = socialActivity;
   const visitors = useMemo(
     () => revenue.map((v, i) => Math.round(v * (0.55 + (i % 3) * 0.08))),
     [revenue]
@@ -371,7 +526,7 @@ export default function LaterAnalyticsPanel() {
   const activeTabLabel =
     subTabs.find((tab) => tab.key === sub)?.label ?? t('analyticsTab', locale);
 
-  // KPIs from Meta sync (followers / media) + bio revenue when available.
+  // KPIs: checkout revenue from Link-in-bio sales + social reach from connected APIs.
   const kpis: {
     label: string;
     value: string;
@@ -381,37 +536,51 @@ export default function LaterAnalyticsPanel() {
   }[] = [
     {
       label: t('kpiRevenueCheckout', locale),
-      value: `${activeWorkspace.analytics.revenue_sek || 0} SEK`,
+      value: `${bioRevenueSek || activeWorkspace.analytics.revenue_sek || 0} SEK`,
       delta: '—',
       deltaTone: 'neutral',
-      meta: String(activeWorkspace.analytics.utm_total_clicks || 0),
+      meta: String(bioTotalClicks || activeWorkspace.analytics.utm_total_clicks || 0),
     },
     {
       label: t('kpiFollowers', locale),
-      value: formatCompact(engagement.followers || igProfile.followers, locale),
+      value: formatCompact(totalFollowers || engagement.followers, locale),
       delta: '—',
       deltaTone: 'neutral',
-      meta: igProfile.handle ?? String(metaSync?.snapshot?.instagram?.media_count ?? 0),
+      meta: `${connectedAccounts.length} APIs`,
     },
     {
       label: t('kpiBioStoreCvr', locale),
-      value: '0%',
+      value: `${bioStoreCvr}%`,
       delta: '—',
-      deltaTone: 'neutral',
-      meta: '0',
+      deltaTone: bioStoreCvr > 0 ? 'good' : 'neutral',
+      meta: String(bioProducts.reduce((n, p) => n + p.purchases, 0)),
     },
     {
       label: t('kpiPlannedPosts', locale),
       value: String(
-        metaSync?.snapshot?.planner_imported ??
-          metaSync?.snapshot?.media.length ??
+        analyticsApi?.planner_imported ??
+          metaSync?.snapshot?.planner_imported ??
+          liveMedia.length ??
           0
       ),
       delta: '—',
       deltaTone: 'neutral',
-      meta: 'Meta',
+      meta: hasInstagram ? 'Meta' : 'APIs',
     },
   ];
+
+  const topBioProducts = useMemo(
+    () =>
+      bioProducts.map((p) => ({
+        name: p.name,
+        category: p.category,
+        clicks: p.clicks,
+        conversion: p.conversion,
+        revenue: `${p.revenue_sek} SEK`,
+        live: p.live,
+      })),
+    [bioProducts]
+  );
 
   const tableHeaders = [
     t('colProduct', locale),
@@ -422,13 +591,35 @@ export default function LaterAnalyticsPanel() {
     t('colStatus', locale),
   ];
 
-  if (!socialsLoading && !hasConnectedSocials) {
+  const isBioCommerceTab = sub === 'overview' || sub === 'linkinbio';
+
+  // Social tabs need connected APIs; Revenue + Link in bio come from Bio Builder sales.
+  if (!socialsLoading && !hasConnectedSocials && !isBioCommerceTab) {
     return (
       <div className="space-y-6">
         <AdminPageHeader
           eyebrow={t('analyticsAndRevenue', locale)}
           title={activeTabLabel}
         />
+        <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none -mt-2">
+          {subTabs.map(({ key, label }) => {
+            const active = sub === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSub(key)}
+                className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
+                  active
+                    ? 'text-slate-900 bg-slate-100'
+                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
         <ConnectSocialsEmpty />
       </div>
     );
@@ -568,35 +759,50 @@ export default function LaterAnalyticsPanel() {
         <IgBusinessRequiredBanner showSettingsLink />
       ) : null}
 
-      {hasInstagram && igProfile.handle ? (
-        <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 sm:px-5 flex items-center gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          {igProfile.avatar ? (
-            <img
-              src={igProfile.avatar}
-              alt=""
-              className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-full object-cover border-2 border-[#E9D5FF]"
-            />
-          ) : (
-            <span className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] inline-flex items-center justify-center text-white">
-              <InstagramIcon size={18} />
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-extrabold text-slate-900 truncate">
-              {igProfile.displayName}
-            </p>
-            <p className="text-xs text-slate-500 font-medium font-mono truncate">
-              {igProfile.handle}
-            </p>
-          </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-              {t('kpiFollowers', locale)}
-            </p>
-            <p className="text-lg font-extrabold tabular-nums text-slate-900">
-              {formatCompact(igProfile.followers, locale)}
-            </p>
-          </div>
+      {connectedAccounts.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {connectedAccounts.map((account) => {
+            const Icon = PLATFORM_ICON[account.platform] || InstagramIcon;
+            const slice = platformSlices[account.platform];
+            const followers =
+              slice?.followers || Number(account.follower_count) || 0;
+            const handle = slice?.handle || account.handle || account.display_name;
+            const avatar = slice?.avatar_url || account.avatar_url;
+            return (
+              <div
+                key={`${account.platform}-${account.handle || account.external_id || 'row'}`}
+                className="rounded-2xl border border-slate-200/80 bg-white px-3.5 py-3 flex items-center gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+              >
+                {avatar ? (
+                  <img
+                    src={avatar}
+                    alt=""
+                    className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full object-cover border-2 border-[#E9D5FF]"
+                  />
+                ) : (
+                  <span className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-slate-100 inline-flex items-center justify-center text-slate-700">
+                    <Icon size={18} />
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                    {PLATFORM_LABEL[account.platform] || account.platform}
+                  </p>
+                  <p className="text-sm font-extrabold text-slate-900 truncate">
+                    {handle || PLATFORM_LABEL[account.platform] || account.platform}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                    {t('kpiFollowers', locale)}
+                  </p>
+                  <p className="text-base font-extrabold tabular-nums text-slate-900">
+                    {formatCompact(followers, locale)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : null}
 
@@ -606,7 +812,7 @@ export default function LaterAnalyticsPanel() {
         workspaceName={activeWorkspace.name}
         rangeLabel={formatRangeLabel(dateRange, locale)}
         kpis={kpis}
-        topProducts={TOP_PRODUCTS}
+        topProducts={topBioProducts}
         engagement={engagement}
       />
 
@@ -685,8 +891,8 @@ export default function LaterAnalyticsPanel() {
               </div>
             </div>
             <PerformanceChart
-              revenue={revenue}
-              visitors={visitors}
+              revenue={checkoutRevenueSeries}
+              visitors={checkoutVisitorSeries}
               days={dayLabels}
               ariaLabel={t('performanceChartAria', locale)}
             />
@@ -725,34 +931,45 @@ export default function LaterAnalyticsPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {TOP_PRODUCTS.map((row) => (
-                    <tr
-                      key={row.name}
-                      className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
-                    >
-                      <td className="px-5 sm:px-7 py-4 text-sm font-semibold text-slate-900">
-                        {row.name}
-                      </td>
-                      <td className="px-5 sm:px-7 py-4 text-sm text-slate-500">{row.category}</td>
-                      <td className="px-5 sm:px-7 py-4 text-sm font-semibold tabular-nums text-slate-800">
-                        {row.clicks.toLocaleString(localeTag(locale))}
-                      </td>
-                      <td className="px-5 sm:px-7 py-4 text-sm font-bold tabular-nums text-emerald-600">
-                        {row.conversion}
-                      </td>
-                      <td className="px-5 sm:px-7 py-4 text-sm font-semibold tabular-nums text-slate-800">
-                        {row.revenue}
-                      </td>
-                      <td className="px-5 sm:px-7 py-4">
-                        <span
-                          className={`inline-block w-2 h-2 rounded-full ${
-                            row.live ? 'bg-emerald-500' : 'bg-slate-300'
-                          }`}
-                          title={row.live ? t('statusLive', locale) : t('statusPaused', locale)}
-                        />
+                  {topBioProducts.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={tableHeaders.length}
+                        className="px-5 sm:px-7 py-10 text-sm text-slate-400 text-center"
+                      >
+                        —
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    topBioProducts.map((row) => (
+                      <tr
+                        key={row.name}
+                        className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
+                      >
+                        <td className="px-5 sm:px-7 py-4 text-sm font-semibold text-slate-900">
+                          {row.name}
+                        </td>
+                        <td className="px-5 sm:px-7 py-4 text-sm text-slate-500">{row.category}</td>
+                        <td className="px-5 sm:px-7 py-4 text-sm font-semibold tabular-nums text-slate-800">
+                          {row.clicks.toLocaleString(localeTag(locale))}
+                        </td>
+                        <td className="px-5 sm:px-7 py-4 text-sm font-bold tabular-nums text-emerald-600">
+                          {row.conversion}
+                        </td>
+                        <td className="px-5 sm:px-7 py-4 text-sm font-semibold tabular-nums text-slate-800">
+                          {row.revenue}
+                        </td>
+                        <td className="px-5 sm:px-7 py-4">
+                          <span
+                            className={`inline-block w-2 h-2 rounded-full ${
+                              row.live ? 'bg-emerald-500' : 'bg-slate-300'
+                            }`}
+                            title={row.live ? t('statusLive', locale) : t('statusPaused', locale)}
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -761,7 +978,18 @@ export default function LaterAnalyticsPanel() {
       )}
 
       {sub === 'audience' && (
-        <AudienceInsights locale={locale} workspaceName={activeWorkspace.name} />
+        <AudienceInsights
+          locale={locale}
+          workspaceName={activeWorkspace.name}
+          followers={totalFollowers || engagement.followers}
+          accountCount={
+            analyticsApi?.totals?.accounts ??
+            analyticsApi?.metrics?.accounts ??
+            connectedAccounts.length
+          }
+          reach={engagement.reach}
+          platforms={platformSlices}
+        />
       )}
 
       {sub === 'posts' && (
@@ -798,14 +1026,15 @@ export default function LaterAnalyticsPanel() {
         <HashtagsAnalyticsTab
           locale={locale}
           rangeLabel={formatRangeLabel(dateRange, locale)}
+          hashtags={usedHashtags}
         />
       )}
       {sub === 'linkinbio' && (
         <LinkInBioAnalyticsTab
           locale={locale}
           rangeLabel={formatRangeLabel(dateRange, locale)}
-          totalClicks={activeWorkspace.analytics.utm_total_clicks}
-          links={activeWorkspace.analytics.utm_links}
+          totalClicks={bioTotalClicks}
+          links={bioUtmLinks}
           onOpenBio={() => setSection('biobuilder')}
         />
       )}
@@ -1370,35 +1599,30 @@ function ContentPerformanceTab({
   );
 }
 
-type UsedHashtag = {
-  tag: string;
-  posts: number;
-  reach: number;
-  er: number;
-  trend: number;
-};
-
-const USED_HASHTAGS: UsedHashtag[] = [];
+type UsedHashtag = AnalyticsHashtag;
 
 const AI_HASHTAG_SETS: { topic: string; tags: string[] }[] = [];
 
 function HashtagsAnalyticsTab({
   locale,
   rangeLabel,
+  hashtags,
 }: {
   locale: Locale;
   rangeLabel: string;
+  hashtags: UsedHashtag[];
 }) {
   const [generating, setGenerating] = useState(false);
   const [ideas, setIdeas] = useState(AI_HASHTAG_SETS);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const maxReach = Math.max(...USED_HASHTAGS.map((h) => h.reach), 1);
+  const used = hashtags;
+  const maxReach = Math.max(...used.map((h) => h.reach), 1);
 
   const regenerate = () => {
     setGenerating(true);
     window.setTimeout(() => {
-      // Rotate / shuffle mock AI sets to simulate a fresh generation.
+      // Rotate / shuffle AI sets when available (empty until AI endpoint ships).
       setIdeas((prev) =>
         [...prev]
           .map((set) => ({
@@ -1425,11 +1649,19 @@ function HashtagsAnalyticsTab({
     <div className="space-y-4 sm:space-y-5">
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: t('hashtagsUnique', locale), value: String(USED_HASHTAGS.length) },
-          { label: t('hashtagsAvgLift', locale), value: '+6.4%' },
+          { label: t('hashtagsUnique', locale), value: String(used.length) },
+          {
+            label: t('hashtagsAvgLift', locale),
+            value:
+              used.length > 0
+                ? `${(
+                    used.reduce((s, h) => s + h.er, 0) / used.length
+                  ).toFixed(1)}%`
+                : '—',
+          },
           {
             label: t('hashtagsTaggedPosts', locale),
-            value: String(USED_HASHTAGS.reduce((s, h) => s + h.posts, 0)),
+            value: String(used.reduce((s, h) => s + h.posts, 0)),
           },
         ].map((m) => (
           <div key={m.label} className={adminKpiClass}>
@@ -1475,44 +1707,55 @@ function HashtagsAnalyticsTab({
               </tr>
             </thead>
             <tbody>
-              {USED_HASHTAGS.map((h) => (
-                <tr
-                  key={h.tag}
-                  className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70"
-                >
-                  <td className="px-4 sm:px-5 py-3">
-                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1a1848]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#F472B6]" aria-hidden />
-                      {h.tag}
-                    </span>
-                    <div className="mt-1.5 h-1 max-w-[120px] rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-[#1a1848]"
-                        style={{ width: `${(h.reach / maxReach) * 100}%` }}
-                      />
-                    </div>
-                  </td>
-                  <td className="px-4 sm:px-5 py-3 text-sm font-semibold tabular-nums text-slate-800">
-                    {h.posts}
-                  </td>
-                  <td className="px-4 sm:px-5 py-3 text-sm font-semibold tabular-nums text-slate-800">
-                    {formatCompact(h.reach, locale)}
-                  </td>
-                  <td className="px-4 sm:px-5 py-3 text-sm font-extrabold tabular-nums text-slate-900">
-                    {h.er.toFixed(1)}%
-                  </td>
-                  <td className="px-4 sm:px-5 py-3">
-                    <span
-                      className={`text-xs font-bold tabular-nums ${
-                        h.trend >= 0 ? 'text-emerald-600' : 'text-rose-500'
-                      }`}
-                    >
-                      {h.trend >= 0 ? '+' : ''}
-                      {h.trend}%
-                    </span>
+              {used.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 sm:px-5 py-10 text-sm text-slate-400 text-center"
+                  >
+                    —
                   </td>
                 </tr>
-              ))}
+              ) : (
+                used.map((h) => (
+                  <tr
+                    key={h.tag}
+                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70"
+                  >
+                    <td className="px-4 sm:px-5 py-3">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1a1848]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#F472B6]" aria-hidden />
+                        {h.tag}
+                      </span>
+                      <div className="mt-1.5 h-1 max-w-[120px] rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-[#1a1848]"
+                          style={{ width: `${(h.reach / maxReach) * 100}%` }}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-4 sm:px-5 py-3 text-sm font-semibold tabular-nums text-slate-800">
+                      {h.posts}
+                    </td>
+                    <td className="px-4 sm:px-5 py-3 text-sm font-semibold tabular-nums text-slate-800">
+                      {formatCompact(h.reach, locale)}
+                    </td>
+                    <td className="px-4 sm:px-5 py-3 text-sm font-extrabold tabular-nums text-slate-900">
+                      {h.er.toFixed(1)}%
+                    </td>
+                    <td className="px-4 sm:px-5 py-3">
+                      <span
+                        className={`text-xs font-bold tabular-nums ${
+                          h.trend >= 0 ? 'text-emerald-600' : 'text-rose-500'
+                        }`}
+                      >
+                        {h.trend >= 0 ? '+' : ''}
+                        {h.trend}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -1541,115 +1784,49 @@ function HashtagsAnalyticsTab({
         </div>
 
         <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-          {ideas.map((set) => {
-            const id = set.topic;
-            const copied = copiedId === id;
-            return (
-              <div
-                key={id}
-                className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3.5 flex flex-col gap-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-bold text-slate-800">
-                    {tf('aiHashtagSetFor', locale, { topic: set.topic })}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void copySet(id, set.tags)}
-                    className="h-8 min-h-[32px] px-2 rounded-lg text-[11px] font-semibold text-slate-500 hover:bg-white hover:text-slate-800 inline-flex items-center gap-1 transition-colors"
-                  >
-                    {copied ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                    {copied ? t('aiHashtagCopied', locale) : t('aiHashtagCopySet', locale)}
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {set.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-[#1a1848]"
+          {ideas.length === 0 ? (
+            <p className="text-sm text-slate-400 md:col-span-3 text-center py-6">—</p>
+          ) : (
+            ideas.map((set) => {
+              const id = set.topic;
+              const copied = copiedId === id;
+              return (
+                <div
+                  key={id}
+                  className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3.5 flex flex-col gap-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-bold text-slate-800">
+                      {tf('aiHashtagSetFor', locale, { topic: set.topic })}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void copySet(id, set.tags)}
+                      className="h-8 min-h-[32px] px-2 rounded-lg text-[11px] font-semibold text-slate-500 hover:bg-white hover:text-slate-800 inline-flex items-center gap-1 transition-colors"
                     >
-                      {tag}
-                    </span>
-                  ))}
+                      {copied ? (
+                        <Check size={12} className="text-emerald-600" />
+                      ) : (
+                        <Copy size={12} />
+                      )}
+                      {copied ? t('aiHashtagCopied', locale) : t('aiHashtagCopySet', locale)}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {set.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-[#1a1848]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-/** Mock Nordic creator audience breakdown for the Audience analytics tab. */
-const AUDIENCE_GENDER = [
-  { key: 'women' as const, pct: 68 },
-  { key: 'men' as const, pct: 29 },
-  { key: 'other' as const, pct: 3 },
-];
-
-const AUDIENCE_AGES = [
-  { label: '13–17', pct: 4 },
-  { label: '18–24', pct: 28 },
-  { label: '25–34', pct: 41 },
-  { label: '35–44', pct: 18 },
-  { label: '45–54', pct: 7 },
-  { label: '55+', pct: 2 },
-];
-
-const AUDIENCE_COUNTRIES = [
-  { name: 'Sweden', pct: 42 },
-  { name: 'Norway', pct: 18 },
-  { name: 'Denmark', pct: 14 },
-  { name: 'Finland', pct: 11 },
-  { name: 'Germany', pct: 8 },
-  { name: 'Other', pct: 7 },
-];
-
-const AUDIENCE_CITIES = [
-  { name: 'Stockholm', pct: 22 },
-  { name: 'Oslo', pct: 11 },
-  { name: 'Copenhagen', pct: 9 },
-  { name: 'Göteborg', pct: 8 },
-  { name: 'Helsinki', pct: 7 },
-  { name: 'Malmö', pct: 5 },
-];
-
-/** 7 days × 6 day-parts intensity 0–1 (Mon→Sun). */
-const ACTIVE_HEAT: number[][] = [
-  [0.15, 0.25, 0.45, 0.7, 0.85, 0.55],
-  [0.18, 0.3, 0.5, 0.75, 0.9, 0.6],
-  [0.2, 0.35, 0.55, 0.8, 0.95, 0.65],
-  [0.22, 0.4, 0.6, 0.85, 1, 0.7],
-  [0.25, 0.45, 0.65, 0.9, 0.98, 0.75],
-  [0.3, 0.5, 0.55, 0.7, 0.85, 0.8],
-  [0.2, 0.35, 0.4, 0.55, 0.7, 0.65],
-];
-
-const DAY_PARTS = ['00–04', '04–08', '08–12', '12–16', '16–20', '20–24'];
-
-function AudienceBarRow({
-  label,
-  pct,
-  color = '#1a1848',
-}: {
-  label: string;
-  pct: number;
-  color?: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-slate-700 truncate">{label}</span>
-        <span className="text-sm font-extrabold tabular-nums text-slate-900 flex-shrink-0">
-          {pct}%
-        </span>
-      </div>
-      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-[width] duration-500"
-          style={{ width: `${Math.min(100, Math.max(0, pct))}%`, background: color }}
-        />
       </div>
     </div>
   );
@@ -1658,29 +1835,43 @@ function AudienceBarRow({
 function AudienceInsights({
   locale,
   workspaceName,
+  followers,
+  accountCount,
+  reach,
+  platforms,
 }: {
   locale: Locale;
   workspaceName: string;
+  followers: number;
+  accountCount: number;
+  reach: number;
+  platforms: Record<string, AnalyticsPlatformSlice>;
 }) {
-  const dayLabels = [
-    t('dayMon', locale),
-    t('dayTue', locale),
-    t('dayWed', locale),
-    t('dayThu', locale),
-    t('dayFri', locale),
-    t('daySat', locale),
-    t('daySun', locale),
-  ];
+  const connectedPlatforms = useMemo(() => {
+    return Object.entries(platforms)
+      .filter(([, slice]) => slice?.connected)
+      .map(([key, slice]) => ({
+        key,
+        label: PLATFORM_LABEL[key] || key,
+        followers: slice.followers || 0,
+        handle: slice.handle,
+        Icon: PLATFORM_ICON[key] || InstagramIcon,
+      }))
+      .sort((a, b) => b.followers - a.followers);
+  }, [platforms]);
 
-  const genderLabels = {
-    women: t('audienceGenderWomen', locale),
-    men: t('audienceGenderMen', locale),
-    other: t('audienceGenderOther', locale),
-  };
-  const genderColors = {
-    women: '#F472B6',
-    men: '#1a1848',
-    other: '#9089F0',
+  const followerTotal = Math.max(
+    followers,
+    connectedPlatforms.reduce((s, p) => s + p.followers, 0),
+    1
+  );
+
+  const PLATFORM_COLORS: Record<string, string> = {
+    instagram: '#E1306C',
+    facebook: '#1877F2',
+    youtube: '#FF0000',
+    linkedin: '#0A66C2',
+    tiktok: '#0F172A',
   };
 
   return (
@@ -1691,9 +1882,18 @@ function AudienceInsights({
         </h3>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: t('kpiFollowers', locale), value: '18,804' },
-            { label: t('accounts', locale), value: '3' },
-            { label: t('reach7d', locale), value: '0' },
+            {
+              label: t('kpiFollowers', locale),
+              value: formatCompact(followers, locale),
+            },
+            {
+              label: t('accounts', locale),
+              value: String(accountCount),
+            },
+            {
+              label: t('reach7d', locale),
+              value: formatCompact(reach, locale),
+            },
           ].map((m) => (
             <div key={m.label} className="rounded-xl bg-slate-50 border border-slate-100 p-4">
               <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
@@ -1705,148 +1905,76 @@ function AudienceInsights({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-        {/* Gender */}
-        <div className={`${adminCardClass} p-5 sm:p-6`}>
-          <h4 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
-            {t('audienceGender', locale)}
-          </h4>
-          <div className="mt-4 flex h-3 rounded-full overflow-hidden bg-slate-100">
-            {AUDIENCE_GENDER.map((g) => (
-              <div
-                key={g.key}
-                className="h-full first:rounded-l-full last:rounded-r-full"
-                style={{ width: `${g.pct}%`, background: genderColors[g.key] }}
-                title={`${genderLabels[g.key]} ${g.pct}%`}
-              />
-            ))}
-          </div>
-          <ul className="mt-5 space-y-3">
-            {AUDIENCE_GENDER.map((g) => (
-              <li key={g.key} className="flex items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ background: genderColors[g.key] }}
-                  />
-                  {genderLabels[g.key]}
-                </span>
-                <span className="text-sm font-extrabold tabular-nums text-slate-900">{g.pct}%</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className={`${adminCardClass} p-5 sm:p-6`}>
+        <h4 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
+          {t('audienceDemographics', locale)}
+        </h4>
+        <p className="text-sm text-slate-500 mt-1 mb-5">
+          {t('audienceActiveTimesHint', locale)}
+        </p>
 
-        {/* Age */}
-        <div className={`${adminCardClass} p-5 sm:p-6`}>
-          <h4 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
-            {t('audienceAge', locale)}
-          </h4>
-          <div className="mt-5 space-y-3.5">
-            {AUDIENCE_AGES.map((a) => (
-              <AudienceBarRow key={a.label} label={a.label} pct={a.pct} color="#1a1848" />
-            ))}
-          </div>
-        </div>
-
-        {/* Demographics */}
-        <div className={`${adminCardClass} p-5 sm:p-6 lg:col-span-2`}>
-          <h4 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
-            {t('audienceDemographics', locale)}
-          </h4>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
-            <div>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400 mb-3">
-                {t('audienceTopCountries', locale)}
-              </p>
-              <div className="space-y-3.5">
-                {AUDIENCE_COUNTRIES.map((c) => (
-                  <AudienceBarRow key={c.name} label={c.name} pct={c.pct} color="#2B2568" />
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400 mb-3">
-                {t('audienceTopCities', locale)}
-              </p>
-              <div className="space-y-3.5">
-                {AUDIENCE_CITIES.map((c) => (
-                  <AudienceBarRow key={c.name} label={c.name} pct={c.pct} color="#F472B6" />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Active times heatmap */}
-        <div className={`${adminCardClass} p-5 sm:p-6 lg:col-span-2`}>
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-5">
-            <div>
-              <h4 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
-                {t('audienceActiveTimes', locale)}
-              </h4>
-              <p className="text-sm text-slate-500 mt-1">
-                {t('audienceActiveTimesHint', locale)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-              <span>{t('audienceLessActive', locale)}</span>
-              <div className="flex gap-0.5">
-                {[0.15, 0.35, 0.55, 0.75, 1].map((v) => (
-                  <span
-                    key={v}
-                    className="w-3.5 h-3.5 rounded-sm"
-                    style={{ background: `rgba(26, 24, 72, ${0.12 + v * 0.88})` }}
-                  />
-                ))}
-              </div>
-              <span>{t('audienceMoreActive', locale)}</span>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto -mx-1 px-1">
-            <div className="min-w-[520px]">
-              <div
-                className="grid gap-1 mb-1"
-                style={{ gridTemplateColumns: `56px repeat(${DAY_PARTS.length}, minmax(0, 1fr))` }}
-              >
-                <div />
-                {DAY_PARTS.map((p) => (
+        {connectedPlatforms.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-8">—</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex h-3 rounded-full overflow-hidden bg-slate-100">
+              {connectedPlatforms.map((p) => {
+                const pct = Math.round((p.followers / followerTotal) * 100);
+                if (pct <= 0 && p.followers <= 0) return null;
+                return (
                   <div
-                    key={p}
-                    className="text-center text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 py-1"
-                  >
-                    {p}
-                  </div>
-                ))}
-              </div>
-              {ACTIVE_HEAT.map((row, dayIdx) => (
-                <div
-                  key={dayLabels[dayIdx]}
-                  className="grid gap-1 mb-1"
-                  style={{
-                    gridTemplateColumns: `56px repeat(${DAY_PARTS.length}, minmax(0, 1fr))`,
-                  }}
-                >
-                  <div className="text-[11px] font-semibold text-slate-500 flex items-center">
-                    {dayLabels[dayIdx]}
-                  </div>
-                  {row.map((intensity, partIdx) => (
-                    <div
-                      key={`${dayIdx}-${partIdx}`}
-                      className="h-9 min-h-[36px] rounded-md"
-                      style={{
-                        background: `rgba(26, 24, 72, ${0.08 + intensity * 0.92})`,
-                      }}
-                      title={`${dayLabels[dayIdx]} ${DAY_PARTS[partIdx]}`}
-                    />
-                  ))}
-                </div>
-              ))}
+                    key={p.key}
+                    className="h-full first:rounded-l-full last:rounded-r-full"
+                    style={{
+                      width: `${Math.max(pct, p.followers > 0 ? 4 : 0)}%`,
+                      background: PLATFORM_COLORS[p.key] || '#1a1848',
+                    }}
+                    title={`${p.label} ${pct}%`}
+                  />
+                );
+              })}
             </div>
+
+            <ul className="space-y-4">
+              {connectedPlatforms.map((p) => {
+                const pct = Math.round((p.followers / followerTotal) * 1000) / 10;
+                return (
+                  <li key={p.key} className="flex items-center gap-3">
+                    <span className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-full bg-slate-50 border border-slate-100 inline-flex items-center justify-center flex-shrink-0">
+                      <p.Icon size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-slate-800 truncate">
+                          {p.label}
+                          {p.handle ? (
+                            <span className="ml-1.5 text-xs font-medium text-slate-400 font-mono">
+                              {p.handle}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="text-sm font-extrabold tabular-nums text-slate-900 flex-shrink-0">
+                          {formatCompact(p.followers, locale)} · {pct}%
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-[width] duration-500"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, pct))}%`,
+                            background: PLATFORM_COLORS[p.key] || '#1a1848',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
+

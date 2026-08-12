@@ -1,7 +1,10 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { getMockCommunityAdminPayload } from '@/lib/mock-community-admin';
+import {
+  createManagedCommunity,
+  getMockCommunityAdminPayload,
+} from '@/lib/mock-community-admin';
 import { demoPostPinOverrides } from '@/lib/demo-pin-state';
 
 async function requireSession() {
@@ -23,27 +26,59 @@ export async function GET(request: Request) {
     return Response.json(getMockCommunityAdminPayload(communityId));
   }
 
-  try {
-    const communities = await sql`
-      SELECT id, name, slug, description, category, cover_color,
-             member_count, COALESCE(is_published, true) AS is_published
-      FROM communities
-      WHERE creator_id = ${session.user.id}
-         OR id IN (
-           SELECT community_id FROM community_memberships
-           WHERE user_id = ${session.user.id} AND role IN ('owner', 'moderator')
-         )
-      ORDER BY name ASC
-    `;
+  const emptyPayload = (selected: Record<string, unknown> | null = null) => ({
+    communities: selected ? [selected] : [],
+    community: selected,
+    overview: {
+      member_count: 0,
+      post_count: 0,
+      comment_count: 0,
+      joined_this_week: 0,
+      moderator_count: 0,
+      like_count: 0,
+    },
+    members: [],
+    posts: [],
+    demo: false,
+  });
 
-    if (!Array.isArray(communities) || communities.length === 0) {
-      return Response.json(getMockCommunityAdminPayload(communityId));
+  try {
+    // Prefer the requested community (workspace-bound) so admin never falls to mock.
+    let communities: Record<string, unknown>[] = [];
+    if (communityId) {
+      const byId = await sql`
+        SELECT id, name, slug, description, category, cover_color,
+               member_count, COALESCE(is_published, true) AS is_published
+        FROM communities
+        WHERE id = ${communityId}
+        LIMIT 1
+      `;
+      if (Array.isArray(byId) && byId[0]) {
+        communities = byId as Record<string, unknown>[];
+      }
+    }
+
+    if (communities.length === 0) {
+      const owned = await sql`
+        SELECT id, name, slug, description, category, cover_color,
+               member_count, COALESCE(is_published, true) AS is_published
+        FROM communities
+        WHERE creator_id = ${session.user.id}
+           OR id IN (
+             SELECT community_id FROM community_memberships
+             WHERE user_id = ${session.user.id} AND role IN ('owner', 'moderator')
+           )
+        ORDER BY name ASC
+      `;
+      communities = (Array.isArray(owned) ? owned : []) as Record<string, unknown>[];
+    }
+
+    if (communities.length === 0) {
+      return Response.json(emptyPayload(null));
     }
 
     const selected =
-      (communities as Array<Record<string, unknown>>).find(
-        (c) => Number(c.id) === communityId
-      ) ?? communities[0];
+      communities.find((c) => Number(c.id) === communityId) ?? communities[0];
     const cid = Number((selected as { id: number }).id);
 
     const [members, posts, commentRows] = await sql.transaction([
@@ -121,7 +156,23 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error(error);
-    return Response.json(getMockCommunityAdminPayload(communityId));
+    // Keep UI usable but never pretend seed mock is production data.
+    return Response.json({
+      communities: [],
+      community: null,
+      overview: {
+        member_count: 0,
+        post_count: 0,
+        comment_count: 0,
+        joined_this_week: 0,
+        moderator_count: 0,
+        like_count: 0,
+      },
+      members: [],
+      posts: [],
+      demo: false,
+      error: 'load_failed',
+    });
   }
 }
 
@@ -135,6 +186,150 @@ export async function POST(request: Request) {
 
     if (!action) {
       return Response.json({ error: 'action required' }, { status: 400 });
+    }
+
+    if (action === 'create_community') {
+      const name = String(body.name ?? '').trim() || 'New community';
+      const description = String(body.description ?? '').trim();
+      const slugBase =
+        name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '') || `community-${Date.now()}`;
+      const slug = `${slugBase}-${Date.now().toString(36).slice(-5)}`;
+
+      // Demo / no database — still publish into the public catalog so site users can find it.
+      if (!process.env.DATABASE_URL?.trim()) {
+        const community = createManagedCommunity({
+          name,
+          description,
+          skipWorkspaceProfile: true,
+        });
+        return Response.json({
+          success: true,
+          community,
+          public_url: `/communities/${community.id}`,
+          demo: true,
+        });
+      }
+
+      try {
+        let rows: Record<string, unknown>[] = [];
+        try {
+          rows = (await sql`
+            INSERT INTO communities (
+              name, slug, description, category, creator_id, creator_name,
+              creator_image, cover_color, member_count, is_featured, is_published
+            ) VALUES (
+              ${name},
+              ${slug},
+              ${description || 'Your creator community.'},
+              ${'Community'},
+              ${session.user.id},
+              ${session.user.name || 'Creator'},
+              ${session.user.image ?? null},
+              ${'#2B2568'},
+              ${1},
+              ${false},
+              ${true}
+            )
+            RETURNING id, name, slug, description, category, cover_color,
+                      member_count, creator_name, creator_image,
+                      COALESCE(is_published, true) AS is_published
+          `) as Record<string, unknown>[];
+        } catch (fkError) {
+          // If creator_id FK fails, still publish the community for site users.
+          console.warn('[create_community] retry without creator_id', fkError);
+          rows = (await sql`
+            INSERT INTO communities (
+              name, slug, description, category, creator_name,
+              creator_image, cover_color, member_count, is_featured, is_published
+            ) VALUES (
+              ${name},
+              ${slug},
+              ${description || 'Your creator community.'},
+              ${'Community'},
+              ${session.user.name || 'Creator'},
+              ${session.user.image ?? null},
+              ${'#2B2568'},
+              ${1},
+              ${false},
+              ${true}
+            )
+            RETURNING id, name, slug, description, category, cover_color,
+                      member_count, creator_name, creator_image,
+                      COALESCE(is_published, true) AS is_published
+          `) as Record<string, unknown>[];
+        }
+
+        const row = rows?.[0] as
+          | {
+              id: number;
+              name: string;
+              slug: string;
+              description: string | null;
+              category: string | null;
+              cover_color: string | null;
+              member_count: number | null;
+              creator_name: string | null;
+              creator_image: string | null;
+              is_published: boolean;
+            }
+          | undefined;
+
+        if (!row?.id) {
+          return Response.json(
+            {
+              error: 'create_failed',
+              message: 'Community insert returned no row. Check DATABASE_URL / schema.',
+            },
+            { status: 500 }
+          );
+        }
+
+        try {
+          await sql`
+            INSERT INTO community_memberships (user_id, community_id, role)
+            VALUES (${session.user.id}, ${row.id}, 'owner')
+            ON CONFLICT (user_id, community_id) DO UPDATE SET role = 'owner'
+          `;
+        } catch (membershipError) {
+          console.warn('[create_community] owner membership failed', membershipError);
+        }
+
+        const community = {
+          id: Number(row.id),
+          name: row.name,
+          slug: row.slug,
+          description: row.description || '',
+          category: row.category || 'Community',
+          cover_color: row.cover_color || '#2B2568',
+          member_count: Number(row.member_count) || 1,
+          is_published: Boolean(row.is_published),
+          handle: `@${String(row.slug || name).replace(/-/g, '')}`,
+          avatar_url: row.creator_image || null,
+          channels: ['instagram', 'tiktok', 'linkedin'],
+        };
+
+        return Response.json({
+          success: true,
+          community,
+          public_url: `/communities/${community.id}`,
+          demo: false,
+        });
+      } catch (error) {
+        console.error('[create_community] DB insert failed', error);
+        const message =
+          error instanceof Error ? error.message : 'Failed to create community in database';
+        return Response.json(
+          {
+            error: 'create_failed',
+            message,
+            hint: 'Community was not published for site users. Fix DB schema/credentials and retry.',
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // Demo mode: acknowledge mutations so the client can update optimistically.

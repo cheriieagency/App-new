@@ -12,7 +12,9 @@ import {
   type StoreProductType,
 } from '@/lib/mock-store';
 import {
+  normalizeBillingInterval,
   normalizeCollectFields,
+  normalizeFulfillment,
   normalizeOrderBump,
 } from '@/lib/store-collect-fields';
 
@@ -33,10 +35,14 @@ function normalizeProduct(row: Record<string, unknown>) {
     image_url: (row.image_url as string | null) ?? null,
     community_id:
       row.community_id != null ? Number(row.community_id) : null,
+    workspace_id: (row.workspace_id as string | null) ?? null,
     is_published: row.is_published !== false,
     created_at: String(row.created_at ?? new Date().toISOString()),
     collect_fields: normalizeCollectFields(row.collect_fields),
     order_bump: normalizeOrderBump(row.order_bump),
+    billing_interval: normalizeBillingInterval(row.billing_interval),
+    fulfillment: normalizeFulfillment(row.fulfillment),
+    require_custom_fields: Boolean(row.require_custom_fields),
   };
 }
 

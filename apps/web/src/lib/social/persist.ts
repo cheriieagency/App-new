@@ -1,12 +1,17 @@
 /**
- * Shared social_accounts persistence — matches the live Supabase schema:
- *   user_id, platform, platform_user_id, platform_user_name,
- *   access_token, refresh_token, expires_at, avatar_url, workspace_id, …
- * UNIQUE (user_id, platform)
+ * Shared social_accounts persistence — workspace-scoped connections.
+ * Unique per (user_id, workspace_id, platform).
  */
 
 import sql from '@/app/api/utils/sql';
 import type { ConnectedSocialAccount, SocialPlatform } from '@/lib/mock-content-planner';
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
+  readWorkspaceIdFromCookieHeader,
+} from '@/lib/social/oauth-workspace';
+
+export { ACTIVE_WORKSPACE_COOKIE, ACTIVE_WORKSPACE_COOKIE_ALIAS };
 
 export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   'instagram',
@@ -16,14 +21,10 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   'linkedin',
 ];
 
-export const ACTIVE_WORKSPACE_COOKIE = 'nc_active_workspace_id';
-
 export type UpsertSocialAccountRow = {
   userId: string;
   platform: SocialPlatform;
-  /** Unique platform channel / account id */
   platformUserId: string;
-  /** Display name or @handle */
   platformUserName: string;
   accessToken: string;
   refreshToken?: string | null;
@@ -71,10 +72,6 @@ export async function ensureUserProfile(input: {
   }
 }
 
-/**
- * Additive migration — safe to call on every upsert/list until columns exist.
- * Aligns the live Supabase table with the app's expected fields.
- */
 let schemaReady: Promise<void> | null = null;
 
 export async function ensureSocialAccountsSchema(): Promise<void> {
@@ -96,6 +93,23 @@ export async function ensureSocialAccountsSchema(): Promise<void> {
         ADD COLUMN IF NOT EXISTS connected_at timestamptz DEFAULT now(),
         ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()
     `;
+    try {
+      await sql`
+        ALTER TABLE public.social_accounts
+          DROP CONSTRAINT IF EXISTS social_accounts_user_id_platform_key
+      `;
+    } catch {
+      /* ignore */
+    }
+    try {
+      await sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS social_accounts_user_workspace_platform_uidx
+          ON public.social_accounts (user_id, workspace_id, platform)
+          WHERE workspace_id IS NOT NULL AND workspace_id <> ''
+      `;
+    } catch (error) {
+      console.warn('[social/persist] workspace unique index skipped', error);
+    }
   })().catch((error) => {
     schemaReady = null;
     console.warn('[social/persist] schema ensure skipped', error);
@@ -112,7 +126,7 @@ function expiresIso(input: UpsertSocialAccountRow): string | null {
   return null;
 }
 
-/** Upsert one platform row — UNIQUE (user_id, platform). */
+/** Upsert one platform row scoped to a workspace. */
 export async function upsertSocialAccountRow(
   input: UpsertSocialAccountRow
 ): Promise<ConnectedSocialAccount> {
@@ -137,6 +151,18 @@ export async function upsertSocialAccountRow(
   const displayName = input.platformUserName;
   const metaJson = JSON.stringify(input.meta ?? {});
   const workspaceId = input.workspaceId?.trim() || null;
+
+  if (!workspaceId) {
+    throw new Error('workspace_id is required to bind social accounts');
+  }
+
+  // Workspace-scoped replace — avoids fighting legacy UNIQUE (user_id, platform).
+  await sql`
+    DELETE FROM social_accounts
+    WHERE user_id = ${input.userId}
+      AND platform = ${input.platform}
+      AND workspace_id = ${workspaceId}
+  `;
 
   await sql`
     INSERT INTO social_accounts (
@@ -179,22 +205,6 @@ export async function upsertSocialAccountRow(
       now(),
       now()
     )
-    ON CONFLICT (user_id, platform) DO UPDATE SET
-      platform_user_id = EXCLUDED.platform_user_id,
-      platform_user_name = EXCLUDED.platform_user_name,
-      display_name = EXCLUDED.display_name,
-      handle = EXCLUDED.handle,
-      avatar_url = EXCLUDED.avatar_url,
-      access_token = EXCLUDED.access_token,
-      refresh_token = COALESCE(EXCLUDED.refresh_token, social_accounts.refresh_token),
-      expires_at = EXCLUDED.expires_at,
-      workspace_id = COALESCE(EXCLUDED.workspace_id, social_accounts.workspace_id),
-      page_id = EXCLUDED.page_id,
-      page_name = EXCLUDED.page_name,
-      followers_count = EXCLUDED.followers_count,
-      meta = EXCLUDED.meta,
-      connected_at = now(),
-      updated_at = now()
   `;
 
   return {
@@ -277,7 +287,7 @@ function mapRow(raw: Record<string, unknown>): ConnectedSocialAccount {
   };
 }
 
-/** Live rows for the authenticated user — never mock seeds. */
+/** Live rows for one workspace — never mixes connections across brands. */
 export async function listLiveSocialAccountsForUser(input: {
   userId: string;
   workspaceId?: string | null;
@@ -295,7 +305,7 @@ export async function listLiveSocialAccountsForUser(input: {
           SELECT *
           FROM social_accounts
           WHERE user_id = ${input.userId}
-            AND (workspace_id = ${workspaceId} OR workspace_id IS NULL)
+            AND workspace_id = ${workspaceId}
           ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
         `
       : await sql`
@@ -319,29 +329,7 @@ export async function listLiveSocialAccountsForUser(input: {
     );
   } catch (error) {
     console.error('[social/persist] list failed', error);
-    // Minimal fallback for pre-migration schemas.
-    try {
-      const rows = await sql`
-        SELECT *
-        FROM social_accounts
-        WHERE user_id = ${input.userId}
-        ORDER BY created_at DESC
-      `;
-      const byPlatform = new Map<SocialPlatform, ConnectedSocialAccount>();
-      if (Array.isArray(rows)) {
-        for (const raw of rows as Array<Record<string, unknown>>) {
-          const platform = raw.platform as SocialPlatform;
-          if (!platform || byPlatform.has(platform)) continue;
-          byPlatform.set(platform, mapRow(raw));
-        }
-      }
-      return SOCIAL_PLATFORMS.map(
-        (platform) => byPlatform.get(platform) ?? disconnectedStub(platform)
-      );
-    } catch (fallbackError) {
-      console.error('[social/persist] list fallback failed', fallbackError);
-      return SOCIAL_PLATFORMS.map(disconnectedStub);
-    }
+    return SOCIAL_PLATFORMS.map(disconnectedStub);
   }
 }
 
@@ -349,10 +337,38 @@ export async function deleteSocialAccountRow(input: {
   userId: string;
   platform: SocialPlatform;
   platformUserId?: string | null;
+  workspaceId?: string | null;
 }): Promise<{ deleted: boolean }> {
   if (!process.env.DATABASE_URL?.trim()) return { deleted: false };
 
   await ensureSocialAccountsSchema();
+  const workspaceId = input.workspaceId?.trim() || null;
+
+  if (workspaceId && input.platformUserId?.trim()) {
+    const rows = await sql`
+      DELETE FROM social_accounts
+      WHERE user_id = ${input.userId}
+        AND platform = ${input.platform}
+        AND workspace_id = ${workspaceId}
+        AND (
+          platform_user_id = ${input.platformUserId}
+          OR platform_user_id IS NULL
+        )
+      RETURNING id
+    `;
+    if (Array.isArray(rows) && rows.length > 0) return { deleted: true };
+  }
+
+  if (workspaceId) {
+    const rows = await sql`
+      DELETE FROM social_accounts
+      WHERE user_id = ${input.userId}
+        AND platform = ${input.platform}
+        AND workspace_id = ${workspaceId}
+      RETURNING id
+    `;
+    return { deleted: Array.isArray(rows) && rows.length > 0 };
+  }
 
   if (input.platformUserId?.trim()) {
     const rows = await sql`
@@ -379,16 +395,9 @@ export async function deleteSocialAccountRow(input: {
 
 export function readWorkspaceIdFromRequest(request?: Request | null): string | null {
   if (!request) return null;
-  const header = request.headers.get('x-workspace-id')?.trim();
+  const header =
+    request.headers.get('x-workspace-id')?.trim() ||
+    request.headers.get('x-active-workspace-id')?.trim();
   if (header) return header;
-  const cookie = request.headers.get('cookie') || '';
-  const match = cookie.match(
-    new RegExp(`(?:^|;\\s*)${ACTIVE_WORKSPACE_COOKIE}=([^;]+)`)
-  );
-  if (!match?.[1]) return null;
-  try {
-    return decodeURIComponent(match[1]);
-  } catch {
-    return match[1];
-  }
+  return readWorkspaceIdFromCookieHeader(request.headers.get('cookie'));
 }

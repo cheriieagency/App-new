@@ -7,6 +7,7 @@ import { applyBioPreset, type BioTheme } from '@/lib/bio-theme';
 import type { SocialPlatform } from '@/lib/mock-content-planner';
 import type { UtmClickStat } from '@/lib/bio-utm';
 import { buildTrackedShortUrl } from '@/lib/bio-utm';
+import { computeBioAnalyticsSlice } from '@/lib/bio-sales';
 
 export const NC_WORKSPACE_STORAGE_KEY = 'nc_active_workspace_id';
 /** v2 drops seeded Ebba / demo brand profiles from older local sessions. */
@@ -210,12 +211,15 @@ const liveStudioBlocks: WorkspaceBioBlock[] = [
 ];
 
 function buildProfiles(): WorkspaceProfile[] {
-  // Fresh creators start with zero social spaces — create via the workspace picker.
+  // Empty until hydrated from localStorage or ensureDefaultWorkspace().
   return [];
 }
 
 let profiles: WorkspaceProfile[] = buildProfiles();
 let profilesHydrated = false;
+
+const DEFAULT_WORKSPACE_ID = 'default-my-workspace';
+const DEFAULT_WORKSPACE_NAME = 'My workspace';
 
 /** In-memory blank profile so admin UI can render before the first social space exists. */
 export function blankWorkspaceProfile(): WorkspaceProfile {
@@ -299,6 +303,24 @@ export function listWorkspaceProfiles(): WorkspaceProfile[] {
   return profiles.map(cloneProfile);
 }
 
+/**
+ * Ensure every account has at least one workspace named "My workspace".
+ * Called on first admin load / after signup — idempotent.
+ */
+export function ensureDefaultWorkspace(): WorkspaceProfile {
+  hydrateProfilesFromStorage();
+  if (profiles.length > 0) {
+    return cloneProfile(profiles[0]);
+  }
+  return createWorkspaceProfile({
+    id: DEFAULT_WORKSPACE_ID,
+    name: DEFAULT_WORKSPACE_NAME,
+    handle: 'myworkspace',
+    channels: [],
+    color: '#2B2568',
+  });
+}
+
 export function getWorkspaceProfile(id: string): WorkspaceProfile | null {
   hydrateProfilesFromStorage();
   const found = profiles.find((p) => p.id === id);
@@ -329,7 +351,7 @@ export function cloneProfile(p: WorkspaceProfile): WorkspaceProfile {
     },
     analytics: {
       ...p.analytics,
-      revenue_chart: [0, 0, 0, 0, 0, 0, 0],
+      revenue_chart: [...(p.analytics.revenue_chart || [0, 0, 0, 0, 0, 0, 0])],
       utm_links: p.analytics.utm_links.map((u) => ({ ...u })),
       recent_emails: p.analytics.recent_emails.map((e) => ({ ...e })),
     },
@@ -372,6 +394,81 @@ export function updateWorkspaceBio(
     avatar_url:
       patch.profile_photo !== undefined ? patch.profile_photo : current.avatar_url,
   };
+  // Keep Revenue / Link-in-bio analytics aligned with Bio Builder blocks.
+  if (patch.blocks) {
+    profiles[idx] = syncWorkspaceBioAnalytics(profiles[idx].id) || profiles[idx];
+  } else {
+    persistProfiles();
+  }
+  return cloneProfile(profiles[idx]);
+}
+
+/** Patch analytics fields for a workspace (Revenue / Link in bio). */
+export function updateWorkspaceAnalytics(
+  id: string,
+  patch: Partial<WorkspaceAnalyticsData>
+): WorkspaceProfile | null {
+  hydrateProfilesFromStorage();
+  const idx = profiles.findIndex((p) => p.id === id);
+  if (idx < 0) return null;
+  profiles[idx] = {
+    ...profiles[idx],
+    analytics: {
+      ...profiles[idx].analytics,
+      ...patch,
+      revenue_chart: patch.revenue_chart
+        ? [...patch.revenue_chart]
+        : [...profiles[idx].analytics.revenue_chart],
+      utm_links: patch.utm_links
+        ? patch.utm_links.map((u) => ({ ...u }))
+        : profiles[idx].analytics.utm_links.map((u) => ({ ...u })),
+      recent_emails: patch.recent_emails
+        ? patch.recent_emails.map((e) => ({ ...e }))
+        : profiles[idx].analytics.recent_emails.map((e) => ({ ...e })),
+    },
+  };
+  persistProfiles();
+  return cloneProfile(profiles[idx]);
+}
+
+/** Patch community slice for a workspace (Community create / bind). */
+export function updateWorkspaceCommunity(
+  id: string,
+  patch: Partial<WorkspaceCommunityData>
+): WorkspaceProfile | null {
+  hydrateProfilesFromStorage();
+  const idx = profiles.findIndex((p) => p.id === id);
+  if (idx < 0) return null;
+  profiles[idx] = {
+    ...profiles[idx],
+    community: {
+      ...profiles[idx].community,
+      ...patch,
+      recent_members: patch.recent_members
+        ? patch.recent_members.map((m) => ({ ...m }))
+        : profiles[idx].community.recent_members.map((m) => ({ ...m })),
+    },
+  };
+  persistProfiles();
+  return cloneProfile(profiles[idx]);
+}
+
+/** Recompute Revenue metrics from Bio Builder products + checkout sales. */
+export function syncWorkspaceBioAnalytics(
+  id: string,
+  opts?: { from?: string; to?: string }
+): WorkspaceProfile | null {
+  hydrateProfilesFromStorage();
+  const idx = profiles.findIndex((p) => p.id === id);
+  if (idx < 0) return null;
+  const slice = computeBioAnalyticsSlice(profiles[idx], opts);
+  profiles[idx] = {
+    ...profiles[idx],
+    analytics: {
+      ...profiles[idx].analytics,
+      ...slice,
+    },
+  };
   persistProfiles();
   return cloneProfile(profiles[idx]);
 }
@@ -383,23 +480,29 @@ export function createWorkspaceProfile(input: {
   color?: string;
   id?: string;
 }): WorkspaceProfile {
-  const id = input.id ?? String(Date.now() % 100000);
+  hydrateProfilesFromStorage();
+  const id =
+    input.id ??
+    `ws_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   if (profiles.some((p) => p.id === id)) {
     return cloneProfile(profiles.find((p) => p.id === id)!);
   }
-  let handle = (input.handle ?? '').trim() || input.name.replace(/\s+/g, '').toLowerCase();
+  let handle =
+    (input.handle ?? '').trim() ||
+    input.name.replace(/\s+/g, '').toLowerCase();
   handle = handle.replace(/^@/, '');
   const theme = applyBioPreset('nordic-minimal');
+  const displayName = input.name.trim() || DEFAULT_WORKSPACE_NAME;
   const profile: WorkspaceProfile = {
     id,
-    name: input.name.trim() || 'Ny Team-yta',
+    name: displayName,
     handle: `@${handle}`,
-    avatar_url: `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(input.name)}`,
+    avatar_url: `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(displayName)}`,
     color: input.color || '#E11D48',
     channels: input.channels?.length ? input.channels : [],
     bio: {
       profile_photo: null,
-      display_name: input.name.trim() || 'Ny Team-yta',
+      display_name: displayName,
       handle,
       bio_text: '',
       theme,
@@ -417,8 +520,8 @@ export function createWorkspaceProfile(input: {
       recent_emails: [],
     },
     community: {
-      community_id: Number(id) || Date.now(),
-      community_name: input.name.trim() || 'Ny Team-yta',
+      community_id: Number.parseInt(id.replace(/\D/g, '').slice(0, 9), 10) || Date.now(),
+      community_name: displayName,
       total_members: 0,
       posts: 0,
       comments: 0,
@@ -435,12 +538,36 @@ export function createWorkspaceProfile(input: {
       kanban_count: 0,
       calendar_events: 0,
       scheduled_posts: 0,
-      project_name: input.name.trim() || 'Ny Team-yta',
+      project_name: displayName,
     },
   };
   profiles = [...profiles, profile];
   persistProfiles();
   return cloneProfile(profile);
+}
+
+/** Remove a workspace. Keeps at least one (re-seeds "My workspace" if emptied). */
+export function deleteWorkspaceProfile(id: string): {
+  deleted: boolean;
+  remaining: WorkspaceProfile[];
+} {
+  hydrateProfilesFromStorage();
+  const next = profiles.filter((p) => p.id !== id);
+  if (next.length === profiles.length) {
+    return { deleted: false, remaining: listWorkspaceProfiles() };
+  }
+  profiles = next;
+  if (profiles.length === 0) {
+    persistProfiles();
+    ensureDefaultWorkspace();
+  } else {
+    persistProfiles();
+  }
+  return { deleted: true, remaining: listWorkspaceProfiles() };
+}
+
+export function isDefaultWorkspaceId(id: string): boolean {
+  return id === DEFAULT_WORKSPACE_ID;
 }
 
 /** Shape used by WorkspaceSelector dropdown. */

@@ -48,12 +48,86 @@ export const DEFAULT_COLLECT_FIELDS: CollectField[] = [
   },
 ];
 
+/**
+ * Community store defaults: name/email/phone stay on the product for CRM sync
+ * but are hidden at checkout — members are already authenticated.
+ */
+export const MEMBER_ONE_CLICK_COLLECT_FIELDS: CollectField[] = [
+  {
+    id: 'name',
+    label: 'Name',
+    type: 'text',
+    required: false,
+    visible: false,
+    isDefault: true,
+  },
+  {
+    id: 'email',
+    label: 'Email',
+    type: 'email',
+    required: false,
+    visible: false,
+    isDefault: true,
+  },
+  {
+    id: 'phone',
+    label: 'Phone Number',
+    type: 'phone',
+    required: false,
+    visible: false,
+    isDefault: true,
+  },
+];
+
 export const DEFAULT_ORDER_BUMP: OrderBump = {
   enabled: false,
-  title: '⚡ Lägg till arbetsbok för +49 kr',
+  title: '⚡ Add workbook for +49 SEK',
   price: 49,
-  description: 'Bonus-PDF med övningar och templates',
+  description: 'Bonus PDF with exercises and templates',
 };
+
+export type BillingInterval = 'one_time' | 'monthly' | 'yearly';
+
+export type FulfillmentType =
+  | 'none'
+  | 'unlock_course'
+  | 'assign_badge'
+  | 'digital_file'
+  | 'booking_link';
+
+export type OfferFulfillment = {
+  type: FulfillmentType;
+  /** Course id, badge name, file URL, or booking URL depending on type. */
+  target: string;
+};
+
+export const DEFAULT_FULFILLMENT: OfferFulfillment = {
+  type: 'none',
+  target: '',
+};
+
+export function normalizeFulfillment(raw: unknown): OfferFulfillment {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_FULFILLMENT };
+  const row = raw as Record<string, unknown>;
+  const type = String(row.type ?? 'none') as FulfillmentType;
+  const allowed: FulfillmentType[] = [
+    'none',
+    'unlock_course',
+    'assign_badge',
+    'digital_file',
+    'booking_link',
+  ];
+  return {
+    type: allowed.includes(type) ? type : 'none',
+    target: String(row.target ?? '').trim(),
+  };
+}
+
+export function normalizeBillingInterval(raw: unknown): BillingInterval {
+  const v = String(raw ?? 'one_time');
+  if (v === 'monthly' || v === 'yearly') return v;
+  return 'one_time';
+}
 
 let fieldSeq = 1;
 

@@ -1,16 +1,10 @@
 /**
- * GET /api/auth/meta/login?target=instagram|facebook|both
- * Starts Meta OAuth with full Pages + Instagram + Business Manager scopes.
- *
- * Scope string (explicit):
- * public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts,
- * instagram_basic,instagram_content_publish,instagram_manage_insights,business_management
- *
- * Always sends auth_type=rerequest + prompt=consent so Meta re-asks page permissions.
+ * GET /api/auth/meta/login?target=instagram|facebook|both&workspaceId=…
+ * Starts Meta OAuth bound to the active Team Workspace.
  */
 
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { metaEnv, missingEnvResponse } from '@/lib/config/env';
 import {
@@ -20,6 +14,12 @@ import {
   encodeMetaOAuthState,
   parseMetaOAuthTarget,
 } from '@/lib/meta/oauth';
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
+  appendWorkspaceToOAuthState,
+  setActiveWorkspaceCookies,
+} from '@/lib/social/oauth-workspace';
 
 export async function GET(request: Request) {
   if (!metaEnv.appId() || !metaEnv.appSecret()) {
@@ -28,25 +28,33 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const target = parseMetaOAuthTarget(url.searchParams.get('target'));
+  const jar = await cookies();
+  const workspaceId =
+    url.searchParams.get('workspaceId')?.trim() ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+    null;
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     const signIn = new URL('/account/signin', request.url);
-    signIn.searchParams.set(
-      'callbackUrl',
-      `/api/auth/meta/login?target=${target}`
-    );
+    const cb = new URL(`/api/auth/meta/login`, request.url);
+    cb.searchParams.set('target', target);
+    if (workspaceId) cb.searchParams.set('workspaceId', workspaceId);
+    signIn.searchParams.set('callbackUrl', `${cb.pathname}?${cb.searchParams}`);
     return NextResponse.redirect(signIn);
   }
 
   const nonce = crypto.randomUUID();
-  const state = encodeMetaOAuthState(nonce, target);
+  const state = appendWorkspaceToOAuthState(
+    encodeMetaOAuthState(nonce, target),
+    workspaceId
+  );
   const origin = url.origin;
 
   let loginUrl: string;
   try {
     loginUrl = buildMetaLoginUrl(state, origin, target);
-    // Defensive: guarantee required scopes + re-consent params are present.
     const parsed = new URL(loginUrl);
     parsed.searchParams.set('scope', META_OAUTH_SCOPES.join(','));
     parsed.searchParams.set('auth_type', 'rerequest');
@@ -61,7 +69,6 @@ export async function GET(request: Request) {
   }
 
   const res = NextResponse.redirect(loginUrl);
-  // Cookie mirrors OAuth state (nonce.target) through Meta's redirect.
   res.cookies.set(META_OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
     sameSite: 'lax',
@@ -69,5 +76,6 @@ export async function GET(request: Request) {
     path: '/',
     maxAge: 60 * 10,
   });
+  if (workspaceId) setActiveWorkspaceCookies(res, workspaceId);
   return res;
 }

@@ -290,6 +290,7 @@ export type TranslationKey =
   | 'lessonDescription'
   | 'lessonVideoUrl'
   | 'addPdf'
+  | 'addVideo'
   | 'confirmDeleteLesson'
   | 'addLesson'
   // Admin broadcast
@@ -674,6 +675,7 @@ const sv: CoreDict = {
   lessonDescription: 'Lektionsbeskrivning',
   lessonVideoUrl: 'Video-URL (valfritt)',
   addPdf: 'Lägg till PDF',
+  addVideo: 'Ladda upp video',
   confirmDeleteLesson: 'Ta bort den här lektionen?',
   addLesson: 'Lägg till',
   broadcastStudio: 'Sändningsinställningar',
@@ -1048,6 +1050,7 @@ const en: CoreDict = {
   lessonDescription: 'Lesson description',
   lessonVideoUrl: 'Video URL (optional)',
   addPdf: 'Add PDF',
+  addVideo: 'Upload video',
   confirmDeleteLesson: 'Delete this lesson?',
   addLesson: 'Add',
   broadcastStudio: 'Broadcast Settings',
@@ -1414,6 +1417,7 @@ const no: CoreDict = derive(sv, {
   lessonDescription: 'Leksjonsbeskrivelse',
   lessonVideoUrl: 'Video-URL (valgfritt)',
   addPdf: 'Legg til PDF',
+  addVideo: 'Last opp video',
   confirmDeleteLesson: 'Slette denne leksjonen?',
   addLesson: 'Legg til',
   broadcastTitle: 'Sendingstittel',
@@ -1784,6 +1788,7 @@ const da: CoreDict = derive(sv, {
   lessonDescription: 'Lektionsbeskrivelse',
   lessonVideoUrl: 'Video-URL (valgfrit)',
   addPdf: 'Tilføj PDF',
+  addVideo: 'Upload video',
   confirmDeleteLesson: 'Slet denne lektion?',
   addLesson: 'Tilføj',
   broadcastTitle: 'Udsendelsestitel',
@@ -2159,6 +2164,7 @@ const fi: CoreDict = derive(sv, {
   lessonDescription: 'Oppitunnin kuvaus',
   lessonVideoUrl: 'Video-URL (valinnainen)',
   addPdf: 'Lisää PDF',
+  addVideo: 'Lataa video',
   confirmDeleteLesson: 'Poista tämä oppitunti?',
   addLesson: 'Lisää',
   broadcastTitle: 'Lähetyksen otsikko',

@@ -1,6 +1,6 @@
 /**
  * GET /api/auth/callback/linkedin
- * LinkedIn OAuth callback → token → userinfo → social_accounts → redirect.
+ * LinkedIn OAuth callback → social_accounts bound to workspace_id → redirect.
  */
 
 import { NextResponse } from 'next/server';
@@ -12,7 +12,7 @@ import {
   fetchLinkedInProfile,
 } from '@/lib/linkedin/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
-import { ACTIVE_WORKSPACE_COOKIE } from '@/lib/social/persist';
+import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
 
 function clearState(res: NextResponse) {
   res.cookies.set(LINKEDIN_OAUTH_STATE_COOKIE, '', {
@@ -46,6 +46,12 @@ export async function GET(request: Request) {
   const expected = jar.get(LINKEDIN_OAUTH_STATE_COOKIE)?.value;
   if (!state || !expected || state !== expected) return fail('invalid_state');
 
+  const workspaceId = resolveOAuthWorkspaceId({
+    state,
+    jarGet: (name) => jar.get(name)?.value,
+  });
+  if (!workspaceId) return fail('missing_workspace_id');
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     const signIn = new URL('/account/signin', origin);
@@ -67,7 +73,7 @@ export async function GET(request: Request) {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? null,
       expiresIn: tokens.expires_in ?? null,
-      workspaceId: jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null,
+      workspaceId,
     });
 
     const dest = new URL('/admin/settings/socials', origin);

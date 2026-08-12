@@ -16,12 +16,14 @@ import {
   ChevronUp,
   FolderOpen,
   FileText,
+  Video,
 } from 'lucide-react';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
 import {
   COURSE_CATEGORIES,
+  registerManagedCourse,
   type AdminCourse,
   type AdminLesson,
 } from '@/lib/mock-classroom-admin';
@@ -31,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { FeatureGate } from '@/components/common/FeatureGate';
 import { useSubscription } from '@/components/common/useSubscription';
 import { UNLIMITED } from '@/lib/config/plans';
+import { toast } from 'sonner';
 
 type ClassroomResponse = {
   courses: AdminCourse[];
@@ -59,16 +62,21 @@ export default function ClassroomAdminSection({
   const { hasFeature, limits, requestUpgrade } = useSubscription();
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [form, setForm] = useState(EMPTY_FORM);
+  const [customCategory, setCustomCategory] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonDescription, setLessonDescription] = useState('');
   const [lessonVideo, setLessonVideo] = useState('');
   const [lessonPdf, setLessonPdf] = useState<{ url: string; name: string } | null>(null);
+  const [lessonVideoName, setLessonVideoName] = useState('');
+  const [courseVideoName, setCourseVideoName] = useState('');
   const [upload, { loading: uploading }] = useUpload();
   const coverRef = useRef<HTMLInputElement>(null);
   const coursePdfRef = useRef<HTMLInputElement>(null);
+  const courseVideoRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
+  const lessonVideoRef = useRef<HTMLInputElement>(null);
 
   const queryKey = ['admin-classroom', communityId ?? 'all'] as const;
 
@@ -102,12 +110,24 @@ export default function ClassroomAdminSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg =
+          json?.message ||
+          json?.error ||
+          (r.status === 403 ? 'Upgrade required to save courses' : 'Failed to save');
+        throw new Error(typeof msg === 'string' ? msg : 'Failed to save');
+      }
+      return json;
     },
     onSuccess: (res, variables) => {
+      const emptyPrev: ClassroomResponse = {
+        courses: [],
+        categories: [...COURSE_CATEGORIES],
+      };
+
       queryClient.setQueryData<ClassroomResponse>(queryKey, (prev) => {
-        if (!prev) return prev;
+        const base = prev ?? emptyPrev;
         const action = String(variables.action);
 
         if (action === 'create_course') {
@@ -124,29 +144,30 @@ export default function ClassroomAdminSection({
             sort_order: 0,
             lessons: [],
           };
+          registerManagedCourse(course);
           const categoriesNext = Array.from(
-            new Set([...prev.categories, course.category])
+            new Set([...(base.categories ?? []), course.category])
           );
           return {
-            ...prev,
+            ...base,
             categories: categoriesNext,
-            courses: [course, ...prev.courses],
+            courses: [course, ...(base.courses ?? []).filter((c) => c.id !== course.id)],
           };
         }
 
         if (action === 'delete_course') {
           const id = Number(variables.id);
           return {
-            ...prev,
-            courses: prev.courses.filter((c) => c.id !== id),
+            ...base,
+            courses: (base.courses ?? []).filter((c) => c.id !== id),
           };
         }
 
         if (action === 'toggle_publish' || action === 'update_course') {
           const id = Number(variables.id);
           return {
-            ...prev,
-            courses: prev.courses.map((c) =>
+            ...base,
+            courses: (base.courses ?? []).map((c) =>
               c.id === id
                 ? {
                     ...c,
@@ -183,8 +204,8 @@ export default function ClassroomAdminSection({
             is_published: true,
           };
           return {
-            ...prev,
-            courses: prev.courses.map((c) =>
+            ...base,
+            courses: (base.courses ?? []).map((c) =>
               c.id === courseId
                 ? { ...c, lessons: [...(c.lessons ?? []), lesson] }
                 : c
@@ -195,18 +216,33 @@ export default function ClassroomAdminSection({
         if (action === 'delete_lesson') {
           const lessonId = Number(variables.id);
           return {
-            ...prev,
-            courses: prev.courses.map((c) => ({
+            ...base,
+            courses: (base.courses ?? []).map((c) => ({
               ...c,
               lessons: (c.lessons ?? []).filter((l) => l.id !== lessonId),
             })),
           };
         }
 
-        return prev;
+        return base;
       });
-      queryClient.invalidateQueries({ queryKey: ['classroom'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-classroom'] });
+
+      if (String(variables.action) === 'create_course') {
+        toast.success('Course saved');
+      }
+
+      // Soft revalidate — cache already has the new course.
+      void queryClient.invalidateQueries({
+        queryKey: ['classroom'],
+        refetchType: 'none',
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['admin-classroom'],
+        refetchType: 'active',
+      });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Could not save course');
     },
   });
 
@@ -247,21 +283,52 @@ export default function ClassroomAdminSection({
     }));
   };
 
+  const handleCourseVideo = async (file: File) => {
+    if (file.type && !file.type.startsWith('video/')) {
+      return;
+    }
+    const result = await upload({ file });
+    const url = result.url || URL.createObjectURL(file);
+    setForm((f) => ({ ...f, video_url: url }));
+    setCourseVideoName(file.name);
+  };
+
+  const handleLessonVideo = async (file: File) => {
+    if (file.type && !file.type.startsWith('video/')) {
+      return;
+    }
+    const result = await upload({ file });
+    const url = result.url || URL.createObjectURL(file);
+    setLessonVideo(url);
+    setLessonVideoName(file.name);
+  };
+
   const resetLessonForm = () => {
     setLessonTitle('');
     setLessonDescription('');
     setLessonVideo('');
+    setLessonVideoName('');
     setLessonPdf(null);
+  };
+
+  const resolvedCategory = () => {
+    const custom = customCategory.trim();
+    if (custom) return custom;
+    return form.category.trim() || categories[0] || 'Marketing';
   };
 
   const submitCourse = () => {
     if (!form.title.trim()) return;
+    if (!communityId) {
+      toast.error('Select a community before saving a course');
+      return;
+    }
     mutation.mutate(
       {
         action: 'create_course',
         title: form.title.trim(),
         description: form.description.trim() || null,
-        category: form.category,
+        category: resolvedCategory(),
         community_id: communityId,
         cover_image: form.cover_image || null,
         video_url: form.video_url.trim() || null,
@@ -271,6 +338,8 @@ export default function ClassroomAdminSection({
       {
         onSuccess: () => {
           setForm(EMPTY_FORM);
+          setCustomCategory('');
+          setCourseVideoName('');
           setShowForm(false);
         },
       }
@@ -451,8 +520,15 @@ export default function ClassroomAdminSection({
                 {t('category', locale)}
               </label>
               <select
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                value={
+                  categories.includes(form.category)
+                    ? form.category
+                    : categories[0] || 'Marketing'
+                }
+                onChange={(e) => {
+                  setCustomCategory('');
+                  setForm((f) => ({ ...f, category: e.target.value }));
+                }}
                 className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-extrabold text-[#2c3340] focus:outline-none focus:border-[var(--nc-coral)]"
               >
                 {categories.map((cat) => (
@@ -467,17 +543,8 @@ export default function ClassroomAdminSection({
                 {t('orCustomCategory', locale)}
               </label>
               <Input
-                value={
-                  COURSE_CATEGORIES.includes(
-                    form.category as (typeof COURSE_CATEGORIES)[number]
-                  )
-                    ? ''
-                    : form.category
-                }
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v.trim()) setForm((f) => ({ ...f, category: v }));
-                }}
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
                 placeholder={t('customCategoryPlaceholder', locale)}
                 className="rounded-xl border-zinc-200 text-sm h-11"
               />
@@ -490,9 +557,23 @@ export default function ClassroomAdminSection({
             </p>
             <Input
               value={form.video_url}
-              onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, video_url: e.target.value }));
+                setCourseVideoName('');
+              }}
               placeholder={t('courseVideoUrl', locale)}
               className="rounded-xl border-zinc-200 text-sm h-11"
+            />
+            <input
+              ref={courseVideoRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleCourseVideo(f);
+                e.target.value = '';
+              }}
             />
             <input
               ref={coursePdfRef}
@@ -505,6 +586,52 @@ export default function ClassroomAdminSection({
                 e.target.value = '';
               }}
             />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={() => courseVideoRef.current?.click()}
+                disabled={uploading}
+                className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {uploading ? (
+                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <Video size={14} />
+                )}
+                {t('addVideo', locale)}
+              </button>
+              <button
+                type="button"
+                onClick={() => coursePdfRef.current?.click()}
+                disabled={uploading}
+                className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {uploading ? (
+                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  <FileText size={14} />
+                )}
+                {t('addPdf', locale)}
+              </button>
+            </div>
+            {form.video_url ? (
+              <div className="flex items-center gap-2 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
+                <Video size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
+                <span className="text-xs font-bold text-zinc-600 flex-1 truncate">
+                  {courseVideoName || form.video_url}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm((f) => ({ ...f, video_url: '' }));
+                    setCourseVideoName('');
+                  }}
+                  className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-zinc-400 hover:text-red-500"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : null}
             {form.pdf_url ? (
               <div className="flex items-center gap-2 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
                 <FileText size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
@@ -519,21 +646,7 @@ export default function ClassroomAdminSection({
                   <X size={14} />
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => coursePdfRef.current?.click()}
-                disabled={uploading}
-                className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
-                {uploading ? (
-                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                ) : (
-                  <FileText size={14} />
-                )}
-                {t('addPdf', locale)}
-              </button>
-            )}
+            ) : null}
           </div>
 
           <label className="flex items-center gap-2 h-11 min-h-[44px] text-xs font-extrabold text-zinc-600 cursor-pointer w-fit">
@@ -747,6 +860,17 @@ export default function ClassroomAdminSection({
                           e.target.value = '';
                         }}
                       />
+                      <input
+                        ref={lessonVideoRef}
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void handleLessonVideo(f);
+                          e.target.value = '';
+                        }}
+                      />
                       <Input
                         value={expandedId === course.id ? lessonTitle : ''}
                         onChange={(e) => setLessonTitle(e.target.value)}
@@ -761,10 +885,31 @@ export default function ClassroomAdminSection({
                       />
                       <Input
                         value={expandedId === course.id ? lessonVideo : ''}
-                        onChange={(e) => setLessonVideo(e.target.value)}
+                        onChange={(e) => {
+                          setLessonVideo(e.target.value);
+                          setLessonVideoName('');
+                        }}
                         placeholder={t('lessonVideoUrl', locale)}
                         className="rounded-xl border-zinc-200 text-sm h-11"
                       />
+                      {lessonVideo && expandedId === course.id && lessonVideoName ? (
+                        <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-zinc-100">
+                          <Video size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
+                          <span className="text-xs font-bold text-zinc-600 flex-1 truncate">
+                            {lessonVideoName}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLessonVideo('');
+                              setLessonVideoName('');
+                            }}
+                            className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-zinc-400 hover:text-red-500"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : null}
                       {lessonPdf && expandedId === course.id && (
                         <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-zinc-100">
                           <FileText size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
@@ -781,6 +926,22 @@ export default function ClassroomAdminSection({
                         </div>
                       )}
                       <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          type="button"
+                          onClick={() => lessonVideoRef.current?.click()}
+                          disabled={uploading}
+                          className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                          {uploading ? (
+                            <Loader2
+                              size={14}
+                              style={{ animation: 'spin 1s linear infinite' }}
+                            />
+                          ) : (
+                            <Video size={14} />
+                          )}
+                          {t('addVideo', locale)}
+                        </button>
                         <button
                           type="button"
                           onClick={() => pdfRef.current?.click()}

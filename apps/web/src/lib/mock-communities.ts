@@ -1,4 +1,5 @@
 import type { SearchableCommunity } from '@/components/landing/CommunitySearchAutocomplete';
+import { listPublicCatalogCommunities } from '@/lib/public-communities-store';
 
 /** Test account used for local / membership QA. */
 export const EBBA_TEST_USER = {
@@ -27,20 +28,26 @@ export function isEbbaTestUser(email?: string | null, name?: string | null): boo
   );
 }
 
-/** Mock list with Ebba's two communities marked as joined when session matches. */
+/** Mock list with catalog communities + Ebba membership marks when session matches. */
 export function getMockCommunitiesForUser(opts?: {
   email?: string | null;
   name?: string | null;
   forceJoined?: boolean;
 }): SearchableCommunity[] {
   const markJoined = opts?.forceJoined || isEbbaTestUser(opts?.email, opts?.name);
-  return MOCK_COMMUNITIES.map((c) => ({
+  const catalog = listPublicCatalogCommunities(opts);
+  const byId = new Map<number, SearchableCommunity>();
+  for (const c of [...MOCK_COMMUNITIES, ...catalog]) {
+    byId.set(c.id, { ...c });
+  }
+  return [...byId.values()].map((c) => ({
     ...c,
     is_joined:
       markJoined &&
-      EBBA_MEMBER_COMMUNITY_SLUGS.includes(
+      (EBBA_MEMBER_COMMUNITY_SLUGS.includes(
         c.slug as (typeof EBBA_MEMBER_COMMUNITY_SLUGS)[number]
-      )
+      ) ||
+        Boolean(c.is_joined))
         ? true
         : Boolean(c.is_joined),
   }));

@@ -465,6 +465,7 @@ export default function AdminSidebar() {
         onOpenChange={setCreateOpen}
         createUrl="/api/admin/workspaces"
         onCreated={(ws) => {
+          // createWorkspace already persists + activates; refresh keeps lists in sync.
           refreshWorkspaces();
           setActiveWorkspaceId(ws.id);
         }}

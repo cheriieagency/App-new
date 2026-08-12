@@ -61,6 +61,13 @@ export function getMetaSyncSnapshot(userId: string): MetaSyncSnapshot | null {
   return snapshots.get(userId) ?? null;
 }
 
+export function setMetaSyncSnapshot(
+  userId: string,
+  snapshot: MetaSyncSnapshot
+): void {
+  snapshots.set(userId, snapshot);
+}
+
 function relativeTime(iso?: string): string {
   if (!iso) return '';
   const ms = Date.now() - new Date(iso).getTime();

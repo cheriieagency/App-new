@@ -1,25 +1,34 @@
 /**
- * GET /api/analytics
- * Aggregates connected social_accounts + Meta sync insights for the Analytics UI.
- * Never 500s on empty accounts — returns a structured onboarding fallback instead.
+ * GET /api/analytics?workspaceId=…
+ * Aggregates ALL social_accounts for the active workspace + Meta Graph insights/media
+ * when Instagram is connected. Never 500s on empty accounts.
  */
 
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import { listLiveSocialAccountsForUser } from '@/lib/social/persist';
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
+  listLiveSocialAccountsForUser,
+} from '@/lib/social/persist';
 import {
   getMetaSyncSnapshot,
   syncMetaDataForUser,
 } from '@/lib/meta/sync';
 
-function onboardingFallback(reason: string) {
+const PLATFORMS = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'] as const;
+
+type PlatformKey = (typeof PLATFORMS)[number];
+
+function onboardingFallback(reason: string, workspaceId: string | null = null) {
   return {
     ok: true,
     source: 'onboarding_fallback',
     connected: false,
     reason,
+    workspace_id: workspaceId,
     message:
-      'No connected social accounts found. Connect Instagram, Facebook, YouTube, or LinkedIn under Settings → Socials to load live analytics.',
+      'No connected social accounts found for this workspace. Connect Instagram, Facebook, YouTube, or LinkedIn under Settings → Socials.',
     cta: {
       label: 'Connect social accounts',
       href: '/admin/settings/socials',
@@ -30,16 +39,73 @@ function onboardingFallback(reason: string) {
       likes: 0,
       comments: 0,
       followers: 0,
+      profile_views: 0,
+      engagement_rate: 0,
+      accounts: 0,
+    },
+    totals: {
+      followers: 0,
+      accounts: 0,
+      reach: 0,
+      impressions: 0,
+      likes: 0,
+      comments: 0,
       engagement_rate: 0,
     },
+    by_platform: Object.fromEntries(
+      PLATFORMS.map((p) => [
+        p,
+        { connected: false, followers: 0, handle: null, display_name: null, avatar_url: null },
+      ])
+    ),
     accounts: [],
     media: [],
+    hashtags: [],
     insights: null,
     instagram: null,
   };
 }
 
-export async function GET() {
+/** Pull #tags from captions and rank by usage + engagement proxy. */
+function extractHashtags(
+  media: Array<{
+    caption?: string | null;
+    like_count?: number | null;
+    comments_count?: number | null;
+  }>
+) {
+  const map = new Map<
+    string,
+    { tag: string; posts: number; likes: number; comments: number }
+  >();
+  for (const item of media) {
+    const caption = item.caption || '';
+    const matches = caption.match(/#[\p{L}\p{N}_]+/gu) || [];
+    const unique = [...new Set(matches.map((m) => m.toLowerCase()))];
+    for (const raw of unique) {
+      const tag = raw.startsWith('#') ? raw : `#${raw}`;
+      const prev = map.get(tag) || { tag, posts: 0, likes: 0, comments: 0 };
+      prev.posts += 1;
+      prev.likes += item.like_count ?? 0;
+      prev.comments += item.comments_count ?? 0;
+      map.set(tag, prev);
+    }
+  }
+  return [...map.values()]
+    .map((h) => {
+      const reach = Math.max(h.likes + h.comments, h.likes * 8, h.posts);
+      const er =
+        reach > 0
+          ? Math.round(((h.likes + h.comments) / reach) * 1000) / 10
+          : 0;
+      return { tag: h.tag, posts: h.posts, reach, er, trend: 0 };
+    })
+    .sort((a, b) => b.posts - a.posts || b.reach - a.reach)
+    .slice(0, 40);
+}
+
+export async function GET(request: Request) {
+  let workspaceId: string | null = null;
   try {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) {
@@ -49,16 +115,29 @@ export async function GET() {
       );
     }
 
+    const url = new URL(request.url);
+    const jar = await cookies();
+    workspaceId =
+      url.searchParams.get('workspaceId')?.trim() ||
+      request.headers.get('x-workspace-id')?.trim() ||
+      request.headers.get('x-active-workspace-id')?.trim() ||
+      jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+      jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+      null;
+
+    // Strict workspace scope — never mix another brand's API connections.
     const accounts = await listLiveSocialAccountsForUser({
       userId: session.user.id,
+      workspaceId,
     });
     const connected = accounts.filter((a) => a.connected);
 
     if (connected.length === 0) {
       console.warn(
-        '[Analytics API] No social accounts found for user. Returning onboarding fallback data.'
+        '[Analytics API] No social accounts for workspace. Returning onboarding fallback.',
+        { workspaceId, userId: session.user.id }
       );
-      return Response.json(onboardingFallback('no_social_accounts'));
+      return Response.json(onboardingFallback('no_social_accounts', workspaceId));
     }
 
     let snapshot = getMetaSyncSnapshot(session.user.id);
@@ -75,11 +154,10 @@ export async function GET() {
       }
     }
 
-    if (!snapshot && hasIg) {
-      console.warn(
-        '[Analytics API] No social accounts metrics available after sync. Returning onboarding fallback data.'
-      );
-    }
+    const followersFromAccounts = connected.reduce(
+      (sum, a) => sum + (Number(a.follower_count) || 0),
+      0
+    );
 
     const insights = snapshot?.insights ?? {
       reach: 0,
@@ -91,13 +169,85 @@ export async function GET() {
       profile_views: 0,
     };
 
+    // Prefer summed workspace followers across all APIs; fall back to IG insights.
+    const totalFollowers =
+      followersFromAccounts > 0
+        ? followersFromAccounts
+        : insights.followers || 0;
+
     const engagementTotal = (insights.likes || 0) + (insights.comments || 0);
     const reach = insights.reach || 0;
+    const engagementRate =
+      reach > 0
+        ? Math.round((engagementTotal / reach) * 1000) / 10
+        : 0;
+
+    const by_platform: Record<
+      PlatformKey,
+      {
+        connected: boolean;
+        followers: number;
+        handle: string | null;
+        display_name: string | null;
+        avatar_url: string | null;
+      }
+    > = Object.fromEntries(
+      PLATFORMS.map((p) => {
+        const row = connected.find((a) => a.platform === p);
+        return [
+          p,
+          {
+            connected: Boolean(row),
+            followers: Number(row?.follower_count) || 0,
+            handle: row?.handle ?? null,
+            display_name: row?.display_name ?? null,
+            avatar_url: row?.avatar_url ?? null,
+          },
+        ];
+      })
+    ) as Record<
+      PlatformKey,
+      {
+        connected: boolean;
+        followers: number;
+        handle: string | null;
+        display_name: string | null;
+        avatar_url: string | null;
+      }
+    >;
+
+    // Prefer live IG snapshot followers when available.
+    if (snapshot?.instagram?.followers_count != null && by_platform.instagram.connected) {
+      by_platform.instagram.followers = snapshot.instagram.followers_count;
+      by_platform.instagram.handle =
+        snapshot.instagram.username
+          ? `@${snapshot.instagram.username.replace(/^@/, '')}`
+          : by_platform.instagram.handle;
+      by_platform.instagram.display_name =
+        snapshot.instagram.name || by_platform.instagram.display_name;
+      by_platform.instagram.avatar_url =
+        snapshot.instagram.profile_picture_url || by_platform.instagram.avatar_url;
+    }
+
+    const media = snapshot?.media ?? [];
+    const hashtags = extractHashtags(media);
+
+    const metrics = {
+      reach,
+      impressions: insights.impressions || 0,
+      likes: insights.likes || 0,
+      comments: insights.comments || 0,
+      followers: totalFollowers,
+      profile_views: insights.profile_views || 0,
+      engagement_rate: engagementRate,
+      accounts: connected.length,
+    };
 
     return Response.json({
       ok: true,
-      source: snapshot ? 'meta_sync' : 'social_accounts',
+      source: snapshot ? 'workspace_meta_sync' : 'workspace_social_accounts',
       connected: true,
+      workspace_id: workspaceId,
       accounts: connected.map((a) => ({
         platform: a.platform,
         handle: a.handle,
@@ -106,24 +256,28 @@ export async function GET() {
         follower_count: a.follower_count,
         connected: true,
       })),
-      metrics: {
-        reach,
-        impressions: insights.impressions || 0,
-        likes: insights.likes || 0,
-        comments: insights.comments || 0,
-        followers: insights.followers || 0,
-        engagement_rate:
-          reach > 0
-            ? Math.round((engagementTotal / reach) * 1000) / 10
-            : 0,
+      by_platform,
+      metrics,
+      totals: {
+        followers: totalFollowers,
+        accounts: connected.length,
+        reach: metrics.reach,
+        impressions: metrics.impressions,
+        likes: metrics.likes,
+        comments: metrics.comments,
+        engagement_rate: metrics.engagement_rate,
       },
       insights,
       instagram: snapshot?.instagram ?? null,
-      media: snapshot?.media ?? [],
+      media,
+      hashtags,
       synced_at: snapshot?.synced_at ?? null,
+      planner_imported: snapshot?.planner_imported ?? 0,
       message: snapshot
         ? null
-        : 'Accounts connected. Open Instagram sync or reconnect to pull Graph insights.',
+        : hasIg
+          ? 'Accounts connected. Instagram Graph insights pending — reconnect or open Social settings to sync.'
+          : 'Accounts connected. Instagram unlocks Posts, Reels, Stories & Hashtags insights; follower totals include all connected APIs.',
       cta: snapshot
         ? null
         : {
@@ -133,9 +287,9 @@ export async function GET() {
     });
   } catch (error) {
     console.warn(
-      '[Analytics API] No social accounts found for user. Returning onboarding fallback data.',
+      '[Analytics API] Error — returning onboarding fallback.',
       error
     );
-    return Response.json(onboardingFallback('analytics_error'));
+    return Response.json(onboardingFallback('analytics_error', workspaceId));
   }
 }

@@ -23,7 +23,10 @@ import {
   type MetaOAuthTarget,
 } from '@/lib/meta/oauth';
 import { upsertMetaSocialAccounts } from '@/lib/meta/social-accounts';
-import { ACTIVE_WORKSPACE_COOKIE } from '@/lib/social/persist';
+import {
+  baseOAuthState,
+  resolveOAuthWorkspaceId,
+} from '@/lib/social/oauth-workspace';
 
 function clearOAuthState(res: NextResponse) {
   res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
@@ -77,12 +80,30 @@ export async function GET(request: Request) {
 
   const jar = await cookies();
   const expectedState = jar.get(META_OAUTH_STATE_COOKIE)?.value;
-  if (!state || !expectedState || state !== expectedState) {
+  // Cookie may store full state (with ~ws~) while provider echoes the same value.
+  if (
+    !state ||
+    !expectedState ||
+    (state !== expectedState &&
+      baseOAuthState(state) !== baseOAuthState(expectedState))
+  ) {
     return failRedirect(origin, 'meta_fetch_failed', 'invalid_state');
   }
 
-  const decoded = decodeMetaOAuthState(state);
+  const decoded = decodeMetaOAuthState(baseOAuthState(state));
   const target: MetaOAuthTarget = decoded?.target ?? 'both';
+  const workspaceId = resolveOAuthWorkspaceId({
+    state,
+    jarGet: (name) => jar.get(name)?.value,
+  });
+
+  if (!workspaceId) {
+    return failRedirect(
+      origin,
+      'meta_fetch_failed',
+      'missing_workspace_id'
+    );
+  }
 
   let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
   try {
@@ -154,7 +175,7 @@ export async function GET(request: Request) {
         userAccessToken: longLived.access_token,
         expiresIn: longLived.expires_in,
         target,
-        workspaceId: jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null,
+        workspaceId,
         instagram: resolved.instagram,
         instagramPage: resolved.instagramPage,
       });

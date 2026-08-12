@@ -6,13 +6,21 @@ import {
   applyPostPinOverride,
 } from '@/lib/demo-pin-state';
 import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner';
-import { createWorkspaceProfile } from '@/lib/mock-workspace-profiles';
+import {
+  createWorkspaceProfile,
+  updateWorkspaceCommunity,
+} from '@/lib/mock-workspace-profiles';
+import {
+  managedToSearchable,
+  publishCommunityToPublicCatalog,
+} from '@/lib/public-communities-store';
 
 function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
 let managedCommunitySeq = 200;
+const NC_MANAGED_COMMUNITIES_KEY = 'nc_managed_communities_v1';
 
 export type CommunityAdminMember = {
   id: string;
@@ -68,9 +76,42 @@ export type ManagedCommunity = {
   avatar_url: string | null;
   /** Connected social channels for this team workspace. */
   channels: SocialPlatform[];
+  /** Active brand workspace this community belongs to. */
+  workspace_id?: string | null;
+  is_free?: boolean;
+  monthly_price_sek?: number;
+  cover_url?: string | null;
 };
 
 export const MOCK_MANAGED_COMMUNITIES: ManagedCommunity[] = [];
+
+function hydrateManagedCommunities() {
+  if (typeof window === 'undefined') return;
+  if (MOCK_MANAGED_COMMUNITIES.length > 0) return;
+  try {
+    const raw = localStorage.getItem(NC_MANAGED_COMMUNITIES_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as ManagedCommunity[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return;
+    MOCK_MANAGED_COMMUNITIES.splice(0, MOCK_MANAGED_COMMUNITIES.length, ...parsed);
+    const maxId = parsed.reduce((n, c) => Math.max(n, Number(c.id) || 0), 0);
+    if (maxId >= managedCommunitySeq) managedCommunitySeq = maxId + 1;
+  } catch {
+    /* ignore */
+  }
+}
+
+function persistManagedCommunities() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      NC_MANAGED_COMMUNITIES_KEY,
+      JSON.stringify(MOCK_MANAGED_COMMUNITIES)
+    );
+  } catch {
+    /* ignore quota */
+  }
+}
 
 /** Map a managed community to the planner workspace shape for the shared selector. */
 export function managedCommunityAsWorkspace(c: ManagedCommunity): BrandWorkspace {
@@ -86,6 +127,7 @@ export function managedCommunityAsWorkspace(c: ManagedCommunity): BrandWorkspace
 }
 
 export function listManagedCommunities(): ManagedCommunity[] {
+  hydrateManagedCommunities();
   return MOCK_MANAGED_COMMUNITIES.map((c) => ({
     ...c,
     channels: [...c.channels],
@@ -97,8 +139,14 @@ export function createManagedCommunity(input: {
   handle?: string;
   channels?: SocialPlatform[];
   cover_color?: string;
+  description?: string;
+  /** Bind to an existing brand workspace instead of creating a new one. */
+  workspaceId?: string | null;
+  /** Skip creating/updating any workspace profile (API provisional create). */
+  skipWorkspaceProfile?: boolean;
 }): ManagedCommunity {
-  const name = input.name.trim() || 'Ny Team-yta';
+  hydrateManagedCommunities();
+  const name = input.name.trim() || 'New community';
   const slug = name
     .toLowerCase()
     .replace(/[^a-z0-9åäö\s-]/gi, '')
@@ -106,14 +154,14 @@ export function createManagedCommunity(input: {
     .replace(/\s+/g, '-');
   let handle = (input.handle ?? '').trim() || `@${slug.replace(/-/g, '')}`;
   if (!handle.startsWith('@')) handle = `@${handle.replace(/^@/, '')}`;
-  const colors = ['#0f766e', '#0369a1', '#E11D48', '#4F46E5', '#EA580C'];
+  const colors = ['#0f766e', '#0369a1', '#E11D48', '#4F46E5', '#EA580C', '#2B2568'];
   const id = ++managedCommunitySeq;
   const community: ManagedCommunity = {
     id,
     name,
-    slug: slug || `workspace-${id}`,
-    description: 'Ny team-yta / varumärke.',
-    category: 'Övrigt',
+    slug: slug || `community-${id}`,
+    description: input.description?.trim() || 'Your creator community.',
+    category: 'Other',
     cover_color: input.cover_color || colors[id % colors.length],
     member_count: 1,
     is_published: true,
@@ -123,17 +171,55 @@ export function createManagedCommunity(input: {
       input.channels && input.channels.length > 0
         ? input.channels
         : ['instagram', 'tiktok', 'linkedin'],
+    workspace_id: input.workspaceId ?? null,
+    is_free: true,
+    monthly_price_sek: 0,
+    cover_url: null,
   };
   MOCK_MANAGED_COMMUNITIES.push(community);
-  // Keep global Admin workspace profiles in sync with new team-ytor.
-  createWorkspaceProfile({
-    id: String(community.id),
-    name: community.name,
-    handle: community.handle,
-    channels: community.channels,
-    color: community.cover_color,
-  });
+  persistManagedCommunities();
+  // Make the community discoverable for site users (search / join / about page).
+  publishCommunityToPublicCatalog(
+    managedToSearchable(community, { creatorName: community.name, isJoined: true })
+  );
+
+  if (!input.skipWorkspaceProfile) {
+    if (input.workspaceId) {
+      // Attach to the active brand workspace (Community tab empty-state create).
+      updateWorkspaceCommunity(input.workspaceId, {
+        community_id: community.id,
+        community_name: community.name,
+        total_members: 1,
+        posts: 0,
+        comments: 0,
+        active_moderators: 0,
+        recent_members: [],
+      });
+    } else {
+      // Keep global Admin workspace profiles in sync with new team-ytor.
+      createWorkspaceProfile({
+        id: String(community.id),
+        name: community.name,
+        handle: community.handle,
+        channels: community.channels,
+        color: community.cover_color,
+      });
+    }
+  }
   return { ...community, channels: [...community.channels] };
+}
+
+/** Upsert a managed community into the local demo registry (client persistence). */
+export function registerManagedCommunity(community: ManagedCommunity): void {
+  hydrateManagedCommunities();
+  const idx = MOCK_MANAGED_COMMUNITIES.findIndex((c) => c.id === community.id);
+  if (idx >= 0) MOCK_MANAGED_COMMUNITIES[idx] = { ...community, channels: [...community.channels] };
+  else MOCK_MANAGED_COMMUNITIES.push({ ...community, channels: [...community.channels] });
+  if (community.id >= managedCommunitySeq) managedCommunitySeq = community.id + 1;
+  persistManagedCommunities();
+  publishCommunityToPublicCatalog(
+    managedToSearchable(community, { creatorName: community.name, isJoined: true })
+  );
 }
 
 const MOCK_MEMBERS_101: CommunityAdminMember[] = [];
@@ -178,6 +264,7 @@ function sortPostsPinnedFirst(posts: CommunityAdminPost[]) {
 }
 
 export function getMockCommunityAdminPayload(communityId?: number) {
+  hydrateManagedCommunities();
   const communities = MOCK_MANAGED_COMMUNITIES;
   const selected =
     communities.find((c) => c.id === communityId) ?? communities[0] ?? null;
