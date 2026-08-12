@@ -42,6 +42,9 @@ export function buildMetaLoginUrl(state: string, requestOrigin?: string | null):
   url.searchParams.set('state', state);
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', META_OAUTH_SCOPES.join(','));
+  // Always re-prompt permissions + page selection (even if previously granted).
+  url.searchParams.set('auth_type', 'rerequest');
+  url.searchParams.set('prompt', 'consent');
   return url.toString();
 }
 

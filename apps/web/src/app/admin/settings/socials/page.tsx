@@ -17,8 +17,17 @@ function MetaConnectToast() {
   useEffect(() => {
     const success = searchParams.get('success');
     const error = searchParams.get('error');
+    const warning = searchParams.get('warning');
+
     if (success === 'meta_connected') {
       toast.success('Instagram & Facebook connected');
+      if (warning === 'no_instagram') {
+        toast.message('No Instagram Business account was linked to the selected Pages.');
+      }
+    } else if (error === 'no_pages') {
+      toast.message(
+        'Meta login succeeded, but no Facebook Pages were returned. Grant Page access and try again.'
+      );
     } else if (error) {
       toast.error(`Meta connection failed: ${error.replace(/_/g, ' ')}`);
     }
@@ -77,26 +86,6 @@ export default function AdminSocialSettingsPage() {
         <Suspense fallback={null}>
           <MetaConnectToast />
         </Suspense>
-
-        <div className="rounded-2xl border border-[#1877F2]/20 bg-white px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          <div>
-            <p className="text-sm font-extrabold text-slate-900">
-              Connect Instagram & Facebook
-            </p>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Authorize Meta to publish and read insights for your Pages & IG Business accounts.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              window.location.href = '/api/auth/meta/login';
-            }}
-            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-bold"
-          >
-            Connect Instagram & Facebook
-          </button>
-        </div>
 
         <SocialAccountsPanel />
       </main>

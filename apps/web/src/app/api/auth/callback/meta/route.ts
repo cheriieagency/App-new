@@ -9,9 +9,20 @@ import {
 } from '@/lib/meta/oauth';
 import { upsertMetaSocialAccounts } from '@/lib/meta/social-accounts';
 
+function clearOAuthState(res: NextResponse) {
+  res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 0,
+  });
+}
+
 /**
  * GET /api/auth/callback/meta
  * OAuth callback — code → long-lived token → pages/IG → social_accounts → redirect.
+ * Empty page/IG lists redirect softly (no throw, session kept).
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -23,7 +34,9 @@ export async function GET(request: Request) {
   const failRedirect = (reason: string) => {
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('error', reason);
-    return NextResponse.redirect(dest);
+    const res = NextResponse.redirect(dest);
+    clearOAuthState(res);
+    return res;
   };
 
   if (oauthError) {
@@ -51,6 +64,16 @@ export async function GET(request: Request) {
     const longLived = await exchangeForLongLivedToken(shortLived.access_token);
     const pages = await fetchMetaPagesWithInstagram(longLived.access_token);
 
+    // Soft path: OAuth succeeded but user selected no Pages / has no IG Business.
+    if (!pages.length) {
+      const dest = new URL('/admin/settings/socials', origin);
+      dest.searchParams.set('error', 'no_pages');
+      const res = NextResponse.redirect(dest);
+      clearOAuthState(res);
+      return res;
+    }
+
+    const hasIg = pages.some((p) => Boolean(p.instagram_business_account?.id));
     await upsertMetaSocialAccounts({
       userId: session.user.id,
       pages,
@@ -59,14 +82,11 @@ export async function GET(request: Request) {
 
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', 'meta_connected');
+    if (!hasIg) {
+      dest.searchParams.set('warning', 'no_instagram');
+    }
     const res = NextResponse.redirect(dest);
-    res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      maxAge: 0,
-    });
+    clearOAuthState(res);
     return res;
   } catch (error) {
     console.error('[meta/callback]', error);

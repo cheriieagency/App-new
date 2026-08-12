@@ -4,7 +4,7 @@ import './global.css';
 import { Providers } from './providers';
 import { SITE_URL } from '@/lib/site';
 
-const defaultTitle = 'clikd: — Build, Sell & Scale Community, Bio & Socials';
+const defaultTitle = 'clikd: — Creator OS';
 const defaultDescription =
   'All-in-one creator platform for the Nordics. Community, Link-in-Bio, courses, social planner, and instant payments — where creators and fans click.';
 
@@ -33,7 +33,13 @@ export const metadata: Metadata = {
     description: defaultDescription,
   },
   icons: {
-    icon: '/favicon.png',
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/favicon.png', type: 'image/png', sizes: '1024x1024' },
+      { url: '/icon.png', type: 'image/png', sizes: '1024x1024' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/favicon.ico',
   },
 };
 
