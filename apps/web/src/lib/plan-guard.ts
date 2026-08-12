@@ -2,7 +2,10 @@
  * Server-side plan entitlement helpers for API routes.
  */
 
+import { headers } from 'next/headers';
+import { auth } from '@/lib/auth';
 import { getWorkspacePlan } from '@/lib/mock-content-planner';
+import { isProUnlockedEmail } from '@/lib/test-accounts';
 import {
   checkLimit,
   hasFeature,
@@ -21,6 +24,21 @@ export type UpgradeRequiredBody = {
   message?: string;
 };
 
+/** Resolve plan for the current request session (Pro-unlock emails always get pro). */
+export async function resolveWorkspacePlan(
+  requestHeaders?: Headers
+): Promise<WorkspacePlan> {
+  try {
+    const h = requestHeaders ?? (await headers());
+    const session = await auth.api.getSession({ headers: h });
+    if (isProUnlockedEmail(session?.user?.email)) return 'pro';
+  } catch {
+    /* fall through */
+  }
+  return getWorkspacePlan();
+}
+
+/** @deprecated Prefer resolveWorkspacePlan — sync path cannot see Pro-unlock emails. */
 export function currentWorkspacePlan(): WorkspacePlan {
   return getWorkspacePlan();
 }
@@ -38,18 +56,22 @@ export function upgradeRequiredResponse(
 }
 
 /** Returns a 403 Response when the active plan lacks the feature; otherwise null. */
-export function requireFeature(feature: PlanFeatureKey): Response | null {
-  const plan = currentWorkspacePlan();
+export async function requireFeature(
+  feature: PlanFeatureKey,
+  requestHeaders?: Headers
+): Promise<Response | null> {
+  const plan = await resolveWorkspacePlan(requestHeaders);
   if (hasFeature(plan, feature)) return null;
   return upgradeRequiredResponse(minPlanForFeature(feature), { feature });
 }
 
 /** Returns a 403 Response when usage is at/over the limit; otherwise null. */
-export function requireLimit(
+export async function requireLimit(
   limitKey: PlanLimitKey,
-  currentUsage: number
-): Response | null {
-  const plan = currentWorkspacePlan();
+  currentUsage: number,
+  requestHeaders?: Headers
+): Promise<Response | null> {
+  const plan = await resolveWorkspacePlan(requestHeaders);
   const result = checkLimit(plan, limitKey, currentUsage);
   if (result.allowed) return null;
   const minPlan: WorkspacePlan =
@@ -60,8 +82,11 @@ export function requireLimit(
   });
 }
 
-export function requirePlanAtLeast(minPlan: WorkspacePlan): Response | null {
-  const plan = currentWorkspacePlan();
+export async function requirePlanAtLeast(
+  minPlan: WorkspacePlan,
+  requestHeaders?: Headers
+): Promise<Response | null> {
+  const plan = await resolveWorkspacePlan(requestHeaders);
   if (isPlanAtLeast(plan, minPlan)) return null;
   return upgradeRequiredResponse(minPlan);
 }

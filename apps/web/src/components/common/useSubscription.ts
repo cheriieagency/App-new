@@ -39,6 +39,7 @@ export function useSubscription(): UseSubscriptionResult {
   const [upgradeTarget, setUpgradeTarget] = useState<WorkspacePlan>('creator');
 
   const plan = normalizeWorkspacePlan(data?.plan);
+  const proUnlocked = Boolean(data?.pro_unlocked) || plan === 'pro';
   const limits = useMemo(() => getPlanLimits(plan), [plan]);
 
   const hasFeatureFn = useCallback(
@@ -57,10 +58,15 @@ export function useSubscription(): UseSubscriptionResult {
     [plan]
   );
 
-  const requestUpgrade = useCallback((minPlan: WorkspacePlan = 'creator') => {
-    setUpgradeTarget(minPlan);
-    setUpgradeOpen(true);
-  }, []);
+  const requestUpgrade = useCallback(
+    (minPlan: WorkspacePlan = 'creator') => {
+      // VIP / already-Pro accounts never see a payment wall.
+      if (proUnlocked || isPlanAtLeast(plan, minPlan)) return;
+      setUpgradeTarget(minPlan);
+      setUpgradeOpen(true);
+    },
+    [plan, proUnlocked]
+  );
 
   return {
     plan,

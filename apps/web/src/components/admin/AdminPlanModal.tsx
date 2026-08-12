@@ -79,7 +79,7 @@ function planLabel(plan: WorkspacePlan) {
 }
 
 export function useAdminPlan() {
-  return useQuery<{ plan: WorkspacePlan }>({
+  return useQuery<{ plan: WorkspacePlan; pro_unlocked?: boolean }>({
     queryKey: ['admin-workspace-plan'],
     queryFn: async () => {
       const r = await fetch('/api/planner/team');
@@ -102,6 +102,7 @@ export default function AdminPlanModal({
   const queryClient = useQueryClient();
   const { data, isLoading } = useAdminPlan();
   const current = data?.plan ?? 'creator';
+  const proUnlocked = Boolean(data?.pro_unlocked) || current === 'pro';
 
   const changePlan = useMutation({
     mutationFn: async (plan: WorkspacePlan) => {
@@ -111,10 +112,13 @@ export default function AdminPlanModal({
         body: JSON.stringify({ action: 'set_plan', plan }),
       });
       if (!r.ok) throw new Error('Failed');
-      return r.json() as Promise<{ plan: WorkspacePlan }>;
+      return r.json() as Promise<{ plan: WorkspacePlan; pro_unlocked?: boolean }>;
     },
     onSuccess: (res) => {
-      queryClient.setQueryData(['admin-workspace-plan'], { plan: res.plan });
+      queryClient.setQueryData(['admin-workspace-plan'], {
+        plan: res.plan,
+        pro_unlocked: res.pro_unlocked,
+      });
       queryClient.invalidateQueries({ queryKey: ['planner-team'] });
       toast.success(`Switched to ${planLabel(res.plan)}`);
       onOpenChange(false);
@@ -135,7 +139,9 @@ export default function AdminPlanModal({
           <DialogDescription className="text-xs text-slate-500 font-medium">
             {isLoading
               ? t('common.loading')
-              : `Current: ${planLabel(current)}. Choose a plan to upgrade or change.`}
+              : proUnlocked && data?.pro_unlocked
+                ? 'Pro Plan unlocked on this account — no payment wall.'
+                : `Current: ${planLabel(current)}. Choose a plan to upgrade or change.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -189,11 +195,17 @@ export default function AdminPlanModal({
                 </ul>
                 <button
                   type="button"
-                  disabled={active || changePlan.isPending}
+                  disabled={
+                    active ||
+                    changePlan.isPending ||
+                    Boolean(data?.pro_unlocked && plan.id !== 'pro')
+                  }
                   onClick={() => changePlan.mutate(plan.id)}
                   className={`h-10 min-h-[40px] w-full rounded-xl text-xs font-extrabold inline-flex items-center justify-center gap-1.5 transition-all ${
                     active
                       ? 'bg-slate-100 text-slate-400 cursor-default'
+                      : data?.pro_unlocked && plan.id !== 'pro'
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                       : plan.highlight
                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20 hover:opacity-95'
                         : 'bg-slate-900 text-white hover:opacity-90'
@@ -202,7 +214,9 @@ export default function AdminPlanModal({
                   {pending ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : active ? (
-                    'Current plan'
+                    data?.pro_unlocked ? 'Pro unlocked' : 'Current plan'
+                  ) : data?.pro_unlocked && plan.id !== 'pro' ? (
+                    'Included in Pro'
                   ) : current === 'pro' && plan.id !== 'pro' ? (
                     `Switch to ${plan.name}`
                   ) : plan.id === 'starter' ? (

@@ -2,9 +2,9 @@
  * Platform access role — separates community members from creator/admin studio.
  * Persisted in the `clikd_platform_role` cookie after login (login portal tab).
  *
- * Dual-access accounts (e.g. ebbabrobeck@test.se) may use both member and creator
- * routes with the same credentials. Dual flag is encoded in the role cookie as
- * `member+dual` / `creator+dual` so middleware never depends on a second cookie.
+ * Dual-access accounts may use both member and creator routes with the same
+ * credentials. Dual flag is encoded in the role cookie as `member+dual` /
+ * `creator+dual` so middleware never depends on a second cookie.
  */
 
 export type PlatformRole = 'member' | 'creator' | 'admin';
@@ -14,17 +14,7 @@ export const PLATFORM_ROLE_COOKIE = 'clikd_platform_role';
 /** Legacy dual flag cookie name (cleared on write; dual lives in the role cookie). */
 export const LEGACY_DUAL_COOKIE = 'clikd_dual_access';
 
-/**
- * Emails that can sign in as Community member AND Creator/Admin
- * with the same credentials (tab only picks the landing home).
- */
-export const DUAL_ACCESS_EMAILS = ['ebbabrobeck@test.se'] as const;
-
-export function isDualAccessEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  const normalized = email.trim().toLowerCase();
-  return (DUAL_ACCESS_EMAILS as readonly string[]).includes(normalized);
-}
+export { isDualAccessEmail, DUAL_ACCESS_EMAILS } from '@/lib/test-accounts';
 
 export function isCreatorRole(role: string | null | undefined): boolean {
   return role === 'creator' || role === 'admin';

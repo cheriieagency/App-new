@@ -22,7 +22,7 @@ const ACTION_CONFIGS: Record<string, { system: string; userPrefix: string }> = {
 
 export async function POST(request: Request) {
   try {
-    const gate = requireFeature('aiCopilotSuite');
+    const gate = await requireFeature('aiCopilotSuite', request.headers);
     if (gate) return gate;
 
     const { action, topic } = await request.json();

@@ -1,7 +1,7 @@
 /** Local upload handler — returns a data URL so photos work without cloud storage. */
 
 import {
-  currentWorkspacePlan,
+  resolveWorkspacePlan,
   hasFeature,
   minPlanForFeature,
   upgradeRequiredResponse,
@@ -23,7 +23,8 @@ export async function POST(request: Request) {
         file.type.startsWith('video/') ||
         form.get('purpose') === 'video' ||
         form.get('kind') === 'video';
-      if (isVideo && !hasFeature(currentWorkspacePlan(), 'coursesAndVideoHosting')) {
+      const plan = await resolveWorkspacePlan(request.headers);
+      if (isVideo && !hasFeature(plan, 'coursesAndVideoHosting')) {
         return upgradeRequiredResponse(minPlanForFeature('coursesAndVideoHosting'), {
           feature: 'coursesAndVideoHosting',
           message: 'Video hosting requires Creator plan',

@@ -116,7 +116,7 @@ export async function POST(request: Request) {
   const session = authResult.session!;
 
   // Full broadcasts require Creator+.
-  const broadcastGate = requireFeature('emailBroadcasts');
+  const broadcastGate = await requireFeature('emailBroadcasts', request.headers);
   if (broadcastGate) return broadcastGate;
 
   if (!resendEnv.apiKey()) {

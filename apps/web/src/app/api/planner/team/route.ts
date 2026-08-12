@@ -13,13 +13,15 @@ import { getPlanLimits } from '@/lib/config/plans';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const project = searchParams.get('project') || undefined;
-  const plan = getWorkspacePlan();
+  const { resolveWorkspacePlan } = await import('@/lib/plan-guard');
+  const plan = await resolveWorkspacePlan(request.headers);
   return Response.json({
     members: listTeamMembers(project),
     all_members: listTeamMembers(),
     plan,
     limits: getPlanLimits(plan),
     demo: true,
+    pro_unlocked: plan === 'pro',
   });
 }
 
@@ -29,6 +31,17 @@ export async function POST(request: Request) {
     const action = String(body.action ?? 'add');
 
     if (action === 'set_plan') {
+      const { isProUnlockedEmail } = await import('@/lib/test-accounts');
+      const { auth } = await import('@/lib/auth');
+      const session = await auth.api.getSession({ headers: request.headers });
+      // VIP / QA accounts stay on Pro — ignore downgrade attempts.
+      if (isProUnlockedEmail(session?.user?.email)) {
+        return Response.json({
+          plan: 'pro' as WorkspacePlan,
+          members: listTeamMembers(),
+          pro_unlocked: true,
+        });
+      }
       const plan = body.plan as WorkspacePlan;
       if (!['starter', 'creator', 'pro'].includes(plan)) {
         return Response.json({ error: 'Invalid plan' }, { status: 400 });

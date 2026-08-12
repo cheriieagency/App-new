@@ -4,7 +4,7 @@ import { requireFeature } from '@/lib/plan-guard';
  * POST /api/admin/custom-domain — Pro-only custom domain linking (demo).
  */
 export async function POST(request: Request) {
-  const gate = requireFeature('customDomain');
+  const gate = await requireFeature('customDomain', request.headers);
   if (gate) return gate;
 
   try {
@@ -30,8 +30,8 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
-  const gate = requireFeature('customDomain');
+export async function GET(request: Request) {
+  const gate = await requireFeature('customDomain', request.headers);
   if (gate) return gate;
   return Response.json({ domain: null, status: 'unset', demo: true });
 }

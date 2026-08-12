@@ -82,7 +82,7 @@ export async function POST(request: Request) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   // Classroom create/update requires Creator+ (courses & video hosting).
-  const gate = requireFeature('coursesAndVideoHosting');
+  const gate = await requireFeature('coursesAndVideoHosting', request.headers);
   if (gate) return gate;
 
   try {

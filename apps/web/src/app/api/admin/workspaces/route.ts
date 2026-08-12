@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     // Workspace / brand count gated by plan (Starter/Creator = 1, Pro = 3).
     const existing =
       listWorkspaceProfiles().length || listManagedCommunities().length;
-    const limitGate = requireLimit('maxWorkspaces', existing);
+    const limitGate = await requireLimit('maxWorkspaces', existing, request.headers);
     if (limitGate) return limitGate;
 
     const body = await request.json();
