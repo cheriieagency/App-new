@@ -11,6 +11,8 @@ import {
 import type { StoreKind, StoreProduct } from '@/lib/mock-store';
 import { useLanguage } from '@/lib/i18n';
 import OneTapCheckoutDrawer from '@/components/store/OneTapCheckoutDrawer';
+import { useWorkspaceOptional } from '@/context/WorkspaceContext';
+import { authClient } from '@/lib/auth-client';
 
 type FilterKey = 'all' | StoreKind;
 
@@ -31,6 +33,8 @@ export default function StoreView({
   communityName?: string | null;
 }) {
   const { t } = useLanguage();
+  const workspace = useWorkspaceOptional();
+  const { data: session } = authClient.useSession();
   const [filter, setFilter] = useState<FilterKey>('all');
   const [checkoutProduct, setCheckoutProduct] = useState<StoreProduct | null>(
     null
@@ -169,6 +173,8 @@ export default function StoreView({
         open={Boolean(checkoutProduct)}
         product={checkoutProduct}
         communityId={communityId}
+        workspaceId={workspace?.activeWorkspace?.id ?? null}
+        sellerUserId={session?.user?.id ?? null}
         onClose={() => setCheckoutProduct(null)}
       />
     </div>

@@ -45,18 +45,28 @@ CREATE UNIQUE INDEX IF NOT EXISTS profiles_custom_domain_uidx
   ON public.profiles (custom_domain)
   WHERE custom_domain IS NOT NULL;
 
--- Brand workspaces (custom domain routing for Pro)
+-- Brand workspaces (custom domain routing for Pro + creator wallet / Connect)
 CREATE TABLE IF NOT EXISTS public.workspaces (
-  id                      text PRIMARY KEY,
-  user_id                 text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-  name                    text,
-  slug                    text,
-  default_community_slug  text,
-  custom_domain           text,
-  custom_domain_verified  boolean NOT NULL DEFAULT false,
-  created_at              timestamptz NOT NULL DEFAULT now(),
-  updated_at              timestamptz NOT NULL DEFAULT now()
+  id                         text PRIMARY KEY,
+  user_id                    text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  name                       text,
+  slug                       text,
+  default_community_slug     text,
+  custom_domain              text,
+  custom_domain_verified     boolean NOT NULL DEFAULT false,
+  wallet_balance_sek         numeric(14, 2) NOT NULL DEFAULT 0,
+  total_revenue_sek          numeric(14, 2) NOT NULL DEFAULT 0,
+  stripe_connect_account_id  text,
+  stripe_connect_enabled     boolean NOT NULL DEFAULT false,
+  created_at                 timestamptz NOT NULL DEFAULT now(),
+  updated_at                 timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.workspaces
+  ADD COLUMN IF NOT EXISTS wallet_balance_sek numeric(14, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS total_revenue_sek numeric(14, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS stripe_connect_account_id text,
+  ADD COLUMN IF NOT EXISTS stripe_connect_enabled boolean NOT NULL DEFAULT false;
 
 CREATE UNIQUE INDEX IF NOT EXISTS workspaces_custom_domain_uidx
   ON public.workspaces (custom_domain)
@@ -442,6 +452,52 @@ CREATE INDEX IF NOT EXISTS payments_status_idx ON payments (status);
 CREATE UNIQUE INDEX IF NOT EXISTS payments_provider_external_uidx
   ON payments (provider, external_id)
   WHERE external_id IS NOT NULL;
+
+-- -----------------------------------------------------------------------------
+-- 6a) Storefront orders + creator payouts (Link-in-Bio revenue)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.orders (
+  id                   serial PRIMARY KEY,
+  workspace_id         text NOT NULL,
+  seller_user_id       text NOT NULL,
+  buyer_email          text,
+  buyer_name           text,
+  product_id           text,
+  product_title        text NOT NULL,
+  amount_gross_sek     numeric(14, 2) NOT NULL CHECK (amount_gross_sek >= 0),
+  platform_fee_sek     numeric(14, 2) NOT NULL DEFAULT 0,
+  amount_net_sek       numeric(14, 2) NOT NULL DEFAULT 0,
+  platform_fee_percent numeric(5, 2) NOT NULL DEFAULT 0,
+  status               text NOT NULL DEFAULT 'completed'
+                         CHECK (status IN ('pending', 'completed', 'refunded', 'failed')),
+  provider             text NOT NULL DEFAULT 'demo',
+  external_id          text,
+  metadata             jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at           timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS orders_external_id_uidx
+  ON public.orders (provider, external_id)
+  WHERE external_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS orders_workspace_idx
+  ON public.orders (workspace_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.payouts (
+  id                 serial PRIMARY KEY,
+  workspace_id       text NOT NULL,
+  seller_user_id     text NOT NULL,
+  amount_sek         numeric(14, 2) NOT NULL CHECK (amount_sek > 0),
+  status             text NOT NULL DEFAULT 'requested'
+                       CHECK (status IN ('requested', 'processing', 'completed', 'failed')),
+  stripe_transfer_id text,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  completed_at       timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS payouts_workspace_idx
+  ON public.payouts (workspace_id, created_at DESC);
 
 -- -----------------------------------------------------------------------------
 -- 6b) email CRM (subscribers + broadcasts)

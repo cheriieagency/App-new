@@ -22,6 +22,12 @@ type Props = {
   open: boolean;
   product: StoreProduct | null;
   communityId?: number | null;
+  /** Active brand workspace — credits wallet + orders ledger */
+  workspaceId?: string | null;
+  /** Public bio handle used to resolve seller when workspace row is missing */
+  handle?: string | null;
+  /** Explicit seller (creator) user id when known */
+  sellerUserId?: string | null;
   onClose: () => void;
   onSuccess?: (payload: {
     product: StoreProduct;
@@ -52,6 +58,9 @@ export default function OneTapCheckoutDrawer({
   open,
   product,
   communityId,
+  workspaceId,
+  handle,
+  sellerUserId,
   onClose,
   onSuccess,
 }: Props) {
@@ -218,6 +227,35 @@ export default function OneTapCheckoutDrawer({
         }
       } catch {
         /* non-blocking */
+      }
+    }
+
+    // Persist order + credit creator wallet (plan-based platform fee applied server-side).
+    if (workspaceId && total > 0) {
+      try {
+        await fetch('/api/checkout/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId,
+            handle: handle || null,
+            sellerUserId: sellerUserId || null,
+            productId: String(product.id),
+            productTitle: product.name,
+            amountGrossSek: total,
+            buyerEmail: buyerEmail || null,
+            buyerName,
+            provider: 'demo',
+            externalId: `demo_${workspaceId}_${product.id}_${Date.now()}`,
+            metadata: {
+              bumpSelected,
+              communityId: communityId ?? null,
+              method,
+            },
+          }),
+        });
+      } catch {
+        /* non-blocking — local bio-sales still recorded by parent */
       }
     }
 

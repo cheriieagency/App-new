@@ -63,6 +63,7 @@ import {
   sumBioRevenueSek,
 } from '@/lib/bio-sales';
 import { syncWorkspaceBioAnalytics } from '@/lib/mock-workspace-profiles';
+import RevenueAnalyticsPanel from '@/components/admin/analytics/RevenueAnalyticsPanel';
 
 const PLATFORM_LABEL: Record<string, string> = {
   instagram: 'Instagram',
@@ -879,136 +880,7 @@ export default function LaterAnalyticsPanel() {
         />
       )}
 
-      {sub === 'overview' && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-            {kpis.map((k) => (
-              <div key={k.label} className={adminKpiClass}>
-                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
-                  {k.label}
-                </p>
-                <p className="mt-3 font-clikd-wordmark font-extrabold text-[26px] sm:text-[28px] leading-none text-slate-900 tracking-tight tabular-nums">
-                  {k.value}
-                </p>
-                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                  <span
-                    className={`text-xs font-bold tabular-nums ${
-                      k.deltaTone === 'good' ? 'text-emerald-600' : 'text-slate-500'
-                    }`}
-                  >
-                    {k.delta}
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">{k.meta}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className={`${adminCardClass} p-5 sm:p-7`}>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
-              <div>
-                <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
-                  {t('performanceCheckoutTitle', locale)}
-                </h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  {t('performanceCheckoutSub', locale)}
-                </p>
-              </div>
-              <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-slate-900" /> {t('chartRevenue', locale)}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-slate-300" /> {t('chartVisitors', locale)}
-                </span>
-              </div>
-            </div>
-            <PerformanceChart
-              revenue={checkoutRevenueSeries}
-              visitors={checkoutVisitorSeries}
-              days={dayLabels}
-              ariaLabel={t('performanceChartAria', locale)}
-            />
-          </div>
-
-          <div className={`${adminCardClass} overflow-hidden`}>
-            <div className="px-5 sm:px-7 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100">
-              <div>
-                <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
-                  {t('topBioProductsTitle', locale)}
-                </h2>
-                <p className="text-sm text-slate-500 mt-0.5">
-                  {t('topBioProductsSub', locale)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSection('biobuilder')}
-                className="h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50 transition-colors self-start"
-              >
-                <Plus size={14} /> {t('newProduct', locale)}
-              </button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[680px] text-left">
-                <thead>
-                  <tr className="border-b border-slate-100">
-                    {tableHeaders.map((h) => (
-                      <th
-                        key={h}
-                        className="px-5 sm:px-7 py-3 text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {topBioProducts.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={tableHeaders.length}
-                        className="px-5 sm:px-7 py-10 text-sm text-slate-400 text-center"
-                      >
-                        —
-                      </td>
-                    </tr>
-                  ) : (
-                    topBioProducts.map((row) => (
-                      <tr
-                        key={row.name}
-                        className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
-                      >
-                        <td className="px-5 sm:px-7 py-4 text-sm font-semibold text-slate-900">
-                          {row.name}
-                        </td>
-                        <td className="px-5 sm:px-7 py-4 text-sm text-slate-500">{row.category}</td>
-                        <td className="px-5 sm:px-7 py-4 text-sm font-semibold tabular-nums text-slate-800">
-                          {row.clicks.toLocaleString(localeTag(locale))}
-                        </td>
-                        <td className="px-5 sm:px-7 py-4 text-sm font-bold tabular-nums text-emerald-600">
-                          {row.conversion}
-                        </td>
-                        <td className="px-5 sm:px-7 py-4 text-sm font-semibold tabular-nums text-slate-800">
-                          {row.revenue}
-                        </td>
-                        <td className="px-5 sm:px-7 py-4">
-                          <span
-                            className={`inline-block w-2 h-2 rounded-full ${
-                              row.live ? 'bg-emerald-500' : 'bg-slate-300'
-                            }`}
-                            title={row.live ? t('statusLive', locale) : t('statusPaused', locale)}
-                          />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
+      {sub === 'overview' && <RevenueAnalyticsPanel />}
 
       {sub === 'audience' && (
         <AudienceInsights

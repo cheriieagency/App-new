@@ -1,9 +1,12 @@
-import { missingEnvKeys, missingEnvResponse, stripeEnv } from '@/lib/config/env';
-
 /**
- * Stripe webhook receiver.
- * Requires STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET in apps/web/.env.local.
+ * Stripe webhook — credits creator wallets on checkout.session.completed.
  */
+
+import { missingEnvKeys, missingEnvResponse, stripeEnv } from '@/lib/config/env';
+import { getStripe } from '@/lib/commerce/stripe';
+import { recordCompletedOrder } from '@/lib/commerce/orders';
+import type Stripe from 'stripe';
+
 export async function POST(request: Request) {
   const missing = missingEnvKeys(
     ...stripeEnv.requiredKeys,
@@ -13,19 +16,81 @@ export async function POST(request: Request) {
     return missingEnvResponse(missing, 'Stripe');
   }
 
+  const stripe = getStripe();
+  const webhookSecret = stripeEnv.webhookSecret();
+  if (!stripe || !webhookSecret) {
+    return Response.json({ error: 'Stripe not configured' }, { status: 503 });
+  }
+
   const signature = request.headers.get('stripe-signature');
   if (!signature) {
     return Response.json({ error: 'missing_stripe_signature' }, { status: 400 });
   }
 
-  // Signature verification + event dispatch will use stripeEnv.secretKey() /
-  // stripeEnv.webhookSecret() when checkout is fully wired.
-  const _rawBody = await request.text();
-  void _rawBody;
+  const rawBody = await request.text();
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+  } catch (error) {
+    console.warn('[stripe webhook] signature', error);
+    return Response.json({ error: 'invalid_signature' }, { status: 400 });
+  }
 
-  return Response.json({
-    ok: true,
-    received: true,
-    hint: 'Stripe webhook stub — wire event handlers when enabling live checkout.',
-  });
+  try {
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const meta = session.metadata || {};
+      const workspaceId = String(meta.workspace_id || '').trim();
+      const sellerUserId = String(meta.seller_user_id || '').trim();
+      const productTitle =
+        String(meta.product_title || '').trim() || 'Product';
+      const amountGrossSek = Math.max(
+        0,
+        Math.round(
+          Number(meta.amount_gross_sek) ||
+            (typeof session.amount_total === 'number'
+              ? session.amount_total / 100
+              : 0)
+        )
+      );
+
+      if (workspaceId && sellerUserId && amountGrossSek > 0) {
+        await recordCompletedOrder({
+          workspaceId,
+          sellerUserId,
+          buyerEmail: session.customer_details?.email || session.customer_email,
+          buyerName: session.customer_details?.name || null,
+          productId: meta.product_id || null,
+          productTitle,
+          amountGrossSek,
+          provider: 'stripe',
+          externalId: session.id,
+          metadata: {
+            payment_intent: session.payment_intent,
+            handle: meta.handle || null,
+          },
+        });
+      }
+    }
+
+    if (event.type === 'account.updated') {
+      const account = event.data.object as Stripe.Account;
+      const chargesEnabled = Boolean(account.charges_enabled && account.payouts_enabled);
+      if (account.id && process.env.DATABASE_URL?.trim()) {
+        const sql = (await import('@/app/api/utils/sql')).default;
+        await sql`
+          UPDATE public.workspaces
+          SET
+            stripe_connect_enabled = ${chargesEnabled},
+            updated_at = now()
+          WHERE stripe_connect_account_id = ${account.id}
+        `;
+      }
+    }
+  } catch (error) {
+    console.warn('[stripe webhook] handler', error);
+    return Response.json({ error: 'handler_failed' }, { status: 500 });
+  }
+
+  return Response.json({ ok: true, received: true, type: event.type });
 }

@@ -416,6 +416,8 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
         open={Boolean(checkoutProduct)}
         product={checkoutProduct}
         communityId={checkoutProduct?.access_community_id ?? null}
+        workspaceId={profile.id}
+        handle={profile.handle}
         onClose={() => {
           setCheckoutProduct(null);
           setCheckoutBlock(null);
