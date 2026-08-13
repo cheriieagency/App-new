@@ -873,4 +873,79 @@ export async function sendInstagramDm(input: {
   return { id: String(json.message_id || json.id) };
 }
 
+/**
+ * Private Reply to an Instagram comment → opens a DM thread (Comment-to-DM).
+ * Preferred over recipient.id for keyword automations (7-day comment window).
+ */
+export async function sendInstagramPrivateReply(input: {
+  /** Page id or IG user id that owns the messaging endpoint. */
+  igOrPageId: string;
+  accessToken: string;
+  commentId: string;
+  message: string;
+}): Promise<{ id: string }> {
+  const url = new URL(
+    `${GRAPH_BASE}/${encodeURIComponent(input.igOrPageId)}/messages`
+  );
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recipient: { comment_id: input.commentId },
+      message: { text: input.message },
+      messaging_product: 'instagram',
+      access_token: input.accessToken,
+    }),
+  });
+  const json = (await res.json()) as {
+    message_id?: string;
+    id?: string;
+    error?: { message?: string };
+  };
+  if (!res.ok || !(json.message_id || json.id)) {
+    throw new Error(
+      json.error?.message ||
+        'Failed to send Comment-to-DM private reply'
+    );
+  }
+  return { id: String(json.message_id || json.id) };
+}
+
+/**
+ * Send a DM to an Instagram-scoped user id (fallback when private reply fails).
+ */
+export async function sendInstagramDmToUser(input: {
+  igUserId: string;
+  accessToken: string;
+  recipientId: string;
+  message: string;
+}): Promise<{ id: string }> {
+  const url = new URL(
+    `${GRAPH_BASE}/${encodeURIComponent(input.igUserId)}/messages`
+  );
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${input.accessToken}`,
+    },
+    body: JSON.stringify({
+      recipient: { id: input.recipientId },
+      message: { text: input.message },
+      messaging_product: 'instagram',
+    }),
+  });
+  const json = (await res.json()) as {
+    message_id?: string;
+    id?: string;
+    error?: { message?: string };
+  };
+  if (!res.ok || !(json.message_id || json.id)) {
+    throw new Error(
+      json.error?.message || 'Failed to send Instagram DM to user'
+    );
+  }
+  return { id: String(json.message_id || json.id) };
+}
+
 export { GRAPH_BASE };

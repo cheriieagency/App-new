@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Inbox, Loader2, MessageCircle, RefreshCw, Send } from 'lucide-react';
+import { Inbox, Loader2, MessageCircle, RefreshCw, Send, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
@@ -12,7 +12,9 @@ import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import { refreshMetaSync, useMetaSync } from '@/hooks/useMetaSync';
+import DMAutomationPanel from '@/components/admin/inbox/DMAutomationPanel';
 
+type InboxMainTab = 'inbox' | 'automations';
 type InboxChannel = 'all' | 'comment' | 'dm';
 
 type DmMessage = {
@@ -56,6 +58,17 @@ export default function SocialInboxPanel() {
   const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const [channelFilter, setChannelFilter] = useState<InboxChannel>('all');
+  const [mainTab, setMainTab] = useState<InboxMainTab>(() => {
+    if (typeof window === 'undefined') return 'inbox';
+    const sub = new URLSearchParams(window.location.search).get('sub');
+    return sub === 'automations' ? 'automations' : 'inbox';
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sub') === 'automations') setMainTab('automations');
+  }, []);
 
   const syncedThreads = useMemo<DmThread[]>(
     () =>
@@ -244,30 +257,74 @@ export default function SocialInboxPanel() {
         title={t('socialInboxTitle', locale)}
         description={instagramHandle ?? t('instagramNotConnected', locale)}
         actions={
-          <button
-            type="button"
-            onClick={() => void onRefresh()}
-            disabled={refreshing || isFetching}
-            className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          >
-            {refreshing || isFetching ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <RefreshCw size={14} />
-            )}
-            Sync
-          </button>
+          mainTab === 'inbox' ? (
+            <button
+              type="button"
+              onClick={() => void onRefresh()}
+              disabled={refreshing || isFetching}
+              className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {refreshing || isFetching ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <RefreshCw size={14} />
+              )}
+              Sync
+            </button>
+          ) : null
         }
       />
 
-      {syncError ? (
+      <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none">
+        {(
+          [
+            { key: 'inbox' as const, label: 'Inbox', icon: Inbox },
+            {
+              key: 'automations' as const,
+              label: 'Automations',
+              icon: Zap,
+            },
+          ] as const
+        ).map(({ key, label, icon: Icon }) => {
+          const active = mainTab === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setMainTab(key);
+                if (typeof window !== 'undefined') {
+                  const params = new URLSearchParams(window.location.search);
+                  params.set('tab', 'inbox');
+                  if (key === 'automations') params.set('sub', 'automations');
+                  else params.delete('sub');
+                  const next = `${window.location.pathname}?${params.toString()}`;
+                  window.history.replaceState({}, '', next);
+                }
+              }}
+              className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 inline-flex items-center gap-1.5 ${
+                active
+                  ? 'text-slate-900 bg-slate-100'
+                  : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Icon size={13} />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {mainTab === 'automations' ? <DMAutomationPanel /> : null}
+
+      {mainTab === 'inbox' && syncError ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900">
           Instagram sync issue: {syncError}. Try Sync, or reconnect under Settings →
           Socials (comment + messaging permissions required).
         </div>
       ) : null}
 
-      {dmPermissionIssue ? (
+      {mainTab === 'inbox' && dmPermissionIssue ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-950 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <div className="space-y-1 min-w-0">
             <p>
@@ -292,6 +349,7 @@ export default function SocialInboxPanel() {
         </div>
       ) : null}
 
+      {mainTab === 'inbox' ? (
       <div className="flex flex-wrap gap-2">
         {(
           [
@@ -314,7 +372,9 @@ export default function SocialInboxPanel() {
           </button>
         ))}
       </div>
+      ) : null}
 
+      {mainTab === 'inbox' ? (
       <div
         className={`${adminCardClass} overflow-hidden grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] min-h-[520px]`}
       >
@@ -518,6 +578,7 @@ export default function SocialInboxPanel() {
           )}
         </section>
       </div>
+      ) : null}
     </div>
   );
 }
