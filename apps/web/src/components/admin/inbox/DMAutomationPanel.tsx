@@ -80,6 +80,7 @@ export default function DMAutomationPanel() {
   const qc = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -242,6 +243,61 @@ export default function DMAutomationPanel() {
   };
   const rules = data?.automations ?? [];
 
+  const testMutation = useMutation({
+    mutationFn: async () => {
+      const firstKw = rules[0]?.triggerKeywords?.[0];
+      const commentText = firstKw
+        ? `Test comment with ${firstKw}`
+        : 'Hej! Jag vill ha #KURS info';
+      const res = await fetch('/api/admin/inbox/automations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          workspaceId: activeWorkspace.id,
+          commentText,
+        }),
+      });
+      if (!res.ok) {
+        let message = `Test failed (${res.status})`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson?.error) message = errJson.error;
+        } catch {
+          /* non-JSON */
+        }
+        throw new Error(message);
+      }
+      return res.json() as Promise<{
+        ready?: boolean;
+        matchedRule?: { keyword: string; title: string } | null;
+        blockers?: string[];
+        webhook?: { callbackUrl?: string | null };
+        dmsSentTotal?: number;
+        commentText?: string;
+      }>;
+    },
+    onSuccess: (json) => {
+      if (json.ready) {
+        toast.success(
+          `Ready — matched “${json.matchedRule?.keyword}”. Live DMs need Meta webhook on a public URL.`
+        );
+        setTestResult(
+          `Keyword match OK for “${json.commentText}”. Callback: ${json.webhook?.callbackUrl || 'not public yet'}. DMs logged: ${json.dmsSentTotal ?? 0}.`
+        );
+      } else {
+        const blockers = json.blockers?.length
+          ? json.blockers.join(' ')
+          : 'Automation not ready.';
+        toast.error(blockers.slice(0, 180));
+        setTestResult(blockers);
+      }
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Test failed');
+    },
+  });
+
   const openCreate = () => {
     setForm({
       ...EMPTY_FORM,
@@ -332,15 +388,36 @@ export default function DMAutomationPanel() {
               When someone comments a keyword, Clikd sends your DM + storefront link.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="h-11 min-h-[44px] px-4 rounded-xl bg-clikd-pink text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:opacity-90"
-          >
-            <Plus size={16} />
-            Create Comment-to-DM Rule
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => testMutation.mutate()}
+              disabled={testMutation.isPending || rules.length === 0}
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {testMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Zap size={16} />
+              )}
+              Test automation
+            </button>
+            <button
+              type="button"
+              onClick={openCreate}
+              className="h-11 min-h-[44px] px-4 rounded-xl bg-clikd-pink text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:opacity-90"
+            >
+              <Plus size={16} />
+              Create Comment-to-DM Rule
+            </button>
+          </div>
         </div>
+
+        {testResult ? (
+          <div className="mx-5 sm:mx-7 mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-700">
+            {testResult}
+          </div>
+        ) : null}
 
         {isLoading ? (
           <div className="py-16 flex justify-center text-slate-400">
