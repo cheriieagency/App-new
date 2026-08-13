@@ -25,6 +25,7 @@ const CHANNELS: { key: SocialPlatform; label: string }[] = [
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'youtube', label: 'YouTube' },
+  { key: 'pinterest', label: 'Pinterest' },
 ];
 
 export default function CreateWorkspaceModal({

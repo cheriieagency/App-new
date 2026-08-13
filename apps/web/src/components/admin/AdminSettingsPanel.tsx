@@ -41,6 +41,7 @@ import {
   FacebookIcon,
   InstagramIcon,
   LinkedInIcon,
+  PinterestIcon,
   TikTokIcon,
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
@@ -124,6 +125,7 @@ const SOCIAL_ICONS = {
   tiktok: TikTokIcon,
   linkedin: LinkedInIcon,
   youtube: YouTubeIcon,
+  pinterest: PinterestIcon,
 } as const;
 
 const PLATFORM_ORDER: SocialPlatform[] = [
@@ -132,6 +134,7 @@ const PLATFORM_ORDER: SocialPlatform[] = [
   'tiktok',
   'youtube',
   'linkedin',
+  'pinterest',
 ];
 
 const IN_APP_NOTIF_KEYS: Exclude<NotifPrefKey, 'weeklyEmailDigest'>[] = [

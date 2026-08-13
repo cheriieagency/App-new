@@ -13,6 +13,7 @@ import {
   FacebookIcon,
   InstagramIcon,
   LinkedInIcon,
+  PinterestIcon,
   TikTokIcon,
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
@@ -51,6 +52,7 @@ const PLATFORM_TITLES: Record<SocialPlatform, string> = {
   youtube: 'YouTube Data API v3',
   linkedin: 'LinkedIn Share API',
   facebook: 'Meta / Facebook Pages API',
+  pinterest: 'Pinterest Developer API',
 };
 
 const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
@@ -86,6 +88,13 @@ const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
     'pages_manage_metadata',
     'business_management',
   ],
+  pinterest: [
+    'boards:read',
+    'boards:write',
+    'pins:read',
+    'pins:write',
+    'user_accounts:read',
+  ],
 };
 
 const ICONS = {
@@ -94,6 +103,7 @@ const ICONS = {
   linkedin: LinkedInIcon,
   youtube: YouTubeIcon,
   facebook: FacebookIcon,
+  pinterest: PinterestIcon,
 } as const;
 
 const ORDER: SocialPlatform[] = [
@@ -102,6 +112,7 @@ const ORDER: SocialPlatform[] = [
   'tiktok',
   'youtube',
   'linkedin',
+  'pinterest',
 ];
 
 function formatCount(n: number, language: ReturnType<typeof useLanguage>['language']) {
@@ -229,14 +240,15 @@ export default function SocialAccountsPanel({
   const [demoMode, setDemoMode] = useState(false);
 
   const connectLabel = (platform: SocialPlatform) => {
-    const keys = {
+    const keys: Partial<Record<SocialPlatform, string>> = {
       instagram: 'socials.connectInstagram',
       tiktok: 'socials.connectTikTok',
       youtube: 'socials.connectYouTube',
       linkedin: 'socials.connectLinkedIn',
       facebook: 'socials.connectFacebook',
-    } as const;
-    return t(keys[platform]);
+    };
+    const key = keys[platform];
+    return key ? t(key) : PLATFORM_META[platform].connectLabel;
   };
   const [oauthPlatform, setOauthPlatform] = useState<SocialPlatform | null>(null);
   const [disconnectTarget, setDisconnectTarget] =
@@ -330,6 +342,13 @@ export default function SocialAccountsPanel({
       );
       return;
     }
+    if (!demoMode && platform === 'pinterest') {
+      window.location.href = withWorkspaceQuery(
+        '/api/auth/pinterest/login',
+        activeWorkspaceId
+      );
+      return;
+    }
     if (demoMode) {
       setOauthPlatform(platform);
       return;
@@ -362,6 +381,7 @@ export default function SocialAccountsPanel({
       'youtube',
       'linkedin',
       'tiktok',
+      'pinterest',
     ]);
 
     // Live OAuth rows: delete only that platform via unified disconnect API.
@@ -687,6 +707,39 @@ export default function SocialAccountsPanel({
               />
             </div>
           </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3 w-full">
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold text-slate-900">
+                Connect Pinterest Account
+              </p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
+                Link Pinterest for board access and Content Planner Pin scheduling.
+              </p>
+              <p className="text-[10px] font-semibold text-slate-500 leading-snug mt-1.5">
+                {t('socials.workspaceGuidePerWorkspace')}
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
+              <ConnectOrConnectedButton
+                connected={Boolean(byPlatform.get('pinterest')?.connected)}
+                account={byPlatform.get('pinterest') ?? null}
+                onConnect={() => {
+                  window.location.href = withWorkspaceQuery(
+                    '/api/auth/pinterest/login',
+                    activeWorkspaceId
+                  );
+                }}
+                onDisconnect={() =>
+                  setDisconnectTarget(byPlatform.get('pinterest') ?? null)
+                }
+                disconnectLabel={t('socials.disconnectAccount')}
+                idleLabel="Connect Pinterest Account"
+                idleClassName="bg-[#E60023] hover:bg-[#c4001a]"
+                icon={<PinterestIcon size={16} />}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -697,7 +750,7 @@ export default function SocialAccountsPanel({
               Demo Mode — simulated OAuth
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Turn Demo Mode off to use live Instagram, Facebook, TikTok, YouTube, and LinkedIn connections.
+              Turn Demo Mode off to use live Instagram, Facebook, TikTok, YouTube, LinkedIn, and Pinterest connections.
             </p>
           </div>
         </div>

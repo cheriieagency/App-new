@@ -33,6 +33,7 @@ import {
   FacebookIcon,
   InstagramIcon,
   LinkedInIcon,
+  PinterestIcon,
   TikTokIcon,
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
@@ -54,6 +55,7 @@ const PLATFORM_ICONS: Record<
   linkedin: LinkedInIcon,
   youtube: YouTubeIcon,
   facebook: FacebookIcon,
+  pinterest: PinterestIcon,
 };
 
 type ViewMode = 'board' | 'calendar' | 'table' | 'feed' | 'notes' | 'copilot';

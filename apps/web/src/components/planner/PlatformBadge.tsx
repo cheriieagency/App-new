@@ -4,6 +4,7 @@ import {
   FacebookIcon,
   InstagramIcon,
   LinkedInIcon,
+  PinterestIcon,
   TikTokIcon,
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
@@ -15,6 +16,7 @@ const ICONS = {
   linkedin: LinkedInIcon,
   youtube: YouTubeIcon,
   facebook: FacebookIcon,
+  pinterest: PinterestIcon,
 } as const;
 
 export function PlatformBadge({

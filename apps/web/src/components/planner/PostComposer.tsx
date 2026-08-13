@@ -46,6 +46,7 @@ const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'youtube', label: 'YouTube' },
+  { key: 'pinterest', label: 'Pinterest' },
 ];
 
 function toLocalInputValue(iso: string | null | undefined) {
@@ -226,6 +227,33 @@ export default function PostComposer({
         body: JSON.stringify(payload),
       });
       if (!r.ok) throw new Error('save failed');
+
+      // Content Planner → Pinterest Pin create/schedule when channel is selected.
+      const pinImage = mediaItems.find((m) => m.type === 'image')?.url;
+      if (
+        platforms.includes('pinterest') &&
+        pinImage &&
+        (status === 'scheduled' || status === 'published')
+      ) {
+        try {
+          await fetch('/api/planner/pinterest/pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: ideaTitle || caption.split('\n')[0].slice(0, 100) || 'Pin',
+              description: caption,
+              imageUrl: pinImage,
+              scheduledAt:
+                status === 'scheduled' && scheduledAt
+                  ? new Date(scheduledAt).toISOString()
+                  : null,
+            }),
+          });
+        } catch {
+          /* non-blocking — post still saved in planner */
+        }
+      }
+
       onSaved();
       onOpenChange(false);
     } finally {

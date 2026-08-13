@@ -26,6 +26,7 @@ const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'youtube', label: 'YouTube Shorts / Video' },
+  { key: 'pinterest', label: 'Pinterest Pin' },
 ];
 
 export default function AiContentGenerator({

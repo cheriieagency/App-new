@@ -45,6 +45,7 @@ const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'youtube', label: 'YouTube' },
+  { key: 'pinterest', label: 'Pinterest' },
 ];
 
 const MODE_DEFS: {
@@ -242,24 +243,28 @@ export default function AiCopilotPanel({
         setHashtagResult('');
         setHooks([]);
       } else if (mode === 'caption') {
-        const r = await fetch('/api/planner/generate', {
+        // Live OpenAI Copilot (gpt-4o-mini) with local polish fallback.
+        const live = await fetch('/api/ai/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'ideas', prompt, platforms, tone }),
+          body: JSON.stringify({
+            prompt,
+            platform: platforms[0] || 'instagram',
+            tone,
+          }),
         });
-        const data = await r.json();
-        const first: AiContentIdea | undefined = data.ideas?.[0];
-        const raw =
-          first?.captions[platforms[0]] ||
-          Object.values(first?.captions ?? {})[0] ||
-          prompt;
-        const polish = await fetch('/api/planner/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'polish', caption: raw, tone }),
-        });
-        const polished = await polish.json();
-        setCaptionResult(polished.caption || raw);
+        if (live.ok) {
+          const data = await live.json();
+          setCaptionResult(String(data.caption ?? '').trim() || prompt);
+        } else {
+          const polish = await fetch('/api/planner/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'polish', caption: prompt, tone }),
+          });
+          const polished = await polish.json();
+          setCaptionResult(polished.caption || prompt);
+        }
         setIdeas([]);
         setHashtagResult('');
         setHooks([]);
