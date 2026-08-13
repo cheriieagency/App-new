@@ -342,18 +342,22 @@ export async function POST(request: Request) {
     let dmMessageId: string | null = null;
     let lastGraphError: string | null = null;
 
+    // Private Reply REQUIRES recipient.comment_id — never recipient.id / from.id.
+    if (!commentId) {
+      console.warn(
+        '[Meta Webhook] Refusing Private Reply — missing commentId'
+      );
+      return NextResponse.json({ success: true, received: true }, { status: 200 });
+    }
+
     for (const endpointId of messagingEndpointIds) {
-      // CRITICAL: Meta Instagram Private Reply — recipient.comment_id required.
+      // CRITICAL: Meta Instagram Graph API Private Reply shape (v21.0).
       const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
         endpointId
       )}/messages`;
       const dispatchPayload = {
-        recipient: {
-          comment_id: commentId,
-        },
-        message: {
-          text: dmText,
-        },
+        recipient: { comment_id: commentId },
+        message: { text: dmText },
       };
 
       try {
