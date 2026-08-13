@@ -3,24 +3,33 @@
  */
 
 import {
+  fetchInstagramAudienceDemographics,
+  fetchInstagramDmConversations,
   fetchInstagramInsights,
   fetchInstagramMedia,
   fetchInstagramMediaComments,
   fetchInstagramProfile,
+  type InstagramAudienceDemographics,
   type InstagramComment,
   type InstagramMediaItem,
 } from '@/lib/meta/graph-api';
 import { listStoredMetaAccounts } from '@/lib/meta/social-accounts';
 import { upsertPlannerPost } from '@/lib/mock-content-planner';
 
+export type MetaInboxChannel = 'comment' | 'dm';
+
 export type MetaInboxThread = {
   id: string;
+  channel: MetaInboxChannel;
   name: string;
   handle: string;
   preview: string;
   time: string;
   unread: boolean;
   media_id?: string;
+  /** Instagram-scoped user id — required to reply to DMs. */
+  recipient_id?: string;
+  page_id?: string;
   messages: Array<{
     id: string;
     from: 'them' | 'you';
@@ -53,6 +62,7 @@ export type MetaSyncSnapshot = {
   media: InstagramMediaItem[];
   inbox_threads: MetaInboxThread[];
   planner_imported: number;
+  demographics?: InstagramAudienceDemographics | null;
 };
 
 const snapshots = new Map<string, MetaSyncSnapshot>();
@@ -91,6 +101,7 @@ function commentsToThreads(
       const handle = c.username ? `@${c.username.replace(/^@/, '')}` : '@user';
       threads.push({
         id: c.id,
+        channel: 'comment',
         name: c.username || 'Instagram user',
         handle,
         preview: c.text.slice(0, 120),
@@ -109,6 +120,46 @@ function commentsToThreads(
     }
   }
   return threads.slice(0, 40);
+}
+
+function dmConversationsToThreads(
+  pageId: string,
+  igUserId: string,
+  conversations: Awaited<ReturnType<typeof fetchInstagramDmConversations>>
+): MetaInboxThread[] {
+  return conversations.slice(0, 30).map((conv) => {
+    const msgs = [...(conv.messages?.data ?? [])].reverse();
+    const last = msgs[msgs.length - 1] || conv.messages?.data?.[0];
+    const handle = conv.recipient_username
+      ? `@${conv.recipient_username.replace(/^@/, '')}`
+      : '@user';
+    return {
+      id: `dm:${conv.id}`,
+      channel: 'dm' as const,
+      name: conv.recipient_name || conv.recipient_username || 'Instagram user',
+      handle,
+      preview: (last?.message || 'Direct message').slice(0, 120),
+      time: relativeTime(last?.created_time || conv.updated_time),
+      unread: true,
+      recipient_id: conv.recipient_id,
+      page_id: pageId,
+      messages: msgs
+        .filter((m) => m.message?.trim())
+        .map((m) => {
+          const fromId = m.from?.id;
+          const fromThem =
+            Boolean(fromId) &&
+            fromId !== pageId &&
+            fromId !== igUserId;
+          return {
+            id: m.id,
+            from: (fromThem ? 'them' : 'you') as 'them' | 'you',
+            text: m.message || '',
+            time: relativeTime(m.created_time),
+          };
+        }),
+    };
+  });
 }
 
 function importMediaToPlanner(media: InstagramMediaItem[], projectName: string): number {
@@ -221,6 +272,16 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
     console.warn('[meta/sync] insights failed', error);
   }
 
+  let demographics: InstagramAudienceDemographics | null = null;
+  try {
+    demographics = await fetchInstagramAudienceDemographics(
+      ig.external_id,
+      ig.access_token
+    );
+  } catch (error) {
+    console.warn('[meta/sync] demographics failed', error);
+  }
+
   try {
     media = await fetchInstagramMedia(ig.external_id, ig.access_token, 25);
   } catch (error) {
@@ -234,6 +295,37 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
       commentsByMedia.set(item.id, comments);
     })
   );
+
+  // Instagram DMs require a Page access token + messaging scopes.
+  let dmThreads: MetaInboxThread[] = [];
+  const pageId = ig.page_id;
+  const pageToken =
+    accounts.find((a) => a.platform === 'facebook' && a.page_id === pageId)
+      ?.access_token ||
+    (pageId ? ig.access_token : null);
+  if (pageId && pageToken) {
+    try {
+      const conversations = await fetchInstagramDmConversations(
+        pageId,
+        pageToken,
+        20
+      );
+      dmThreads = dmConversationsToThreads(
+        pageId,
+        ig.external_id,
+        conversations
+      );
+    } catch (error) {
+      console.warn(
+        '[meta/sync] Instagram DMs unavailable — reconnect with instagram_manage_messages',
+        error
+      );
+    }
+  }
+
+  const commentThreads = commentsToThreads(media, commentsByMedia);
+  // DMs first, then comments (newest activity still reflected by relative times).
+  const inbox_threads = [...dmThreads, ...commentThreads].slice(0, 60);
 
   const likes = media.reduce((n, m) => n + (m.like_count ?? 0), 0);
   const comments = media.reduce((n, m) => n + (m.comments_count ?? 0), 0);
@@ -273,8 +365,9 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
         profile?.followers_count ?? ig.followers_count ?? 0,
     },
     media,
-    inbox_threads: commentsToThreads(media, commentsByMedia),
+    inbox_threads,
     planner_imported: plannerImported,
+    demographics,
   };
 
   snapshots.set(userId, snapshot);

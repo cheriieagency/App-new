@@ -144,3 +144,65 @@ export async function fetchTikTokUserInfo(
     likes_count: Number(user.likes_count) || 0,
   };
 }
+
+export type TikTokVideoItem = {
+  id: string;
+  title?: string;
+  video_description?: string;
+  cover_image_url?: string;
+  share_url?: string;
+  create_time?: number;
+  duration?: number;
+  like_count?: number;
+  comment_count?: number;
+  share_count?: number;
+  view_count?: number;
+};
+
+const VIDEO_LIST_FIELDS = [
+  'id',
+  'title',
+  'video_description',
+  'cover_image_url',
+  'share_url',
+  'create_time',
+  'duration',
+  'like_count',
+  'comment_count',
+  'share_count',
+  'view_count',
+].join(',');
+
+/**
+ * List recent TikTok videos for the connected creator (Display API video.list).
+ * Docs: POST /v2/video/list/
+ */
+export async function fetchTikTokVideos(
+  accessToken: string,
+  maxCount = 20
+): Promise<TikTokVideoItem[]> {
+  const url = new URL('https://open.tiktokapis.com/v2/video/list/');
+  url.searchParams.set('fields', VIDEO_LIST_FIELDS);
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ max_count: Math.min(Math.max(maxCount, 1), 20) }),
+  });
+
+  const payload = (await res.json()) as {
+    data?: { videos?: TikTokVideoItem[]; cursor?: number; has_more?: boolean };
+    error?: { code?: string; message?: string };
+  };
+
+  if (!res.ok || (payload.error?.code && payload.error.code !== 'ok')) {
+    throw new Error(
+      payload.error?.message || `TikTok video.list failed (${res.status})`
+    );
+  }
+
+  return payload.data?.videos ?? [];
+}

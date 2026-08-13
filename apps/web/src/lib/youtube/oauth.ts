@@ -12,6 +12,8 @@ export const YOUTUBE_OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile',
   'https://www.googleapis.com/auth/youtube.readonly',
   'https://www.googleapis.com/auth/youtube.upload',
+  // Required for Audience → demographics (age / gender / country).
+  'https://www.googleapis.com/auth/yt-analytics.readonly',
 ] as const;
 
 export function getYouTubeCallbackUrl(requestOrigin?: string | null): string {

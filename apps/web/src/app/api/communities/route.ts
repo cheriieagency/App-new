@@ -7,7 +7,9 @@ import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { getMockCommunitiesForUser } from '@/lib/mock-communities';
+import { fireEmailAutomations, persistSubscriber } from '@/lib/email/crm-persist';
 import { syncSubscriber } from '@/lib/mock-email-crm';
+import { getSiteUrl } from '@/lib/site';
 import {
   listPublicCatalogCommunities,
   publishCommunityToPublicCatalog,
@@ -100,46 +102,57 @@ export async function POST(request: Request) {
       await sql`
         UPDATE communities SET member_count = member_count + 1 WHERE id = ${community_id}
       `;
-      // Auto-sync to creator Email CRM with source tag.
-      syncSubscriber({
-        email: session.user.email,
-        name: session.user.name || 'Medlem',
-        user_id: session.user.id,
-        image: session.user.image ?? null,
-        source: 'community_member',
-        community_id: Number(community_id),
-        extra_tags: ['Community Member'],
-      });
+      // Auto-sync to creator Email CRM + fire welcome automation.
       try {
-        // Best-effort persist for the community creator's list.
         const owners = await sql`
-          SELECT creator_id FROM communities WHERE id = ${Number(community_id)} LIMIT 1
+          SELECT creator_id, name FROM communities WHERE id = ${Number(community_id)} LIMIT 1
         `;
         const creatorId = owners?.[0]?.creator_id as string | undefined;
-        if (creatorId) {
-          await sql`
-            INSERT INTO email_subscribers (
-              creator_id, user_id, name, email, image, source, tags, community_id
-            )
-            VALUES (
-              ${creatorId},
-              ${session.user.id},
-              ${session.user.name || 'Medlem'},
-              ${session.user.email},
-              ${session.user.image ?? null},
-              'community_member',
-              ${['Community Member']},
-              ${Number(community_id)}
-            )
-            ON CONFLICT (creator_id, email) DO UPDATE SET
-              tags = (
-                SELECT ARRAY(SELECT DISTINCT unnest(email_subscribers.tags || EXCLUDED.tags))
-              ),
-              updated_at = now()
-          `;
+        const communityName =
+          String(owners?.[0]?.name ?? '').trim() || `Community ${community_id}`;
+        if (creatorId && session.user.email) {
+          await persistSubscriber({
+            creatorId,
+            email: session.user.email,
+            name: session.user.name || 'Medlem',
+            userId: session.user.id,
+            image: session.user.image ?? null,
+            source: 'community_member',
+            communityId: Number(community_id),
+            tags: ['Community Member'],
+          });
+          void fireEmailAutomations({
+            creatorId,
+            communityId: Number(community_id),
+            communityName,
+            communityUrl: `${getSiteUrl()}/community/${community_id}`,
+            trigger: 'community_join',
+            recipientEmail: session.user.email,
+            recipientName: session.user.name || 'Medlem',
+          }).catch((err) =>
+            console.warn('[communities/join] automation failed', err)
+          );
+        } else {
+          syncSubscriber({
+            email: session.user.email,
+            name: session.user.name || 'Medlem',
+            user_id: session.user.id,
+            image: session.user.image ?? null,
+            source: 'community_member',
+            community_id: Number(community_id),
+            extra_tags: ['Community Member'],
+          });
         }
       } catch {
-        /* demo / missing table — in-memory sync still applied */
+        syncSubscriber({
+          email: session.user.email,
+          name: session.user.name || 'Medlem',
+          user_id: session.user.id,
+          image: session.user.image ?? null,
+          source: 'community_member',
+          community_id: Number(community_id),
+          extra_tags: ['Community Member'],
+        });
       }
     } else if (action === 'leave') {
       const deleted = await sql`

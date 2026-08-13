@@ -22,6 +22,37 @@ export type AnalyticsPlatformSlice = {
   avatar_url: string | null;
 };
 
+export type AnalyticsDemoRow = {
+  key: string;
+  label: string;
+  value: number;
+  pct: number;
+};
+
+export type AnalyticsPlatformDemographics = {
+  platform: string;
+  available: boolean;
+  message?: string | null;
+  countries: AnalyticsDemoRow[];
+  cities: AnalyticsDemoRow[];
+  genders: AnalyticsDemoRow[];
+  ages: AnalyticsDemoRow[];
+  active_hours: number[];
+};
+
+export type AnalyticsDemographics = {
+  source: 'engaged_audience' | 'followers' | 'none';
+  countries: AnalyticsDemoRow[];
+  cities: AnalyticsDemoRow[];
+  genders: AnalyticsDemoRow[];
+  ages: AnalyticsDemoRow[];
+  active_hours: number[];
+  available: boolean;
+  message?: string | null;
+  by_platform?: AnalyticsPlatformDemographics[];
+  platforms_with_data?: string[];
+};
+
 export type AnalyticsApiResponse = {
   ok: boolean;
   source?: string;
@@ -59,14 +90,19 @@ export type AnalyticsApiResponse = {
   }>;
   insights?: Record<string, number> | null;
   instagram?: Record<string, unknown> | null;
+  demographics?: AnalyticsDemographics | null;
   media?: Array<{
     id: string;
+    platform?: string | null;
     caption?: string | null;
     media_type?: string | null;
     media_url?: string | null;
     thumbnail_url?: string | null;
+    permalink?: string | null;
     like_count?: number | null;
     comments_count?: number | null;
+    shares_count?: number | null;
+    view_count?: number | null;
     timestamp?: string | null;
   }>;
   hashtags?: AnalyticsHashtag[];

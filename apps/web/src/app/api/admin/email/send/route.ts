@@ -10,6 +10,7 @@ import {
   type SubscriberSource,
 } from '@/lib/mock-email-crm';
 import { resendEnv } from '@/lib/config/env';
+import { trackBroadcastMessages } from '@/lib/email/crm-persist';
 import { resendMissingResponse, sendEmail } from '@/lib/email/send';
 import { buildUnsubscribeUrl } from '@/lib/email/unsubscribe';
 import { BroadcastEmail } from '@/lib/email/templates/BroadcastEmail';
@@ -246,7 +247,7 @@ export async function POST(request: Request) {
 
   if (process.env.DATABASE_URL?.trim() && !isTest && sentCount > 0) {
     try {
-      await sql`
+      const inserted = await sql`
         INSERT INTO email_broadcasts (
           creator_id, subject, body, audience, audience_label,
           recipient_count, open_rate, click_rate, status
@@ -262,7 +263,18 @@ export async function POST(request: Request) {
           ${0},
           'sent'
         )
+        RETURNING id
       `;
+      const broadcastId = Number(inserted?.[0]?.id);
+      if (Number.isFinite(broadcastId) && broadcastId > 0) {
+        await trackBroadcastMessages({
+          creatorId: session.user.id,
+          broadcastId,
+          messages: results
+            .filter((r) => r.ok && r.id)
+            .map((r) => ({ email: r.email, resendId: String(r.id) })),
+        });
+      }
     } catch (e) {
       console.error('[email/send] broadcast persist failed', e);
     }

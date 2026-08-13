@@ -3,15 +3,17 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { resendEnv } from '@/lib/config/env';
 import {
+  listPersistedAutomations,
+  listPersistedCommunityEmails,
+  setPersistedAutomationStatus,
+  upsertPersistedAutomation,
+} from '@/lib/email/crm-persist';
+import {
   AUDIENCE_OPTIONS,
   applyMergeTags,
   createBroadcast,
   getMockEmailCrmPayload,
-  listCommunityAutomationEmails,
-  listEmailAutomations,
-  setEmailAutomationStatus,
   syncSubscriber,
-  upsertEmailAutomation,
   type EmailAutomationTrigger,
   type SubscriberSource,
 } from '@/lib/mock-email-crm';
@@ -20,15 +22,23 @@ async function requireSession() {
   return auth.api.getSession({ headers: await headers() });
 }
 
-function emptyEmailCrmPayload(cid?: number) {
+async function emptyEmailCrmPayload(creatorId: string, cid?: number) {
+  const automations = await listPersistedAutomations({
+    creatorId,
+    communityId: cid,
+  });
+  const community_emails = await listPersistedCommunityEmails({
+    creatorId,
+    communityId: cid,
+  });
   return {
     total_subscribers: 0,
     average_open_rate: 0,
     total_broadcasts: 0,
     subscribers: [] as unknown[],
     broadcasts: [] as unknown[],
-    automations: listEmailAutomations({ community_id: cid }),
-    community_emails: listCommunityAutomationEmails({ community_id: cid }),
+    automations,
+    community_emails,
     audiences: AUDIENCE_OPTIONS,
     tags: ['all'],
     demo: false as const,
@@ -75,7 +85,7 @@ export async function GET(request: Request) {
 
     if (!Array.isArray(rows) || rows.length === 0) {
       // Real empty CRM — do not inject seed/mock contacts when DB is configured.
-      return Response.json(emptyEmailCrmPayload(cid));
+      return Response.json(await emptyEmailCrmPayload(session.user.id, cid));
     }
 
     const broadcasts = await sql`
@@ -118,14 +128,23 @@ export async function GET(request: Request) {
         ? 0
         : sent.reduce((n, b) => n + Number(b.open_rate ?? 0), 0) / sent.length;
 
+    const automations = await listPersistedAutomations({
+      creatorId: session.user.id,
+      communityId: cid,
+    });
+    const community_emails = await listPersistedCommunityEmails({
+      creatorId: session.user.id,
+      communityId: cid,
+    });
+
     return Response.json({
       total_subscribers: subscribers.length,
       average_open_rate: Math.round(avgOpen * 10) / 10,
       total_broadcasts: sent.length,
       subscribers,
       broadcasts,
-      automations: listEmailAutomations({ community_id: cid }),
-      community_emails: listCommunityAutomationEmails({ community_id: cid }),
+      automations,
+      community_emails,
       audiences: AUDIENCE_OPTIONS,
       tags: ['all', ...Array.from(new Set(subscribers.flatMap((s) => s.tags)))],
       demo: false,
@@ -134,7 +153,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('[GET /api/admin/email]', error);
     return Response.json({
-      ...emptyEmailCrmPayload(cid),
+      ...(await emptyEmailCrmPayload(session.user.id, cid)),
       error: 'load_failed',
     });
   }
@@ -151,16 +170,24 @@ export async function POST(request: Request) {
     if (action === 'toggle_automation') {
       const id = String(body.id ?? '');
       const status = body.status === 'paused' ? 'paused' : 'active';
-      const automation = setEmailAutomationStatus(id, status);
+      const automation = await setPersistedAutomationStatus(
+        session.user.id,
+        id,
+        status
+      );
       if (!automation) {
         return Response.json({ error: 'Automation not found' }, { status: 404 });
       }
-      return Response.json({ success: true, automation, demo: true });
+      return Response.json({
+        success: true,
+        automation,
+        demo: !process.env.DATABASE_URL?.trim(),
+      });
     }
 
     if (action === 'upsert_automation') {
       const trigger = String(body.trigger ?? 'community_join') as EmailAutomationTrigger;
-      const automation = upsertEmailAutomation({
+      const automation = await upsertPersistedAutomation(session.user.id, {
         id: body.id ? String(body.id) : undefined,
         name: String(body.name ?? ''),
         description: body.description != null ? String(body.description) : undefined,
@@ -173,7 +200,11 @@ export async function POST(request: Request) {
             ? Number(body.community_id)
             : null,
       });
-      return Response.json({ success: true, automation, demo: true });
+      return Response.json({
+        success: true,
+        automation,
+        demo: !process.env.DATABASE_URL?.trim(),
+      });
     }
 
     // Import existing community members into this creator's Email CRM.

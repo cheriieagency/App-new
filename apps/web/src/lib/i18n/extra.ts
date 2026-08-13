@@ -435,6 +435,9 @@ export type ExtraKey =
   | 'last7Days'
   | 'kpiRevenueCheckout'
   | 'kpiFollowers'
+  | 'totalFollowersAll'
+  | 'followersPerAccount'
+  | 'shareOfAudience'
   | 'kpiBioStoreCvr'
   | 'kpiPlannedPosts'
   | 'performanceCheckoutTitle'
@@ -652,6 +655,12 @@ export type ExtraKey =
   | 'audienceTopCountries'
   | 'audienceTopCities'
   | 'audienceActiveTimesHint'
+  | 'audienceLocation'
+  | 'demographicsUnavailable'
+  | 'demographicsFromViewers'
+  | 'demographicsFromFollowers'
+  | 'demographicsAllPlatforms'
+  | 'demographicsPlatformStatus'
   | 'audienceLessActive'
   | 'audienceMoreActive'
   | 'analyticsTab'
@@ -1359,6 +1368,9 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   last7Days: '7 days',
   kpiRevenueCheckout: 'Revenue (Checkout)',
   kpiFollowers: 'Followers',
+  totalFollowersAll: 'Total followers',
+  followersPerAccount: 'Followers per account',
+  shareOfAudience: 'Share of audience',
   kpiBioStoreCvr: 'Bio Store CVR',
   kpiPlannedPosts: 'Planned posts',
   performanceCheckoutTitle: 'Performance & checkout revenue',
@@ -1778,6 +1790,13 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   audienceTopCountries: 'Top countries',
   audienceTopCities: 'Top cities',
   audienceActiveTimesHint: 'When your audience is most active (local time)',
+  audienceLocation: 'Location',
+  demographicsUnavailable:
+    'Demographics need an Instagram Business/Creator account with 100+ followers and insight permissions. Reconnect Instagram under Settings → Socials, then refresh.',
+  demographicsFromViewers: 'Based on accounts that viewed / engaged with your content',
+  demographicsFromFollowers: 'Based on your Instagram followers',
+  demographicsAllPlatforms: 'All platforms',
+  demographicsPlatformStatus: 'Sources',
   audienceLessActive: 'Less',
   audienceMoreActive: 'More',
   analyticsTab: 'Analytics',
@@ -2291,6 +2310,9 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   last7Days: '7 dagar',
   kpiRevenueCheckout: 'Intäkter (Checkout)',
   kpiFollowers: 'Följare',
+  totalFollowersAll: 'Totalt antal följare',
+  followersPerAccount: 'Följare per konto',
+  shareOfAudience: 'Andel av publiken',
   kpiBioStoreCvr: 'Bio Store CVR',
   kpiPlannedPosts: 'Planerade inlägg',
   performanceCheckoutTitle: 'Prestanda & checkout-intäkter',
@@ -2710,6 +2732,13 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   audienceTopCountries: 'Toppländer',
   audienceTopCities: 'Toppstäder',
   audienceActiveTimesHint: 'När din publik är mest aktiv (lokal tid)',
+  audienceLocation: 'Plats',
+  demographicsUnavailable:
+    'Demografi kräver ett Instagram Business/Creator-konto med 100+ följare och insight-behörighet. Anslut Instagram igen under Inställningar → Sociala konton och uppdatera.',
+  demographicsFromViewers: 'Baserat på konton som tittat på / engagerat med ditt innehåll',
+  demographicsFromFollowers: 'Baserat på dina Instagram-följare',
+  demographicsAllPlatforms: 'Alla plattformar',
+  demographicsPlatformStatus: 'Källor',
   audienceLessActive: 'Mindre',
   audienceMoreActive: 'Mer',
   analyticsTab: 'Analytics',
@@ -3348,6 +3377,9 @@ navFeatures: 'Ominaisuudet',
   last7Days: '7 päivää',
   kpiRevenueCheckout: 'Tulot (Checkout)',
   kpiFollowers: 'Seuraajat',
+  totalFollowersAll: 'Seuraajat yhteensä',
+  followersPerAccount: 'Seuraajat tilittäin',
+  shareOfAudience: 'Osuus yleisöstä',
   kpiPlannedPosts: 'Ajastetut julkaisut',
   performanceCheckoutTitle: 'Suorituskyky & checkout-tulot',
   performanceCheckoutSub: 'Päivittäiset tulot SEK:nä viime viikolta',
@@ -3500,9 +3532,16 @@ navFeatures: 'Ominaisuudet',
   audienceGenderWomen: 'Naiset',
   audienceGenderMen: 'Miehet',
   audienceGenderOther: 'Muu',
-  audienceTopCountries: 'Top-maat',
-  audienceTopCities: 'Top-kaupungit',
+  audienceTopCountries: 'Suosituimmat maat',
+  audienceTopCities: 'Suosituimmat kaupungit',
   audienceActiveTimesHint: 'Milloin yleisösi on aktiivisimmillaan (paikallinen aika)',
+  audienceLocation: 'Sijainti',
+  demographicsUnavailable:
+    'Demografia edellyttää Instagram Business/Creator -tiliä, jossa on yli 100 seuraajaa, sekä insight-oikeudet. Yhdistä Instagram uudelleen asetuksissa ja päivitä.',
+  demographicsFromViewers: 'Perustuu tileihin, jotka katselivat / sitoutuivat sisältöösi',
+  demographicsFromFollowers: 'Perustuu Instagram-seuraajiisi',
+  demographicsAllPlatforms: 'Kaikki alustat',
+  demographicsPlatformStatus: 'Lähteet',
   audienceLessActive: 'Vähemmän',
   audienceMoreActive: 'Enemmän',
   analyticsTab: 'Analytics',

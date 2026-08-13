@@ -1,7 +1,12 @@
+import sql from '@/app/api/utils/sql';
 import {
   buildCommunityAccessEmail,
 } from '@/lib/community-access-email';
 import { listManagedCommunities } from '@/lib/mock-community-admin';
+import {
+  fireEmailAutomations,
+  persistSubscriber,
+} from '@/lib/email/crm-persist';
 import { sendCommunityAccessInvite } from '@/lib/mock-email-crm';
 import { sendCommunityWelcomeEmail, sendOrderReceiptEmail } from '@/lib/email/transactional';
 import { getSiteUrl } from '@/lib/site';
@@ -40,7 +45,7 @@ export async function POST(request: Request) {
       request.headers.get('origin') ||
       getSiteUrl();
 
-    // Demo CRM ledger (always).
+    // Demo CRM ledger (always) + resolve community creator for durable CRM.
     const result = sendCommunityAccessInvite({
       buyerName,
       buyerEmail,
@@ -49,6 +54,32 @@ export async function POST(request: Request) {
       communityName,
       origin,
     });
+
+    let creatorId: string | null = null;
+    if (process.env.DATABASE_URL?.trim()) {
+      try {
+        const owners = await sql`
+          SELECT creator_id, name FROM communities WHERE id = ${communityId} LIMIT 1
+        `;
+        creatorId = (owners?.[0]?.creator_id as string) || null;
+        if (owners?.[0]?.name) {
+          // Prefer live community name from DB when present.
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (creatorId) {
+      await persistSubscriber({
+        creatorId,
+        email: buyerEmail,
+        name: buyerName,
+        source: 'vip_access',
+        communityId,
+        tags: ['Community Access', productTitle],
+      });
+    }
 
     const composed = buildCommunityAccessEmail({
       buyerName,
@@ -59,14 +90,31 @@ export async function POST(request: Request) {
       origin,
     });
 
-    // Live Resend delivery when RESEND_API_KEY is set.
-    const welcome = await sendCommunityWelcomeEmail({
-      to: buyerEmail,
-      memberName: buyerName,
-      communityId,
-      communityName,
-      origin,
-    });
+    // Prefer rule-driven automations; fall back to default welcome template.
+    let automationSent = 0;
+    if (creatorId) {
+      const fired = await fireEmailAutomations({
+        creatorId,
+        communityId,
+        communityName,
+        communityUrl: result.communityUrl,
+        trigger: 'purchase_community_access',
+        recipientEmail: buyerEmail,
+        recipientName: buyerName,
+      });
+      automationSent = fired.sent;
+    }
+
+    const welcome =
+      automationSent > 0
+        ? { ok: true as const, id: 'automation' }
+        : await sendCommunityWelcomeEmail({
+            to: buyerEmail,
+            memberName: buyerName,
+            communityId,
+            communityName,
+            origin,
+          });
 
     let receipt: Awaited<ReturnType<typeof sendOrderReceiptEmail>> | null = null;
     if (Number.isFinite(amountSek) && amountSek > 0) {
@@ -88,9 +136,16 @@ export async function POST(request: Request) {
         to: buyerEmail,
         subject: composed.subject,
         preview: result.preview,
+        automation_sent: automationSent,
         resend: welcome.ok
           ? { ok: true, id: welcome.id }
-          : { ok: false, error: welcome.error, missingEnv: welcome.missingEnv },
+          : {
+              ok: false,
+              error:
+                'error' in welcome ? String(welcome.error) : 'send_failed',
+              missingEnv:
+                'missingEnv' in welcome ? welcome.missingEnv : undefined,
+            },
         receipt: receipt
           ? receipt.ok
             ? { ok: true, id: receipt.id }

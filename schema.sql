@@ -460,6 +460,55 @@ CREATE TABLE IF NOT EXISTS email_broadcasts (
 CREATE INDEX IF NOT EXISTS email_broadcasts_creator_idx
   ON email_broadcasts (creator_id, sent_at DESC);
 
+CREATE TABLE IF NOT EXISTS email_automations (
+  id            text PRIMARY KEY,
+  creator_id    text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  community_id  integer REFERENCES communities(id) ON DELETE SET NULL,
+  name          text NOT NULL,
+  description   text NOT NULL DEFAULT '',
+  trigger       text NOT NULL,
+  subject       text NOT NULL,
+  body          text NOT NULL,
+  status        text NOT NULL DEFAULT 'active'
+                  CHECK (status IN ('active', 'paused')),
+  sent_count    integer NOT NULL DEFAULT 0,
+  last_sent_at  timestamptz,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS email_automations_creator_idx
+  ON email_automations (creator_id, status);
+
+CREATE TABLE IF NOT EXISTS email_message_tracking (
+  resend_id     text PRIMARY KEY,
+  broadcast_id  integer REFERENCES email_broadcasts(id) ON DELETE CASCADE,
+  creator_id    text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  email         text NOT NULL,
+  opened        boolean NOT NULL DEFAULT false,
+  clicked       boolean NOT NULL DEFAULT false,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  opened_at     timestamptz,
+  clicked_at    timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS email_message_tracking_broadcast_idx
+  ON email_message_tracking (broadcast_id);
+
+CREATE TABLE IF NOT EXISTS email_automation_sends (
+  id              serial PRIMARY KEY,
+  automation_id   text REFERENCES email_automations(id) ON DELETE SET NULL,
+  creator_id      text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  community_id    integer,
+  community_name  text,
+  kind            text NOT NULL DEFAULT 'member_auto',
+  subject         text NOT NULL,
+  recipient_name  text NOT NULL,
+  recipient_email text NOT NULL,
+  resend_id       text,
+  sent_at         timestamptz NOT NULL DEFAULT now()
+);
+
 -- -----------------------------------------------------------------------------
 -- 7) events + RSVPs + live chat
 -- -----------------------------------------------------------------------------

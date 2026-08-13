@@ -163,6 +163,8 @@ export const resendEnv = {
   apiKey: () => readEnv('RESEND_API_KEY'),
   /** Verified sender, e.g. "clikd: <hello@clikd.app>" */
   from: () => readEnv('RESEND_FROM_EMAIL') ?? 'clikd: <onboarding@resend.dev>',
+  /** Optional shared secret for POST /api/webhooks/resend */
+  webhookSecret: () => readEnv('RESEND_WEBHOOK_SECRET'),
   requiredKeys: ['RESEND_API_KEY'] as const,
 };
 

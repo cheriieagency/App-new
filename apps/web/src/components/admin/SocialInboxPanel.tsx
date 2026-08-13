@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Inbox, Loader2, RefreshCw, Send } from 'lucide-react';
+import { Inbox, Loader2, MessageCircle, RefreshCw, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
@@ -13,6 +13,8 @@ import { t } from '@/lib/i18n';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import { refreshMetaSync, useMetaSync } from '@/hooks/useMetaSync';
 
+type InboxChannel = 'all' | 'comment' | 'dm';
+
 type DmMessage = {
   id: string;
   from: 'them' | 'you';
@@ -22,11 +24,14 @@ type DmMessage = {
 
 type DmThread = {
   id: string;
+  channel: 'comment' | 'dm';
   name: string;
   handle: string;
   preview: string;
   time: string;
   unread: boolean;
+  recipient_id?: string;
+  page_id?: string;
   messages: DmMessage[];
 };
 
@@ -39,8 +44,7 @@ function formatInstagramHandle(raw: string | null | undefined): string | null {
 }
 
 /**
- * Instagram inbox — currently powered by comments on recent media
- * (Meta Graph). Real Instagram Messaging DMs are not wired yet.
+ * Instagram inbox — comments on recent media + private DMs via Messaging API.
  */
 export default function SocialInboxPanel() {
   const { locale } = useLocale();
@@ -51,22 +55,33 @@ export default function SocialInboxPanel() {
   const [localThreads, setLocalThreads] = useState<DmThread[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
+  const [channelFilter, setChannelFilter] = useState<InboxChannel>('all');
 
   const syncedThreads = useMemo<DmThread[]>(
     () =>
       (metaSync?.snapshot?.inbox_threads ?? []).map((thread) => ({
         id: thread.id,
+        channel: (thread.channel === 'dm' ? 'dm' : 'comment') as 'comment' | 'dm',
         name: thread.name,
         handle: thread.handle,
         preview: thread.preview,
         time: thread.time,
         unread: thread.unread,
+        recipient_id: thread.recipient_id,
+        page_id: thread.page_id,
         messages: thread.messages,
       })),
     [metaSync?.snapshot?.inbox_threads]
   );
 
-  const threads = localThreads ?? syncedThreads;
+  const allThreads = localThreads ?? syncedThreads;
+  const threads = useMemo(() => {
+    if (channelFilter === 'all') return allThreads;
+    return allThreads.filter((t) => t.channel === channelFilter);
+  }, [allThreads, channelFilter]);
+
+  const dmCount = allThreads.filter((t) => t.channel === 'dm').length;
+  const commentCount = allThreads.filter((t) => t.channel === 'comment').length;
 
   useEffect(() => {
     setLocalThreads(null);
@@ -76,7 +91,13 @@ export default function SocialInboxPanel() {
   const [draft, setDraft] = useState('');
 
   useEffect(() => {
-    if (!activeId && threads.length > 0) setActiveId(threads[0].id);
+    if (threads.length === 0) {
+      setActiveId(null);
+      return;
+    }
+    if (!activeId || !threads.some((t) => t.id === activeId)) {
+      setActiveId(threads[0].id);
+    }
   }, [activeId, threads]);
 
   const instagramHandle = useMemo(() => {
@@ -114,11 +135,13 @@ export default function SocialInboxPanel() {
       if (!res.synced) {
         toast.error(res.error || 'Could not refresh Instagram inbox');
       } else {
-        const count = res.snapshot?.inbox_threads?.length ?? 0;
+        const list = res.snapshot?.inbox_threads ?? [];
+        const dms = list.filter((t) => t.channel === 'dm').length;
+        const comments = list.length - dms;
         toast.success(
-          count > 0
-            ? `Synced ${count} comment thread${count === 1 ? '' : 's'}`
-            : 'Synced — no comments on recent posts yet'
+          list.length > 0
+            ? `Synced ${dms} DM${dms === 1 ? '' : 's'} · ${comments} comment${comments === 1 ? '' : 's'}`
+            : 'Synced — no DMs or comments on recent posts yet'
         );
       }
     } catch (err) {
@@ -137,14 +160,21 @@ export default function SocialInboxPanel() {
       const r = await fetch('/api/meta/inbox/reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ commentId: active.id, message: text }),
+        body: JSON.stringify({
+          threadId: active.id,
+          commentId: active.id,
+          channel: active.channel,
+          message: text,
+          recipientId: active.recipient_id,
+          pageId: active.page_id,
+        }),
       });
       const json = await r.json().catch(() => ({}));
       if (!r.ok) {
         throw new Error(
           json.message ||
             json.error ||
-            'Reply failed — reconnect Instagram with comment permissions'
+            'Reply failed — reconnect Instagram with comment + messaging permissions'
         );
       }
       const replyId = String(json.reply_id || `local-${Date.now()}`);
@@ -171,7 +201,7 @@ export default function SocialInboxPanel() {
         });
       }
       setDraft('');
-      toast.success('Reply sent');
+      toast.success(active.channel === 'dm' ? 'DM sent' : 'Comment reply sent');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not send reply');
     } finally {
@@ -218,9 +248,32 @@ export default function SocialInboxPanel() {
       {syncError ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900">
           Instagram sync issue: {syncError}. Try Sync, or reconnect under Settings →
-          Socials (comment permissions required).
+          Socials (comment + messaging permissions required).
         </div>
       ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            { key: 'all', label: `All (${allThreads.length})` },
+            { key: 'dm', label: `DMs (${dmCount})` },
+            { key: 'comment', label: `Comments (${commentCount})` },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setChannelFilter(tab.key)}
+            className={`min-h-11 px-3.5 rounded-xl text-sm font-semibold border transition-colors ${
+              channelFilter === tab.key
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       <div
         className={`${adminCardClass} overflow-hidden grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] min-h-[520px]`}
@@ -232,7 +285,7 @@ export default function SocialInboxPanel() {
             </span>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-900 truncate">
-                Instagram comments
+                Instagram inbox
               </p>
               <p className="text-[11px] text-slate-400 truncate font-mono">
                 {instagramHandle ?? 'Connected account'}
@@ -249,10 +302,16 @@ export default function SocialInboxPanel() {
             ) : threads.length === 0 ? (
               <div className="py-16 text-center text-slate-400 px-4 space-y-2">
                 <Inbox size={28} className="mx-auto mb-2 opacity-40" />
-                <p className="text-sm font-semibold">No comments on recent posts yet</p>
+                <p className="text-sm font-semibold">
+                  {channelFilter === 'dm'
+                    ? 'No DMs yet'
+                    : channelFilter === 'comment'
+                      ? 'No comments on recent posts yet'
+                      : 'Inbox is empty'}
+                </p>
                 <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-                  Inbox shows comments on your latest Instagram media. Private DMs are not
-                  connected yet. Tap Sync after new comments arrive.
+                  Shows Instagram comments and private DMs. Reconnect under Settings →
+                  Socials if DMs stay empty (needs messaging permission), then tap Sync.
                 </p>
               </div>
             ) : (
@@ -289,7 +348,18 @@ export default function SocialInboxPanel() {
                           {thread.time}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 truncate">{thread.handle}</p>
+                      <p className="text-[11px] text-slate-400 truncate inline-flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center h-5 px-1.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wide ${
+                            thread.channel === 'dm'
+                              ? 'bg-slate-900 text-white'
+                              : 'bg-pink-50 text-[#DB2777]'
+                          }`}
+                        >
+                          {thread.channel === 'dm' ? 'DM' : 'Comment'}
+                        </span>
+                        {thread.handle}
+                      </p>
                       <p
                         className={`text-sm truncate mt-0.5 ${
                           thread.unread ? 'text-slate-700 font-medium' : 'text-slate-500'
@@ -319,35 +389,49 @@ export default function SocialInboxPanel() {
                     .join('')
                     .slice(0, 2)}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{active.name}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{active.handle}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900 truncate">
+                    {active.name}
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate inline-flex items-center gap-1.5">
+                    {active.channel === 'dm' ? (
+                      <MessageCircle size={12} className="text-slate-500" />
+                    ) : null}
+                    {active.channel === 'dm' ? 'Direct message' : 'Comment'} ·{' '}
+                    {active.handle}
+                  </p>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-                {active.messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.from === 'you' ? 'justify-end' : 'justify-start'}`}
-                  >
+                {active.messages.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">
+                    No messages in this thread yet
+                  </p>
+                ) : (
+                  active.messages.map((msg) => (
                     <div
-                      className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm ${
-                        msg.from === 'you'
-                          ? 'bg-[#2B2568] text-white'
-                          : 'bg-slate-100 text-slate-800'
-                      }`}
+                      key={msg.id}
+                      className={`flex ${msg.from === 'you' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <p className="leading-relaxed">{msg.text}</p>
-                      <p
-                        className={`text-[10px] mt-1 ${
-                          msg.from === 'you' ? 'text-white/60' : 'text-slate-400'
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm ${
+                          msg.from === 'you'
+                            ? 'bg-[#2B2568] text-white'
+                            : 'bg-slate-100 text-slate-800'
                         }`}
                       >
-                        {msg.time}
-                      </p>
+                        <p className="leading-relaxed">{msg.text}</p>
+                        <p
+                          className={`text-[10px] mt-1 ${
+                            msg.from === 'you' ? 'text-white/60' : 'text-slate-400'
+                          }`}
+                        >
+                          {msg.time}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
               <form
                 className="border-t border-slate-100 p-3 flex items-center gap-2"
@@ -356,7 +440,11 @@ export default function SocialInboxPanel() {
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Reply to this comment…"
+                  placeholder={
+                    active.channel === 'dm'
+                      ? 'Reply to this DM…'
+                      : 'Reply to this comment…'
+                  }
                   className="flex-1 h-11 min-h-[44px] rounded-xl border border-slate-200 px-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#2B2568]/15"
                 />
                 <button
@@ -378,7 +466,7 @@ export default function SocialInboxPanel() {
               <div>
                 <Inbox size={28} className="mx-auto mb-2 opacity-40" />
                 <p className="text-sm font-semibold">
-                  Select a comment thread or tap Sync
+                  Select a thread or tap Sync
                 </p>
               </div>
             </div>

@@ -37,9 +37,16 @@ import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import { useMetaSync } from '@/hooks/useMetaSync';
 import {
   useAnalytics,
-  type AnalyticsHashtag,
+  type AnalyticsDemographics,
   type AnalyticsPlatformSlice,
 } from '@/hooks/useAnalytics';
+import { useAnalyticsPosts } from '@/hooks/useAnalyticsPosts';
+import { useAnalyticsHashtags } from '@/hooks/useAnalyticsHashtags';
+import type {
+  PlatformAccountPill,
+  UnifiedPostMetric,
+} from '@/lib/analytics/unified-posts';
+import type { HashtagBucket } from '@/lib/ai/openai';
 import IgBusinessRequiredBanner from '@/components/admin/IgBusinessRequiredBanner';
 import {
   FacebookIcon,
@@ -63,6 +70,7 @@ const PLATFORM_LABEL: Record<string, string> = {
   youtube: 'YouTube',
   linkedin: 'LinkedIn',
   tiktok: 'TikTok',
+  pinterest: 'Pinterest',
 };
 
 const PLATFORM_ICON: Record<
@@ -131,13 +139,34 @@ type AnalyticsSubTab =
 type PostPerfRow = {
   id: string;
   title: string;
+  /** Display label (Instagram, Facebook, …). */
   platform: string;
+  /** Stable key for grouping (instagram, facebook, tiktok). */
+  platformKey: string;
   image: string;
   er: number;
   impressions: number;
   likes: number;
   comments: number;
   shares: number;
+};
+
+const PLATFORM_ORDER = [
+  'instagram',
+  'facebook',
+  'tiktok',
+  'youtube',
+  'pinterest',
+  'linkedin',
+] as const;
+
+const PLATFORM_ACCENT: Record<string, string> = {
+  instagram: '#E1306C',
+  facebook: '#1877F2',
+  youtube: '#FF0000',
+  linkedin: '#0A66C2',
+  tiktok: '#0F172A',
+  pinterest: '#E60023',
 };
 
 /** Empty engagement shape until Meta Graph insights sync. */
@@ -257,6 +286,10 @@ export default function LaterAnalyticsPanel() {
   const [draftTo, setDraftTo] = useState(dateRange.to);
   const [exportOpen, setExportOpen] = useState(false);
   const [bioTick, setBioTick] = useState(0);
+  // Live IG / FB / TikTok published posts for Posts + Reels tabs.
+  const { data: postsApi, isLoading: postsLoading } = useAnalyticsPosts(
+    hasConnectedSocials && (sub === 'posts' || sub === 'reels')
+  );
 
   // Keep Revenue / Link-in-bio in sync with Bio Builder products + checkout sales.
   useEffect(() => {
@@ -396,83 +429,83 @@ export default function LaterAnalyticsPanel() {
     igProfile.followers,
   ]);
 
-  /** Map synced IG media into Posts / Reels rows (from workspace analytics API). */
-  const { bestPosts, worstPosts, bestReels, worstReels } = useMemo(() => {
+  /** Prefer dedicated /api/analytics/posts; fall back to aggregated media. */
+  const { feedPosts, reelPosts, postAccounts } = useMemo(() => {
+    const platformLabel = (raw?: string | null) => {
+      const key = (raw || 'instagram').toLowerCase();
+      return PLATFORM_LABEL[key] || key.charAt(0).toUpperCase() + key.slice(1);
+    };
+
+    const fromUnified = (item: UnifiedPostMetric): PostPerfRow => ({
+      id: item.id,
+      title: item.title,
+      platform: platformLabel(item.platform),
+      platformKey: item.platform,
+      image: item.mediaUrl || '',
+      er: item.engagementRate,
+      impressions: item.impressions,
+      likes: item.likes,
+      comments: item.comments,
+      shares: item.shares ?? 0,
+    });
+
+    const livePosts = postsApi?.posts ?? [];
+    if (livePosts.length > 0 || (postsApi?.accounts?.length ?? 0) > 0) {
+      const isVideo = (m: UnifiedPostMetric) => {
+        const type = (m.mediaType || '').toUpperCase();
+        return type === 'VIDEO' || type === 'REELS' || m.platform === 'tiktok';
+      };
+      return {
+        feedPosts: livePosts.filter((m) => !isVideo(m)).map(fromUnified),
+        reelPosts: livePosts.filter((m) => isVideo(m)).map(fromUnified),
+        postAccounts: postsApi?.accounts ?? [],
+      };
+    }
+
+    // Fallback: older /api/analytics media payload.
     const media = liveMedia;
     const toRow = (item: (typeof media)[number]): PostPerfRow => {
       const likes = item.like_count ?? 0;
       const comments = item.comments_count ?? 0;
-      const impressions = Math.max(likes + comments, likes * 8);
+      const shares = item.shares_count ?? 0;
+      const views = item.view_count ?? 0;
+      const impressions = Math.max(
+        views,
+        likes + comments + shares,
+        likes * 8,
+        1
+      );
       const er =
         impressions > 0
-          ? Math.round(((likes + comments) / impressions) * 1000) / 10
+          ? Math.round(((likes + comments + shares) / impressions) * 1000) / 10
           : 0;
-      const title =
-        item.caption?.split('\n')[0]?.slice(0, 48) ||
-        `IG ${item.media_type || 'post'}`;
+      const plat = (item.platform || 'instagram').toLowerCase();
       return {
         id: item.id,
-        title,
-        platform: 'Instagram',
+        title:
+          item.caption?.split('\n')[0]?.slice(0, 48) ||
+          `${platformLabel(plat)} ${item.media_type || 'post'}`,
+        platform: platformLabel(plat),
+        platformKey: plat,
         image: item.thumbnail_url || item.media_url || '',
         er,
         impressions,
         likes,
         comments,
-        shares: 0,
+        shares,
       };
     };
-    const feed = media
-      .filter((m) => m.media_type !== 'VIDEO' && m.media_type !== 'REELS')
-      .map(toRow)
-      .sort((a, b) => b.er - a.er);
-    const reels = media
-      .filter((m) => m.media_type === 'VIDEO' || m.media_type === 'REELS')
-      .map(toRow)
-      .sort((a, b) => b.er - a.er);
-    const split = (rows: PostPerfRow[]) => {
-      if (rows.length === 0) return { best: [] as PostPerfRow[], worst: [] as PostPerfRow[] };
-      if (rows.length === 1) return { best: rows, worst: [] as PostPerfRow[] };
-      const mid = Math.max(1, Math.ceil(rows.length / 2));
-      return { best: rows.slice(0, mid), worst: [...rows].reverse().slice(0, rows.length - mid) };
+    const isVideo = (m: (typeof media)[number]) => {
+      const type = (m.media_type || '').toUpperCase();
+      const plat = (m.platform || '').toLowerCase();
+      return type === 'VIDEO' || type === 'REELS' || plat === 'tiktok';
     };
-    const postsSplit = split(feed.length ? feed : media.map(toRow).sort((a, b) => b.er - a.er));
-    const reelsSplit = split(reels);
     return {
-      bestPosts: postsSplit.best,
-      worstPosts: postsSplit.worst,
-      bestReels: reelsSplit.best,
-      worstReels: reelsSplit.worst,
+      feedPosts: media.filter((m) => !isVideo(m)).map(toRow),
+      reelPosts: media.filter((m) => isVideo(m)).map(toRow),
+      postAccounts: [] as PlatformAccountPill[],
     };
-  }, [liveMedia]);
-
-  const usedHashtags = useMemo<AnalyticsHashtag[]>(() => {
-    if (analyticsApi?.hashtags && analyticsApi.hashtags.length > 0) {
-      return analyticsApi.hashtags;
-    }
-    // Client-side fallback from captions when API omits hashtags.
-    const map = new Map<string, AnalyticsHashtag>();
-    for (const item of liveMedia) {
-      const matches = (item.caption || '').match(/#[\p{L}\p{N}_]+/gu) || [];
-      for (const raw of matches) {
-        const tag = raw.toLowerCase();
-        const prev = map.get(tag) || { tag, posts: 0, reach: 0, er: 0, trend: 0 };
-        prev.posts += 1;
-        prev.reach += Math.max(item.like_count ?? 0, 1);
-        map.set(tag, prev);
-      }
-    }
-    return [...map.values()]
-      .map((h) => ({
-        ...h,
-        er:
-          h.reach > 0
-            ? Math.round(((h.posts * 2) / h.reach) * 1000) / 10
-            : 0,
-      }))
-      .sort((a, b) => b.posts - a.posts)
-      .slice(0, 40);
-  }, [analyticsApi?.hashtags, liveMedia]);
+  }, [postsApi?.posts, postsApi?.accounts, liveMedia]);
 
   // Social engagement chart (Analytics tab) from Meta media; Revenue tab uses bio checkout series.
   const socialActivity = useMemo(() => {
@@ -989,6 +1022,24 @@ export default function LaterAnalyticsPanel() {
           }
           reach={engagement.reach}
           platforms={platformSlices}
+          demographics={analyticsApi?.demographics ?? null}
+          accounts={connectedAccounts.map((a) => ({
+            platform: a.platform,
+            handle: a.handle ?? null,
+            display_name: a.display_name ?? null,
+            avatar_url: a.avatar_url ?? null,
+            followers:
+              a.platform === 'instagram'
+                ? Number(
+                    platformSlices.instagram?.followers ??
+                      a.follower_count ??
+                      0
+                  )
+                : Number(a.follower_count) ||
+                  Number(platformSlices[a.platform]?.followers) ||
+                  0,
+            external_id: a.external_id ?? a.platform,
+          }))}
         />
       )}
 
@@ -998,8 +1049,9 @@ export default function LaterAnalyticsPanel() {
           rangeLabel={formatRangeLabel(dateRange, locale)}
           compareKey="postsPerformanceCompare"
           reachLabelKey="metricImpressions"
-          best={bestPosts}
-          worst={worstPosts}
+          rows={feedPosts}
+          accounts={postAccounts}
+          loading={postsLoading}
         />
       )}
       {sub === 'reels' && (
@@ -1008,8 +1060,9 @@ export default function LaterAnalyticsPanel() {
           rangeLabel={formatRangeLabel(dateRange, locale)}
           compareKey="reelsPerformanceCompare"
           reachLabelKey="metricPlays"
-          best={bestReels}
-          worst={worstReels}
+          rows={reelPosts}
+          accounts={postAccounts}
+          loading={postsLoading}
         />
       )}
       {sub === 'stories' && (
@@ -1018,15 +1071,18 @@ export default function LaterAnalyticsPanel() {
           rangeLabel={formatRangeLabel(dateRange, locale)}
           compareKey="storiesPerformanceCompare"
           reachLabelKey="metricImpressions"
-          best={[]}
-          worst={[]}
+          rows={[]}
+          accounts={[]}
+          loading={false}
         />
       )}
       {sub === 'hashtags' && (
         <HashtagsAnalyticsTab
           locale={locale}
           rangeLabel={formatRangeLabel(dateRange, locale)}
-          hashtags={usedHashtags}
+          workspaceId={activeWorkspace.id}
+          workspaceName={activeWorkspace.name}
+          enabled={hasConnectedSocials}
         />
       )}
       {sub === 'linkinbio' && (
@@ -1466,20 +1522,21 @@ function PostPerfRowItem({
         <img src={post.image} alt="" className="w-full h-full object-cover" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm font-semibold text-slate-900 truncate">{post.title}</p>
-          <span className="hidden sm:inline text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex-shrink-0">
-            {post.platform}
-          </span>
-        </div>
-        <div className="mt-1.5 flex items-center gap-2">
+        <p className="text-sm font-semibold text-slate-900 truncate">{post.title}</p>
+          <div className="mt-1.5 flex items-center gap-2">
           <div className="h-1.5 flex-1 max-w-[140px] rounded-full bg-slate-100 overflow-hidden">
             <div
               className="h-full rounded-full"
               style={{ width: `${barPct}%`, background: barColor }}
             />
           </div>
-          <span className="text-xs font-extrabold tabular-nums text-slate-900 flex-shrink-0">
+          <span
+            className={`text-[11px] font-extrabold tabular-nums flex-shrink-0 px-1.5 py-0.5 rounded-md ${
+              tone === 'best'
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-pink-50 text-[#DB2777]'
+            }`}
+          >
             {post.er.toFixed(1)}%
           </span>
         </div>
@@ -1514,13 +1571,38 @@ function PostPerfRowItem({
   );
 }
 
+/** Top 2–3 by ER and bottom 2–3 by ER (no overlap when few posts). */
+function splitBestWorst(rows: PostPerfRow[], take = 3) {
+  if (rows.length === 0) {
+    return { best: [] as PostPerfRow[], worst: [] as PostPerfRow[] };
+  }
+  const sorted = [...rows].sort((a, b) => b.er - a.er);
+  const n = Math.min(take, sorted.length);
+  if (sorted.length <= n) {
+    return { best: sorted, worst: [] as PostPerfRow[] };
+  }
+  const best = sorted.slice(0, n);
+  const worst = [...sorted].reverse().slice(0, Math.min(take, sorted.length - n));
+  return { best, worst };
+}
+
+function formatAccountPillLabel(account: PlatformAccountPill) {
+  const label = PLATFORM_LABEL[account.platform] || account.platform;
+  if (account.platform === 'facebook') {
+    return account.display_name || account.handle || label;
+  }
+  const handle = account.handle?.replace(/^@/, '');
+  return handle ? `@${handle}` : account.display_name || label;
+}
+
 function ContentPerformanceTab({
   locale,
   rangeLabel,
   compareKey,
   reachLabelKey,
-  best,
-  worst,
+  rows,
+  accounts,
+  loading,
 }: {
   locale: Locale;
   rangeLabel: string;
@@ -1529,110 +1611,292 @@ function ContentPerformanceTab({
     | 'reelsPerformanceCompare'
     | 'storiesPerformanceCompare';
   reachLabelKey: 'metricImpressions' | 'metricPlays';
-  best: PostPerfRow[];
-  worst: PostPerfRow[];
+  rows: PostPerfRow[];
+  accounts: PlatformAccountPill[];
+  loading?: boolean;
 }) {
+  // Prefer API account pills; otherwise derive from rows present.
+  const pills = useMemo(() => {
+    if (accounts.length > 0) return accounts;
+    const seen = new Set(rows.map((r) => r.platformKey));
+    return (['instagram', 'facebook', 'tiktok'] as const)
+      .filter((p) => seen.has(p))
+      .map(
+        (platform): PlatformAccountPill => ({
+          platform,
+          connected: true,
+          handle: null,
+          display_name: PLATFORM_LABEL[platform],
+          avatar_url: null,
+          post_count: rows.filter((r) => r.platformKey === platform).length,
+          status: 'ok',
+        })
+      );
+  }, [accounts, rows]);
+
+  // One section per platform (connected or with rows).
+  const byPlatform = useMemo(() => {
+    const map = new Map<string, PostPerfRow[]>();
+    for (const row of rows) {
+      const key = row.platformKey || 'instagram';
+      const list = map.get(key) || [];
+      list.push(row);
+      map.set(key, list);
+    }
+
+    const keys = new Set<string>([
+      ...pills.filter((p) => p.connected || p.post_count > 0).map((p) => p.platform),
+      ...map.keys(),
+    ]);
+
+    return [...keys]
+      .sort((a, b) => {
+        const ia = PLATFORM_ORDER.indexOf(a as (typeof PLATFORM_ORDER)[number]);
+        const ib = PLATFORM_ORDER.indexOf(b as (typeof PLATFORM_ORDER)[number]);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      })
+      .map((key) => {
+        const sorted = [...(map.get(key) || [])].sort((a, b) => b.er - a.er);
+        const { best, worst } = splitBestWorst(sorted, 3);
+        const pill = pills.find((p) => p.platform === key);
+        return {
+          key,
+          label: PLATFORM_LABEL[key] || key,
+          accent: PLATFORM_ACCENT[key] || '#0F172A',
+          Icon: PLATFORM_ICON[key] || InstagramIcon,
+          count: sorted.length,
+          best,
+          worst,
+          status: pill?.status ?? (sorted.length ? 'ok' : 'empty'),
+          message:
+            pill?.message ||
+            (sorted.length
+              ? null
+              : 'Connect account or publish content to view analytics'),
+        };
+      });
+  }, [rows, pills]);
+
   return (
-    <div className="space-y-4">
-      <p className="text-sm font-medium text-slate-500 -mt-1">
+    <div className="space-y-5">
+      {pills.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {pills.map((account) => {
+            const accent = PLATFORM_ACCENT[account.platform] || '#0F172A';
+            const Icon = PLATFORM_ICON[account.platform] || InstagramIcon;
+            const muted =
+              account.status === 'disconnected' ||
+              account.status === 'empty' ||
+              account.status === 'error';
+            return (
+              <div
+                key={account.platform}
+                className={`inline-flex items-center gap-2 min-h-11 px-3 rounded-xl border text-sm font-semibold ${
+                  muted
+                    ? 'bg-slate-50 border-slate-200 text-slate-500'
+                    : 'bg-white border-slate-200 text-slate-800'
+                }`}
+              >
+                <span
+                  className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-white flex-shrink-0"
+                  style={{ backgroundColor: accent }}
+                  aria-hidden
+                >
+                  <Icon size={14} className="text-white" />
+                </span>
+                <span className="truncate max-w-[160px]">
+                  {formatAccountPillLabel(account)}
+                </span>
+                {account.status === 'ok' && (
+                  <span className="text-[10px] font-mono font-bold tabular-nums text-slate-400">
+                    {account.post_count}
+                  </span>
+                )}
+                {account.status !== 'ok' && (
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600">
+                    {account.status === 'disconnected' ? 'Connect' : '—'}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-sm font-medium text-slate-500">
         {tf(compareKey, locale, { range: rangeLabel })}
       </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <section className={`${adminCardClass} overflow-hidden`}>
-          <div className="px-3.5 py-3 border-b border-slate-100">
-            <h3 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden />
-              {t('bestPerformingPosts', locale)}
-            </h3>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5">
-              {t('bestPerformingSub', locale)}
-            </p>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {best.length === 0 ? (
-              <p className="px-3.5 py-8 text-sm text-slate-400 text-center">—</p>
-            ) : (
-              best.map((post, i) => (
-                <PostPerfRowItem
-                  key={post.id}
-                  post={post}
-                  locale={locale}
-                  tone="best"
-                  rank={i + 1}
-                  reachLabelKey={reachLabelKey}
-                />
-              ))
-            )}
-          </div>
-        </section>
+      {loading && byPlatform.every((g) => g.count === 0) ? (
+        <div className={`${adminCardClass} px-4 py-10 text-center text-sm text-slate-400`}>
+          Loading posts…
+        </div>
+      ) : byPlatform.length === 0 ? (
+        <div className={`${adminCardClass} px-4 py-8 text-center`}>
+          <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-100 text-sm font-semibold text-amber-800">
+            Connect account or publish content to view analytics
+          </p>
+        </div>
+      ) : (
+        byPlatform.map((group) => (
+          <section key={group.key} className="space-y-3">
+            <div className="flex items-center gap-2.5 min-h-11">
+              <span
+                className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-xl inline-flex items-center justify-center text-white flex-shrink-0"
+                style={{ backgroundColor: group.accent }}
+                aria-hidden
+              >
+                <group.Icon size={16} className="text-white" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
+                  {group.label}
+                </h3>
+                <p className="text-[11px] font-medium text-slate-400 tabular-nums">
+                  {group.count > 0 ? group.count : group.message}
+                </p>
+              </div>
+            </div>
 
-        <section className={`${adminCardClass} overflow-hidden`}>
-          <div className="px-3.5 py-3 border-b border-slate-100">
-            <h3 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#F472B6]" aria-hidden />
-              {t('worstPerformingPosts', locale)}
-            </h3>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5">
-              {t('worstPerformingSub', locale)}
-            </p>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {worst.length === 0 ? (
-              <p className="px-3.5 py-8 text-sm text-slate-400 text-center">—</p>
+            {group.count === 0 ? (
+              <div className={`${adminCardClass} px-4 py-6`}>
+                <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-100 text-xs sm:text-sm font-semibold text-amber-800">
+                  Connect account or publish content to view analytics
+                </p>
+              </div>
             ) : (
-              worst.map((post, i) => (
-                <PostPerfRowItem
-                  key={post.id}
-                  post={post}
-                  locale={locale}
-                  tone="worst"
-                  rank={i + 1}
-                  reachLabelKey={reachLabelKey}
-                />
-              ))
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                <div className={`${adminCardClass} overflow-hidden`}>
+                  <div className="px-3.5 py-3 border-b border-slate-100">
+                    <h4 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full bg-emerald-500"
+                        aria-hidden
+                      />
+                      {t('bestPerformingPosts', locale)}
+                    </h4>
+                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                      {t('bestPerformingSub', locale)}
+                    </p>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {group.best.map((post, i) => (
+                      <PostPerfRowItem
+                        key={post.id}
+                        post={post}
+                        locale={locale}
+                        tone="best"
+                        rank={i + 1}
+                        reachLabelKey={reachLabelKey}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className={`${adminCardClass} overflow-hidden`}>
+                  <div className="px-3.5 py-3 border-b border-slate-100">
+                    <h4 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full bg-[#F472B6]"
+                        aria-hidden
+                      />
+                      {t('worstPerformingPosts', locale)}
+                    </h4>
+                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                      {t('worstPerformingSub', locale)}
+                    </p>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {group.worst.length === 0 ? (
+                      <p className="px-3.5 py-8 text-sm text-slate-400 text-center">
+                        —
+                      </p>
+                    ) : (
+                      group.worst.map((post, i) => (
+                        <PostPerfRowItem
+                          key={post.id}
+                          post={post}
+                          locale={locale}
+                          tone="worst"
+                          rank={i + 1}
+                          reachLabelKey={reachLabelKey}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
-          </div>
-        </section>
-      </div>
+          </section>
+        ))
+      )}
     </div>
   );
 }
 
-type UsedHashtag = AnalyticsHashtag;
-
-const AI_HASHTAG_SETS: { topic: string; tags: string[] }[] = [];
-
 function HashtagsAnalyticsTab({
   locale,
   rangeLabel,
-  hashtags,
+  workspaceId,
+  workspaceName,
+  enabled,
 }: {
   locale: Locale;
   rangeLabel: string;
-  hashtags: UsedHashtag[];
+  workspaceId: string;
+  workspaceName: string;
+  enabled: boolean;
 }) {
+  const { data, isLoading } = useAnalyticsHashtags(enabled);
   const [generating, setGenerating] = useState(false);
-  const [ideas, setIdeas] = useState(AI_HASHTAG_SETS);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [ideas, setIdeas] = useState<HashtagBucket[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const used = hashtags;
+  const used = data?.hashtags ?? [];
+  const kpis = data?.kpis ?? {
+    uniqueTags: 0,
+    avgReachLift: 0,
+    taggedPosts: 0,
+  };
   const maxReach = Math.max(...used.map((h) => h.reach), 1);
 
-  const regenerate = () => {
+  const regenerate = async () => {
     setGenerating(true);
-    window.setTimeout(() => {
-      // Rotate / shuffle AI sets when available (empty until AI endpoint ships).
-      setIdeas((prev) =>
-        [...prev]
-          .map((set) => ({
-            ...set,
-            tags: [...set.tags].sort(() => Math.random() - 0.5),
-          }))
-          .reverse()
+    setGenError(null);
+    try {
+      const res = await fetch('/api/ai/hashtags', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': workspaceId,
+          'x-active-workspace-id': workspaceId,
+        },
+        body: JSON.stringify({
+          workspaceId,
+          niche: workspaceName || 'creator brand',
+          topHashtags: used.slice(0, 15).map((h) => h.tag),
+        }),
+      });
+      const json = (await res.json()) as {
+        buckets?: HashtagBucket[];
+        message?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(
+          json.message || json.error || 'Failed to generate hashtag ideas'
+        );
+      }
+      setIdeas(json.buckets || []);
+    } catch (error) {
+      setGenError(
+        error instanceof Error ? error.message : 'Failed to generate hashtag ideas'
       );
+    } finally {
       setGenerating(false);
-    }, 900);
+    }
   };
 
   const copySet = async (id: string, tags: string[]) => {
@@ -1649,19 +1913,19 @@ function HashtagsAnalyticsTab({
     <div className="space-y-4 sm:space-y-5">
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: t('hashtagsUnique', locale), value: String(used.length) },
+          {
+            label: t('hashtagsUnique', locale),
+            value: isLoading ? '…' : String(kpis.uniqueTags),
+          },
           {
             label: t('hashtagsAvgLift', locale),
-            value:
-              used.length > 0
-                ? `${(
-                    used.reduce((s, h) => s + h.er, 0) / used.length
-                  ).toFixed(1)}%`
-                : '—',
+            value: isLoading
+              ? '…'
+              : `${kpis.avgReachLift >= 0 ? '+' : ''}${kpis.avgReachLift.toFixed(1)}%`,
           },
           {
             label: t('hashtagsTaggedPosts', locale),
-            value: String(used.reduce((s, h) => s + h.posts, 0)),
+            value: isLoading ? '…' : String(kpis.taggedPosts),
           },
         ].map((m) => (
           <div key={m.label} className={adminKpiClass}>
@@ -1707,13 +1971,21 @@ function HashtagsAnalyticsTab({
               </tr>
             </thead>
             <tbody>
-              {used.length === 0 ? (
+              {isLoading ? (
                 <tr>
                   <td
                     colSpan={5}
                     className="px-4 sm:px-5 py-10 text-sm text-slate-400 text-center"
                   >
-                    —
+                    Loading hashtags…
+                  </td>
+                </tr>
+              ) : used.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 sm:px-5 py-10 text-center">
+                    <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-100 text-sm font-semibold text-amber-800">
+                      No hashtags in recent posts yet — publish with #tags or generate AI ideas below
+                    </p>
                   </td>
                 </tr>
               ) : (
@@ -1724,13 +1996,21 @@ function HashtagsAnalyticsTab({
                   >
                     <td className="px-4 sm:px-5 py-3">
                       <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1a1848]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#F472B6]" aria-hidden />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-[#F472B6]"
+                          aria-hidden
+                        />
                         {h.tag}
+                      </span>
+                      <span className="ml-2 inline-flex items-center h-6 min-h-[24px] px-1.5 rounded-md bg-slate-100 text-[10px] font-mono font-bold tabular-nums text-slate-500">
+                        {h.posts}
                       </span>
                       <div className="mt-1.5 h-1 max-w-[120px] rounded-full bg-slate-100 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-[#1a1848]"
-                          style={{ width: `${(h.reach / maxReach) * 100}%` }}
+                          style={{
+                            width: `${(h.reach / maxReach) * 100}%`,
+                          }}
                         />
                       </div>
                     </td>
@@ -1741,16 +2021,18 @@ function HashtagsAnalyticsTab({
                       {formatCompact(h.reach, locale)}
                     </td>
                     <td className="px-4 sm:px-5 py-3 text-sm font-extrabold tabular-nums text-slate-900">
-                      {h.er.toFixed(1)}%
+                      {h.engagementRate.toFixed(1)}%
                     </td>
                     <td className="px-4 sm:px-5 py-3">
                       <span
-                        className={`text-xs font-bold tabular-nums ${
-                          h.trend >= 0 ? 'text-emerald-600' : 'text-rose-500'
+                        className={`inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg text-xs font-bold tabular-nums ${
+                          h.trend >= 0
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-rose-50 text-rose-600'
                         }`}
                       >
                         {h.trend >= 0 ? '+' : ''}
-                        {h.trend}%
+                        {h.trend.toFixed(1)}%
                       </span>
                     </td>
                   </tr>
@@ -1774,21 +2056,35 @@ function HashtagsAnalyticsTab({
           </div>
           <button
             type="button"
-            onClick={regenerate}
+            onClick={() => void regenerate()}
             disabled={generating}
-            className="h-10 min-h-[40px] px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 self-start"
+            className="h-11 min-h-[44px] px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 self-start"
           >
             <Sparkles size={13} />
-            {generating ? t('aiHashtagGenerating', locale) : t('aiHashtagGenerate', locale)}
+            {generating
+              ? t('aiHashtagGenerating', locale)
+              : t('aiHashtagGenerate', locale)}
           </button>
         </div>
 
+        {genError && (
+          <p className="mx-4 sm:mx-5 mt-4 text-sm font-medium text-rose-600">
+            {genError}
+          </p>
+        )}
+
         <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-          {ideas.length === 0 ? (
-            <p className="text-sm text-slate-400 md:col-span-3 text-center py-6">—</p>
+          {generating && ideas.length === 0 ? (
+            <p className="text-sm text-slate-400 md:col-span-3 text-center py-6">
+              Generating hashtag sets…
+            </p>
+          ) : ideas.length === 0 ? (
+            <p className="text-sm text-slate-400 md:col-span-3 text-center py-6">
+              Tap Generate ideas to create High Reach, Niche, and Low Competition sets with OpenAI
+            </p>
           ) : (
             ideas.map((set) => {
-              const id = set.topic;
+              const id = set.title;
               const copied = copiedId === id;
               return (
                 <div
@@ -1797,19 +2093,21 @@ function HashtagsAnalyticsTab({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-xs font-bold text-slate-800">
-                      {tf('aiHashtagSetFor', locale, { topic: set.topic })}
+                      {set.title}
                     </p>
                     <button
                       type="button"
                       onClick={() => void copySet(id, set.tags)}
-                      className="h-8 min-h-[32px] px-2 rounded-lg text-[11px] font-semibold text-slate-500 hover:bg-white hover:text-slate-800 inline-flex items-center gap-1 transition-colors"
+                      className="h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-white hover:text-slate-900 inline-flex items-center gap-1 transition-colors border border-transparent hover:border-slate-200"
                     >
                       {copied ? (
                         <Check size={12} className="text-emerald-600" />
                       ) : (
                         <Copy size={12} />
                       )}
-                      {copied ? t('aiHashtagCopied', locale) : t('aiHashtagCopySet', locale)}
+                      {copied
+                        ? t('aiHashtagCopied', locale)
+                        : '1-Click Copy All'}
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -1832,6 +2130,90 @@ function HashtagsAnalyticsTab({
   );
 }
 
+type AudienceAccountRow = {
+  platform: string;
+  handle: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  followers: number;
+  external_id: string;
+};
+
+function DemoBarList({
+  rows,
+  emptyLabel,
+}: {
+  rows: Array<{ key: string; label: string; value: number; pct: number }>;
+  emptyLabel: string;
+}) {
+  if (rows.length === 0) {
+    return <p className="text-sm text-slate-400 py-2">{emptyLabel}</p>;
+  }
+  return (
+    <ul className="space-y-2.5">
+      {rows.map((row) => (
+        <li key={row.key}>
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <span className="font-semibold text-slate-800 truncate">{row.label}</span>
+            <span className="tabular-nums font-extrabold text-slate-900 flex-shrink-0">
+              {row.pct}%
+            </span>
+          </div>
+          <div className="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-[#F472B6]"
+              style={{ width: `${Math.min(100, Math.max(2, row.pct))}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ActiveHoursChart({ hours, locale }: { hours: number[]; locale: Locale }) {
+  const max = Math.max(...hours, 1);
+  const peak = hours.indexOf(Math.max(...hours));
+  return (
+    <div>
+      <div className="flex items-end gap-0.5 h-24">
+        {hours.map((value, hour) => {
+          const h = Math.max(4, Math.round((value / max) * 100));
+          return (
+            <div
+              key={hour}
+              className="flex-1 min-w-0 rounded-t-sm bg-[#2B2568]/15 hover:bg-[#F472B6]/70 transition-colors"
+              style={{
+                height: `${h}%`,
+                background:
+                  hour === peak && value > 0
+                    ? '#F472B6'
+                    : undefined,
+              }}
+              title={`${String(hour).padStart(2, '0')}:00 · ${value}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex justify-between mt-2 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+        <span>00</span>
+        <span>06</span>
+        <span>12</span>
+        <span>18</span>
+        <span>23</span>
+      </div>
+      {peak >= 0 && hours[peak] > 0 ? (
+        <p className="text-xs text-slate-500 font-medium mt-2">
+          {t('audienceActiveTimesHint', locale)} · peak{' '}
+          <span className="font-bold text-slate-800">
+            {String(peak).padStart(2, '0')}:00
+          </span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function AudienceInsights({
   locale,
   workspaceName,
@@ -1839,6 +2221,8 @@ function AudienceInsights({
   accountCount,
   reach,
   platforms,
+  accounts,
+  demographics,
 }: {
   locale: Locale;
   workspaceName: string;
@@ -1846,25 +2230,11 @@ function AudienceInsights({
   accountCount: number;
   reach: number;
   platforms: Record<string, AnalyticsPlatformSlice>;
+  accounts: AudienceAccountRow[];
+  demographics: AnalyticsDemographics | null;
 }) {
-  const connectedPlatforms = useMemo(() => {
-    return Object.entries(platforms)
-      .filter(([, slice]) => slice?.connected)
-      .map(([key, slice]) => ({
-        key,
-        label: PLATFORM_LABEL[key] || key,
-        followers: slice.followers || 0,
-        handle: slice.handle,
-        Icon: PLATFORM_ICON[key] || InstagramIcon,
-      }))
-      .sort((a, b) => b.followers - a.followers);
-  }, [platforms]);
-
-  const followerTotal = Math.max(
-    followers,
-    connectedPlatforms.reduce((s, p) => s + p.followers, 0),
-    1
-  );
+  // "all" = merged view; otherwise a platform key from by_platform.
+  const [demoPlatform, setDemoPlatform] = useState<string>('all');
 
   const PLATFORM_COLORS: Record<string, string> = {
     instagram: '#E1306C',
@@ -1872,7 +2242,77 @@ function AudienceInsights({
     youtube: '#FF0000',
     linkedin: '#0A66C2',
     tiktok: '#0F172A',
+    pinterest: '#E60023',
   };
+
+  const platformSlices = demographics?.by_platform ?? [];
+
+  // Reset to All when the connected set changes (e.g. after reconnect).
+  useEffect(() => {
+    if (
+      demoPlatform !== 'all' &&
+      !platformSlices.some((s) => s.platform === demoPlatform)
+    ) {
+      setDemoPlatform('all');
+    }
+  }, [demoPlatform, platformSlices]);
+
+  const activeDemo = useMemo(() => {
+    if (!demographics) return null;
+    if (demoPlatform === 'all') return demographics;
+    const slice = platformSlices.find((s) => s.platform === demoPlatform);
+    if (!slice) return demographics;
+    return {
+      source: demographics.source,
+      countries: slice.countries,
+      cities: slice.cities,
+      genders: slice.genders,
+      ages: slice.ages,
+      active_hours: slice.active_hours,
+      available: slice.available,
+      message: slice.message,
+      by_platform: demographics.by_platform,
+      platforms_with_data: demographics.platforms_with_data,
+    } satisfies AnalyticsDemographics;
+  }, [demographics, demoPlatform, platformSlices]);
+
+  // Prefer live connected accounts; fall back to by_platform slices.
+  const accountRows = useMemo(() => {
+    if (accounts.length > 0) {
+      return [...accounts]
+        .map((a) => ({
+          key: `${a.platform}:${a.external_id}`,
+          platform: a.platform,
+          label: PLATFORM_LABEL[a.platform] || a.platform,
+          handle: a.handle,
+          display_name: a.display_name,
+          avatar_url: a.avatar_url,
+          followers: Number(a.followers) || 0,
+          Icon: PLATFORM_ICON[a.platform] || InstagramIcon,
+        }))
+        .sort((a, b) => b.followers - a.followers);
+    }
+    return Object.entries(platforms)
+      .filter(([, slice]) => slice?.connected)
+      .map(([key, slice]) => ({
+        key,
+        platform: key,
+        label: PLATFORM_LABEL[key] || key,
+        handle: slice.handle,
+        display_name: slice.display_name,
+        avatar_url: slice.avatar_url,
+        followers: slice.followers || 0,
+        Icon: PLATFORM_ICON[key] || InstagramIcon,
+      }))
+      .sort((a, b) => b.followers - a.followers);
+  }, [accounts, platforms]);
+
+  const followerTotal = useMemo(() => {
+    const summed = accountRows.reduce((s, a) => s + a.followers, 0);
+    return Math.max(followers, summed, 0);
+  }, [accountRows, followers]);
+
+  const denom = Math.max(followerTotal, 1);
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -1880,97 +2320,287 @@ function AudienceInsights({
         <h3 className="font-clikd-wordmark font-extrabold text-base text-slate-900 mb-4">
           {t('analyticsAudience', locale)} · {workspaceName}
         </h3>
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            {
-              label: t('kpiFollowers', locale),
-              value: formatCompact(followers, locale),
-            },
-            {
-              label: t('accounts', locale),
-              value: String(accountCount),
-            },
-            {
-              label: t('reach7d', locale),
-              value: formatCompact(reach, locale),
-            },
-          ].map((m) => (
-            <div key={m.label} className="rounded-xl bg-slate-50 border border-slate-100 p-4">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                {m.label}
-              </p>
-              <p className="text-xl font-extrabold text-slate-900 mt-1 tabular-nums">{m.value}</p>
+
+        {/* Total across all platforms + accounts + reach */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-xl bg-slate-900 text-white p-4 sm:p-5">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-white/60">
+              {t('totalFollowersAll', locale)}
+            </p>
+            <p className="text-2xl sm:text-3xl font-extrabold mt-1 tabular-nums">
+              {formatCompact(followerTotal, locale)}
+            </p>
+            <p className="text-xs text-white/55 font-medium mt-1">
+              {accountRows.length} {t('accounts', locale).toLowerCase()}
+            </p>
+          </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 sm:p-5">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              {t('accounts', locale)}
+            </p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
+              {accountCount || accountRows.length}
+            </p>
+          </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 sm:p-5">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              {t('reach7d', locale)}
+            </p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
+              {formatCompact(reach, locale)}
+            </p>
+          </div>
+        </div>
+
+        {/* Separated followers per connected account */}
+        <div className="mt-5 pt-5 border-t border-slate-100">
+          <div className="flex items-end justify-between gap-3 mb-3">
+            <h4 className="font-clikd-wordmark font-extrabold text-sm text-slate-900">
+              {t('followersPerAccount', locale)}
+            </h4>
+            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              {t('shareOfAudience', locale)}
+            </p>
+          </div>
+
+          {accountRows.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">—</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {accountRows.map((row) => {
+                const pct = Math.round((row.followers / denom) * 1000) / 10;
+                const Icon = row.Icon;
+                return (
+                  <div
+                    key={row.key}
+                    className="rounded-xl border border-slate-200/80 bg-white p-4 flex flex-col gap-3 min-h-[44px]"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-full border border-slate-100 inline-flex items-center justify-center flex-shrink-0 overflow-hidden bg-slate-50"
+                        style={{
+                          color: PLATFORM_COLORS[row.platform] || '#1a1848',
+                        }}
+                      >
+                        {row.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={row.avatar_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Icon size={18} />
+                        )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-extrabold text-slate-900 truncate">
+                          {row.label}
+                        </p>
+                        <p className="text-xs text-slate-500 font-mono truncate">
+                          {row.handle ||
+                            row.display_name ||
+                            PLATFORM_LABEL[row.platform] ||
+                            row.platform}
+                        </p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                        {t('kpiFollowers', locale)}
+                      </p>
+                      <p className="text-xl font-extrabold text-slate-900 tabular-nums mt-0.5">
+                        {formatCompact(row.followers, locale)}
+                      </p>
+                      <div className="mt-2 h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-[width] duration-500"
+                          style={{
+                            width: `${Math.min(100, Math.max(row.followers > 0 ? 3 : 0, pct))}%`,
+                            background: PLATFORM_COLORS[row.platform] || '#1a1848',
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-500 mt-1 tabular-nums">
+                        {pct}%
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
       </div>
 
       <div className={`${adminCardClass} p-5 sm:p-6`}>
-        <h4 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
-          {t('audienceDemographics', locale)}
-        </h4>
-        <p className="text-sm text-slate-500 mt-1 mb-5">
-          {t('audienceActiveTimesHint', locale)}
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
+          <div>
+            <h4 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
+              {t('audienceDemographics', locale)}
+            </h4>
+            <p className="text-sm text-slate-500 mt-1">
+              {demoPlatform === 'all' &&
+              (demographics?.platforms_with_data?.length ?? 0) > 1
+                ? t('demographicsAllPlatforms', locale)
+                : activeDemo?.source === 'engaged_audience'
+                  ? t('demographicsFromViewers', locale)
+                  : activeDemo?.source === 'followers'
+                    ? t('demographicsFromFollowers', locale)
+                    : t('audienceActiveTimesHint', locale)}
+            </p>
+          </div>
+        </div>
 
-        {connectedPlatforms.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-8">—</p>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex h-3 rounded-full overflow-hidden bg-slate-100">
-              {connectedPlatforms.map((p) => {
-                const pct = Math.round((p.followers / followerTotal) * 100);
-                if (pct <= 0 && p.followers <= 0) return null;
-                return (
-                  <div
-                    key={p.key}
-                    className="h-full first:rounded-l-full last:rounded-r-full"
-                    style={{
-                      width: `${Math.max(pct, p.followers > 0 ? 4 : 0)}%`,
-                      background: PLATFORM_COLORS[p.key] || '#1a1848',
-                    }}
-                    title={`${p.label} ${pct}%`}
+        {platformSlices.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-5">
+            <button
+              type="button"
+              onClick={() => setDemoPlatform('all')}
+              className={`min-h-11 px-3.5 rounded-xl text-sm font-semibold border transition-colors ${
+                demoPlatform === 'all'
+                  ? 'bg-slate-900 text-white border-slate-900'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              {t('demographicsAllPlatforms', locale)}
+            </button>
+            {platformSlices.map((slice) => {
+              const selected = demoPlatform === slice.platform;
+              const color = PLATFORM_COLORS[slice.platform] || '#0F172A';
+              return (
+                <button
+                  key={slice.platform}
+                  type="button"
+                  onClick={() => setDemoPlatform(slice.platform)}
+                  className={`min-h-11 px-3.5 rounded-xl text-sm font-semibold border transition-colors inline-flex items-center gap-2 ${
+                    selected
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: color }}
+                    aria-hidden
                   />
-                );
-              })}
+                  {PLATFORM_LABEL[slice.platform] || slice.platform}
+                  {!slice.available && (
+                    <span
+                      className={`text-[10px] font-mono uppercase tracking-wide ${
+                        selected ? 'text-white/60' : 'text-slate-400'
+                      }`}
+                    >
+                      —
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {!activeDemo?.available ? (
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
+              {activeDemo?.message ||
+                demographics?.message ||
+                t('demographicsUnavailable', locale)}
+            </p>
+            {demoPlatform === 'all' && platformSlices.length > 0 && (
+              <ul className="space-y-2 max-w-2xl">
+                {platformSlices.map((slice) => (
+                  <li
+                    key={slice.platform}
+                    className="text-xs text-slate-500 leading-relaxed flex gap-2"
+                  >
+                    <span
+                      className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{
+                        backgroundColor:
+                          PLATFORM_COLORS[slice.platform] || '#94A3B8',
+                      }}
+                    />
+                    <span>
+                      <span className="font-semibold text-slate-700">
+                        {PLATFORM_LABEL[slice.platform] || slice.platform}
+                      </span>
+                      {': '}
+                      {slice.available
+                        ? t('demographicsAllPlatforms', locale)
+                        : slice.message || '—'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {demoPlatform === 'all' &&
+              platformSlices.some((s) => !s.available && s.message) && (
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  {platformSlices
+                    .filter((s) => !s.available && s.message)
+                    .map(
+                      (s) =>
+                        `${PLATFORM_LABEL[s.platform] || s.platform}: ${s.message}`
+                    )
+                    .join(' · ')}
+                </p>
+              )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+                  {t('audienceTopCountries', locale)}
+                </p>
+                <DemoBarList rows={activeDemo.countries} emptyLabel="—" />
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+                  {t('audienceTopCities', locale)}
+                </p>
+                <DemoBarList rows={activeDemo.cities} emptyLabel="—" />
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+                  {t('audienceGender', locale)}
+                </p>
+                <DemoBarList
+                  rows={activeDemo.genders.map((g) => ({
+                    ...g,
+                    label:
+                      g.key.toUpperCase() === 'F' || g.label === 'Women'
+                        ? t('audienceGenderWomen', locale)
+                        : g.key.toUpperCase() === 'M' || g.label === 'Men'
+                          ? t('audienceGenderMen', locale)
+                          : t('audienceGenderOther', locale),
+                  }))}
+                  emptyLabel="—"
+                />
+              </div>
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+                  {t('audienceAge', locale)}
+                </p>
+                <DemoBarList rows={activeDemo.ages} emptyLabel="—" />
+              </div>
             </div>
 
-            <ul className="space-y-4">
-              {connectedPlatforms.map((p) => {
-                const pct = Math.round((p.followers / followerTotal) * 1000) / 10;
-                return (
-                  <li key={p.key} className="flex items-center gap-3">
-                    <span className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-full bg-slate-50 border border-slate-100 inline-flex items-center justify-center flex-shrink-0">
-                      <p.Icon size={16} />
-                    </span>
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-slate-800 truncate">
-                          {p.label}
-                          {p.handle ? (
-                            <span className="ml-1.5 text-xs font-medium text-slate-400 font-mono">
-                              {p.handle}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="text-sm font-extrabold tabular-nums text-slate-900 flex-shrink-0">
-                          {formatCompact(p.followers, locale)} · {pct}%
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-[width] duration-500"
-                          style={{
-                            width: `${Math.min(100, Math.max(0, pct))}%`,
-                            background: PLATFORM_COLORS[p.key] || '#1a1848',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+                {t('audienceActiveTimes', locale)}
+              </p>
+              {activeDemo.active_hours.some((n) => n > 0) ? (
+                <ActiveHoursChart
+                  hours={activeDemo.active_hours}
+                  locale={locale}
+                />
+              ) : (
+                <p className="text-sm text-slate-400 py-2">—</p>
+              )}
+            </div>
           </div>
         )}
       </div>

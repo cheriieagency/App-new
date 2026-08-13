@@ -15,6 +15,8 @@ import {
   getMetaSyncSnapshot,
   syncMetaDataForUser,
 } from '@/lib/meta/sync';
+import { fetchMultiPlatformDemographics } from '@/lib/analytics/demographics';
+import { fetchMultiPlatformMedia } from '@/lib/analytics/media';
 
 const PLATFORMS = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'] as const;
 
@@ -63,6 +65,7 @@ function onboardingFallback(reason: string, workspaceId: string | null = null) {
     hashtags: [],
     insights: null,
     instagram: null,
+    demographics: null,
   };
 }
 
@@ -229,8 +232,50 @@ export async function GET(request: Request) {
         snapshot.instagram.profile_picture_url || by_platform.instagram.avatar_url;
     }
 
-    const media = snapshot?.media ?? [];
+    // Posts / Reels: Instagram + Facebook Page + TikTok (when tokens exist).
+    let media = (snapshot?.media ?? []).map((item) => ({
+      id: item.id.startsWith('instagram:') ? item.id : `instagram:${item.id}`,
+      platform: 'instagram' as const,
+      caption: item.caption ?? null,
+      media_type: item.media_type ?? null,
+      media_url: item.media_url ?? null,
+      thumbnail_url: item.thumbnail_url ?? item.media_url ?? null,
+      permalink: item.permalink ?? null,
+      like_count: item.like_count ?? 0,
+      comments_count: item.comments_count ?? 0,
+      shares_count: 0,
+      view_count: null as number | null,
+      timestamp: item.timestamp ?? null,
+    }));
+    if (workspaceId) {
+      try {
+        media = await fetchMultiPlatformMedia({
+          userId: session.user.id,
+          workspaceId,
+          instagramMedia: snapshot?.media ?? null,
+        });
+      } catch (error) {
+        console.warn('[Analytics API] multi-platform media failed', error);
+      }
+    }
     const hashtags = extractHashtags(media);
+
+    // Audience demographics across every connected API for this workspace.
+    let demographics = null as Awaited<
+      ReturnType<typeof fetchMultiPlatformDemographics>
+    > | null;
+    if (workspaceId) {
+      try {
+        demographics = await fetchMultiPlatformDemographics({
+          userId: session.user.id,
+          workspaceId,
+        });
+      } catch (error) {
+        console.warn('[Analytics API] multi-platform demographics failed', error);
+        // Fall back to Instagram-only snapshot demographics if present.
+        demographics = (snapshot?.demographics as typeof demographics) ?? null;
+      }
+    }
 
     const metrics = {
       reach,
@@ -269,15 +314,16 @@ export async function GET(request: Request) {
       },
       insights,
       instagram: snapshot?.instagram ?? null,
+      demographics,
       media,
       hashtags,
       synced_at: snapshot?.synced_at ?? null,
       planner_imported: snapshot?.planner_imported ?? 0,
-      message: snapshot
+      message: media.length
         ? null
         : hasIg
           ? 'Accounts connected. Instagram Graph insights pending — reconnect or open Social settings to sync.'
-          : 'Accounts connected. Instagram unlocks Posts, Reels, Stories & Hashtags insights; follower totals include all connected APIs.',
+          : 'Accounts connected. Posts pull from Instagram, Facebook Page, and TikTok when those APIs return media.',
       cta: snapshot
         ? null
         : {
