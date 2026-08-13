@@ -460,9 +460,14 @@ export function extractCommentEventsFromWebhook(
       const commentId = String(
         value.id || value.comment_id || ''
       ).trim();
-      const commenterId = String(from.id || '').trim();
+      const commenterId = String(
+        from.id || value.sender_id || ''
+      ).trim();
       const text = String(value.text || value.message || '').trim();
       if (!commentId || !commenterId || !text) continue;
+
+      // Skip creator self-comments (commenter id == entry / page / IG id).
+      if (entryId && commenterId === entryId) continue;
 
       const igAccountId =
         objectType === 'instagram'
