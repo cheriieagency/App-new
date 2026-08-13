@@ -100,6 +100,15 @@ export const youtubeEnv = {
   oauthRequiredKeys: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const,
 };
 
+// ---------------------------------------------------------------------------
+// 5b. Pinterest Developer API
+// ---------------------------------------------------------------------------
+export const pinterestEnv = {
+  appId: () => readEnv('PINTEREST_APP_ID'),
+  appSecret: () => readEnv('PINTEREST_APP_SECRET'),
+  requiredKeys: ['PINTEREST_APP_ID', 'PINTEREST_APP_SECRET'] as const,
+};
+
 /**
  * Public app origin for OAuth redirect_uri builders.
  * Prefers NEXT_PUBLIC_APP_URL, then the request origin, then production clikd:.
@@ -164,6 +173,7 @@ export const env = {
   tiktok: tiktokEnv,
   linkedin: linkedinEnv,
   youtube: youtubeEnv,
+  pinterest: pinterestEnv,
   stripe: stripeEnv,
   supabase: supabaseEnv,
   database: databaseEnv,

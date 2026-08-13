@@ -5,7 +5,13 @@ import { PLAN_LIMITS } from '@/lib/config/plans';
 
 export type { WorkspacePlan } from '@/lib/config/plans';
 
-export type SocialPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'youtube' | 'facebook';
+export type SocialPlatform =
+  | 'instagram'
+  | 'tiktok'
+  | 'linkedin'
+  | 'youtube'
+  | 'facebook'
+  | 'pinterest';
 
 export type ContentTone = 'inspirerande' | 'professionell' | 'saljig' | 'casual';
 
@@ -575,6 +581,15 @@ const socialAccounts: ConnectedSocialAccount[] = [
     follower_count: null,
     page_name: null,
   },
+  {
+    platform: 'pinterest',
+    connected: false,
+    handle: null,
+    display_name: null,
+    avatar_url: null,
+    connected_at: null,
+    follower_count: null,
+  },
 ];
 
 const TONE_FLAVOR: Record<ContentTone, string> = {
@@ -590,6 +605,7 @@ const HASHTAGS: Record<SocialPlatform, string[]> = {
   linkedin: ['#entreprenörskap', '#contentmarketing', '#leadership', '#b2b'],
   youtube: ['#youtube', '#creator', '#tutorial'],
   facebook: ['#creator', '#community', '#digitalmarketing', '#nordic'],
+  pinterest: ['#pinterest', '#pinideas', '#inspiration', '#creator', '#diy'],
 };
 
 export function mediaTypeBadge(items: PlannerMediaItem[]): string {
@@ -829,6 +845,7 @@ export function setSocialConnection(
       linkedin: 'Ebba Brobeck',
       youtube: '@ebbacreator',
       facebook: 'Ebba Creator Lab',
+      pinterest: '@ebbacreator',
     };
     const names: Record<SocialPlatform, string> = {
       instagram: 'Ebba Creator Lab',
@@ -836,6 +853,7 @@ export function setSocialConnection(
       linkedin: 'Ebba Brobeck',
       youtube: 'clikd: Channel',
       facebook: 'Ebba Creator Lab',
+      pinterest: 'Ebba Creator Lab',
     };
     acc.connected = true;
     acc.handle = handles[platform];
@@ -967,6 +985,11 @@ export const PLATFORM_META: Record<
     label: 'Facebook',
     color: '#1877F2',
     connectLabel: 'Connect Facebook Page',
+  },
+  pinterest: {
+    label: 'Pinterest',
+    color: '#E60023',
+    connectLabel: 'Connect Pinterest Account',
   },
 };
 

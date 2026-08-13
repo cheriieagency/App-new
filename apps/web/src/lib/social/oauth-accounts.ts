@@ -10,7 +10,13 @@ import {
   upsertSocialAccountRow,
 } from '@/lib/social/persist';
 
-export type OAuthSocialPlatform = 'youtube' | 'linkedin' | 'tiktok' | 'instagram' | 'facebook';
+export type OAuthSocialPlatform =
+  | 'youtube'
+  | 'linkedin'
+  | 'tiktok'
+  | 'instagram'
+  | 'facebook'
+  | 'pinterest';
 
 export type UpsertOAuthSocialAccountInput = {
   userId: string;
@@ -61,7 +67,7 @@ export async function upsertOAuthSocialAccount(
 /** List YouTube / LinkedIn / TikTok rows for the user. */
 export async function listOAuthSocialAccountsForUser(
   userId: string,
-  platforms: OAuthSocialPlatform[] = ['youtube', 'linkedin', 'tiktok']
+  platforms: OAuthSocialPlatform[] = ['youtube', 'linkedin', 'tiktok', 'pinterest']
 ): Promise<ConnectedSocialAccount[]> {
   const all = await listLiveSocialAccountsForUser({ userId });
   return all.filter(

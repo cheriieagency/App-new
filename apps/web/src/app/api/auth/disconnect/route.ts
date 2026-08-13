@@ -22,6 +22,7 @@ const ALLOWED: OAuthSocialPlatform[] = [
   'tiktok',
   'instagram',
   'facebook',
+  'pinterest',
 ];
 
 export async function POST(request: Request) {
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          'platform must be youtube, linkedin, instagram, or facebook',
+          'platform must be youtube, linkedin, tiktok, instagram, facebook, or pinterest',
       },
       { status: 400 }
     );

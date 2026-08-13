@@ -19,6 +19,7 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   'tiktok',
   'youtube',
   'linkedin',
+  'pinterest',
 ];
 
 export type UpsertSocialAccountRow = {
@@ -109,6 +110,22 @@ export async function ensureSocialAccountsSchema(): Promise<void> {
       `;
     } catch (error) {
       console.warn('[social/persist] workspace unique index skipped', error);
+    }
+    // Allow Pinterest (and keep existing platforms) on the platform CHECK constraint.
+    try {
+      await sql`
+        ALTER TABLE public.social_accounts
+          DROP CONSTRAINT IF EXISTS social_accounts_platform_check
+      `;
+      await sql`
+        ALTER TABLE public.social_accounts
+          ADD CONSTRAINT social_accounts_platform_check
+          CHECK (platform IN (
+            'instagram', 'facebook', 'tiktok', 'linkedin', 'youtube', 'pinterest'
+          ))
+      `;
+    } catch (error) {
+      console.warn('[social/persist] platform check update skipped', error);
     }
   })().catch((error) => {
     schemaReady = null;
