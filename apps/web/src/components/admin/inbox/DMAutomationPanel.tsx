@@ -13,6 +13,7 @@ import {
   Percent,
   Pencil,
   Plus,
+  RefreshCw,
   Trash2,
   Zap,
   X,
@@ -320,6 +321,7 @@ export default function DMAutomationPanel() {
         webhook?: { callbackUrl?: string | null };
         dmsSentTotal?: number;
         commentText?: string;
+        subscribeResults?: Array<{ targetId: string; ok: boolean }>;
       }>;
     },
     onSuccess: (json) => {
@@ -340,6 +342,58 @@ export default function DMAutomationPanel() {
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'Test failed');
+    },
+  });
+
+  const resyncWebhooksMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/admin/inbox/automations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          workspaceId: activeWorkspace.id,
+          action: 'resubscribe_webhooks',
+        }),
+      });
+      if (!res.ok) {
+        let message = `Re-sync failed (${res.status})`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson?.error) message = errJson.error;
+        } catch {
+          /* non-JSON */
+        }
+        throw new Error(message);
+      }
+      return res.json() as Promise<{
+        ready?: boolean;
+        blockers?: string[];
+        nextSteps?: string[];
+        subscribeResults?: Array<{ targetId: string; ok: boolean; error?: string }>;
+      }>;
+    },
+    onSuccess: (json) => {
+      const okCount =
+        json.subscribeResults?.filter((r) => r.ok).length ?? 0;
+      if (json.ready || okCount > 0) {
+        toast.success(
+          `Re-synced Meta webhooks (${okCount} account${okCount === 1 ? '' : 's'}).`
+        );
+        setTestResult(
+          json.nextSteps?.join(' ') ||
+            `Subscribed ${okCount} Page/IG account(s) to feed/comments/messages/mentions.`
+        );
+      } else {
+        const blockers = json.blockers?.length
+          ? json.blockers.join(' ')
+          : 'Could not re-subscribe Meta webhooks.';
+        toast.error(blockers.slice(0, 180));
+        setTestResult(blockers);
+      }
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Re-sync failed');
     },
   });
 
@@ -434,6 +488,19 @@ export default function DMAutomationPanel() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => resyncWebhooksMutation.mutate()}
+              disabled={resyncWebhooksMutation.isPending}
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {resyncWebhooksMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <RefreshCw size={16} />
+              )}
+              🔄 Re-sync Meta Webhooks
+            </button>
             <button
               type="button"
               onClick={() => testMutation.mutate()}

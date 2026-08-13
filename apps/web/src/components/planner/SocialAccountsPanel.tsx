@@ -5,10 +5,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Loader2,
+  RefreshCw,
   Shield,
   Unplug,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   FacebookIcon,
   InstagramIcon,
@@ -306,6 +308,57 @@ export default function SocialAccountsPanel({
     },
   });
 
+  const resyncMetaWebhooks = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId) {
+        throw new Error('Select a workspace first');
+      }
+      const r = await fetch('/api/admin/inbox/automations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+          action: 'resubscribe_webhooks',
+        }),
+      });
+      if (!r.ok) {
+        let message = `Re-sync failed (${r.status})`;
+        try {
+          const errJson = (await r.json()) as { error?: string };
+          if (errJson?.error) message = errJson.error;
+        } catch {
+          /* ignore */
+        }
+        throw new Error(message);
+      }
+      return r.json() as Promise<{
+        ready?: boolean;
+        blockers?: string[];
+        subscribeResults?: Array<{ targetId: string; ok: boolean }>;
+      }>;
+    },
+    onSuccess: (json) => {
+      const okCount =
+        json.subscribeResults?.filter((row) => row.ok).length ?? 0;
+      if (json.ready || okCount > 0) {
+        toast.success(
+          `Re-synced Meta webhooks (${okCount} account${okCount === 1 ? '' : 's'}).`
+        );
+      } else {
+        toast.error(
+          (json.blockers?.join(' ') || 'Could not re-subscribe Meta webhooks.').slice(
+            0,
+            180
+          )
+        );
+      }
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Re-sync failed');
+    },
+  });
+
   const startConnect = (platform: SocialPlatform) => {
     // Live OAuth when Demo Mode is off — always bind to active workspace.
     if (!demoMode && platform === 'instagram') {
@@ -546,6 +599,22 @@ export default function SocialAccountsPanel({
               {t('socials.workspaceGuidePerWorkspace')}
             </p>
           </div>
+          {(byPlatform.get('instagram')?.connected ||
+            byPlatform.get('facebook')?.connected) && (
+            <button
+              type="button"
+              onClick={() => resyncMetaWebhooks.mutate()}
+              disabled={resyncMetaWebhooks.isPending || !activeWorkspaceId}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-sm font-bold hover:bg-white disabled:opacity-50 transition-colors"
+            >
+              {resyncMetaWebhooks.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <RefreshCw size={16} />
+              )}
+              🔄 Re-sync Meta Webhooks
+            </button>
+          )}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
             <ConnectOrConnectedButton
               connected={Boolean(byPlatform.get('instagram')?.connected)}

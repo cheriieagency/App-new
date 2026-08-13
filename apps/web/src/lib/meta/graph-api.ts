@@ -717,14 +717,17 @@ export async function replyToInstagramComment(
   message: string,
   accessToken: string
 ): Promise<{ id: string }> {
-  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(commentId)}/replies`);
-  const body = new URLSearchParams();
-  body.set('message', message);
-  body.set('access_token', accessToken);
-  const res = await fetch(url.toString(), {
+  // Public comment replies use Graph v21.0 + Bearer (same as private replies).
+  const commentReplyUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
+    commentId
+  )}/replies`;
+  const res = await fetch(commentReplyUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message }),
   });
   const json = (await res.json()) as { id?: string; error?: { message?: string } };
   if (!res.ok || !json.id) {
