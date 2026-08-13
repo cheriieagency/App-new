@@ -28,81 +28,16 @@ export async function GET() {
       LIMIT 20
     `;
 
-    // Seed community members as static leaderboard entries (ensures leaderboard is never empty)
-    const seedMembers = [
-      {
-        id: 'seed-3',
-        name: 'Astrid Karlsson',
-        image: null,
-        joined_at: '2026-01-15',
-        post_count: 24,
-        likes_received: 187,
-        comment_count: 63,
-      },
-      {
-        id: 'seed-1',
-        name: 'Emma Lindqvist',
-        image: null,
-        joined_at: '2026-01-20',
-        post_count: 18,
-        likes_received: 142,
-        comment_count: 54,
-      },
-      {
-        id: 'seed-2',
-        name: 'Marcus Björk',
-        image: null,
-        joined_at: '2026-02-03',
-        post_count: 15,
-        likes_received: 98,
-        comment_count: 41,
-      },
-      {
-        id: 'seed-4',
-        name: 'Erik Svensson',
-        image: null,
-        joined_at: '2026-02-14',
-        post_count: 11,
-        likes_received: 76,
-        comment_count: 29,
-      },
-      {
-        id: 'seed-5',
-        name: 'Linn Petersson',
-        image: null,
-        joined_at: '2026-03-01',
-        post_count: 8,
-        likes_received: 54,
-        comment_count: 22,
-      },
-      {
-        id: 'seed-6',
-        name: 'Johan Holm',
-        image: null,
-        joined_at: '2026-03-10',
-        post_count: 6,
-        likes_received: 39,
-        comment_count: 17,
-      },
-      {
-        id: 'seed-7',
-        name: 'Sara Magnusson',
-        image: null,
-        joined_at: '2026-04-01',
-        post_count: 4,
-        likes_received: 21,
-        comment_count: 9,
-      },
-    ];
-
-    // Merge real + seed, dedup by id, compute points
-    const allIds = new Set(realMembers.map((m: any) => m.id));
-    const merged = [...realMembers, ...seedMembers.filter((s) => !allIds.has(s.id))]
-      .map((m: any) => ({
+    // Real members only — no seeded leaderboard rows.
+    const merged = (realMembers as Array<Record<string, unknown>>)
+      .map((m) => ({
         ...m,
-        points: m.post_count * 10 + m.likes_received * 5 + m.comment_count * 3,
+        points:
+          Number(m.post_count || 0) * 10 +
+          Number(m.likes_received || 0) * 5 +
+          Number(m.comment_count || 0) * 3,
       }))
-      .sort((a: any, b: any) => b.points - a.points);
+      .sort((a, b) => Number(b.points) - Number(a.points));
 
     return Response.json(merged);
   } catch (error) {

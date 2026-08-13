@@ -20,6 +20,7 @@ import {
   managedToSearchable,
   publishCommunityToPublicCatalog,
 } from '@/lib/public-communities-store';
+import { resolvePrimaryWorkspaceForUser } from '@/lib/communities/workspace';
 
 const CATEGORIES = [
   'Marketing',
@@ -108,15 +109,16 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const jar = await cookies();
-  const workspaceId = resolveWorkspaceId(null, url, jar, request.headers);
+  let workspaceId = resolveWorkspaceId(null, url, jar, request.headers);
+  if (!workspaceId) {
+    workspaceId = await resolvePrimaryWorkspaceForUser(session.user.id);
+  }
 
   await ensureCommunitiesSchema();
 
   if (!process.env.DATABASE_URL?.trim()) {
     const all = listManagedCommunities();
-    const scoped = workspaceId
-      ? all.filter((c) => c.workspace_id === workspaceId)
-      : all;
+    const scoped = all.filter((c) => c.workspace_id === workspaceId);
     return Response.json({
       communities: scoped,
       community: scoped[0] ?? null,
@@ -126,24 +128,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Strict workspace binding: only communities for the active workspace.
-    const rows = workspaceId
-      ? await sql`
-          SELECT *
-          FROM communities
-          WHERE workspace_id = ${workspaceId}
-          ORDER BY created_at DESC NULLS LAST, name ASC
-        `
-      : await sql`
-          SELECT *
-          FROM communities
-          WHERE creator_id = ${session.user.id}
-             OR id IN (
-               SELECT community_id FROM community_memberships
-               WHERE user_id = ${session.user.id} AND role IN ('owner', 'moderator')
-             )
-          ORDER BY created_at DESC NULLS LAST, name ASC
-        `;
+    // Strict: only communities bound to this active workspace_id.
+    const rows = await sql`
+      SELECT *
+      FROM communities
+      WHERE workspace_id = ${workspaceId}
+      ORDER BY created_at DESC NULLS LAST, name ASC
+    `;
 
     const list = (Array.isArray(rows) ? rows : []).map((r) =>
       mapRow(r as Record<string, unknown>)
@@ -182,16 +173,21 @@ export async function POST(request: Request) {
     body = {};
   }
 
-  const workspaceId = resolveWorkspaceId(
+  let workspaceId = resolveWorkspaceId(
     typeof body.workspaceId === 'string'
       ? body.workspaceId
       : typeof body.workspace_id === 'string'
         ? body.workspace_id
-        : null,
+        : typeof body.activeWorkspaceId === 'string'
+          ? body.activeWorkspaceId
+          : null,
     url,
     jar,
     request.headers
   );
+  if (!workspaceId) {
+    workspaceId = await resolvePrimaryWorkspaceForUser(session.user.id);
+  }
 
   if (!workspaceId) {
     return Response.json(
@@ -223,10 +219,16 @@ export async function POST(request: Request) {
     (typeof body.cover_url === 'string' && body.cover_url.trim()) ||
     (typeof body.coverUrl === 'string' && body.coverUrl.trim()) ||
     null;
-  const isFree = body.is_free !== false && body.isFree !== false;
-  const monthlyPrice = isFree
-    ? 0
-    : Math.max(0, Math.round(Number(body.monthly_price_sek ?? body.monthlyPriceSek ?? 0)));
+  // Prefer explicit booleans; otherwise treat price > 0 as paid.
+  const monthlyPriceInput = Math.max(
+    0,
+    Math.round(Number(body.monthly_price_sek ?? body.monthlyPriceSek ?? 0))
+  );
+  let isFree: boolean;
+  if (typeof body.is_free === 'boolean') isFree = body.is_free;
+  else if (typeof body.isFree === 'boolean') isFree = body.isFree;
+  else isFree = monthlyPriceInput <= 0;
+  const monthlyPrice = isFree ? 0 : monthlyPriceInput;
 
   await ensureCommunitiesSchema();
 

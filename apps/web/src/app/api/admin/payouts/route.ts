@@ -128,6 +128,28 @@ export async function POST(request: Request) {
   const accountId = wallet.stripe_connect_account_id
     ? String(wallet.stripe_connect_account_id)
     : null;
+  const connectEnabled = Boolean(wallet.stripe_connect_enabled && accountId);
+
+  if (!accountId || !connectEnabled) {
+    return Response.json(
+      {
+        success: false,
+        error:
+          'Connect your bank account with Stripe Express before requesting a payout.',
+        walletBalance: balance,
+        stripeConnectRequired: true,
+      },
+      { status: 400 }
+    );
+  }
+
+  const stripe = getStripe();
+  if (!stripe || !stripeEnv.secretKey()) {
+    return Response.json(
+      { success: false, error: 'Stripe is not configured' },
+      { status: 503 }
+    );
+  }
 
   const inserted = await sql`
     INSERT INTO public.payouts (
@@ -150,73 +172,68 @@ export async function POST(request: Request) {
   let status = 'requested';
   let transferId: string | null = null;
 
-  const stripe = getStripe();
-  if (accountId && stripe && stripeEnv.secretKey()) {
-    try {
-      await sql`
-        UPDATE public.payouts
-        SET status = 'processing'
-        WHERE id = ${payoutRow.id}
-      `;
+  try {
+    await sql`
+      UPDATE public.payouts
+      SET status = 'processing'
+      WHERE id = ${payoutRow.id}
+    `;
 
-      // Transfer from platform balance → connected Express account (øre / cents).
-      const transfer = await stripe.transfers.create({
-        amount: amountSek * 100,
-        currency: 'sek',
-        destination: accountId,
-        metadata: {
-          workspace_id: workspaceId,
-          payout_id: String(payoutRow.id),
-          seller_user_id: session.user.id,
-        },
-      });
-      transferId = transfer.id;
-      status = 'completed';
+    // Transfer from platform balance → connected Express account (öre).
+    const transfer = await stripe.transfers.create({
+      amount: amountSek * 100,
+      currency: 'sek',
+      destination: accountId,
+      metadata: {
+        workspace_id: workspaceId,
+        payout_id: String(payoutRow.id),
+        seller_user_id: session.user.id,
+      },
+    });
+    transferId = transfer.id;
+    status = 'completed';
 
-      await sql`
-        UPDATE public.payouts
-        SET
-          status = 'completed',
-          stripe_transfer_id = ${transferId},
-          completed_at = now()
-        WHERE id = ${payoutRow.id}
-      `;
-    } catch (error) {
-      console.warn('[payouts] stripe transfer', error);
-      status = 'failed';
-      await sql`
-        UPDATE public.payouts
-        SET status = 'failed'
-        WHERE id = ${payoutRow.id}
-      `;
-      return Response.json(
-        {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Stripe transfer failed — wallet not deducted',
-          payout: {
-            id: payoutRow.id,
-            amountSek,
-            status,
-          },
+    await sql`
+      UPDATE public.payouts
+      SET
+        status = 'completed',
+        stripe_transfer_id = ${transferId},
+        completed_at = now()
+      WHERE id = ${payoutRow.id}
+    `;
+  } catch (error) {
+    console.warn('[payouts] stripe transfer', error);
+    status = 'failed';
+    await sql`
+      UPDATE public.payouts
+      SET status = 'failed'
+      WHERE id = ${payoutRow.id}
+    `;
+    return Response.json(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Stripe transfer failed — wallet not deducted',
+        payout: {
+          id: payoutRow.id,
+          amountSek,
+          status,
         },
-        { status: 502 }
-      );
-    }
-  } else {
-    // No Connect account yet — keep as requested (manual ops) but still hold funds.
-    status = 'requested';
+      },
+      { status: 502 }
+    );
   }
 
-  // Deduct wallet when payout is completed OR queued as requested (funds reserved).
+  // Deduct wallet only after a successful Stripe transfer.
   await sql`
     UPDATE public.workspaces
     SET
       wallet_balance_sek = GREATEST(0, COALESCE(wallet_balance_sek, 0) - ${amountSek}),
       updated_at = now()
     WHERE id = ${workspaceId}
+      AND COALESCE(wallet_balance_sek, 0) >= ${amountSek}
   `;
 
   const refreshed = await sql`

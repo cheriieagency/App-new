@@ -51,6 +51,7 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { useSubscription } from '@/components/common/useSubscription';
 import UpgradeModal from '@/components/common/UpgradeModal';
 import CreateCommunityModal from '@/components/admin/CreateCommunityModal';
+import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { useCommunities } from '@/hooks/useCommunities';
 import CommunityPostsTab from '@/components/admin/community/CommunityPostsTab';
 import { toast } from 'sonner';
@@ -529,11 +530,21 @@ export default function CommunityAdminPanel({
 
   // Workspace-scoped communities (only the community bound to this brand).
   const {
-    community: workspaceCommunity,
-    communities: workspaceCommunities,
+    community: workspaceCommunityRaw,
+    communities: workspaceCommunitiesRaw,
     refetchCommunities,
     isLoading: communitiesLoading,
   } = useCommunities(true);
+
+  // Hard filter: workspace_id === activeWorkspaceId only.
+  const workspaceCommunities = workspaceCommunitiesRaw.filter(
+    (c) => String(c.workspace_id) === String(activeWorkspace.id)
+  );
+  const workspaceCommunity =
+    workspaceCommunityRaw &&
+    String(workspaceCommunityRaw.workspace_id) === String(activeWorkspace.id)
+      ? workspaceCommunityRaw
+      : workspaceCommunities[0] ?? null;
 
   // Only bind to the community owned by this workspace (ignore stale profile ids).
   const [overrideCommunityId, setOverrideCommunityId] = useState<number | null>(
@@ -818,14 +829,15 @@ export default function CommunityAdminPanel({
     moderator_count: 0,
     like_count: 0,
   };
-  const communities =
+  const communities = (
     data?.communities?.length
       ? data.communities
       : workspaceCommunities.length
         ? workspaceCommunities
         : community
           ? [community]
-          : [];
+          : []
+  ).filter((c) => String(c.workspace_id) === String(activeWorkspace.id));
 
   if (!community) {
     const defaultName =
@@ -839,28 +851,13 @@ export default function CommunityAdminPanel({
           title={t('adminNavCommunity', locale)}
           description="No community yet — create one when you're ready."
         />
-        <div className={`${adminCardClass} p-8 sm:p-12 text-center space-y-5`}>
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-[#E9D5FF]/60 border border-[#E9D5FF] flex items-center justify-center">
-            <Users size={22} className="text-[#2B2568]" />
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-sm font-semibold text-slate-700">
-              Your community space is empty.
-            </p>
-            <p className="text-xs font-medium text-slate-400 max-w-sm mx-auto leading-relaxed">
-              Create a community for this workspace to manage members, feed, classroom, and store.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-colors"
-          >
-            <Plus size={16} />
-            Create community
-          </button>
-        </div>
+        <AdminEmptyState
+          icon={Users}
+          headline="Your community space is empty"
+          description="Create a community for this workspace to manage members, feed, classroom, and store."
+          ctaLabel="+ Create Community"
+          onCta={() => setCreateOpen(true)}
+        />
 
         <CreateCommunityModal
           open={createOpen}

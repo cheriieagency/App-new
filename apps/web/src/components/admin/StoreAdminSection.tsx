@@ -25,6 +25,7 @@ import {
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
+import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import {
   offerPillFromProduct,
   productFieldsFromOfferPill,
@@ -919,10 +920,13 @@ export default function StoreAdminSection({
           {t('loading', locale)}
         </div>
       ) : products.length === 0 ? (
-        <div className="nc-glass rounded-[1.5rem] py-12 text-center">
-          <ShoppingBag size={28} className="text-zinc-200 mx-auto mb-2" />
-          <p className="text-sm font-bold text-zinc-400">{t('storeEmpty', locale)}</p>
-        </div>
+        <AdminEmptyState
+          icon={ShoppingBag}
+          headline="No digital products yet"
+          description="Create your first e-book, course, or coaching offer for this workspace."
+          ctaLabel="+ Create First Digital Product"
+          onCta={() => setShowForm(true)}
+        />
       ) : (
         <div className="space-y-3">
           {products.map((product) => {

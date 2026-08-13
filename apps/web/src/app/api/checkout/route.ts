@@ -8,6 +8,7 @@ import { appBaseUrl, missingEnvKeys, missingEnvResponse, stripeEnv } from '@/lib
 import { getStripe } from '@/lib/commerce/stripe';
 import { ensureCommerceSchema } from '@/lib/commerce/orders';
 import sql from '@/app/api/utils/sql';
+import { resolveCommunityBillingWorkspace } from '@/lib/communities/workspace';
 
 export async function POST(request: Request) {
   const missing = missingEnvKeys(...stripeEnv.requiredKeys);
@@ -27,17 +28,31 @@ export async function POST(request: Request) {
       handle?: unknown;
       productId?: unknown;
       productTitle?: unknown;
+      productType?: unknown;
+      communityId?: unknown;
       amountGrossSek?: unknown;
       buyerEmail?: unknown;
       successUrl?: unknown;
       cancelUrl?: unknown;
     };
 
-    const workspaceId = String(body.workspaceId ?? '').trim();
+    let workspaceId = String(body.workspaceId ?? '').trim();
     const productTitle = String(body.productTitle ?? 'Product').trim() || 'Product';
     const amountGrossSek = Math.max(0, Math.round(Number(body.amountGrossSek) || 0));
-    const sellerUserId = String(body.sellerUserId ?? '').trim();
+    let sellerUserId = String(body.sellerUserId ?? '').trim();
     const origin = appBaseUrl(request.headers.get('origin'));
+
+    // Bind Stripe metadata to the community's workspace when applicable.
+    const billing = await resolveCommunityBillingWorkspace({
+      communityId: body.communityId != null ? body.communityId : null,
+      productId: body.productId != null ? String(body.productId) : null,
+    });
+    if (billing.workspaceId) {
+      workspaceId = billing.workspaceId;
+      if (!sellerUserId && billing.creatorId) {
+        sellerUserId = billing.creatorId;
+      }
+    }
 
     if (!workspaceId || amountGrossSek <= 0) {
       return Response.json(
@@ -91,6 +106,13 @@ export async function POST(request: Request) {
         seller_user_id: sellerUserId,
         product_id: String(body.productId ?? ''),
         product_title: productTitle.slice(0, 200),
+        product_type: String(body.productType ?? ''),
+        community_id:
+          billing.communityId != null
+            ? String(billing.communityId)
+            : body.communityId != null
+              ? String(body.communityId)
+              : '',
         handle: String(body.handle ?? ''),
         amount_gross_sek: String(amountGrossSek),
       },

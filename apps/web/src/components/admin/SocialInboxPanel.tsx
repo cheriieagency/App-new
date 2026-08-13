@@ -122,9 +122,14 @@ export default function SocialInboxPanel() {
     [activeId, threads]
   );
 
+  const inboxStatus = metaSync?.snapshot?.inbox_status;
   const syncError =
     metaSync?.error ||
     (isError ? (error instanceof Error ? error.message : 'Sync failed') : null);
+  const dmPermissionIssue = Boolean(inboxStatus?.needs_reconnect_for_dms);
+  const reconnectHref =
+    '/api/auth/meta/login?target=both&workspaceId=' +
+    encodeURIComponent(activeWorkspace.id || 'default-my-workspace');
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -138,11 +143,21 @@ export default function SocialInboxPanel() {
         const list = res.snapshot?.inbox_threads ?? [];
         const dms = list.filter((t) => t.channel === 'dm').length;
         const comments = list.length - dms;
-        toast.success(
-          list.length > 0
-            ? `Synced ${dms} DM${dms === 1 ? '' : 's'} · ${comments} comment${comments === 1 ? '' : 's'}`
-            : 'Synced — no DMs or comments on recent posts yet'
-        );
+        const status = res.snapshot?.inbox_status;
+        if (status?.needs_reconnect_for_dms) {
+          toast.error(
+            status.dm_error ||
+              'DMs need messaging permissions — reconnect Instagram'
+          );
+        } else {
+          toast.success(
+            list.length > 0
+              ? `Synced ${dms} DM${dms === 1 ? '' : 's'} · ${comments} comment${comments === 1 ? '' : 's'}`
+              : status?.media_scanned === 0
+                ? 'Synced — no recent posts (comments) or DMs yet'
+                : 'Synced — no DMs or comments on recent posts yet'
+          );
+        }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Refresh failed');
@@ -252,6 +267,31 @@ export default function SocialInboxPanel() {
         </div>
       ) : null}
 
+      {dmPermissionIssue ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-950 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <div className="space-y-1 min-w-0">
+            <p>
+              Instagram DMs are blocked — this account is missing messaging
+              permissions
+              {inboxStatus?.missing_scopes?.length
+                ? ` (${inboxStatus.missing_scopes.join(', ')})`
+                : ''}
+              .
+            </p>
+            <p className="font-medium text-rose-800/90">
+              {inboxStatus?.dm_error ||
+                'Reconnect and approve Instagram messaging + Page messaging.'}
+            </p>
+          </div>
+          <a
+            href={reconnectHref}
+            className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold whitespace-nowrap"
+          >
+            Reconnect Instagram
+          </a>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         {(
           [
@@ -310,8 +350,13 @@ export default function SocialInboxPanel() {
                       : 'Inbox is empty'}
                 </p>
                 <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-                  Shows Instagram comments and private DMs. Reconnect under Settings →
-                  Socials if DMs stay empty (needs messaging permission), then tap Sync.
+                  {dmPermissionIssue
+                    ? 'DMs need a reconnect with messaging permissions (see banner above). Comments appear once you have recent posts with comments.'
+                    : inboxStatus?.media_scanned === 0
+                      ? 'No recent Instagram posts found — comments will show after you publish. DMs appear when someone messages @' +
+                        (instagramHandle?.replace(/^@/, '') || 'your account') +
+                        '.'
+                      : 'Shows Instagram comments on recent posts and private DMs. Tap Sync after new activity.'}
                 </p>
               </div>
             ) : (

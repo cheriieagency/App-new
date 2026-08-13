@@ -83,6 +83,7 @@ export default function CommunityPostsTab({
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<number, string>>({});
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
 
   const queryKey = ['admin-community-posts', communityId] as const;
@@ -351,6 +352,7 @@ export default function CommunityPostsTab({
               Write a post to your community…
             </p>
             <input
+              ref={titleInputRef}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -494,12 +496,29 @@ export default function CommunityPostsTab({
           Loading feed…
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white border border-slate-200/80 rounded-2xl py-14 px-6 text-center space-y-2">
-          <MessageCircle size={28} className="text-slate-200 mx-auto" />
-          <p className="text-sm font-bold text-slate-600">
-            No posts yet — start the discussion or share an announcement with your
-            members!
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-8 text-center">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-[#E9D5FF]/50 text-[#2B2568] flex items-center justify-center mb-4">
+            <MessageCircle size={22} />
+          </div>
+          <h3 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+            No posts yet
+          </h3>
+          <p className="text-sm text-slate-500 font-medium mt-2 max-w-md mx-auto">
+            Start the discussion or share an announcement with your members.
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              titleInputRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+              });
+              titleInputRef.current?.focus();
+            }}
+            className="mt-5 inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold"
+          >
+            + Create First Post
+          </button>
         </div>
       ) : (
         <div className="space-y-3">

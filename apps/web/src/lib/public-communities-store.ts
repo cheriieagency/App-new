@@ -15,6 +15,18 @@ export function managedToSearchable(
   c: ManagedCommunity,
   opts?: { creatorName?: string | null; creatorImage?: string | null; isJoined?: boolean }
 ): SearchableCommunity {
+  const extended = c as ManagedCommunity & {
+    monthly_price_sek?: number;
+    is_free?: boolean;
+    workspace_id?: string | null;
+    creator_id?: string | null;
+  };
+  const sek =
+    typeof extended.monthly_price_sek === 'number'
+      ? Math.max(0, Math.round(extended.monthly_price_sek))
+      : 0;
+  const isFree = extended.is_free === true || sek <= 0;
+  const monthly = isFree ? 0 : sek;
   return {
     id: c.id,
     name: c.name,
@@ -27,8 +39,11 @@ export function managedToSearchable(
     is_featured: false,
     is_joined: Boolean(opts?.isJoined),
     slug: c.slug,
-    monthly_price: null,
-    price: null,
+    monthly_price: monthly,
+    price: monthly,
+    is_free: isFree || monthly <= 0,
+    workspace_id: extended.workspace_id ?? null,
+    creator_id: extended.creator_id ?? null,
   };
 }
 

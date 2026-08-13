@@ -3,6 +3,7 @@
  */
 
 import {
+  debugMetaTokenScopes,
   fetchInstagramAudienceDemographics,
   fetchInstagramDmConversations,
   fetchInstagramInsights,
@@ -13,6 +14,7 @@ import {
   type InstagramComment,
   type InstagramMediaItem,
 } from '@/lib/meta/graph-api';
+import { META_INBOX_DM_SCOPES } from '@/lib/meta/oauth';
 import { listStoredMetaAccounts } from '@/lib/meta/social-accounts';
 import { upsertPlannerPost } from '@/lib/mock-content-planner';
 
@@ -63,6 +65,16 @@ export type MetaSyncSnapshot = {
   inbox_threads: MetaInboxThread[];
   planner_imported: number;
   demographics?: InstagramAudienceDemographics | null;
+  /** Why Inbox may be empty — used by SocialInboxPanel banners. */
+  inbox_status?: {
+    media_scanned: number;
+    comments_found: number;
+    dms_found: number;
+    page_id: string | null;
+    dm_error?: string | null;
+    missing_scopes?: string[];
+    needs_reconnect_for_dms?: boolean;
+  };
 };
 
 const snapshots = new Map<string, MetaSyncSnapshot>();
@@ -235,6 +247,14 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
     media: [],
     inbox_threads: [],
     planner_imported: 0,
+    inbox_status: {
+      media_scanned: 0,
+      comments_found: 0,
+      dms_found: 0,
+      page_id: null,
+      dm_error: 'Instagram not connected',
+      needs_reconnect_for_dms: true,
+    },
   };
 
   if (!ig?.access_token || !ig.external_id) {
@@ -298,28 +318,75 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
 
   // Instagram DMs require a Page access token + messaging scopes.
   let dmThreads: MetaInboxThread[] = [];
-  const pageId = ig.page_id;
+  let dmError: string | null = null;
+  let missingScopes: string[] = [];
+  let needsReconnectForDms = false;
+
+  const fb = accounts.find((a) => a.platform === 'facebook');
+  const pageId =
+    ig.page_id ||
+    fb?.page_id ||
+    fb?.external_id ||
+    null;
   const pageToken =
-    accounts.find((a) => a.platform === 'facebook' && a.page_id === pageId)
-      ?.access_token ||
+    (pageId &&
+      accounts.find(
+        (a) =>
+          a.platform === 'facebook' &&
+          (a.page_id === pageId || a.external_id === pageId)
+      )?.access_token) ||
+    fb?.access_token ||
     (pageId ? ig.access_token : null);
-  if (pageId && pageToken) {
+
+  if (!pageId) {
+    dmError =
+      'No Facebook Page linked to this Instagram account — reconnect under Settings → Socials.';
+    needsReconnectForDms = true;
+  } else if (!pageToken) {
+    dmError = 'Missing Page access token — reconnect Facebook + Instagram.';
+    needsReconnectForDms = true;
+  } else {
+    // Detect missing messaging scopes before (or after) the conversations call.
+    const tokenInfo = await debugMetaTokenScopes(pageToken);
+    missingScopes = META_INBOX_DM_SCOPES.filter(
+      (scope) => !tokenInfo.scopes.includes(scope)
+    );
+    if (missingScopes.length > 0) {
+      needsReconnectForDms = true;
+      dmError = `Missing Meta permissions: ${missingScopes.join(', ')}. Reconnect Instagram and approve messaging.`;
+    }
+
     try {
       const conversations = await fetchInstagramDmConversations(
         pageId,
         pageToken,
-        20
+        20,
+        ig.external_id
       );
       dmThreads = dmConversationsToThreads(
         pageId,
         ig.external_id,
         conversations
       );
+      if (dmThreads.length > 0) {
+        dmError = null;
+        needsReconnectForDms = false;
+      }
     } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : 'Instagram DMs unavailable';
       console.warn(
         '[meta/sync] Instagram DMs unavailable — reconnect with instagram_manage_messages',
         error
       );
+      dmError = msg;
+      if (
+        /instagram_manage_messages|pages_messaging|permission|OAuthException|#230/i.test(
+          msg
+        )
+      ) {
+        needsReconnectForDms = true;
+      }
     }
   }
 
@@ -368,6 +435,15 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
     inbox_threads,
     planner_imported: plannerImported,
     demographics,
+    inbox_status: {
+      media_scanned: media.length,
+      comments_found: commentThreads.length,
+      dms_found: dmThreads.length,
+      page_id: pageId,
+      dm_error: dmError,
+      missing_scopes: missingScopes,
+      needs_reconnect_for_dms: needsReconnectForDms,
+    },
   };
 
   snapshots.set(userId, snapshot);

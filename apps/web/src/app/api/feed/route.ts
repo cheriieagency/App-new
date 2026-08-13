@@ -1,7 +1,6 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { MOCK_POSTS } from '@/lib/mock-demo-content';
 import { applyPostPinOverride } from '@/lib/demo-pin-state';
 
 function withDemoPins(posts: Array<Record<string, unknown>>) {
@@ -29,9 +28,7 @@ function sortPinnedFirst(posts: Array<Record<string, unknown>>) {
 export async function GET() {
   try {
     if (!process.env.DATABASE_URL?.trim()) {
-      return Response.json(
-        sortPinnedFirst(withDemoPins(MOCK_POSTS as Array<Record<string, unknown>>))
-      );
+      return Response.json([]);
     }
 
     const posts = await sql`
@@ -42,16 +39,14 @@ export async function GET() {
       ORDER BY p.is_pinned DESC, p.created_at DESC
     `;
     if (!Array.isArray(posts) || posts.length === 0) {
-      return Response.json(
-        sortPinnedFirst(withDemoPins(MOCK_POSTS as Array<Record<string, unknown>>))
-      );
+      return Response.json([]);
     }
-    return Response.json(posts);
+    return Response.json(
+      sortPinnedFirst(withDemoPins(posts as Array<Record<string, unknown>>))
+    );
   } catch (error) {
     console.error(error);
-    return Response.json(
-      sortPinnedFirst(withDemoPins(MOCK_POSTS as Array<Record<string, unknown>>))
-    );
+    return Response.json([]);
   }
 }
 

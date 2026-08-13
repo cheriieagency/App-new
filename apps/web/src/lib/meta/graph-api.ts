@@ -764,7 +764,9 @@ export type InstagramDmConversation = {
 export async function fetchInstagramDmConversations(
   pageId: string,
   pageAccessToken: string,
-  limit = 20
+  limit = 20,
+  /** Instagram Business Account id — exclude from "other participant". */
+  igUserId?: string | null
 ): Promise<InstagramDmConversation[]> {
   const url = new URL(
     `${GRAPH_BASE}/${encodeURIComponent(pageId)}/conversations`
@@ -786,11 +788,15 @@ export async function fetchInstagramDmConversations(
     const data = await graphJson<{ data?: InstagramDmConversation[] }>(
       url.toString()
     );
+    const selfIds = new Set(
+      [pageId, igUserId].filter(Boolean).map((id) => String(id))
+    );
     return (data.data ?? []).map((conv) => {
       const participants = conv.participants?.data ?? [];
-      // Prefer the participant that isn't the Page itself.
+      // Prefer the participant that isn't the Page / IG business account.
       const other =
-        participants.find((p) => p.id && p.id !== pageId) || participants[0];
+        participants.find((p) => p.id && !selfIds.has(p.id)) ||
+        participants[0];
       return {
         ...conv,
         recipient_id: other?.id,
@@ -801,6 +807,32 @@ export async function fetchInstagramDmConversations(
   } catch (error) {
     console.warn('[graph] Instagram DM conversations failed', error);
     throw error;
+  }
+}
+
+/** Inspect which scopes a user/page token actually carries (no token echoed). */
+export async function debugMetaTokenScopes(
+  inputToken: string
+): Promise<{ isValid: boolean; scopes: string[] }> {
+  const appId = process.env.META_APP_ID?.trim();
+  const appSecret = process.env.META_APP_SECRET?.trim();
+  if (!appId || !appSecret || !inputToken) {
+    return { isValid: false, scopes: [] };
+  }
+  try {
+    const url = new URL(`${GRAPH_BASE}/debug_token`);
+    url.searchParams.set('input_token', inputToken);
+    url.searchParams.set('access_token', `${appId}|${appSecret}`);
+    const data = await graphJson<{
+      data?: { is_valid?: boolean; scopes?: string[] };
+    }>(url.toString());
+    return {
+      isValid: Boolean(data.data?.is_valid),
+      scopes: Array.isArray(data.data?.scopes) ? data.data!.scopes! : [],
+    };
+  } catch (error) {
+    console.warn('[graph] debug_token failed', error);
+    return { isValid: false, scopes: [] };
   }
 }
 

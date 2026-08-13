@@ -59,7 +59,7 @@ import {
 import { getMockCommunitiesForUser, normalizeCommunities, recommendCommunitiesFromMemberships, joinedCommunityCategories } from '@/lib/mock-communities';
 import ClassroomView from '@/components/classroom/ClassroomView';
 import StoreView from '@/components/store/StoreView';
-import { normalizeClassroomCourses, filterCoursesForCommunity, SKOOL_CLASSROOM_COURSES } from '@/lib/classroom-content';
+import { normalizeClassroomCourses, filterCoursesForCommunity } from '@/lib/classroom-content';
 
 type TabKey = 'community' | 'events' | 'classroom' | 'store';
 type CommunitySubTab = 'feed' | 'leaderboard';
@@ -870,7 +870,7 @@ function DashboardPageInner() {
   /** Courses belonging to the open community — Classroom tab stays hidden until any exist. */
   const selectedCommunityCourses = useMemo(() => {
     const all = normalizeClassroomCourses(classroom);
-    const catalog = all.length ? all : SKOOL_CLASSROOM_COURSES;
+    const catalog = all;
     return filterCoursesForCommunity(catalog, {
       communityId: selectedCommunity?.id != null ? Number(selectedCommunity.id) : null,
       slug: selectedCommunity?.slug ?? null,

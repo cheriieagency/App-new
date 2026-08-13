@@ -10,6 +10,7 @@ import { getMockCommunitiesForUser } from '@/lib/mock-communities';
 import { fireEmailAutomations, persistSubscriber } from '@/lib/email/crm-persist';
 import { syncSubscriber } from '@/lib/mock-email-crm';
 import { getSiteUrl } from '@/lib/site';
+import { extractCommunityPrice } from '@/lib/communities/pricing';
 import {
   listPublicCatalogCommunities,
   publishCommunityToPublicCatalog,
@@ -48,10 +49,12 @@ export async function GET() {
     }
 
     if (Array.isArray(communities) && communities.length > 0) {
-      // Keep catalog warm for about-page fallbacks.
-      for (const raw of communities) {
+      // Keep catalog warm for about-page fallbacks — preserve admin pricing.
+      const publicRows = communities.map((raw) => {
         const c = raw as Record<string, unknown>;
-        publishCommunityToPublicCatalog({
+        const pricing = extractCommunityPrice(c);
+        const row = {
+          ...c,
           id: Number(c.id),
           name: String(c.name ?? 'Community'),
           description: String(c.description ?? ''),
@@ -63,11 +66,16 @@ export async function GET() {
           is_featured: Boolean(c.is_featured),
           is_joined: Boolean(c.is_joined),
           slug: (c.slug as string | null) ?? null,
-          monthly_price: null,
-          price: null,
-        });
-      }
-      return Response.json(communities);
+          monthly_price: pricing.monthly_price,
+          price: pricing.price,
+          is_free: pricing.is_free,
+          workspace_id: pricing.workspace_id,
+          creator_id: pricing.creator_id,
+        };
+        publishCommunityToPublicCatalog(row);
+        return row;
+      });
+      return Response.json(publicRows);
     }
 
     // DB empty — include any in-memory / demo published communities.

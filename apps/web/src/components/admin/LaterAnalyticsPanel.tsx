@@ -130,7 +130,7 @@ function formatRangeLabel(range: AnalyticsDateRange, locale: Locale) {
 
 type AnalyticsSubTab =
   | 'analytics'
-  | 'overview'
+  | 'revenue'
   | 'audience'
   | 'posts'
   | 'reels'
@@ -138,6 +138,28 @@ type AnalyticsSubTab =
   | 'hashtags'
   | 'linkinbio'
   | 'monthly';
+
+const ANALYTICS_SUB_TABS = new Set<AnalyticsSubTab>([
+  'analytics',
+  'revenue',
+  'audience',
+  'posts',
+  'reels',
+  'stories',
+  'hashtags',
+  'linkinbio',
+  'monthly',
+]);
+
+function parseAnalyticsSub(raw: string | null): AnalyticsSubTab | null {
+  if (!raw) return null;
+  // Legacy deep-links used "overview" for the Revenue tab.
+  if (raw === 'overview') return 'revenue';
+  if (ANALYTICS_SUB_TABS.has(raw as AnalyticsSubTab)) {
+    return raw as AnalyticsSubTab;
+  }
+  return null;
+}
 
 type PostPerfRow = {
   id: string;
@@ -282,13 +304,27 @@ export default function LaterAnalyticsPanel() {
   const { data: metaSync } = useMetaSync(hasInstagram);
   // Workspace-scoped analytics — aggregates every connected API for this brand.
   const { data: analyticsApi } = useAnalytics(hasConnectedSocials);
-  const [sub, setSub] = useState<AnalyticsSubTab>('analytics');
+  const [sub, setSub] = useState<AnalyticsSubTab>(() => {
+    if (typeof window === 'undefined') return 'analytics';
+    return (
+      parseAnalyticsSub(new URLSearchParams(window.location.search).get('sub')) ||
+      'analytics'
+    );
+  });
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
   const [rangeOpen, setRangeOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(dateRange.from);
   const [draftTo, setDraftTo] = useState(dateRange.to);
   const [exportOpen, setExportOpen] = useState(false);
   const [bioTick, setBioTick] = useState(0);
+
+  // Honor ?sub=revenue (and Stripe Connect return/refresh deep-links).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = parseAnalyticsSub(params.get('sub'));
+    if (fromUrl) setSub(fromUrl);
+  }, []);
   // Live IG / FB / TikTok published posts for Posts + Reels tabs.
   const { data: postsApi, isLoading: postsLoading } = useAnalyticsPosts(
     hasConnectedSocials && (sub === 'posts' || sub === 'reels')
@@ -550,12 +586,12 @@ export default function LaterAnalyticsPanel() {
 
   const subTabs: { key: AnalyticsSubTab; label: string; icon: React.ElementType }[] = [
     { key: 'analytics', label: t('analyticsTab', locale), icon: Activity },
+    { key: 'revenue', label: t('analyticsOverview', locale), icon: BarChart3 },
     { key: 'audience', label: t('analyticsAudience', locale), icon: Users },
     { key: 'posts', label: t('analyticsPosts', locale), icon: BookOpen },
     { key: 'reels', label: t('analyticsReels', locale), icon: Film },
     { key: 'stories', label: t('analyticsStories', locale), icon: Eye },
     { key: 'hashtags', label: t('analyticsHashtags', locale), icon: Hash },
-    { key: 'overview', label: t('analyticsOverview', locale), icon: BarChart3 },
     { key: 'linkinbio', label: t('analyticsLinkinBio', locale), icon: Link2 },
     { key: 'monthly', label: 'Monthly Reports', icon: CalendarDays },
   ];
@@ -629,7 +665,7 @@ export default function LaterAnalyticsPanel() {
   ];
 
   const isBioCommerceTab =
-    sub === 'overview' || sub === 'linkinbio' || sub === 'monthly';
+    sub === 'revenue' || sub === 'linkinbio' || sub === 'monthly';
 
   // Social tabs need connected APIs; Revenue + Link in bio come from Bio Builder sales.
   if (!socialsLoading && !hasConnectedSocials && !isBioCommerceTab) {
@@ -862,7 +898,16 @@ export default function LaterAnalyticsPanel() {
             <button
               key={key}
               type="button"
-              onClick={() => setSub(key)}
+              onClick={() => {
+                setSub(key);
+                if (typeof window !== 'undefined') {
+                  const params = new URLSearchParams(window.location.search);
+                  params.set('tab', 'analytics');
+                  params.set('sub', key);
+                  const next = `${window.location.pathname}?${params.toString()}`;
+                  window.history.replaceState({}, '', next);
+                }
+              }}
               className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
                 active
                   ? 'text-slate-900 bg-slate-100'
@@ -884,7 +929,7 @@ export default function LaterAnalyticsPanel() {
         />
       )}
 
-      {sub === 'overview' && <RevenueAnalyticsPanel />}
+      {sub === 'revenue' && <RevenueAnalyticsPanel />}
 
       {sub === 'monthly' && <MonthlyReportEngine />}
 

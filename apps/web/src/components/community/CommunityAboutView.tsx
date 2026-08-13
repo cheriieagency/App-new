@@ -6,13 +6,13 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Check,
+  Circle,
   Lock,
   Globe2,
   Users,
   Coins,
   Play,
   ShieldCheck,
-  Circle,
 } from 'lucide-react';
 import type { CommunityAbout } from '@/lib/community-about';
 import { InstantCheckoutDrawer } from '@/components/community/InstantCheckoutDrawer';
@@ -25,18 +25,23 @@ type CommunityAboutViewProps = {
 };
 
 export function CommunityAboutView({
-  community,
+  community: initialCommunity,
   backHref = '/',
   backLabel = '← Tillbaka till Sök / Dashboard',
 }: CommunityAboutViewProps) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
+  const [community, setCommunity] = useState(initialCommunity);
   const [activeThumb, setActiveThumb] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  const price = community.monthly_price ?? 199;
+  const price =
+    community.is_free || community.monthly_price === 0
+      ? 0
+      : Math.max(0, Number(community.monthly_price ?? community.price ?? 0));
   const isJoined = Boolean(community.is_joined);
+  const isFree = price <= 0;
 
   const thumbLabels = useMemo(
     () => ['Intro', 'Kurs', 'Live', 'Bonus'].slice(0, community.thumbnails.length || 4),
@@ -131,7 +136,7 @@ export function CommunityAboutView({
               </span>
               <span className="inline-flex items-center gap-1.5 min-h-9 px-3 rounded-full bg-white border border-zinc-200 text-xs font-bold text-zinc-700">
                 <Coins size={12} />
-                {price.toLocaleString('sv-SE')} SEK/mån
+                {isFree ? 'Gratis' : `${price.toLocaleString('sv-SE')} SEK/mån`}
               </span>
               <span className="inline-flex items-center gap-2 min-h-9 px-3 rounded-full bg-white border border-zinc-200 text-xs font-bold text-zinc-700">
                 <span
@@ -240,7 +245,9 @@ export function CommunityAboutView({
                     }}
                     className="w-full min-h-12 rounded-2xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-sm font-black transition-all active:scale-[0.99] shadow-lg shadow-zinc-900/20"
                   >
-                    Gå med för {price.toLocaleString('sv-SE')} kr/mån
+                    {isFree
+                      ? 'Gå med gratis →'
+                      : `Gå med för ${price.toLocaleString('sv-SE')} kr/mån`}
                   </button>
                 )}
 
@@ -258,9 +265,13 @@ export function CommunityAboutView({
         open={checkoutOpen}
         onOpenChange={setCheckoutOpen}
         communityName={community.name}
+        communityId={community.id}
         priceSek={price}
+        workspaceId={community.workspace_id}
+        sellerUserId={community.creator_id}
         onSuccess={() => {
-          /* keep drawer open with success state */
+          setCommunity((c) => ({ ...c, is_joined: true }));
+          router.refresh();
         }}
       />
     </div>

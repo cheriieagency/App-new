@@ -465,8 +465,6 @@ export default function SocialAccountsPanel({
         </div>
       ) : null}
 
-      <GoogleIntegrationCard />
-
       {!compact && (
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="min-w-0">
@@ -744,6 +742,8 @@ export default function SocialAccountsPanel({
               />
             </div>
           </div>
+
+          <GoogleIntegrationCard />
         </div>
       )}
 

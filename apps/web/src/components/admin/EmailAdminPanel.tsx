@@ -55,6 +55,7 @@ import { useSubscription } from '@/components/common/useSubscription';
 import UpgradeModal from '@/components/common/UpgradeModal';
 import { PlanLockBadge } from '@/components/common/FeatureGate';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import AdminEmptyState from '@/components/admin/AdminEmptyState';
 
 type EmailResponse = {
   total_subscribers: number;
@@ -491,25 +492,17 @@ export default function EmailAdminPanel() {
         </div>
       )}
       {!data?.demo && subscriberCount === 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p>
-            No subscribers yet for this workspace. Import existing community members, or wait
-            for joins / purchases / RSVPs. Open rate stays at 0% until Resend reports opens.
-          </p>
-          <button
-            type="button"
-            disabled={importMembersMutation.isPending || !workspaceCommunityId}
-            onClick={() => importMembersMutation.mutate()}
-            className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-4 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 shrink-0"
-          >
-            {importMembersMutation.isPending ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Users size={14} />
-            )}
-            Import community members
-          </button>
-        </div>
+        <AdminEmptyState
+          icon={Users}
+          headline="No subscribers yet"
+          description="Import community members, or wait for joins / purchases / RSVPs. Open rate stays at 0% until Resend reports opens."
+          ctaLabel="+ Import Community Members"
+          onCta={() => {
+            if (!importMembersMutation.isPending && workspaceCommunityId) {
+              importMembersMutation.mutate();
+            }
+          }}
+        />
       )}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>

@@ -6,6 +6,7 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { extractCommunityPrice } from '@/lib/communities/pricing';
 import { getMockCommunitiesForUser } from '@/lib/mock-communities';
 import { listPublicCatalogCommunities } from '@/lib/public-communities-store';
 
@@ -18,22 +19,28 @@ export async function GET(_request: Request, context: Ctx) {
   const email = session?.user?.email ?? null;
   const name = session?.user?.name ?? null;
 
-  const asPublic = (raw: Record<string, unknown>) => ({
-    id: Number(raw.id),
-    name: String(raw.name ?? 'Community'),
-    description: String(raw.description ?? ''),
-    category: String(raw.category ?? 'Community'),
-    creator_name: String(raw.creator_name ?? ''),
-    creator_image: (raw.creator_image as string | null) ?? null,
-    cover_color: (raw.cover_color as string | null) ?? '#2B2568',
-    member_count: Number(raw.member_count ?? 0),
-    is_featured: Boolean(raw.is_featured),
-    is_joined: Boolean(raw.is_joined),
-    slug: (raw.slug as string | null) ?? null,
-    monthly_price: null,
-    price: null,
-    is_published: raw.is_published !== false,
-  });
+  const asPublic = (raw: Record<string, unknown>) => {
+    const pricing = extractCommunityPrice(raw);
+    return {
+      id: Number(raw.id),
+      name: String(raw.name ?? 'Community'),
+      description: String(raw.description ?? ''),
+      category: String(raw.category ?? 'Community'),
+      creator_name: String(raw.creator_name ?? ''),
+      creator_image: (raw.creator_image as string | null) ?? null,
+      cover_color: (raw.cover_color as string | null) ?? '#2B2568',
+      member_count: Number(raw.member_count ?? 0),
+      is_featured: Boolean(raw.is_featured),
+      is_joined: Boolean(raw.is_joined),
+      slug: (raw.slug as string | null) ?? null,
+      monthly_price: pricing.monthly_price,
+      price: pricing.price,
+      is_free: pricing.is_free,
+      workspace_id: pricing.workspace_id,
+      creator_id: pricing.creator_id,
+      is_published: raw.is_published !== false,
+    };
+  };
 
   try {
     if (process.env.DATABASE_URL?.trim()) {

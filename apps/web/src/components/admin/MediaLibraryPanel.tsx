@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Trash2, Upload } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
+import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import {
   Dialog,
   DialogContent,
@@ -185,10 +186,18 @@ export default function MediaLibraryPanel() {
           {t('loading', locale)}
         </div>
       ) : assets.length === 0 ? (
-        <div className={`${adminCardClass} py-16 text-center text-slate-400`}>
-          <ImageIcon size={28} className="mx-auto mb-2 opacity-40" />
-          <p className="text-sm font-semibold">{t('noMediaInFolder', locale)}</p>
-        </div>
+        <AdminEmptyState
+          icon={Upload}
+          headline="No media in this folder yet"
+          description="Import from Google Drive or create a folder to organize brand assets for Bio Builder and Planner."
+          ctaLabel="+ Create Folder"
+          onCta={() => setCreateMediaFolderOpen(true)}
+          secondary={
+            <span className="inline-flex">
+              <GoogleDriveImportButton target="media_library" />
+            </span>
+          }
+        />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {assets.map((m) => (

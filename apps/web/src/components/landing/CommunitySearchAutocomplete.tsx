@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import { formatCommunityPriceLabel } from '@/lib/communities/pricing';
 
 export type SearchableCommunity = {
   id: number;
@@ -17,8 +18,12 @@ export type SearchableCommunity = {
   is_featured?: boolean;
   is_joined?: boolean;
   slug?: string | null;
+  /** Monthly membership price in SEK (0 = free). From admin `monthly_price_sek`. */
   monthly_price?: number | null;
   price?: number | null;
+  is_free?: boolean;
+  workspace_id?: string | null;
+  creator_id?: string | null;
 };
 
 type CommunitySearchAutocompleteProps = {
@@ -185,7 +190,12 @@ export function CommunitySearchAutocomplete({
           <ul className="max-h-80 overflow-y-auto py-1">
             {suggestions.map((community, index) => {
               const active = index === highlight;
-              const price = community.monthly_price ?? community.price ?? 199;
+              const price =
+                community.monthly_price ?? community.price ?? null;
+              const priceLabel = formatCommunityPriceLabel(
+                price,
+                community.is_free
+              );
               return (
                 <li key={community.id} role="option" aria-selected={active}>
                   <button
@@ -220,7 +230,7 @@ export function CommunitySearchAutocomplete({
                           #{community.category || 'Community'}
                         </span>
                         <span className="text-[11px] font-bold text-slate-400">
-                          {price.toLocaleString('sv-SE')} SEK/mo
+                          {priceLabel}
                         </span>
                       </div>
                     </div>

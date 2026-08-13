@@ -3,72 +3,8 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { DEFAULT_BIO_THEME, normalizeBioTheme } from '@/lib/bio-theme';
 
-const DEFAULT_BLOCKS = [
-  {
-    id: '1',
-    type: 'lead_magnet',
-    category: 'links',
-    title: 'Gratis E-bok',
-    subtitle: 'Ladda ned gratis',
-    emoji: '📘',
-    color: '#3B82F6',
-    visible: true,
-  },
-  {
-    id: '2',
-    type: 'course',
-    category: 'links',
-    title: 'Kurs: clikd:',
-    subtitle: 'Onlinekurs · 12 lektioner',
-    emoji: '🎓',
-    color: '#8B5CF6',
-    visible: true,
-  },
-  {
-    id: '3',
-    type: 'coaching',
-    category: 'links',
-    title: '1:1 Coaching',
-    subtitle: 'Boka ett samtal',
-    emoji: '🤝',
-    color: '#10B981',
-    visible: true,
-  },
-  {
-    id: '4',
-    type: 'community',
-    category: 'links',
-    title: 'Gå med i Community',
-    subtitle: 'Gratis & öppet',
-    emoji: '🏠',
-    color: '#F59E0B',
-    visible: true,
-  },
-  {
-    id: 's1',
-    type: 'store',
-    category: 'store',
-    title: 'Creator Starter Pack',
-    subtitle: 'Extern butik',
-    emoji: '🛒',
-    color: '#9b8afb',
-    visible: true,
-    destination_url: 'https://example.com/starter-pack',
-    utm_slug: 'starter-pack-s1',
-  },
-  {
-    id: 's2',
-    type: 'store',
-    category: 'store',
-    title: 'Live Studio Hook Pack',
-    subtitle: 'Digital produkt',
-    emoji: '📦',
-    color: '#0f766e',
-    visible: true,
-    destination_url: 'https://example.com/hook-pack',
-    utm_slug: 'hook-pack-s2',
-  },
-];
+/** Empty bio until the creator adds real blocks — no seeded demo products. */
+const DEFAULT_BLOCKS: Array<Record<string, unknown>> = [];
 
 export async function GET() {
   try {
@@ -85,7 +21,7 @@ export async function GET() {
           blocks: DEFAULT_BLOCKS,
           handle: session.user.name?.toLowerCase().replace(/\s+/g, '') ?? 'creator',
           display_name: session.user.name ?? 'Creator',
-          bio_text: 'clikd: · Hjälper dig växa online 🚀',
+          bio_text: '',
           avatar_url: session.user.image ?? null,
           theme: DEFAULT_BIO_THEME,
         });
@@ -102,10 +38,9 @@ export async function GET() {
         blocks: DEFAULT_BLOCKS,
         handle: session.user.name?.toLowerCase().replace(/\s+/g, '') ?? 'creator',
         display_name: session.user.name ?? 'Creator',
-        bio_text: 'clikd: · Hjälper dig växa online 🚀',
+        bio_text: '',
         avatar_url: session.user.image ?? null,
         theme: DEFAULT_BIO_THEME,
-        demo: true,
       });
     }
   } catch (error) {

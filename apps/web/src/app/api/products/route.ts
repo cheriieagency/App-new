@@ -5,7 +5,6 @@ import {
   demoCreateStoreProduct,
   kindForType,
   listDemoStoreProducts,
-  MOCK_PRODUCTS,
   type StoreKind,
   type StoreProductType,
 } from '@/lib/mock-store';
@@ -41,6 +40,7 @@ export async function GET(request: Request) {
 
   try {
     if (!process.env.DATABASE_URL?.trim()) {
+      // In-memory products created in this session only (no seeded catalog).
       return Response.json(listDemoStoreProducts(cid));
     }
 
@@ -58,14 +58,14 @@ export async function GET(request: Request) {
         `;
 
     if (!Array.isArray(products) || products.length === 0) {
-      return Response.json(listDemoStoreProducts(cid));
+      return Response.json([]);
     }
     return Response.json(
       (products as Array<Record<string, unknown>>).map(normalizeProduct)
     );
   } catch (error) {
     console.error(error);
-    return Response.json(cid ? listDemoStoreProducts(cid) : MOCK_PRODUCTS);
+    return Response.json([]);
   }
 }
 

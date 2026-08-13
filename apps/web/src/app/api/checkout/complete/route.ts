@@ -17,6 +17,7 @@ import {
   looksLikeCoachingProduct,
 } from '@/lib/google/calendar';
 import { sendOrderReceiptEmail } from '@/lib/email/transactional';
+import { resolveCommunityBillingWorkspace } from '@/lib/communities/workspace';
 
 async function resolveSellerUserId(input: {
   workspaceId: string;
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
       bookingEndTimeISO?: unknown;
     };
 
-    const workspaceId = String(body.workspaceId ?? '').trim();
+    let workspaceId = String(body.workspaceId ?? '').trim();
     const productTitle = String(body.productTitle ?? 'Product').trim() || 'Product';
     const amountGrossSek = Math.max(0, Math.round(Number(body.amountGrossSek) || 0));
     const buyerEmail =
@@ -106,6 +107,17 @@ export async function POST(request: Request) {
         ? (body.metadata as Record<string, unknown>)
         : {};
 
+    // Community / storefront purchases always credit community.workspace_id.
+    const billing = await resolveCommunityBillingWorkspace({
+      communityId: metadata.communityId ?? metadata.community_id ?? null,
+      productId: body.productId != null ? String(body.productId) : null,
+    });
+    if (billing.workspaceId) {
+      workspaceId = billing.workspaceId;
+      metadata.community_id = billing.communityId;
+      metadata.billed_workspace_id = billing.workspaceId;
+    }
+
     if (!workspaceId) {
       return Response.json({ error: 'workspaceId required' }, { status: 400 });
     }
@@ -116,7 +128,10 @@ export async function POST(request: Request) {
     const sellerUserId = await resolveSellerUserId({
       workspaceId,
       handle: body.handle != null ? String(body.handle) : null,
-      sellerUserId: body.sellerUserId != null ? String(body.sellerUserId) : null,
+      sellerUserId:
+        body.sellerUserId != null
+          ? String(body.sellerUserId)
+          : billing.creatorId,
     });
 
     if (!sellerUserId) {
@@ -128,19 +143,31 @@ export async function POST(request: Request) {
       });
     }
 
+    // Credit the community's workspace (or seller-owned workspace fallback).
     let creditWorkspaceId = workspaceId;
     try {
-      const owned = await sql`
-        SELECT id FROM public.workspaces
-        WHERE id = ${workspaceId} OR user_id = ${sellerUserId}
-        ORDER BY CASE WHEN id = ${workspaceId} THEN 0 ELSE 1 END, updated_at DESC
-        LIMIT 1
+      await ensureCommerceSchema();
+      await sql`
+        INSERT INTO public.workspaces (id, user_id)
+        VALUES (${workspaceId}, ${sellerUserId})
+        ON CONFLICT (id) DO UPDATE SET
+          user_id = COALESCE(workspaces.user_id, EXCLUDED.user_id),
+          updated_at = now()
       `;
-      if (owned?.[0]?.id) {
-        creditWorkspaceId = String(owned[0].id);
+      // When this is a community purchase, never re-route away from community.workspace_id.
+      if (!billing.workspaceId) {
+        const owned = await sql`
+          SELECT id FROM public.workspaces
+          WHERE id = ${workspaceId} OR user_id = ${sellerUserId}
+          ORDER BY CASE WHEN id = ${workspaceId} THEN 0 ELSE 1 END, updated_at DESC
+          LIMIT 1
+        `;
+        if (owned?.[0]?.id) {
+          creditWorkspaceId = String(owned[0].id);
+        }
       }
     } catch {
-      /* keep client workspaceId */
+      /* keep community / client workspaceId */
     }
 
     const order = await recordCompletedOrder({

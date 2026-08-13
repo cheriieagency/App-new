@@ -208,9 +208,13 @@ export async function GET(request: Request) {
     return Response.json({
       ok: true,
       workspaceId,
+      // Spec aliases + camelCase used by RevenueAnalyticsPanel.
       grossRevenue: Number(t?.gross) || 0,
+      totalGrossRevenue: Number(t?.gross) || 0,
       netEarnings: Number(t?.net) || 0,
+      totalNetEarnings: Number(t?.net) || 0,
       totalOrders: Number(t?.orders) || 0,
+      totalOrdersCount: Number(t?.orders) || 0,
       walletBalance: Number(w?.wallet_balance_sek) || 0,
       stripeConnectEnabled: Boolean(w?.stripe_connect_enabled && w?.stripe_connect_account_id),
       stripeConnectAccountId: w?.stripe_connect_account_id

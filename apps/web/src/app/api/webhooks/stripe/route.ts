@@ -16,6 +16,7 @@ import {
   looksLikeCoachingProduct,
 } from '@/lib/google/calendar';
 import { sendOrderReceiptEmail } from '@/lib/email/transactional';
+import { resolveCommunityBillingWorkspace } from '@/lib/communities/workspace';
 import type Stripe from 'stripe';
 
 export async function POST(request: Request) {
@@ -51,8 +52,8 @@ export async function POST(request: Request) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const meta = session.metadata || {};
-      const workspaceId = String(meta.workspace_id || '').trim();
-      const sellerUserId = String(meta.seller_user_id || '').trim();
+      let workspaceId = String(meta.workspace_id || '').trim();
+      let sellerUserId = String(meta.seller_user_id || '').trim();
       const productTitle =
         String(meta.product_title || '').trim() || 'Product';
       const productType = String(meta.product_type || '').trim();
@@ -69,6 +70,18 @@ export async function POST(request: Request) {
         )
       );
 
+      // Community storefront / membership → always bill community.workspace_id.
+      const billing = await resolveCommunityBillingWorkspace({
+        communityId: meta.community_id || meta.communityId || null,
+        productId: meta.product_id || null,
+      });
+      if (billing.workspaceId) {
+        workspaceId = billing.workspaceId;
+        if (!sellerUserId && billing.creatorId) {
+          sellerUserId = billing.creatorId;
+        }
+      }
+
       if (workspaceId && sellerUserId && amountGrossSek > 0) {
         const order = await recordCompletedOrder({
           workspaceId,
@@ -84,6 +97,8 @@ export async function POST(request: Request) {
             payment_intent: session.payment_intent,
             handle: meta.handle || null,
             productType: productType || null,
+            community_id: billing.communityId,
+            billed_workspace_id: workspaceId,
           },
         });
 

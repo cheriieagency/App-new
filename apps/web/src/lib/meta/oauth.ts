@@ -22,6 +22,8 @@ export const META_OAUTH_SCOPES = [
   'pages_show_list',
   'pages_read_engagement',
   'pages_manage_posts',
+  // Required for Page Messaging + Instagram Messaging webhooks/conversations.
+  'pages_manage_metadata',
   'pages_messaging',
   'instagram_basic',
   'instagram_content_publish',
@@ -30,6 +32,14 @@ export const META_OAUTH_SCOPES = [
   // Instagram Messaging API (Inbox DMs via Page conversations).
   'instagram_manage_messages',
   'business_management',
+] as const;
+
+/** Scopes required for Social Inbox DMs (Page conversations + send). */
+export const META_INBOX_DM_SCOPES = [
+  'instagram_manage_messages',
+  'pages_messaging',
+  'pages_manage_metadata',
+  'instagram_basic',
 ] as const;
 
 export function parseMetaOAuthTarget(raw: string | null | undefined): MetaOAuthTarget {

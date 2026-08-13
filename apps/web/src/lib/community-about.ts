@@ -40,10 +40,11 @@ const INCLUDE_SETS: string[][] = [
 ];
 
 function monthlyPrice(c: SearchableCommunity): number {
-  if (typeof c.monthly_price === 'number') return c.monthly_price;
-  if (typeof c.price === 'number') return c.price;
-  const tiers = [199, 249, 299, 399, 499];
-  return tiers[Number(c.id) % tiers.length] ?? 199;
+  if (c.is_free) return 0;
+  if (typeof c.monthly_price === 'number') return Math.max(0, c.monthly_price);
+  if (typeof c.price === 'number') return Math.max(0, c.price);
+  // Never invent a price — missing admin price means free until set.
+  return 0;
 }
 
 /** Enrich a community row with About-page fields (API + mock safe). */
@@ -54,6 +55,8 @@ export function toCommunityAbout(c: SearchableCommunity): CommunityAbout {
   return {
     ...c,
     monthly_price: price,
+    price,
+    is_free: price <= 0 || Boolean(c.is_free),
     privacy: 'public',
     pitch:
       c.description ||

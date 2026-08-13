@@ -225,33 +225,14 @@ export function registerManagedCommunity(community: ManagedCommunity): void {
 const MOCK_MEMBERS_101: CommunityAdminMember[] = [];
 
 const MOCK_MEMBERS_102: CommunityAdminMember[] = [];
-function postsForCommunity(communityId: number): CommunityAdminPost[] {
-  // Lab gets welcome/wins/questions; Live Studio gets announcement-style posts.
-  const ids = communityId === 102 ? [9005, 9004] : [9001, 9002, 9003, 9006];
-  return MOCK_POSTS.filter((p) => ids.includes(p.id)).map((p) => {
-    const comments = (MOCK_COMMENTS[p.id] ?? []).map((c) =>
-      applyCommentPinOverride({
-        id: Number(c.id),
-        post_id: Number(c.post_id),
-        user_id: String(c.user_id),
-        user_name: String(c.user_name),
-        content: String(c.content),
-        parent_id: (c.parent_id as number | null) ?? null,
-        media_url: (c.media_url as string | null | undefined) ?? null,
-        media_type: (c.media_type as string | null | undefined) ?? null,
-        is_pinned: Boolean(c.is_pinned),
-        pinned_at: (c.pinned_at as string | null | undefined) ?? null,
-        created_at: String(c.created_at),
-      })
-    );
-    return applyPostPinOverride({
-      ...p,
-      community_id: communityId,
-      is_pinned: Boolean(p.is_pinned),
-      pinned_at: (p.pinned_at as string | null | undefined) ?? null,
-      comments,
-    });
-  });
+function postsForCommunity(_communityId: number): CommunityAdminPost[] {
+  // No seeded feed posts — empty until the creator publishes.
+  void _communityId;
+  void MOCK_POSTS;
+  void MOCK_COMMENTS;
+  void applyCommentPinOverride;
+  void applyPostPinOverride;
+  return [];
 }
 
 function sortPostsPinnedFirst(posts: CommunityAdminPost[]) {

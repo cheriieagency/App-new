@@ -136,8 +136,8 @@ export async function POST(request: Request) {
   const origin = appBaseUrl(request.headers.get('origin'));
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${origin}/admin?tab=analytics&sub=overview&connect=refresh`,
-    return_url: `${origin}/admin?tab=analytics&sub=overview&connect=return`,
+    refresh_url: `${origin}/admin?tab=analytics&sub=revenue&connect=refresh`,
+    return_url: `${origin}/admin?tab=analytics&sub=revenue&connect=return`,
     type: 'account_onboarding',
   });
 

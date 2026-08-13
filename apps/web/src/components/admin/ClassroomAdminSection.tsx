@@ -34,6 +34,7 @@ import { FeatureGate } from '@/components/common/FeatureGate';
 import { useSubscription } from '@/components/common/useSubscription';
 import { UNLIMITED } from '@/lib/config/plans';
 import { toast } from 'sonner';
+import AdminEmptyState from '@/components/admin/AdminEmptyState';
 
 type ClassroomResponse = {
   courses: AdminCourse[];
@@ -673,11 +674,13 @@ export default function ClassroomAdminSection({
 
       {/* Course list */}
       {courses.length === 0 ? (
-        <div className="nc-glass rounded-[1.5rem] py-14 text-center">
-          <FolderOpen size={28} className="text-zinc-200 mx-auto mb-2" />
-          <p className="text-sm font-bold text-zinc-400">{t('noCourses', locale)}</p>
-          <p className="text-xs text-zinc-300 mt-1">{t('classroomEmptyHint', locale)}</p>
-        </div>
+        <AdminEmptyState
+          icon={GraduationCap}
+          headline="No courses yet"
+          description="Build your first classroom module for this community — lessons, PDFs, and videos."
+          ctaLabel="+ Create First Course"
+          onCta={() => setShowForm(true)}
+        />
       ) : (
         <div className="space-y-3">
           {courses.map((course) => {

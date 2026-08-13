@@ -27,6 +27,16 @@ export async function ensureCommunitiesSchema(): Promise<void> {
         ON communities (workspace_id)
         WHERE workspace_id IS NOT NULL AND workspace_id <> ''
     `;
+    // Backfill orphans so revenue + admin filters always have a workspace.
+    await sql`
+      UPDATE communities
+      SET workspace_id = COALESCE(
+        NULLIF(workspace_id, ''),
+        NULLIF(creator_id, ''),
+        'default-my-workspace'
+      )
+      WHERE workspace_id IS NULL OR workspace_id = ''
+    `;
     ensured = true;
   } catch (error) {
     console.warn('[ensureCommunitiesSchema]', error);

@@ -6,7 +6,6 @@ import { GraduationCap } from 'lucide-react';
 import {
   filterCoursesForCommunity,
   normalizeClassroomCourses,
-  SKOOL_CLASSROOM_COURSES,
   type ClassroomCourse,
 } from '@/lib/classroom-content';
 import ClassroomOverview from '@/components/classroom/ClassroomOverview';
@@ -72,10 +71,7 @@ export default function ClassroomView({
 
   const courses = useMemo(() => {
     const normalized = normalizeClassroomCourses(data);
-    const base = normalized.length ? normalized : SKOOL_CLASSROOM_COURSES;
-    const ids = new Set(base.map((c) => c.id));
-    const missing = SKOOL_CLASSROOM_COURSES.filter((c) => !ids.has(c.id));
-    const merged = [...base, ...missing].sort((a, b) => a.sort_order - b.sort_order);
+    const merged = [...normalized].sort((a, b) => a.sort_order - b.sort_order);
     return filterCoursesForCommunity(merged, {
       communityId,
       slug: communitySlug,
@@ -113,6 +109,24 @@ export default function ClassroomView({
         onToggleComplete={toggleComplete}
         onBack={() => setActiveCourse(null)}
       />
+    );
+  }
+
+  if (courses.length === 0) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-8 text-center">
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-[#E9D5FF]/50 text-[#2B2568] flex items-center justify-center mb-4">
+          <GraduationCap size={22} />
+        </div>
+        <h3 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+          {t('noCourses', locale)}
+        </h3>
+        <p className="text-sm text-slate-500 font-medium mt-2 max-w-md mx-auto">
+          {communityName
+            ? tf('coursesInCommunity', locale, { name: communityName })
+            : t('classroomEmptyHint', locale)}
+        </p>
+      </div>
     );
   }
 

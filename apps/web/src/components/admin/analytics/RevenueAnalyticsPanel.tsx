@@ -4,7 +4,7 @@
  * Admin Analytics → Revenue: live storefront KPIs, 30-day chart, wallet payouts.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Area,
@@ -79,6 +79,32 @@ export default function RevenueAnalyticsPanel() {
     enabled: Boolean(activeWorkspace.id),
     refetchInterval: 30_000,
   });
+
+  // After Stripe Connect onboarding, reopen the payout drawer + refresh wallet.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const connect = params.get('connect');
+    if (connect !== 'return' && connect !== 'refresh') return;
+
+    if (connect === 'return') {
+      setPayoutOpen(true);
+      toast.success('Stripe Connect updated — you can request a payout when ready');
+    } else {
+      toast.message('Finish Stripe Connect onboarding to enable payouts');
+    }
+
+    void qc.invalidateQueries({
+      queryKey: ['analytics-revenue', activeWorkspace.id],
+    });
+
+    params.delete('connect');
+    const next = `${window.location.pathname}?${params.toString()}`.replace(
+      /\?$/,
+      ''
+    );
+    window.history.replaceState({}, '', next);
+  }, [activeWorkspace.id, qc]);
 
   const connectMutation = useMutation({
     mutationFn: async () => {
@@ -165,7 +191,7 @@ export default function RevenueAnalyticsPanel() {
     {
       label: 'Net Creator Earnings',
       value: formatSek(net, tag),
-      meta: 'After platform fee',
+      meta: 'After plan fee (Starter 8% · Creator 2.5% · Pro 0%)',
     },
     {
       label: 'Total Orders',

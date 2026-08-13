@@ -33,8 +33,8 @@ export async function GET(request: Request) {
     if (!postId) return Response.json({ error: 'post_id required' }, { status: 400 });
 
     if (!process.env.DATABASE_URL?.trim()) {
-      const mock = MOCK_COMMENTS[Number(postId)] ?? [];
-      return Response.json(sortPinnedFirst(withDemoPins(mock as Array<Record<string, unknown>>)));
+      void MOCK_COMMENTS;
+      return Response.json([]);
     }
 
     const comments = await sql`
@@ -45,16 +45,14 @@ export async function GET(request: Request) {
       ORDER BY is_pinned DESC, created_at ASC
     `;
     if (!Array.isArray(comments) || comments.length === 0) {
-      const mock = MOCK_COMMENTS[Number(postId)] ?? [];
-      return Response.json(sortPinnedFirst(withDemoPins(mock as Array<Record<string, unknown>>)));
+      return Response.json([]);
     }
-    return Response.json(comments);
+    return Response.json(
+      sortPinnedFirst(withDemoPins(comments as Array<Record<string, unknown>>))
+    );
   } catch (error) {
     console.error(error);
-    const { searchParams } = new URL(request.url);
-    const postId = Number(searchParams.get('post_id'));
-    const mock = MOCK_COMMENTS[postId] ?? [];
-    return Response.json(sortPinnedFirst(withDemoPins(mock as Array<Record<string, unknown>>)));
+    return Response.json([]);
   }
 }
 

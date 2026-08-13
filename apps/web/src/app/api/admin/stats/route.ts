@@ -75,22 +75,7 @@ export async function GET() {
       });
 
     const utm_links =
-      storeProducts.length > 0
-        ? seedDemoUtmStats(storeProducts)
-        : seedDemoUtmStats([
-            {
-              slug: 'starter-pack-demo',
-              title: 'Creator Starter Pack',
-              destination_url: 'https://example.com/starter-pack',
-              handle: handleFallback,
-            },
-            {
-              slug: 'coaching-call-demo',
-              title: '1:1 Mentorship',
-              destination_url: 'https://example.com/mentorship',
-              handle: handleFallback,
-            },
-          ]);
+      storeProducts.length > 0 ? seedDemoUtmStats(storeProducts) : [];
 
     return Response.json({
       members,
@@ -103,36 +88,15 @@ export async function GET() {
     });
   } catch (error) {
     console.error(error);
-    // Demo fallback when DATABASE_URL is missing.
-    const utm_links = seedDemoUtmStats([
-      {
-        slug: 'starter-pack-demo',
-        title: 'Creator Starter Pack',
-        destination_url: 'https://example.com/starter-pack',
-        handle: handleFallback,
-      },
-      {
-        slug: 'hook-pack-demo',
-        title: 'Live Studio Hook Pack',
-        destination_url: 'https://example.com/hook-pack',
-        handle: handleFallback,
-      },
-      {
-        slug: 'coaching-call-demo',
-        title: '1:1 Mentorship',
-        destination_url: 'https://example.com/mentorship',
-        handle: handleFallback,
-      },
-    ]);
+    void handleFallback;
     return Response.json({
-      members: 48,
-      rsvps: 12,
-      products: 6,
-      revenue: 14312,
+      members: 0,
+      rsvps: 0,
+      products: 0,
+      revenue: 0,
       emails: [],
-      utm_links,
-      utm_total_clicks: utm_links.reduce((n, r) => n + r.clicks, 0),
-      demo: true,
+      utm_links: [],
+      utm_total_clicks: 0,
     });
   }
 }
