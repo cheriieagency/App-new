@@ -4,13 +4,14 @@ import { LegalDoc, LegalH2 } from '@/components/legal/LegalDoc';
 
 export default function CookiesContent() {
   return (
-    <LegalDoc doc="cookies" updated="August 11, 2026">
+    <LegalDoc doc="cookies" updated="August 10, 2026">
       <p>
-        This Cookie Policy explains how clikd: (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) uses
+        This Cookie Policy explains how clikd:, provided and operated by Cheriie AB (org. nr:
+        559527-2393, VAT: SE559527239301, &quot;we&quot;, &quot;us&quot;, &quot;our&quot;), uses
         cookies and similar tracking technologies when you visit or use our website (
-        <a href="https://clikd.app">https://clikd.app</a>), mobile applications, social media
-        planning tools, bio storefronts, member communities, and associated services (collectively,
-        the &quot;Service&quot;).
+        <a href="https://clikd.app">https://clikd.app</a>), applications, social media planning
+        tools, bio storefronts, member communities, custom domain services, AI copilot features, and
+        associated services (collectively, the &quot;Service&quot;).
       </p>
       <p>
         This policy should be read alongside our{' '}
@@ -20,9 +21,36 @@ export default function CookiesContent() {
 
       <LegalH2 section="cookiesS1" />
       <p>
-        Cookies are small text files that are placed on your computer, smartphone, or other device
-        when you visit a website. They are widely used to make websites work efficiently, improve
-        user experience, remember preferences, and provide analytical information to website owners.
+        Cheriie AB is the Data Controller responsible for privacy and cookie management on clikd:.
+      </p>
+      <ul>
+        <li>
+          <strong>Legal Entity:</strong> Cheriie AB
+        </li>
+        <li>
+          <strong>Org. nr:</strong> 559527-2393
+        </li>
+        <li>
+          <strong>VAT Registration Number:</strong> SE559527239301
+        </li>
+        <li>
+          <strong>Registered Address:</strong> Sturegatan 18 A, 211 50 Malmö, Sweden
+        </li>
+        <li>
+          <strong>Official Website:</strong>{' '}
+          <a href="https://clikd.app">https://clikd.app</a>
+        </li>
+        <li>
+          <strong>Privacy, Cookie &amp; Legal Contact:</strong>{' '}
+          <a href="mailto:hello@clikd.app">hello@clikd.app</a>
+        </li>
+      </ul>
+
+      <LegalH2 section="cookiesS2" />
+      <p>
+        Cookies are small text files placed on your computer, smartphone, or other device when you
+        visit a website. They are widely used to make websites work efficiently, improve user
+        experience, remember preferences, and provide analytical information to website owners.
       </p>
       <p>In addition to cookies, we may use similar technologies such as:</p>
       <ul>
@@ -37,11 +65,12 @@ export default function CookiesContent() {
         </li>
         <li>
           <strong>OAuth Tokens:</strong> Encrypted session keys used to maintain authorized
-          connections to third-party social media APIs (e.g., Meta, TikTok, YouTube, LinkedIn).
+          connections to third-party social media and AI APIs (e.g., Meta, TikTok, Pinterest,
+          YouTube, LinkedIn, OpenAI).
         </li>
       </ul>
 
-      <LegalH2 section="cookiesS2" />
+      <LegalH2 section="cookiesS3" />
       <p>We use cookies and related technologies for the following core purposes:</p>
       <ul>
         <li>
@@ -55,7 +84,8 @@ export default function CookiesContent() {
         </li>
         <li>
           <strong>Performance &amp; Infrastructure:</strong> Load balancing and monitoring the
-          stability and speed of our platform through our EU-based hosting infrastructure.
+          stability, custom domain SSL routing, and speed of our platform through our EU-based
+          hosting infrastructure (Supabase EU, Vercel Edge).
         </li>
         <li>
           <strong>Analytics &amp; Platform Improvement:</strong> Understanding how users interact
@@ -64,8 +94,7 @@ export default function CookiesContent() {
         </li>
       </ul>
 
-      <LegalH2 section="cookiesS3" />
-
+      <LegalH2 section="cookiesS4" />
       <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
         A. Strictly Necessary Cookies (Essential)
       </h3>
@@ -123,17 +152,18 @@ export default function CookiesContent() {
       </h3>
       <p>
         When you interact with integrated features—such as scheduling posts to connected social media
-        platforms or purchasing via payment gateways (Stripe and local mobile payments)—third-party partners may
-        place necessary session tokens to execute the request securely.
+        platforms (Instagram, TikTok, Pinterest, YouTube, LinkedIn), using AI Copilot tools, or
+        purchasing via payment gateways (Swish, Stripe)—third-party partners may place necessary
+        session tokens to execute the request securely.
       </p>
 
-      <LegalH2 section="cookiesS4" />
+      <LegalH2 section="cookiesS5" />
       <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
-        <table className="w-full min-w-[720px] text-left text-sm border-collapse">
+        <table className="w-full min-w-[640px] text-left text-sm border-collapse">
           <thead>
             <tr className="bg-slate-50 text-slate-900">
               <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
-                Cookie / Token Name
+                Cookie / Storage Name
               </th>
               <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
                 Provider / Domain
@@ -149,34 +179,32 @@ export default function CookiesContent() {
           <tbody className="text-slate-700">
             <tr className="border-b border-slate-100 align-top">
               <td className="px-3 py-2.5 font-mono text-xs">sb-access-token</td>
-              <td className="px-3 py-2.5">clikd.app (Supabase)</td>
+              <td className="px-3 py-2.5">clikd.app (Supabase EU)</td>
               <td className="px-3 py-2.5">Maintains encrypted user authentication session</td>
               <td className="px-3 py-2.5">Essential / Session</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
               <td className="px-3 py-2.5 font-mono text-xs">sb-refresh-token</td>
-              <td className="px-3 py-2.5">clikd.app (Supabase)</td>
+              <td className="px-3 py-2.5">clikd.app (Supabase EU)</td>
               <td className="px-3 py-2.5">Refreshes user login session securely</td>
               <td className="px-3 py-2.5">Essential / 30 Days</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
               <td className="px-3 py-2.5 font-mono text-xs">clikd_workspace_id</td>
               <td className="px-3 py-2.5">clikd.app</td>
-              <td className="px-3 py-2.5">Remembers your active selected brand workspace</td>
+              <td className="px-3 py-2.5">Remembers active selected brand workspace</td>
               <td className="px-3 py-2.5">Functional / 1 Year</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
               <td className="px-3 py-2.5 font-mono text-xs">clikd_lang</td>
               <td className="px-3 py-2.5">clikd.app</td>
               <td className="px-3 py-2.5">
-                Stores preferred interface language (SV/EN/NO/DA)
+                Stores preferred interface language (SV/EN/NO/DA/FI)
               </td>
               <td className="px-3 py-2.5">Functional / 1 Year</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
-              <td className="px-3 py-2.5 font-mono text-xs">
-                __stripe_mid / __stripe_sid
-              </td>
+              <td className="px-3 py-2.5 font-mono text-xs">__stripe_mid / __stripe_sid</td>
               <td className="px-3 py-2.5">stripe.com</td>
               <td className="px-3 py-2.5">
                 Fraud prevention and secure payment processing for Storefronts
@@ -184,10 +212,10 @@ export default function CookiesContent() {
               <td className="px-3 py-2.5">Essential / 1 Year</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
-              <td className="px-3 py-2.5 font-mono text-xs">checkout_session_token</td>
-              <td className="px-3 py-2.5">payment partner</td>
+              <td className="px-3 py-2.5 font-mono text-xs">swish_checkout_token</td>
+              <td className="px-3 py-2.5">getswish.se</td>
               <td className="px-3 py-2.5">
-                Validates active 1-tap Mobile BankID transaction sessions
+                Validates active Swish Mobile BankID transaction sessions
               </td>
               <td className="px-3 py-2.5">Essential / Session</td>
             </tr>
@@ -203,24 +231,41 @@ export default function CookiesContent() {
         </table>
       </div>
 
-      <LegalH2 section="cookiesS5" />
+      <LegalH2 section="cookiesS6" />
       <p>
-        When you connect your social media accounts to our Content Planner or host live webinars,
-        third-party platforms may place cookies or access session tokens subject to their own
-        policies:
+        When you connect your third-party social media accounts or use AI features, third-party
+        platforms may place cookies or access session tokens subject to their own policies:
       </p>
       <ul>
         <li>
-          <strong>Google / YouTube API Services:</strong> Used for channel metrics and Shorts
-          publishing. Review the{' '}
+          <strong>OpenAI API:</strong> Processed in ephemeral sessions for AI Copilot text generation
+          under OpenAI&apos;s Business Privacy Policy.
+        </li>
+        <li>
+          <strong>Pinterest API:</strong> Used for board access and Pin scheduling under Pinterest
+          Privacy Policy.
+        </li>
+        <li>
+          <strong>TikTok API:</strong> Used for video posting and stats under TikTok Privacy Policy.
+        </li>
+        <li>
+          <strong>Meta (Instagram &amp; Facebook Messenger):</strong> Used for graph API connections
+          and Direct Messaging under Meta Platform Terms.
+        </li>
+        <li>
+          <strong>YouTube API Services (Google):</strong> Used for video uploads and metrics under{' '}
+          <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">
+            YouTube Terms of Service
+          </a>{' '}
+          and{' '}
           <a
             href="https://policies.google.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
           >
             Google Privacy Policy
-          </a>{' '}
-          and manage access via{' '}
+          </a>
+          . Manage access via{' '}
           <a
             href="https://myaccount.google.com/permissions"
             target="_blank"
@@ -230,76 +275,66 @@ export default function CookiesContent() {
           </a>
           .
         </li>
-        <li>
-          <strong>Meta (Instagram &amp; Facebook):</strong> Used for graph API connections and post
-          scheduling under Meta Platform Terms.
-        </li>
-        <li>
-          <strong>TikTok API &amp; LinkedIn API:</strong> Used for authorized publishing and
-          cross-posting.
-        </li>
       </ul>
 
-      <LegalH2 section="cookiesS6" />
+      <LegalH2 section="cookiesS7" />
       <p>You have full control over how cookies are placed on your device:</p>
       <ul>
         <li>
           <strong>In-App Cookie Banner:</strong> When you first visit{' '}
           <a href="https://clikd.app">https://clikd.app</a>, you can choose to accept all cookies,
-          customize preferences, or reject non-essential cookies.
+          customize preferences, or select essential cookies only.
+        </li>
+        <li>
+          <strong>Dashboard Settings:</strong> You can update your preferences or disconnect any
+          connected third-party social media account at any time via Settings → Socials in your
+          clikd: dashboard. Disconnecting immediately revokes and deletes stored OAuth tokens.
         </li>
         <li>
           <strong>Browser Settings:</strong> Most web browsers allow you to block, delete, or manage
           cookies through their settings menu:
-          <ul className="mt-2">
-            <li>
-              <strong>Google Chrome:</strong> Settings → Privacy and security → Cookies and other
-              site data
-            </li>
-            <li>
-              <strong>Apple Safari:</strong> Preferences → Privacy → Manage Website Data
-            </li>
-            <li>
-              <strong>Mozilla Firefox:</strong> Options → Privacy &amp; Security → Cookies and Site
-              Data
-            </li>
-            <li>
-              <strong>Microsoft Edge:</strong> Settings → Cookies and site permissions
-            </li>
+          <ul className="mt-1.5">
+            <li>Google Chrome: Settings → Privacy and security → Cookies and other site data</li>
+            <li>Apple Safari: Preferences → Privacy → Manage Website Data</li>
+            <li>Mozilla Firefox: Options → Privacy &amp; Security → Cookies and Site Data</li>
+            <li>Microsoft Edge: Settings → Cookies and site permissions</li>
           </ul>
         </li>
-        <li>
-          <strong>Disconnecting Social Accounts:</strong> You can disconnect any connected social
-          account at any time via Settings → Connected Accounts in your clikd: dashboard. This
-          immediately revokes and deletes all associated OAuth tokens.
-        </li>
       </ul>
-
-      <LegalH2 section="cookiesS7" />
-      <p>
-        We may update this Cookie Policy from time to time to reflect changes in technologies, legal
-        requirements, or platform updates. Any material updates will be announced via email or
-        prominently displayed within the Service at least 14 days prior to taking effect.
-      </p>
 
       <LegalH2 section="cookiesS8" />
       <p>
-        If you have any questions regarding our use of cookies or tracking technologies, please
-        contact our Data Protection Team at:
+        We may update this Cookie Policy periodically to reflect changes in platform features,
+        third-party APIs, or legal requirements. Material updates will be notified via email or
+        displayed within the Service at least 14 days prior to taking effect.
+      </p>
+
+      <LegalH2 section="cookiesS9" />
+      <p>
+        For any questions regarding our Cookie Policy or data protection practices, contact Cheriie
+        AB:
       </p>
       <ul>
         <li>
-          Official Website: <a href="https://clikd.app">https://clikd.app</a>
+          <strong>Legal Entity:</strong> Cheriie AB
         </li>
         <li>
-          Privacy &amp; Cookie Inquiries:{' '}
-          <a href="mailto:privacy@clikd.app">privacy@clikd.app</a>
+          <strong>Org. nr:</strong> 559527-2393
         </li>
         <li>
-          Legal Department: <a href="mailto:legal@clikd.app">legal@clikd.app</a>
+          <strong>VAT:</strong> SE559527239301
+        </li>
+        <li>
+          <strong>Address:</strong> Sturegatan 18 A, 211 50 Malmö, Sweden
+        </li>
+        <li>
+          <strong>Website:</strong> <a href="https://clikd.app">https://clikd.app</a>
+        </li>
+        <li>
+          <strong>Privacy &amp; Cookie Inquiries:</strong>{' '}
+          <a href="mailto:hello@clikd.app">hello@clikd.app</a>
         </li>
       </ul>
-    
     </LegalDoc>
   );
 }
