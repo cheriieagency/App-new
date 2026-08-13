@@ -6,6 +6,14 @@ import sql from '@/app/api/utils/sql';
 
 let tableReady: Promise<void> | null = null;
 
+async function addColumnSafe(ddl: ReturnType<typeof sql>): Promise<void> {
+  try {
+    await ddl;
+  } catch (error) {
+    console.warn('[dm-automations/schema] add column skipped', error);
+  }
+}
+
 /** Idempotent — safe to call on every request. */
 export async function ensureDmAutomationsSchema(): Promise<void> {
   if (!process.env.DATABASE_URL?.trim()) return;
@@ -25,20 +33,14 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
           public_comment_text         text,
           is_active                   boolean NOT NULL DEFAULT true,
           total_dms_sent              integer NOT NULL DEFAULT 0,
-          storefront_clicks           integer NOT NULL DEFAULT 0,
-          created_at                  timestamptz NOT NULL DEFAULT now(),
-          updated_at                  timestamptz NOT NULL DEFAULT now()
+          storefront_clicks           integer NOT NULL DEFAULT 0
         )
-      `;
-      await sql`
-        CREATE INDEX IF NOT EXISTS dm_automations_workspace_idx
-          ON public.dm_automations (workspace_id, is_active)
       `;
       await sql`
         CREATE TABLE IF NOT EXISTS public.dm_logs (
           id                  serial PRIMARY KEY,
           workspace_id        text NOT NULL,
-          automation_id       integer REFERENCES public.dm_automations(id) ON DELETE SET NULL,
+          automation_id       integer,
           comment_id          text,
           media_id            text,
           commenter_id        text NOT NULL,
@@ -47,17 +49,8 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
           dm_message_id       text,
           matched_keyword     text,
           status              text NOT NULL DEFAULT 'sent',
-          error_message       text,
-          created_at          timestamptz NOT NULL DEFAULT now()
+          error_message       text
         )
-      `;
-      await sql`
-        CREATE INDEX IF NOT EXISTS dm_logs_workspace_idx
-          ON public.dm_logs (workspace_id, created_at DESC)
-      `;
-      await sql`
-        CREATE INDEX IF NOT EXISTS dm_logs_rate_idx
-          ON public.dm_logs (workspace_id, commenter_id, created_at DESC)
       `;
     })().catch((error) => {
       tableReady = null;
@@ -68,26 +61,50 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
 
   await tableReady;
 
-  // Always reconcile CTA columns — CREATE TABLE IF NOT EXISTS won't add them
-  // to tables that were created earlier with a different shape.
-  try {
-    await sql`
-      ALTER TABLE public.dm_automations
-        ADD COLUMN IF NOT EXISTS cta_button_label text
-    `;
-  } catch (error) {
-    console.warn('[dm-automations/schema] cta_button_label', error);
-  }
-  try {
-    await sql`
-      ALTER TABLE public.dm_automations
-        ADD COLUMN IF NOT EXISTS cta_button_title text
-    `;
-  } catch (error) {
-    console.warn('[dm-automations/schema] cta_button_title', error);
-  }
+  // Reconcile columns on older table shapes (CREATE IF NOT EXISTS won't add them).
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_automations
+      ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now()
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_automations
+      ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_automations
+      ADD COLUMN IF NOT EXISTS cta_button_label text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_automations
+      ADD COLUMN IF NOT EXISTS cta_button_title text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_automations
+      ADD COLUMN IF NOT EXISTS total_dms_sent integer NOT NULL DEFAULT 0
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_automations
+      ADD COLUMN IF NOT EXISTS storefront_clicks integer NOT NULL DEFAULT 0
+  `);
 
-  // Soft sync so whichever column exists stays populated.
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now()
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS sent_at timestamptz DEFAULT now()
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS matched_keyword text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS dm_message_id text
+  `);
+
+  // Soft sync CTA aliases.
   try {
     await sql`
       UPDATE public.dm_automations
@@ -97,7 +114,7 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
         AND cta_button_label <> ''
     `;
   } catch {
-    /* one of the columns may still be missing on a race */
+    /* ignore */
   }
   try {
     await sql`
@@ -106,6 +123,32 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
       WHERE (cta_button_label IS NULL OR cta_button_label = '')
         AND cta_button_title IS NOT NULL
         AND cta_button_title <> ''
+    `;
+  } catch {
+    /* ignore */
+  }
+
+  // Indexes — ignore if timestamp columns still missing.
+  try {
+    await sql`
+      CREATE INDEX IF NOT EXISTS dm_automations_workspace_idx
+        ON public.dm_automations (workspace_id, is_active)
+    `;
+  } catch {
+    /* ignore */
+  }
+  try {
+    await sql`
+      CREATE INDEX IF NOT EXISTS dm_logs_workspace_idx
+        ON public.dm_logs (workspace_id, id DESC)
+    `;
+  } catch {
+    /* ignore */
+  }
+  try {
+    await sql`
+      CREATE INDEX IF NOT EXISTS dm_logs_rate_idx
+        ON public.dm_logs (workspace_id, commenter_id, id DESC)
     `;
   } catch {
     /* ignore */
@@ -137,5 +180,33 @@ export async function getDmAutomationCtaColumns(): Promise<{
     };
   } catch {
     return { hasLabel: true, hasTitle: true };
+  }
+}
+
+/** Timestamp / sort columns available on dm_automations. */
+export async function getDmAutomationSortColumns(): Promise<{
+  hasCreatedAt: boolean;
+  hasUpdatedAt: boolean;
+}> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return { hasCreatedAt: false, hasUpdatedAt: false };
+  }
+  try {
+    const rows = await sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'dm_automations'
+        AND column_name IN ('created_at', 'updated_at')
+    `;
+    const names = new Set(
+      (Array.isArray(rows) ? rows : []).map((r) => String(r.column_name))
+    );
+    return {
+      hasCreatedAt: names.has('created_at'),
+      hasUpdatedAt: names.has('updated_at'),
+    };
+  } catch {
+    return { hasCreatedAt: false, hasUpdatedAt: false };
   }
 }

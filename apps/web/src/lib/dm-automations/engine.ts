@@ -131,15 +131,33 @@ async function recentlyMessaged(input: {
   workspaceId: string;
   commenterId: string;
 }): Promise<boolean> {
-  const rows = await sql`
-    SELECT id FROM public.dm_logs
-    WHERE workspace_id = ${input.workspaceId}
-      AND commenter_id = ${input.commenterId}
-      AND status = 'sent'
-      AND created_at >= (now() - interval '10 minutes')
-    LIMIT 1
-  `;
-  return Array.isArray(rows) && rows.length > 0;
+  try {
+    const rows = await sql`
+      SELECT id FROM public.dm_logs
+      WHERE workspace_id = ${input.workspaceId}
+        AND commenter_id = ${input.commenterId}
+        AND status = 'sent'
+        AND COALESCE(created_at, sent_at, to_timestamp(0))
+              >= (now() - interval '10 minutes')
+      LIMIT 1
+    `;
+    return Array.isArray(rows) && rows.length > 0;
+  } catch {
+    // Fallback when timestamp columns are missing on older schemas.
+    try {
+      const rows = await sql`
+        SELECT id FROM public.dm_logs
+        WHERE workspace_id = ${input.workspaceId}
+          AND commenter_id = ${input.commenterId}
+          AND status = 'sent'
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+      return Array.isArray(rows) && rows.length > 0;
+    } catch {
+      return false;
+    }
+  }
 }
 
 async function loadActiveRules(workspaceId: string): Promise<DmAutomationRow[]> {
@@ -148,7 +166,7 @@ async function loadActiveRules(workspaceId: string): Promise<DmAutomationRow[]> 
     FROM public.dm_automations
     WHERE workspace_id = ${workspaceId}
       AND is_active = true
-    ORDER BY updated_at DESC
+    ORDER BY id DESC
   `;
   return (Array.isArray(rows) ? rows : []).map((r) => ({
     id: Number(r.id),
@@ -317,13 +335,21 @@ export async function processCommentAutomationEvent(
         'sent'
       )
     `;
-    await sql`
-      UPDATE public.dm_automations
-      SET
-        total_dms_sent = COALESCE(total_dms_sent, 0) + 1,
-        updated_at = now()
-      WHERE id = ${matchedRule.id}
-    `;
+    try {
+      await sql`
+        UPDATE public.dm_automations
+        SET
+          total_dms_sent = COALESCE(total_dms_sent, 0) + 1,
+          updated_at = now()
+        WHERE id = ${matchedRule.id}
+      `;
+    } catch {
+      await sql`
+        UPDATE public.dm_automations
+        SET total_dms_sent = COALESCE(total_dms_sent, 0) + 1
+        WHERE id = ${matchedRule.id}
+      `;
+    }
 
     return {
       matched: true,

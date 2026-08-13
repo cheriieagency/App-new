@@ -101,10 +101,14 @@ function mapRule(row: Record<string, unknown>) {
     storefrontClicks: Number(row.storefront_clicks) || 0,
     createdAt: row.created_at
       ? new Date(String(row.created_at)).toISOString()
-      : null,
+      : row.updated_at
+        ? new Date(String(row.updated_at)).toISOString()
+        : null,
     updatedAt: row.updated_at
       ? new Date(String(row.updated_at)).toISOString()
-      : null,
+      : row.created_at
+        ? new Date(String(row.created_at)).toISOString()
+        : null,
   };
 }
 
@@ -137,7 +141,7 @@ export async function GET(request: Request) {
         SELECT *
         FROM public.dm_automations
         WHERE workspace_id = ${workspaceId}
-        ORDER BY updated_at DESC NULLS LAST, id DESC
+        ORDER BY id DESC
       `;
     } catch (queryErr) {
       console.warn('[GET automations] query failed', queryErr);
@@ -160,11 +164,21 @@ export async function GET(request: Request) {
         FROM public.dm_logs
         WHERE workspace_id = ${workspaceId}
           AND status = 'sent'
-          AND created_at >= date_trunc('month', now())
+          AND COALESCE(created_at, sent_at, to_timestamp(0)) >= date_trunc('month', now())
       `;
       dmsSentThisMonth = Number(monthStats?.[0]?.dms) || 0;
     } catch {
-      dmsSentThisMonth = 0;
+      try {
+        const fallback = await sql`
+          SELECT COUNT(*)::int AS dms
+          FROM public.dm_logs
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'sent'
+        `;
+        dmsSentThisMonth = Number(fallback?.[0]?.dms) || 0;
+      } catch {
+        dmsSentThisMonth = 0;
+      }
     }
     try {
       storefrontClicks = automations.reduce(

@@ -33,6 +33,35 @@ async function resolveWorkspaceId(
   );
 }
 
+function dryRunPayload(extra: Record<string, unknown> = {}) {
+  return {
+    ok: true,
+    ready: false,
+    workspaceId: null as string | null,
+    commentText: '',
+    rulesTotal: 0,
+    rulesActive: 0,
+    matchedRule: null as null | {
+      id: number;
+      title: string;
+      keyword: string;
+      dmPreview: string;
+    },
+    instagram: null as null | Record<string, unknown>,
+    webhook: {
+      verifyTokenSet: Boolean(
+        (process.env.META_WEBHOOK_VERIFY_TOKEN ?? '').trim()
+      ),
+      callbackUrl: null as string | null,
+      sampleEventsParsed: 0,
+    },
+    dmsSentTotal: 0,
+    blockers: [] as string[],
+    nextSteps: [] as string[],
+    ...extra,
+  };
+}
+
 export async function POST(request: Request) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -53,7 +82,14 @@ export async function POST(request: Request) {
 
     const workspaceId = await resolveWorkspaceId(request, body.workspaceId);
     if (!workspaceId) {
-      return NextResponse.json({ error: 'workspaceId required' }, { status: 400 });
+      return NextResponse.json(
+        dryRunPayload({
+          ok: false,
+          blockers: ['workspaceId required'],
+          nextSteps: ['Select an active workspace and retry.'],
+        }),
+        { status: 400 }
+      );
     }
 
     const commentText = String(
@@ -61,22 +97,45 @@ export async function POST(request: Request) {
     ).trim();
 
     if (!process.env.DATABASE_URL?.trim()) {
-      return NextResponse.json({
-        ok: false,
-        ready: false,
-        reason: 'DATABASE_URL missing',
-      });
+      return NextResponse.json(
+        dryRunPayload({
+          ok: false,
+          workspaceId,
+          commentText,
+          reason: 'DATABASE_URL missing',
+          blockers: ['DATABASE_URL missing'],
+        })
+      );
     }
 
-    await ensureDmAutomationsSchema();
+    try {
+      await ensureDmAutomationsSchema();
+    } catch (schemaErr) {
+      console.warn('[automations/test] schema ensure', schemaErr);
+    }
 
-    const rules = await sql`
-      SELECT id, title, trigger_keywords, dm_message_text, cta_button_url,
-             cta_button_title, cta_button_label, is_active, total_dms_sent
-      FROM public.dm_automations
-      WHERE workspace_id = ${workspaceId}
-      ORDER BY updated_at DESC NULLS LAST
-    `;
+    // Prefer id sort — never depend on created_at / updated_at existing.
+    let rules: Record<string, unknown>[] = [];
+    try {
+      rules = (await sql`
+        SELECT *
+        FROM public.dm_automations
+        WHERE workspace_id = ${workspaceId}
+        ORDER BY id DESC
+      `) as Record<string, unknown>[];
+    } catch (queryErr) {
+      console.warn('[automations/test] rules query', queryErr);
+      return NextResponse.json(
+        dryRunPayload({
+          workspaceId,
+          commentText,
+          blockers: [
+            'Could not load dm_automations (table/columns may still be migrating).',
+          ],
+          nextSteps: ['Retry in a few seconds after schema reconcile.'],
+        })
+      );
+    }
 
     const activeRules = (Array.isArray(rules) ? rules : []).filter(
       (r) => r.is_active !== false
@@ -92,12 +151,15 @@ export async function POST(request: Request) {
     for (const rule of activeRules) {
       const keywords = Array.isArray(rule.trigger_keywords)
         ? (rule.trigger_keywords as string[]).map(String)
-        : [];
+        : typeof rule.trigger_keywords === 'string'
+          ? String(rule.trigger_keywords)
+              .split(/[,;\n]+/)
+              .map((k) => k.trim())
+              .filter(Boolean)
+          : [];
       const kw = findMatchingKeyword(commentText, keywords);
       if (kw) {
-        const url = String(
-          rule.cta_button_url || ''
-        ).trim();
+        const url = String(rule.cta_button_url || '').trim();
         const text = String(rule.dm_message_text || '').trim();
         matched = {
           id: Number(rule.id),
@@ -109,22 +171,27 @@ export async function POST(request: Request) {
       }
     }
 
-    const igRows = await sql`
-      SELECT platform, platform_user_id, page_id, handle,
-             (access_token IS NOT NULL AND access_token <> '') AS has_token,
-             workspace_id
-      FROM public.social_accounts
-      WHERE workspace_id = ${workspaceId}
-        AND platform IN ('instagram', 'facebook')
-      ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
-    `;
-
-    const ig = (Array.isArray(igRows) ? igRows : []).find(
-      (r) => r.platform === 'instagram'
-    );
-    const fb = (Array.isArray(igRows) ? igRows : []).find(
-      (r) => r.platform === 'facebook'
-    );
+    let ig: Record<string, unknown> | undefined;
+    let fb: Record<string, unknown> | undefined;
+    try {
+      const igRows = await sql`
+        SELECT platform, platform_user_id, page_id, handle,
+               (access_token IS NOT NULL AND access_token <> '') AS has_token,
+               workspace_id
+        FROM public.social_accounts
+        WHERE workspace_id = ${workspaceId}
+          AND platform IN ('instagram', 'facebook')
+        ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
+      `;
+      ig = (Array.isArray(igRows) ? igRows : []).find(
+        (r) => r.platform === 'instagram'
+      ) as Record<string, unknown> | undefined;
+      fb = (Array.isArray(igRows) ? igRows : []).find(
+        (r) => r.platform === 'facebook'
+      ) as Record<string, unknown> | undefined;
+    } catch (igErr) {
+      console.warn('[automations/test] social_accounts', igErr);
+    }
 
     const verifyTokenSet = Boolean(
       (process.env.META_WEBHOOK_VERIFY_TOKEN ?? '').trim()
@@ -135,38 +202,49 @@ export async function POST(request: Request) {
         ? `${appUrl.replace(/\/$/, '')}/api/webhooks/meta/comments`
         : null;
 
-    // Optional: parse a sample Meta payload shape.
     let parsedEvents = 0;
-    if (body.webhookPayload) {
-      parsedEvents = extractCommentEventsFromWebhook(body.webhookPayload).length;
-    } else {
-      parsedEvents = extractCommentEventsFromWebhook({
-        object: 'instagram',
-        entry: [
-          {
-            id: ig?.platform_user_id || 'test_ig',
-            changes: [
-              {
-                field: 'comments',
-                value: {
-                  id: 'test_comment_1',
-                  text: commentText,
-                  from: { id: 'commenter_1', username: 'tester' },
-                  media: { id: 'media_1' },
+    try {
+      if (body.webhookPayload) {
+        parsedEvents = extractCommentEventsFromWebhook(
+          body.webhookPayload
+        ).length;
+      } else {
+        parsedEvents = extractCommentEventsFromWebhook({
+          object: 'instagram',
+          entry: [
+            {
+              id: String(ig?.platform_user_id || 'test_ig'),
+              changes: [
+                {
+                  field: 'comments',
+                  value: {
+                    id: 'test_comment_1',
+                    text: commentText,
+                    from: { id: 'commenter_1', username: 'tester' },
+                    media: { id: 'media_1' },
+                  },
                 },
-              },
-            ],
-          },
-        ],
-      }).length;
+              ],
+            },
+          ],
+        }).length;
+      }
+    } catch {
+      parsedEvents = 0;
     }
 
-    const logs = await sql`
-      SELECT COUNT(*)::int AS n
-      FROM public.dm_logs
-      WHERE workspace_id = ${workspaceId}
-        AND status = 'sent'
-    `;
+    let dmsSentTotal = 0;
+    try {
+      const logs = await sql`
+        SELECT COUNT(*)::int AS n
+        FROM public.dm_logs
+        WHERE workspace_id = ${workspaceId}
+          AND status = 'sent'
+      `;
+      dmsSentTotal = Number(logs?.[0]?.n) || 0;
+    } catch {
+      dmsSentTotal = 0;
+    }
 
     const blockers: string[] = [];
     if (activeRules.length === 0) {
@@ -198,46 +276,51 @@ export async function POST(request: Request) {
 
     const ready = blockers.length === 0;
 
-    return NextResponse.json({
-      ok: true,
-      ready,
-      workspaceId,
-      commentText,
-      rulesTotal: Array.isArray(rules) ? rules.length : 0,
-      rulesActive: activeRules.length,
-      matchedRule: matched,
-      instagram: ig
-        ? {
-            handle: ig.handle,
-            platformUserId: ig.platform_user_id,
-            pageId: ig.page_id || fb?.page_id || null,
-            hasToken: Boolean(ig.has_token),
-          }
-        : null,
-      webhook: {
-        verifyTokenSet,
-        callbackUrl: webhookUrlPublic,
-        sampleEventsParsed: parsedEvents,
-      },
-      dmsSentTotal: Number(logs?.[0]?.n) || 0,
-      blockers,
-      nextSteps: ready
-        ? [
-            'In Meta Developer Console → Webhooks, subscribe Instagram field `comments` to the callback URL.',
-            'Comment the keyword on a post from another Instagram account.',
-            'Check Active Triggers / DMs Sent and public.dm_logs.',
-          ]
-        : blockers,
-    });
+    return NextResponse.json(
+      dryRunPayload({
+        ok: true,
+        ready,
+        workspaceId,
+        commentText,
+        rulesTotal: Array.isArray(rules) ? rules.length : 0,
+        rulesActive: activeRules.length,
+        matchedRule: matched,
+        instagram: ig
+          ? {
+              handle: ig.handle ?? null,
+              platformUserId: ig.platform_user_id ?? null,
+              pageId: ig.page_id || fb?.page_id || null,
+              hasToken: Boolean(ig.has_token),
+            }
+          : null,
+        webhook: {
+          verifyTokenSet,
+          callbackUrl: webhookUrlPublic,
+          sampleEventsParsed: parsedEvents,
+        },
+        dmsSentTotal,
+        blockers,
+        nextSteps: ready
+          ? [
+              'In Meta Developer Console → Webhooks, subscribe Instagram field `comments` to the callback URL.',
+              'Comment the keyword on a post from another Instagram account.',
+              'Check Active Triggers / DMs Sent and public.dm_logs.',
+            ]
+          : blockers,
+      })
+    );
   } catch (err) {
     console.error('[automations/test]', err);
+    // Always return valid JSON (200) for dry-run so the UI can show blockers.
     return NextResponse.json(
-      {
+      dryRunPayload({
         ok: false,
         ready: false,
         error: err instanceof Error ? err.message : 'test_failed',
-      },
-      { status: 500 }
+        blockers: [
+          err instanceof Error ? err.message : 'Automation dry-run failed',
+        ],
+      })
     );
   }
 }
