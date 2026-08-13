@@ -208,19 +208,13 @@ export default function DMAutomationPanel() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const ws = encodeURIComponent(activeWorkspace.id);
+    mutationFn: async (automationId: number) => {
+      // Query-string only — DELETE bodies are unreliable across browsers/proxies.
       const res = await fetch(
-        `/api/admin/inbox/automations?id=${encodeURIComponent(String(id))}&workspaceId=${ws}`,
+        `/api/admin/inbox/automations?id=${encodeURIComponent(String(automationId))}`,
         {
           method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-workspace-id': activeWorkspace.id,
-            'x-active-workspace-id': activeWorkspace.id,
-          },
           credentials: 'include',
-          body: JSON.stringify({ id, workspaceId: activeWorkspace.id }),
         }
       );
       if (!res.ok) {
@@ -233,9 +227,12 @@ export default function DMAutomationPanel() {
         }
         throw new Error(message);
       }
-      return res.json().catch(() => ({ success: true, deletedId: id }));
+      return res.json().catch(() => ({
+        success: true,
+        deletedId: automationId,
+      }));
     },
-    onMutate: async (id: number) => {
+    onMutate: async (automationId: number) => {
       await qc.cancelQueries({
         queryKey: ['dm-automations', activeWorkspace.id],
       });
@@ -243,9 +240,10 @@ export default function DMAutomationPanel() {
         'dm-automations',
         activeWorkspace.id,
       ]);
+      // Instant UI update — filter out deleted rule from local cache.
       if (previous) {
         const nextAutomations = (previous.automations || []).filter(
-          (r) => r.id !== id
+          (a) => a.id !== automationId
         );
         qc.setQueryData<AutomationsPayload>(
           ['dm-automations', activeWorkspace.id],
@@ -254,7 +252,7 @@ export default function DMAutomationPanel() {
             automations: nextAutomations,
             kpis: {
               ...previous.kpis,
-              activeTriggers: nextAutomations.filter((r) => r.isActive).length,
+              activeTriggers: nextAutomations.filter((a) => a.isActive).length,
             },
           }
         );

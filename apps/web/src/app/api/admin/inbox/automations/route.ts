@@ -677,37 +677,49 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const url = new URL(request.url);
-    let body: {
-      id?: unknown;
-      workspaceId?: unknown;
-      workspace_id?: unknown;
-    } = {};
-    try {
-      const raw = await request.text();
-      body = raw.trim()
-        ? (JSON.parse(raw) as typeof body)
-        : {};
-    } catch {
-      body = {};
+    const { searchParams } = new URL(request.url);
+    let idRaw: string | null = searchParams.get('id');
+    // workspaceId is optional — kept only for logging / soft scoping.
+    let workspaceId: string | null =
+      searchParams.get('workspaceId') ||
+      searchParams.get('workspace_id') ||
+      null;
+
+    // DELETE bodies are often empty — never require JSON.
+    if (!idRaw) {
+      try {
+        const body = (await request.json()) as {
+          id?: unknown;
+          automationId?: unknown;
+          workspaceId?: unknown;
+          workspace_id?: unknown;
+        };
+        idRaw =
+          body.id != null
+            ? String(body.id)
+            : body.automationId != null
+              ? String(body.automationId)
+              : null;
+        workspaceId =
+          workspaceId ||
+          (body.workspaceId != null ? String(body.workspaceId) : null) ||
+          (body.workspace_id != null ? String(body.workspace_id) : null);
+      } catch {
+        /* no body — ignore */
+      }
     }
 
-    const id = Number(
-      url.searchParams.get('id') ??
-        body.id ??
-        url.searchParams.get('automationId')
-    );
-    if (!id || Number.isNaN(id)) {
+    if (!workspaceId) {
+      workspaceId = await resolveWorkspaceId(request, null);
+    }
+
+    const id = Number(idRaw);
+    if (!idRaw || Number.isNaN(id) || id <= 0) {
       return NextResponse.json(
-        { error: 'id required', success: false },
+        { error: 'id is required', success: false },
         { status: 400 }
       );
     }
-
-    let workspaceId = await resolveWorkspaceId(
-      request,
-      body.workspaceId ?? body.workspace_id
-    );
 
     if (!process.env.DATABASE_URL?.trim()) {
       return NextResponse.json(
@@ -722,75 +734,34 @@ export async function DELETE(request: Request) {
       console.warn('[DELETE automations] schema ensure', schemaErr);
     }
 
-    // If workspaceId was omitted, resolve it from the rule row itself.
-    if (!workspaceId) {
-      try {
-        const owned = await sql`
-          SELECT workspace_id
-          FROM public.dm_automations
-          WHERE id = ${id}
-          LIMIT 1
-        `;
-        if (owned?.[0]?.workspace_id) {
-          workspaceId = String(owned[0].workspace_id);
-        }
-      } catch (lookupErr) {
-        console.warn('[DELETE automations] workspace lookup', lookupErr);
-      }
-    }
-
-    if (!workspaceId) {
-      // Still allow delete-by-id for the authenticated creator when cookie is missing.
-      try {
-        const deleted = await sql`
-          DELETE FROM public.dm_automations
-          WHERE id = ${id}
-            AND (user_id = ${session.user.id} OR user_id IS NULL)
-          RETURNING id
-        `;
-        if (deleted?.[0]?.id) {
-          return NextResponse.json({
-            success: true,
-            ok: true,
-            deletedId: id,
-            deleted: id,
-          });
-        }
-      } catch {
-        /* fall through */
-      }
+    // Primary path: delete by unique rule id only (workspaceId not required).
+    let deleted: Record<string, unknown>[] = [];
+    try {
+      deleted = (await sql`
+        DELETE FROM public.dm_automations
+        WHERE id = ${id}
+        RETURNING id, workspace_id
+      `) as Record<string, unknown>[];
+    } catch (dbErr) {
+      console.error('[DELETE automations] sql', dbErr);
       return NextResponse.json(
         {
-          error: 'Could not resolve workspace for this rule',
           success: false,
+          error:
+            dbErr instanceof Error ? dbErr.message : 'Failed to delete rule',
         },
-        { status: 400 }
+        { status: 500 }
       );
     }
 
-    const deleted = await sql`
-      DELETE FROM public.dm_automations
-      WHERE id = ${id}
-        AND workspace_id = ${workspaceId}
-      RETURNING id
-    `;
-
-    if (!deleted?.[0]?.id) {
-      // Soft success if already gone — keep UI snappy.
-      return NextResponse.json({
-        success: true,
-        ok: true,
-        deletedId: id,
-        deleted: id,
-        message: 'Rule not found or already deleted',
-      });
-    }
-
+    // Soft success when already deleted.
     return NextResponse.json({
       success: true,
-      ok: true,
       deletedId: id,
       deleted: id,
+      workspaceId: deleted?.[0]?.workspace_id
+        ? String(deleted[0].workspace_id)
+        : workspaceId,
     });
   } catch (err) {
     console.error('[DELETE /api/admin/inbox/automations]', err);
