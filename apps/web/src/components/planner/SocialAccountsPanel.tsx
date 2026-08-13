@@ -36,6 +36,7 @@ import { localeTag, useLanguage } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import WorkspaceOAuthGuideBanner from '@/components/admin/WorkspaceOAuthGuideBanner';
+import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
 
 const DEMO_MODE_KEY = 'clikd_oauth_demo_recording_mode';
 
@@ -382,6 +383,7 @@ export default function SocialAccountsPanel({
       'linkedin',
       'tiktok',
       'pinterest',
+      'google',
     ]);
 
     // Live OAuth rows: delete only that platform via unified disconnect API.
@@ -462,6 +464,8 @@ export default function SocialAccountsPanel({
           </p>
         </div>
       ) : null}
+
+      <GoogleIntegrationCard />
 
       {!compact && (
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">

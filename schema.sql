@@ -473,13 +473,36 @@ CREATE TABLE IF NOT EXISTS public.orders (
                          CHECK (status IN ('pending', 'completed', 'refunded', 'failed')),
   provider             text NOT NULL DEFAULT 'demo',
   external_id          text,
+  google_meet_url      text,
   metadata             jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at           timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS google_meet_url text;
+
 CREATE UNIQUE INDEX IF NOT EXISTS orders_external_id_uidx
   ON public.orders (provider, external_id)
   WHERE external_id IS NOT NULL;
+
+-- Media library (Google Drive imports + uploads)
+CREATE TABLE IF NOT EXISTS public.media_library (
+  id            serial PRIMARY KEY,
+  workspace_id  text NOT NULL,
+  user_id       text,
+  file_name     text NOT NULL,
+  file_url      text NOT NULL,
+  file_type     text NOT NULL DEFAULT 'application/octet-stream',
+  size_bytes    bigint NOT NULL DEFAULT 0,
+  source        text NOT NULL DEFAULT 'upload',
+  external_id   text,
+  target        text NOT NULL DEFAULT 'media_library',
+  metadata      jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS media_library_workspace_idx
+  ON public.media_library (workspace_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS orders_workspace_idx
   ON public.orders (workspace_id, created_at DESC);
@@ -1112,7 +1135,7 @@ CREATE TABLE IF NOT EXISTS public.social_accounts (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id            text NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   platform           text NOT NULL
-                       CHECK (platform IN ('instagram', 'facebook', 'tiktok', 'linkedin', 'youtube', 'pinterest')),
+                       CHECK (platform IN ('instagram', 'facebook', 'tiktok', 'linkedin', 'youtube', 'pinterest', 'google')),
   external_id        text NOT NULL,
   handle             text,
   display_name       text,

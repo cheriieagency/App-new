@@ -33,6 +33,7 @@ function MetaConnectToast() {
         queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
         queryClient.invalidateQueries({ queryKey: ['meta-sync'] }),
         queryClient.invalidateQueries({ queryKey: ['planner-posts'] }),
+        queryClient.invalidateQueries({ queryKey: ['google-status'] }),
       ]);
     };
 
@@ -43,7 +44,8 @@ function MetaConnectToast() {
       success === 'youtube_connected' ||
       success === 'linkedin_connected' ||
       success === 'tiktok_connected' ||
-      success === 'pinterest_connected'
+      success === 'pinterest_connected' ||
+      success === 'google_connected'
     ) {
       if (success === 'instagram_connected') {
         toast.success('Instagram connected');
@@ -57,6 +59,8 @@ function MetaConnectToast() {
         toast.success('TikTok account connected');
       } else if (success === 'pinterest_connected') {
         toast.success('Pinterest account connected');
+      } else if (success === 'google_connected') {
+        toast.success('Google connected — Drive, Calendar & Meet enabled');
       } else {
         toast.success('Instagram & Facebook connected');
       }

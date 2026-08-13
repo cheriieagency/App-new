@@ -2,7 +2,9 @@
 
 import ContentPlannerShell from '@/components/planner/ContentPlannerShell';
 import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
+import GoogleDriveImportButton from '@/components/admin/GoogleDriveImportButton';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
+import { toast } from 'sonner';
 
 export default function PlannerPage() {
   const { hasConnectedSocials, isLoading } = useConnectedSocials();
@@ -23,5 +25,16 @@ export default function PlannerPage() {
     );
   }
 
-  return <ContentPlannerShell />;
+  return (
+    <ContentPlannerShell
+      headerExtra={
+        <GoogleDriveImportButton
+          target="planner"
+          onImported={(file) => {
+            toast.success(`${file.fileName} ready for your next post`);
+          }}
+        />
+      }
+    />
+  );
 }

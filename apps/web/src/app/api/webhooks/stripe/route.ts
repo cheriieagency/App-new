@@ -1,10 +1,21 @@
 /**
  * Stripe webhook — credits creator wallets on checkout.session.completed.
+ * Coaching products also create a Google Meet event when seller has Google connected.
  */
 
 import { missingEnvKeys, missingEnvResponse, stripeEnv } from '@/lib/config/env';
 import { getStripe } from '@/lib/commerce/stripe';
-import { recordCompletedOrder } from '@/lib/commerce/orders';
+import {
+  attachGoogleMeetToOrder,
+  recordCompletedOrder,
+} from '@/lib/commerce/orders';
+import { getGoogleAccessTokenForSellerWorkspace } from '@/lib/google/tokens';
+import {
+  createGoogleMeetEvent,
+  defaultCoachingSlot,
+  looksLikeCoachingProduct,
+} from '@/lib/google/calendar';
+import { sendOrderReceiptEmail } from '@/lib/email/transactional';
 import type Stripe from 'stripe';
 
 export async function POST(request: Request) {
@@ -44,6 +55,10 @@ export async function POST(request: Request) {
       const sellerUserId = String(meta.seller_user_id || '').trim();
       const productTitle =
         String(meta.product_title || '').trim() || 'Product';
+      const productType = String(meta.product_type || '').trim();
+      const buyerEmail =
+        session.customer_details?.email || session.customer_email || null;
+      const buyerName = session.customer_details?.name || null;
       const amountGrossSek = Math.max(
         0,
         Math.round(
@@ -55,11 +70,11 @@ export async function POST(request: Request) {
       );
 
       if (workspaceId && sellerUserId && amountGrossSek > 0) {
-        await recordCompletedOrder({
+        const order = await recordCompletedOrder({
           workspaceId,
           sellerUserId,
-          buyerEmail: session.customer_details?.email || session.customer_email,
-          buyerName: session.customer_details?.name || null,
+          buyerEmail,
+          buyerName,
           productId: meta.product_id || null,
           productTitle,
           amountGrossSek,
@@ -68,14 +83,72 @@ export async function POST(request: Request) {
           metadata: {
             payment_intent: session.payment_intent,
             handle: meta.handle || null,
+            productType: productType || null,
           },
         });
+
+        let googleMeetUrl: string | null = null;
+        if (
+          order &&
+          looksLikeCoachingProduct({
+            productTitle,
+            productType,
+            metadata: { productType },
+          })
+        ) {
+          try {
+            const tokens = await getGoogleAccessTokenForSellerWorkspace({
+              sellerUserId,
+              workspaceId,
+            });
+            if (tokens) {
+              const slot = defaultCoachingSlot(60);
+              const meetEvent = await createGoogleMeetEvent({
+                accessToken: tokens.accessToken,
+                summary: `1:1 Coaching Call with ${buyerName || 'Buyer'}`,
+                description: `Booked via Clikd Bio Storefront. Buyer: ${buyerEmail || 'n/a'}`,
+                startIso: slot.startIso,
+                endIso: slot.endIso,
+                sellerEmail: tokens.email,
+                buyerEmail,
+              });
+              googleMeetUrl = meetEvent.hangoutLink;
+              if (googleMeetUrl) {
+                await attachGoogleMeetToOrder({
+                  orderId: order.id,
+                  meetUrl: googleMeetUrl,
+                  eventId: meetEvent.eventId,
+                  htmlLink: meetEvent.htmlLink,
+                });
+              }
+            }
+          } catch (error) {
+            console.warn('[stripe webhook] meet booking', error);
+          }
+        }
+
+        if (buyerEmail?.includes('@')) {
+          try {
+            await sendOrderReceiptEmail({
+              to: buyerEmail,
+              buyerName: buyerName || 'there',
+              productTitle,
+              amountSek: amountGrossSek,
+              orderId: order ? String(order.id) : session.id,
+              meetUrl: googleMeetUrl,
+            });
+          } catch (error) {
+            console.warn('[stripe webhook] receipt email', error);
+          }
+        }
       }
     }
 
     if (event.type === 'account.updated') {
       const account = event.data.object as Stripe.Account;
-      const chargesEnabled = Boolean(account.charges_enabled && account.payouts_enabled);
+      const chargesEnabled = Boolean(
+        account.charges_enabled && account.payouts_enabled
+      );
       if (account.id && process.env.DATABASE_URL?.trim()) {
         const sql = (await import('@/app/api/utils/sql')).default;
         await sql`

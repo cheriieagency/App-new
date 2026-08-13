@@ -33,6 +33,7 @@ import { signOutAndRedirect } from '@/lib/sign-out-client';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
 import { adminCardClass } from '@/components/admin/AdminUi';
+import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
 import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
 import { FeatureGate, PlanLockBadge } from '@/components/common/FeatureGate';
 import { useSubscription } from '@/components/common/useSubscription';
@@ -822,11 +823,15 @@ export default function AdminSettingsPanel() {
                     </p>
                   </div>
                   <Link
-                    href="/admin/settings/socials"
+                    href="/admin/settings/integrations"
                     className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
                   >
                     {t('settingsManageSocials', locale)}
                   </Link>
+                </div>
+
+                <div className="mb-4">
+                  <GoogleIntegrationCard />
                 </div>
 
                 <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">

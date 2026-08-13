@@ -100,6 +100,16 @@ export const youtubeEnv = {
   oauthRequiredKeys: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const,
 };
 
+/** Google Drive / Calendar / Meet OAuth (same client as YouTube). */
+export const googleEnv = {
+  clientId: () => readEnv('GOOGLE_CLIENT_ID'),
+  clientSecret: () => readEnv('GOOGLE_CLIENT_SECRET'),
+  /** Optional — enables official Google Picker UI when set */
+  pickerApiKey: () =>
+    readEnv('NEXT_PUBLIC_GOOGLE_API_KEY') || readEnv('GOOGLE_API_KEY'),
+  oauthRequiredKeys: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const,
+};
+
 // ---------------------------------------------------------------------------
 // 5b. Pinterest Developer API
 // ---------------------------------------------------------------------------

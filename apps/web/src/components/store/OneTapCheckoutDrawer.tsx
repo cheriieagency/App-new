@@ -242,6 +242,7 @@ export default function OneTapCheckoutDrawer({
             sellerUserId: sellerUserId || null,
             productId: String(product.id),
             productTitle: product.name,
+            productType: product.type,
             amountGrossSek: total,
             buyerEmail: buyerEmail || null,
             buyerName,
@@ -251,6 +252,8 @@ export default function OneTapCheckoutDrawer({
               bumpSelected,
               communityId: communityId ?? null,
               method,
+              productType: product.type,
+              kind: product.kind,
             },
           }),
         });

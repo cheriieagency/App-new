@@ -1,10 +1,22 @@
 /**
  * POST /api/checkout/complete
  * Record a completed storefront / Link-in-Bio purchase (demo or post-Stripe).
+ * Coaching products → Google Calendar + Meet + receipt email.
  */
 
 import sql from '@/app/api/utils/sql';
-import { recordCompletedOrder, ensureCommerceSchema } from '@/lib/commerce/orders';
+import {
+  recordCompletedOrder,
+  ensureCommerceSchema,
+  attachGoogleMeetToOrder,
+} from '@/lib/commerce/orders';
+import { getGoogleAccessTokenForSellerWorkspace } from '@/lib/google/tokens';
+import {
+  createGoogleMeetEvent,
+  defaultCoachingSlot,
+  looksLikeCoachingProduct,
+} from '@/lib/google/calendar';
+import { sendOrderReceiptEmail } from '@/lib/email/transactional';
 
 async function resolveSellerUserId(input: {
   workspaceId: string;
@@ -71,17 +83,28 @@ export async function POST(request: Request) {
       sellerUserId?: unknown;
       productId?: unknown;
       productTitle?: unknown;
+      productType?: unknown;
       amountGrossSek?: unknown;
       buyerEmail?: unknown;
       buyerName?: unknown;
       provider?: unknown;
       externalId?: unknown;
       metadata?: unknown;
+      bookingStartTimeISO?: unknown;
+      bookingEndTimeISO?: unknown;
     };
 
     const workspaceId = String(body.workspaceId ?? '').trim();
     const productTitle = String(body.productTitle ?? 'Product').trim() || 'Product';
     const amountGrossSek = Math.max(0, Math.round(Number(body.amountGrossSek) || 0));
+    const buyerEmail =
+      body.buyerEmail != null ? String(body.buyerEmail).trim() : '';
+    const buyerName =
+      body.buyerName != null ? String(body.buyerName).trim() : 'Buyer';
+    const metadata =
+      body.metadata && typeof body.metadata === 'object'
+        ? (body.metadata as Record<string, unknown>)
+        : {};
 
     if (!workspaceId) {
       return Response.json({ error: 'workspaceId required' }, { status: 400 });
@@ -105,7 +128,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Prefer an existing workspace owned by the seller so admin Revenue matches.
     let creditWorkspaceId = workspaceId;
     try {
       const owned = await sql`
@@ -124,8 +146,8 @@ export async function POST(request: Request) {
     const order = await recordCompletedOrder({
       workspaceId: creditWorkspaceId,
       sellerUserId,
-      buyerEmail: body.buyerEmail != null ? String(body.buyerEmail) : null,
-      buyerName: body.buyerName != null ? String(body.buyerName) : null,
+      buyerEmail: buyerEmail || null,
+      buyerName: buyerName || null,
       productId: body.productId != null ? String(body.productId) : null,
       productTitle,
       amountGrossSek,
@@ -134,10 +156,7 @@ export async function POST(request: Request) {
           ? body.provider
           : 'demo',
       externalId: body.externalId != null ? String(body.externalId) : null,
-      metadata:
-        body.metadata && typeof body.metadata === 'object'
-          ? (body.metadata as Record<string, unknown>)
-          : {},
+      metadata,
     });
 
     if (!order) {
@@ -148,7 +167,77 @@ export async function POST(request: Request) {
       });
     }
 
-    return Response.json({ ok: true, recorded: true, order });
+    let googleMeetUrl: string | null = null;
+    const isCoaching = looksLikeCoachingProduct({
+      productTitle,
+      productType: body.productType != null ? String(body.productType) : null,
+      metadata,
+    });
+
+    if (isCoaching) {
+      try {
+        const tokens = await getGoogleAccessTokenForSellerWorkspace({
+          sellerUserId,
+          workspaceId: creditWorkspaceId,
+        });
+        if (tokens) {
+          const slot =
+            body.bookingStartTimeISO && body.bookingEndTimeISO
+              ? {
+                  startIso: String(body.bookingStartTimeISO),
+                  endIso: String(body.bookingEndTimeISO),
+                }
+              : defaultCoachingSlot(60);
+
+          const event = await createGoogleMeetEvent({
+            accessToken: tokens.accessToken,
+            summary: `1:1 Coaching Call with ${buyerName || 'Buyer'}`,
+            description: `Booked via Clikd Bio Storefront. Buyer: ${buyerEmail || 'n/a'}`,
+            startIso: slot.startIso,
+            endIso: slot.endIso,
+            sellerEmail: tokens.email,
+            buyerEmail: buyerEmail || null,
+          });
+
+          googleMeetUrl = event.hangoutLink;
+          if (googleMeetUrl) {
+            await attachGoogleMeetToOrder({
+              orderId: order.id,
+              meetUrl: googleMeetUrl,
+              eventId: event.eventId,
+              htmlLink: event.htmlLink,
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('[checkout/complete] meet booking', error);
+      }
+    }
+
+    if (buyerEmail.includes('@')) {
+      try {
+        await sendOrderReceiptEmail({
+          to: buyerEmail,
+          buyerName: buyerName || 'there',
+          productTitle,
+          amountSek: amountGrossSek,
+          orderId: String(order.id),
+          meetUrl: googleMeetUrl,
+        });
+      } catch (error) {
+        console.warn('[checkout/complete] receipt email', error);
+      }
+    }
+
+    return Response.json({
+      ok: true,
+      recorded: true,
+      order: {
+        ...order,
+        google_meet_url: googleMeetUrl,
+      },
+      googleMeetUrl,
+    });
   } catch (error) {
     console.warn('[checkout/complete]', error);
     return Response.json(

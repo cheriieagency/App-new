@@ -17,6 +17,7 @@ export type OrderReceiptInput = {
   amountSek: number;
   orderId?: string;
   workspaceName?: string;
+  meetUrl?: string | null;
 };
 
 /** Send a storefront purchase receipt. */
@@ -25,10 +26,13 @@ export async function sendOrderReceiptEmail(
 ): Promise<SendEmailResult> {
   const unsubscribeUrl = buildUnsubscribeUrl(input.to, getSiteUrl());
   const amountLabel = `${Math.round(input.amountSek).toLocaleString('sv-SE')} SEK`;
+  const hasMeet = Boolean(input.meetUrl);
 
   return sendEmail({
     to: input.to,
-    subject: `Receipt — ${input.productTitle}`,
+    subject: hasMeet
+      ? `Your 1:1 call — ${input.productTitle}`
+      : `Receipt — ${input.productTitle}`,
     unsubscribeEmail: input.to,
     tags: [
       { name: 'category', value: 'order_receipt' },
@@ -40,6 +44,7 @@ export async function sendOrderReceiptEmail(
       amountLabel,
       orderId: input.orderId,
       workspaceName: input.workspaceName,
+      meetUrl: input.meetUrl || undefined,
       unsubscribeUrl,
     }),
   });

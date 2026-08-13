@@ -77,9 +77,14 @@ export async function ensureCommerceSchema(): Promise<void> {
                                CHECK (status IN ('pending', 'completed', 'refunded', 'failed')),
         provider             text NOT NULL DEFAULT 'demo',
         external_id          text,
+        google_meet_url      text,
         metadata             jsonb NOT NULL DEFAULT '{}'::jsonb,
         created_at           timestamptz NOT NULL DEFAULT now()
       )
+    `;
+    await sql`
+      ALTER TABLE public.orders
+        ADD COLUMN IF NOT EXISTS google_meet_url text
     `;
     await sql`
       CREATE UNIQUE INDEX IF NOT EXISTS orders_external_id_uidx
@@ -249,4 +254,26 @@ export async function recordCompletedOrder(
     platform_fee_percent: Number(order.platform_fee_percent),
     wallet_balance_sek: Number(walletRows?.[0]?.wallet_balance_sek) || netSek,
   };
+}
+
+/** Attach a Google Meet link to an order + merge into metadata. */
+export async function attachGoogleMeetToOrder(input: {
+  orderId: number | string;
+  meetUrl: string;
+  eventId?: string | null;
+  htmlLink?: string | null;
+}): Promise<void> {
+  if (!process.env.DATABASE_URL?.trim()) return;
+  await ensureCommerceSchema();
+  await sql`
+    UPDATE public.orders
+    SET
+      google_meet_url = ${input.meetUrl},
+      metadata = COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+        google_meet_url: input.meetUrl,
+        google_event_id: input.eventId ?? null,
+        google_event_html: input.htmlLink ?? null,
+      })}::jsonb
+    WHERE id = ${input.orderId}
+  `;
 }

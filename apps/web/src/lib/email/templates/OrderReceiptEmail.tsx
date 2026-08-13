@@ -18,6 +18,7 @@ export type OrderReceiptEmailProps = {
   amountLabel: string;
   orderId?: string;
   workspaceName?: string;
+  meetUrl?: string;
   unsubscribeUrl: string;
 };
 
@@ -28,6 +29,7 @@ export function OrderReceiptEmail({
   amountLabel,
   orderId,
   workspaceName = 'clikd:',
+  meetUrl,
   unsubscribeUrl,
 }: OrderReceiptEmailProps) {
   const firstName = buyerName.trim().split(/\s+/)[0] || 'there';
@@ -35,7 +37,9 @@ export function OrderReceiptEmail({
   return (
     <Html>
       <Head />
-      <Preview>Receipt for {productTitle}</Preview>
+      <Preview>
+        {meetUrl ? `Your Google Meet link for ${productTitle}` : `Receipt for ${productTitle}`}
+      </Preview>
       <Body style={main}>
         <Container style={container}>
           <Text style={brand}>
@@ -55,6 +59,16 @@ export function OrderReceiptEmail({
               <>
                 <Text style={{ ...cardLabel, marginTop: '12px' }}>Order ID</Text>
                 <Text style={cardValue}>{orderId}</Text>
+              </>
+            ) : null}
+            {meetUrl ? (
+              <>
+                <Text style={{ ...cardLabel, marginTop: '12px' }}>Google Meet</Text>
+                <Text style={cardValue}>
+                  <Link href={meetUrl} style={link}>
+                    Join your 1:1 call
+                  </Link>
+                </Text>
               </>
             ) : null}
           </Section>

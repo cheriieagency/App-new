@@ -23,6 +23,7 @@ import {
   type MediaAsset,
   type MediaFolder,
 } from '@/lib/mock-media-library';
+import GoogleDriveImportButton from '@/components/admin/GoogleDriveImportButton';
 
 const COLORS = ['#F472B6', '#9089F0', '#10B981', '#F59E0B', '#2B2568', '#0EA5E9'];
 
@@ -160,19 +161,22 @@ export default function MediaLibraryPanel() {
           tf('mediaFolderSub', locale, { name: activeWorkspace.name })
         }
         actions={
-          isRoot ? undefined : (
-            <button
-              type="button"
-              onClick={() => {
-                setDeleteAcknowledged(false);
-                setDeleteOpen(true);
-              }}
-              className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-              aria-label={t('delete', locale)}
-            >
-              <Trash2 size={16} />
-            </button>
-          )
+          <div className="flex items-center gap-2">
+            <GoogleDriveImportButton target="media_library" />
+            {!isRoot ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteAcknowledged(false);
+                  setDeleteOpen(true);
+                }}
+                className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                aria-label={t('delete', locale)}
+              >
+                <Trash2 size={16} />
+              </button>
+            ) : null}
+          </div>
         }
       />
 

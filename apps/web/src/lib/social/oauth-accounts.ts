@@ -16,7 +16,8 @@ export type OAuthSocialPlatform =
   | 'tiktok'
   | 'instagram'
   | 'facebook'
-  | 'pinterest';
+  | 'pinterest'
+  | 'google';
 
 export type UpsertOAuthSocialAccountInput = {
   userId: string;
@@ -60,6 +61,7 @@ export async function upsertOAuthSocialAccount(
       followers_count: input.followersCount ?? null,
       company_url: input.companyUrl ?? null,
       refresh_token: input.refreshToken ?? null,
+      email: input.handle?.includes('@') ? input.handle : null,
     },
   });
 }

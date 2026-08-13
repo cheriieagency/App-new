@@ -22,9 +22,12 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   'pinterest',
 ];
 
+/** Content platforms + Google (Drive/Calendar/Meet integration). */
+export type PersistablePlatform = SocialPlatform | 'google';
+
 export type UpsertSocialAccountRow = {
   userId: string;
-  platform: SocialPlatform;
+  platform: PersistablePlatform;
   platformUserId: string;
   platformUserName: string;
   accessToken: string;
@@ -121,7 +124,7 @@ export async function ensureSocialAccountsSchema(): Promise<void> {
         ALTER TABLE public.social_accounts
           ADD CONSTRAINT social_accounts_platform_check
           CHECK (platform IN (
-            'instagram', 'facebook', 'tiktok', 'linkedin', 'youtube', 'pinterest'
+            'instagram', 'facebook', 'tiktok', 'linkedin', 'youtube', 'pinterest', 'google'
           ))
       `;
     } catch (error) {
@@ -225,7 +228,7 @@ export async function upsertSocialAccountRow(
   `;
 
   return {
-    platform: input.platform,
+    platform: input.platform as SocialPlatform,
     connected: true,
     handle,
     display_name: displayName,
@@ -352,7 +355,7 @@ export async function listLiveSocialAccountsForUser(input: {
 
 export async function deleteSocialAccountRow(input: {
   userId: string;
-  platform: SocialPlatform;
+  platform: PersistablePlatform;
   platformUserId?: string | null;
   workspaceId?: string | null;
 }): Promise<{ deleted: boolean }> {
