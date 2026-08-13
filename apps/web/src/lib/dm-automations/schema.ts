@@ -22,7 +22,7 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
     tableReady = (async () => {
       await sql`
         CREATE TABLE IF NOT EXISTS public.dm_automations (
-          id                          serial PRIMARY KEY,
+          id                          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           workspace_id                text NOT NULL,
           user_id                     text,
           title                       text NOT NULL DEFAULT 'Comment-to-DM rule',
@@ -40,7 +40,7 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
         CREATE TABLE IF NOT EXISTS public.dm_logs (
           id                  serial PRIMARY KEY,
           workspace_id        text NOT NULL,
-          automation_id       integer,
+          automation_id       uuid,
           comment_id          text,
           media_id            text,
           commenter_id        text NOT NULL,

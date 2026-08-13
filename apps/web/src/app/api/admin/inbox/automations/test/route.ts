@@ -42,7 +42,7 @@ function dryRunPayload(extra: Record<string, unknown> = {}) {
     rulesTotal: 0,
     rulesActive: 0,
     matchedRule: null as null | {
-      id: number;
+      id: string;
       title: string;
       keyword: string;
       dmPreview: string;
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     );
 
     let matched: {
-      id: number;
+      id: string;
       title: string;
       keyword: string;
       dmPreview: string;
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
         const url = String(rule.cta_button_url || '').trim();
         const text = String(rule.dm_message_text || '').trim();
         matched = {
-          id: Number(rule.id),
+          id: String(rule.id),
           title: String(rule.title || 'Rule'),
           keyword: kw,
           dmPreview: url ? `${text}\n\n${url}` : text,
