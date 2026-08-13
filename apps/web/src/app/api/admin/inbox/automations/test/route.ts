@@ -115,10 +115,11 @@ export async function POST(request: Request) {
       console.warn('[automations/test] schema ensure', schemaErr);
     }
 
-    // (Re)subscribe connected Meta accounts — Page Access Token + platform_user_id.
+    // (Re)subscribe — STRICT field split: IG vs Facebook Page (Graph Error #100).
     const subscribeDetails: Array<{
       platform: string;
       targetId: string;
+      fields?: string;
       ok: boolean;
       error?: string;
     }> = [];
@@ -134,7 +135,6 @@ export async function POST(request: Request) {
       for (const row of Array.isArray(metaAccounts) ? metaAccounts : []) {
         const platform = String(row.platform || '');
         const token = String(row.access_token || '').trim();
-        // Spec: POST /{platform_user_id}/subscribed_apps with Page Access Token.
         const platformUserId =
           row.platform_user_id != null
             ? String(row.platform_user_id).trim()
@@ -149,46 +149,54 @@ export async function POST(request: Request) {
           continue;
         }
 
-        // POST /{platform_user_id}/subscribed_apps with Page Access Token in body.
-        const subscribeUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(platformUserId)}/subscribed_apps`;
+        const isInstagram =
+          platform === 'instagram' ||
+          String(platformUserId).startsWith('1784');
+        // STRICT: never mix Page fields with Instagram fields.
+        const subscribedFields = isInstagram
+          ? 'comments,messages,mentions'
+          : 'feed,messages,messaging_postbacks';
+
+        const subUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
+          platformUserId
+        )}/subscribed_apps?subscribed_fields=${encodeURIComponent(
+          subscribedFields
+        )}&access_token=${encodeURIComponent(token)}`;
+
         try {
-          const graphRes = await fetch(subscribeUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              access_token: token,
-              subscribed_fields: ['feed', 'comments', 'messages', 'mentions'],
-            }),
-          });
-          const graphJson = (await graphRes.json().catch(() => ({}))) as {
+          const res = await fetch(subUrl, { method: 'POST' });
+          const data = (await res.json().catch(() => ({}))) as {
             success?: boolean;
-            error?: { message?: string };
+            error?: { message?: string; code?: number };
           };
-          if (!graphRes.ok || graphJson.error) {
-            const message =
-              graphJson.error?.message ||
-              `subscribed_apps failed (${graphRes.status})`;
-            console.warn(
-              '[automations/test] subscribed_apps error',
+          console.log(
+            '[automations/test] subscribed_apps',
+            {
               platform,
               platformUserId,
-              message
-            );
+              isInstagram,
+              subscribedFields,
+              status: res.status,
+              data,
+            }
+          );
+
+          if (!res.ok || data.error) {
+            const message =
+              data.error?.message ||
+              `subscribed_apps failed (${res.status})`;
             subscribeDetails.push({
-              platform,
+              platform: isInstagram ? 'instagram' : 'facebook',
               targetId: platformUserId,
+              fields: subscribedFields,
               ok: false,
               error: message,
             });
           } else {
-            console.log(
-              '[automations/test] subscribed_apps ok',
-              platform,
-              platformUserId
-            );
             subscribeDetails.push({
-              platform,
+              platform: isInstagram ? 'instagram' : 'facebook',
               targetId: platformUserId,
+              fields: subscribedFields,
               ok: true,
             });
           }
@@ -203,8 +211,9 @@ export async function POST(request: Request) {
             message
           );
           subscribeDetails.push({
-            platform,
+            platform: isInstagram ? 'instagram' : 'facebook',
             targetId: platformUserId,
+            fields: subscribedFields,
             ok: false,
             error: message,
           });
@@ -251,7 +260,7 @@ export async function POST(request: Request) {
         nextSteps:
           subscribedCount > 0
             ? [
-                `Subscribed ${subscribedCount} account(s) to feed/comments/messages/mentions.`,
+                `Subscribed ${subscribedCount} account(s) (IG: comments,messages,mentions · Page: feed,messages,messaging_postbacks).`,
                 'Confirm App Dashboard → Webhooks includes Instagram comments callback.',
                 'Comment a trigger keyword on a post to test live Comment-to-DM.',
               ]

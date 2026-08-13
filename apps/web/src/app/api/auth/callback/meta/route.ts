@@ -188,24 +188,124 @@ export async function GET(request: Request) {
       );
     }
 
-    // Step E2 — subscribe each Facebook Page with its Page Access Token.
+    // Step E2 — STRICT field split (Graph Error #100 if mixed):
+    // Page → feed,messages,messaging_postbacks
+    // Instagram Business → comments,messages,mentions
     try {
+      const seen = new Set<string>();
+
       for (const page of realPages) {
         if (!page.id || !page.access_token) continue;
-        const subUrl = `https://graph.facebook.com/v21.0/${page.id}/subscribed_apps?subscribed_fields=feed,messages,messaging_postbacks&access_token=${encodeURIComponent(page.access_token)}`;
-        const subRes = await fetch(subUrl, { method: 'POST' });
-        const subJson = (await subRes.json().catch(() => ({}))) as {
-          success?: boolean;
-          error?: { message?: string };
-        };
-        if (!subRes.ok || subJson.error) {
+        const pageId = String(page.id);
+        const pageToken = String(page.access_token);
+
+        if (!seen.has(pageId)) {
+          seen.add(pageId);
+          const pageSubUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
+            pageId
+          )}/subscribed_apps?subscribed_fields=${encodeURIComponent(
+            'feed,messages,messaging_postbacks'
+          )}&access_token=${encodeURIComponent(pageToken)}`;
+          try {
+            const subRes = await fetch(pageSubUrl, { method: 'POST' });
+            const subJson = (await subRes.json().catch(() => ({}))) as {
+              success?: boolean;
+              error?: { message?: string };
+            };
+            if (!subRes.ok || subJson.error) {
+              console.warn(
+                '[meta/callback] subscribed_apps page error',
+                pageId,
+                subJson.error?.message || `HTTP ${subRes.status}`
+              );
+            } else {
+              console.log('[meta/callback] subscribed_apps page ok', pageId);
+            }
+          } catch (pageSubErr) {
+            console.warn(
+              '[meta/callback] subscribed_apps page network',
+              pageId,
+              pageSubErr
+            );
+          }
+        }
+
+        const igId = page.instagram_business_account?.id
+          ? String(page.instagram_business_account.id)
+          : '';
+        if (igId && !seen.has(igId)) {
+          seen.add(igId);
+          const igSubUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
+            igId
+          )}/subscribed_apps?subscribed_fields=${encodeURIComponent(
+            'comments,messages,mentions'
+          )}&access_token=${encodeURIComponent(pageToken)}`;
+          try {
+            const igRes = await fetch(igSubUrl, { method: 'POST' });
+            const igJson = (await igRes.json().catch(() => ({}))) as {
+              success?: boolean;
+              error?: { message?: string };
+            };
+            if (!igRes.ok || igJson.error) {
+              console.warn(
+                '[meta/callback] subscribed_apps ig error',
+                igId,
+                igJson.error?.message || `HTTP ${igRes.status}`
+              );
+            } else {
+              console.log('[meta/callback] subscribed_apps ig ok', igId);
+            }
+          } catch (igSubErr) {
+            console.warn(
+              '[meta/callback] subscribed_apps ig network',
+              igId,
+              igSubErr
+            );
+          }
+        }
+      }
+
+      // Also subscribe resolved IG when it came from portfolio (not nested on page).
+      const resolvedIgId = resolved.instagram?.id
+        ? String(resolved.instagram.id)
+        : '';
+      const resolvedPageToken =
+        resolved.instagramPage?.access_token ||
+        realPages[0]?.access_token ||
+        '';
+      if (
+        resolvedIgId &&
+        resolvedPageToken &&
+        !seen.has(resolvedIgId)
+      ) {
+        seen.add(resolvedIgId);
+        const igSubUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
+          resolvedIgId
+        )}/subscribed_apps?subscribed_fields=${encodeURIComponent(
+          'comments,messages,mentions'
+        )}&access_token=${encodeURIComponent(resolvedPageToken)}`;
+        try {
+          const igRes = await fetch(igSubUrl, { method: 'POST' });
+          const igJson = (await igRes.json().catch(() => ({}))) as {
+            error?: { message?: string };
+          };
+          if (!igRes.ok || igJson.error) {
+            console.warn(
+              '[meta/callback] subscribed_apps resolved ig error',
+              resolvedIgId,
+              igJson.error?.message || `HTTP ${igRes.status}`
+            );
+          } else {
+            console.log(
+              '[meta/callback] subscribed_apps resolved ig ok',
+              resolvedIgId
+            );
+          }
+        } catch (igSubErr) {
           console.warn(
-            '[meta/callback] subscribed_apps error',
-            page.id,
-            subJson.error?.message || `HTTP ${subRes.status}`
+            '[meta/callback] subscribed_apps resolved ig network',
+            igSubErr
           );
-        } else {
-          console.log('[meta/callback] subscribed_apps ok', page.id);
         }
       }
     } catch (subError) {
