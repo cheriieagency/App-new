@@ -17,6 +17,7 @@ import {
   extractCommentEventsFromWebhook,
   findMatchingKeyword,
 } from '@/lib/dm-automations/engine';
+import { subscribeMetaAccountsAfterConnect } from '@/lib/meta/subscribe-webhooks';
 
 async function resolveWorkspaceId(
   request: Request,
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
       workspaceId?: unknown;
       commentText?: unknown;
       webhookPayload?: unknown;
+      action?: unknown;
     } = {};
     try {
       body = (await request.json()) as typeof body;
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const action = String(body.action || 'test').trim();
     const commentText = String(
       body.commentText ?? 'Hej! Jag vill ha #KURS info'
     ).trim();
@@ -112,6 +115,81 @@ export async function POST(request: Request) {
       await ensureDmAutomationsSchema();
     } catch (schemaErr) {
       console.warn('[automations/test] schema ensure', schemaErr);
+    }
+
+    // Always (re)subscribe connected Meta accounts to app webhooks.
+    const subscribeResults: Array<{
+      targetId: string;
+      ok: boolean;
+      error?: string;
+    }> = [];
+    try {
+      const metaAccounts = await sql`
+        SELECT platform, platform_user_id, page_id, access_token
+        FROM public.social_accounts
+        WHERE workspace_id = ${workspaceId}
+          AND platform IN ('instagram', 'facebook')
+          AND access_token IS NOT NULL
+          AND access_token <> ''
+      `;
+      for (const row of Array.isArray(metaAccounts) ? metaAccounts : []) {
+        const pageId =
+          row.page_id != null
+            ? String(row.page_id)
+            : row.platform === 'facebook' && row.platform_user_id
+              ? String(row.platform_user_id)
+              : null;
+        const igUserId =
+          row.platform === 'instagram' && row.platform_user_id
+            ? String(row.platform_user_id)
+            : null;
+        const token = String(row.access_token || '');
+        const batch = await subscribeMetaAccountsAfterConnect({
+          pageId,
+          pageAccessToken: token,
+          igUserId,
+          fallbackAccessToken: token,
+        });
+        for (const r of batch) {
+          subscribeResults.push({
+            targetId: r.targetId,
+            ok: r.ok,
+            error: r.error,
+          });
+        }
+      }
+    } catch (subErr) {
+      console.warn('[automations/test] subscribed_apps', subErr);
+    }
+
+    if (action === 'resubscribe_webhooks') {
+      const okCount = subscribeResults.filter((r) => r.ok).length;
+      return NextResponse.json(
+        dryRunPayload({
+          ok: true,
+          ready: okCount > 0,
+          workspaceId,
+          commentText,
+          action: 'resubscribe_webhooks',
+          subscribeResults,
+          blockers:
+            okCount > 0
+              ? []
+              : [
+                  'Could not subscribe any Meta Page/IG account. Reconnect Instagram under Settings → Socials with messaging + comments permissions.',
+                ],
+          nextSteps:
+            okCount > 0
+              ? [
+                  `Subscribed ${okCount} account(s) to feed/comments/messages/mentions.`,
+                  'Confirm App Dashboard → Webhooks includes Instagram comments callback.',
+                  'Comment a trigger keyword on a post to test live Comment-to-DM.',
+                ]
+              : [
+                  'Reconnect Instagram + Facebook Page, then retry Re-sync Meta Webhooks.',
+                ],
+        })
+      );
     }
 
     // Prefer id sort — never depend on created_at / updated_at existing.
@@ -299,6 +377,7 @@ export async function POST(request: Request) {
           sampleEventsParsed: parsedEvents,
         },
         dmsSentTotal,
+        subscribeResults,
         blockers,
         nextSteps: ready
           ? [

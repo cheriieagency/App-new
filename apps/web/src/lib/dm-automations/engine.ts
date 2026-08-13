@@ -323,15 +323,16 @@ export async function processCommentAutomationEvent(
       }
     }
 
-    if (matchedRule.reply_to_comment_publicly) {
-      const publicText =
-        String(matchedRule.public_comment_text || '').trim() ||
-        'Kolla din DM!';
+    if (
+      matchedRule.reply_to_comment_publicly &&
+      String(matchedRule.public_comment_text || '').trim()
+    ) {
+      const publicText = String(matchedRule.public_comment_text).trim();
       try {
         await replyToInstagramComment(
           event.commentId,
           publicText,
-          account.accessToken
+          token
         );
       } catch (replyErr) {
         console.warn('[dm-automations] public comment reply failed', replyErr);
@@ -407,11 +408,12 @@ export async function processCommentAutomationEvent(
   }
 }
 
-/** Parse Meta webhook POST body into comment events. */
+/** Parse Meta webhook POST body into comment events (instagram + page). */
 export function extractCommentEventsFromWebhook(
   payload: unknown
 ): IncomingCommentEvent[] {
   const root = payload as {
+    object?: string;
     entry?: Array<{
       id?: string;
       changes?: Array<{
@@ -420,31 +422,73 @@ export function extractCommentEventsFromWebhook(
       }>;
     }>;
   };
+  const objectType = String(root.object || '').toLowerCase();
   const events: IncomingCommentEvent[] = [];
+
   for (const entry of root.entry || []) {
-    const igAccountId = entry.id ? String(entry.id) : null;
+    const entryId = entry.id ? String(entry.id) : null;
     for (const change of entry.changes || []) {
-      if (change.field && change.field !== 'comments') continue;
+      const field = String(change.field || '').toLowerCase();
       const value = change.value || {};
-      const from = (value.from || {}) as { id?: string; username?: string };
+
+      // Instagram: field=comments · Page: field=feed with item=comment
+      const isIgComment = field === 'comments' || objectType === 'instagram';
+      const isPageComment =
+        field === 'feed' &&
+        (String(value.item || '').toLowerCase() === 'comment' ||
+          Boolean(value.comment_id));
+
+      if (!isIgComment && !isPageComment) {
+        // Still allow bare comments field without object type.
+        if (field && field !== 'comments') continue;
+      }
+
+      // Skip removals / edits that aren't new comments.
+      const verb = String(value.verb || 'add').toLowerCase();
+      if (verb && verb !== 'add' && verb !== 'edited') continue;
+
+      const from = (value.from || {}) as {
+        id?: string;
+        username?: string;
+        name?: string;
+      };
       const media = (value.media || {}) as {
         id?: string;
         owner?: { id?: string };
       };
-      const commentId = String(value.id || value.comment_id || '').trim();
+
+      const commentId = String(
+        value.id || value.comment_id || ''
+      ).trim();
       const commenterId = String(from.id || '').trim();
-      const text = String(value.text || '').trim();
+      const text = String(value.text || value.message || '').trim();
       if (!commentId || !commenterId || !text) continue;
+
+      const igAccountId =
+        objectType === 'instagram'
+          ? media.owner?.id
+            ? String(media.owner.id)
+            : entryId
+          : media.owner?.id
+            ? String(media.owner.id)
+            : null;
+
       events.push({
         commentId,
-        mediaId: media.id ? String(media.id) : null,
+        mediaId: media.id
+          ? String(media.id)
+          : value.post_id
+            ? String(value.post_id)
+            : null,
         text,
         commenterId,
-        commenterUsername: from.username ? String(from.username) : null,
-        igAccountId: media.owner?.id
-          ? String(media.owner.id)
-          : igAccountId,
-        pageId: null,
+        commenterUsername: from.username
+          ? String(from.username)
+          : from.name
+            ? String(from.name)
+            : null,
+        igAccountId,
+        pageId: objectType === 'page' ? entryId : null,
       });
     }
   }

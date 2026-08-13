@@ -1,7 +1,7 @@
 /**
  * Meta Instagram comments webhook — Comment-to-DM automation receiver.
  * GET: hub challenge verification
- * POST: keyword match → private reply / DM + optional public comment reply
+ * POST: keyword match → private reply (recipient.comment_id) + optional public reply
  */
 
 import { missingEnvKeys, missingEnvResponse, metaEnv } from '@/lib/config/env';
@@ -16,7 +16,6 @@ export async function GET(request: Request) {
   const token = url.searchParams.get('hub.verify_token');
   const challenge = url.searchParams.get('hub.challenge');
 
-  // Read safely — trim; never throw if unset.
   const verifyToken = (process.env.META_WEBHOOK_VERIFY_TOKEN ?? '').trim();
 
   if (
@@ -37,19 +36,49 @@ export async function POST(request: Request) {
     return missingEnvResponse(missing, 'Meta / Instagram Graph API');
   }
 
-  let payload: unknown;
+  let body: unknown;
   try {
-    payload = await request.json();
+    body = await request.json();
   } catch {
     return Response.json({ error: 'invalid_json' }, { status: 400 });
   }
 
-  const events = extractCommentEventsFromWebhook(payload);
+  console.log('[Meta Webhook Incoming]', JSON.stringify(body));
+
+  // Parse both object === 'instagram' and object === 'page' structures.
+  const root = body as {
+    object?: string;
+    entry?: Array<{
+      id?: string;
+      changes?: Array<{ field?: string; value?: Record<string, unknown> }>;
+    }>;
+  };
+  const entry = root.entry?.[0];
+  const change = entry?.changes?.[0];
+  const value = change?.value;
+  console.log('[Meta Webhook Parsed]', {
+    object: root.object,
+    entryId: entry?.id,
+    field: change?.field,
+    commentId: value?.id || value?.comment_id,
+    text: value?.text || value?.message,
+    commenterId: (value?.from as { id?: string } | undefined)?.id,
+    mediaId: (value?.media as { id?: string } | undefined)?.id,
+  });
+
+  const events = extractCommentEventsFromWebhook(body);
   const results = [];
 
   for (const event of events) {
     try {
       const result = await processCommentAutomationEvent(event);
+      console.log('[Meta Webhook Dispatch]', {
+        commentId: event.commentId,
+        matched: result.matched,
+        sent: result.sent,
+        automationId: result.automationId,
+        error: result.error,
+      });
       results.push({
         commentId: event.commentId,
         ...result,
@@ -69,6 +98,7 @@ export async function POST(request: Request) {
   return Response.json({
     ok: true,
     received: true,
+    object: root.object ?? null,
     events: events.length,
     results,
   });
