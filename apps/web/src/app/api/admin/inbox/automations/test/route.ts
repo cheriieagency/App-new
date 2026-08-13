@@ -270,27 +270,43 @@ export async function POST(request: Request) {
       });
     }
 
-    // Prefer id sort — never depend on created_at / updated_at existing.
+    // Prefer id sort — never depend on created_at / updated_at / sent_at existing.
     let rules: Record<string, unknown>[] = [];
     try {
-      rules = (await sql`
+      const rulesRows = await sql`
         SELECT *
         FROM public.dm_automations
         WHERE workspace_id = ${workspaceId}
         ORDER BY id DESC
-      `) as Record<string, unknown>[];
+      `;
+      rules = Array.isArray(rulesRows) ? (rulesRows as Record<string, unknown>[]) : [];
     } catch (queryErr) {
       console.warn('[automations/test] rules query', queryErr);
-      return NextResponse.json(
-        dryRunPayload({
-          workspaceId,
-          commentText,
-          blockers: [
-            'Could not load dm_automations (table/columns may still be migrating).',
-          ],
-          nextSteps: ['Retry in a few seconds after schema reconcile.'],
-        })
-      );
+      try {
+        const fallbackRows = await sql`
+          SELECT id, workspace_id, title, trigger_keywords, dm_message_text,
+                 cta_button_url, is_active
+          FROM public.dm_automations
+          WHERE workspace_id = ${workspaceId}
+          ORDER BY id DESC
+        `;
+        rules = Array.isArray(fallbackRows)
+          ? (fallbackRows as Record<string, unknown>[])
+          : [];
+      } catch (fallbackErr) {
+        console.warn('[automations/test] rules fallback failed', fallbackErr);
+        return NextResponse.json(
+          dryRunPayload({
+            workspaceId,
+            commentText,
+            subscribeResults,
+            blockers: [
+              'Could not load dm_automations (table/columns may still be migrating).',
+            ],
+            nextSteps: ['Retry in a few seconds after schema reconcile.'],
+          })
+        );
+      }
     }
 
     const activeRules = (Array.isArray(rules) ? rules : []).filter(
@@ -397,9 +413,22 @@ export async function POST(request: Request) {
         WHERE workspace_id = ${workspaceId}
           AND status = 'sent'
       `;
-      dmsSentTotal = Number(logs?.[0]?.n) || 0;
-    } catch {
-      dmsSentTotal = 0;
+      const topLog = (Array.isArray(logs) ? logs : [])?.[0] || {};
+      dmsSentTotal = Number((topLog as { n?: unknown })?.n) || 0;
+    } catch (logsErr) {
+      console.warn('[automations/test] dm_logs count failed', logsErr);
+      try {
+        // Fallback without status/timestamp columns if schema is mid-migration.
+        const logs = await sql`
+          SELECT COUNT(*)::int AS n
+          FROM public.dm_logs
+          WHERE workspace_id = ${workspaceId}
+        `;
+        const topLog = (Array.isArray(logs) ? logs : [])?.[0] || {};
+        dmsSentTotal = Number((topLog as { n?: unknown })?.n) || 0;
+      } catch {
+        dmsSentTotal = 0;
+      }
     }
 
     const blockers: string[] = [];

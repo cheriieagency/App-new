@@ -87,7 +87,9 @@ function mapDbRow(row: Record<string, unknown>): StoredSocialAccount {
   };
 }
 
-/** Upsert creator profile avatar / handle / followers from the primary IG Business account. */
+/** Upsert creator profile avatar / handle from the primary IG Business account.
+ * Never requires followers_count on public.profiles (column may be absent).
+ */
 async function upsertProfileFromInstagram(input: {
   userId: string;
   username?: string | null;
@@ -100,36 +102,71 @@ async function upsertProfileFromInstagram(input: {
   const handle = input.username
     ? `@${input.username.replace(/^@/, '')}`
     : null;
+  const displayName = input.displayName ?? handle;
 
+  // 1) Core columns only — safe across schemas without followers_count.
   try {
     await sql`
-      INSERT INTO profiles (id, display_name, handle, avatar_url, followers_count)
+      INSERT INTO profiles (id, display_name, handle, avatar_url)
       VALUES (
         ${input.userId},
-        ${input.displayName ?? handle},
+        ${displayName},
         ${handle},
-        ${input.avatarUrl ?? null},
-        ${input.followersCount ?? null}
+        ${input.avatarUrl ?? null}
       )
       ON CONFLICT (id) DO UPDATE SET
         display_name = COALESCE(EXCLUDED.display_name, profiles.display_name),
         handle = COALESCE(EXCLUDED.handle, profiles.handle),
-        avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url),
-        followers_count = COALESCE(EXCLUDED.followers_count, profiles.followers_count)
+        avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url)
     `;
   } catch (error) {
-    // Older schemas may lack avatar_url / followers_count — fall back to handle only.
-    console.warn('[social_accounts] profiles upsert (full) failed, trying handle', error);
+    console.warn(
+      '[social_accounts] profiles upsert (core) failed, trying minimal',
+      error
+    );
+    try {
+      await sql`
+        INSERT INTO profiles (id, display_name, handle)
+        VALUES (${input.userId}, ${displayName}, ${handle})
+        ON CONFLICT (id) DO UPDATE SET
+          display_name = COALESCE(EXCLUDED.display_name, profiles.display_name),
+          handle = COALESCE(EXCLUDED.handle, profiles.handle)
+      `;
+    } catch {
+      try {
+        await sql`
+          UPDATE profiles
+          SET
+            handle = COALESCE(${handle}, handle),
+            display_name = COALESCE(${displayName}, display_name)
+          WHERE id = ${input.userId}
+        `;
+      } catch (fallbackError) {
+        console.warn(
+          '[social_accounts] profiles upsert skipped',
+          fallbackError
+        );
+        return;
+      }
+    }
+  }
+
+  // 2) Optional followers_count — omit entirely if column is missing.
+  if (
+    typeof input.followersCount === 'number' &&
+    Number.isFinite(input.followersCount)
+  ) {
     try {
       await sql`
         UPDATE profiles
-        SET
-          handle = COALESCE(${handle}, handle),
-          display_name = COALESCE(${input.displayName ?? handle}, display_name)
+        SET followers_count = ${input.followersCount}
         WHERE id = ${input.userId}
       `;
-    } catch (fallbackError) {
-      console.warn('[social_accounts] profiles upsert skipped', fallbackError);
+    } catch (followersError) {
+      console.warn(
+        '[social_accounts] profiles.followers_count skipped (column missing?)',
+        followersError
+      );
     }
   }
 }
@@ -405,14 +442,27 @@ export async function listMetaSocialAccountsForUser(
   }
 
   try {
-    const rows = await sql`
-      SELECT platform, platform_user_id, handle, display_name, platform_user_name,
-             avatar_url, page_name, connected_at, created_at, followers_count, meta
-      FROM social_accounts
-      WHERE user_id = ${userId}
-        AND platform IN ('instagram', 'facebook')
-      ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
-    `;
+    let rows: unknown;
+    try {
+      rows = await sql`
+        SELECT platform, platform_user_id, handle, display_name, platform_user_name,
+               avatar_url, page_name, connected_at, created_at, followers_count, meta
+        FROM social_accounts
+        WHERE user_id = ${userId}
+          AND platform IN ('instagram', 'facebook')
+        ORDER BY platform ASC, id DESC
+      `;
+    } catch {
+      // Older schemas may lack followers_count / connected_at — omit them.
+      rows = await sql`
+        SELECT platform, platform_user_id, handle, display_name, platform_user_name,
+               avatar_url, page_name, meta
+        FROM social_accounts
+        WHERE user_id = ${userId}
+          AND platform IN ('instagram', 'facebook')
+        ORDER BY platform ASC, id DESC
+      `;
+    }
     if (!Array.isArray(rows) || rows.length === 0) {
       return (demoByUser.get(userId) ?? []).map(toConnected);
     }

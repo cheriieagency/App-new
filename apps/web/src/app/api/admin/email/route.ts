@@ -187,18 +187,34 @@ export async function POST(request: Request) {
 
     if (action === 'upsert_automation') {
       const trigger = String(body.trigger ?? 'community_join') as EmailAutomationTrigger;
+      const name = String(body.name ?? '').trim();
+      const subject = String(body.subject ?? '').trim();
+      const bodyText = String(body.body ?? '').trim();
+      if (!name || !subject || !bodyText) {
+        return Response.json(
+          { error: 'name, subject, and body are required' },
+          { status: 400 }
+        );
+      }
+      const parsedCommunity = Number(body.community_id);
+      const communityId =
+        body.community_id != null &&
+        body.community_id !== '' &&
+        Number.isFinite(parsedCommunity) &&
+        parsedCommunity > 0
+          ? parsedCommunity
+          : null;
+
       const automation = await upsertPersistedAutomation(session.user.id, {
         id: body.id ? String(body.id) : undefined,
-        name: String(body.name ?? ''),
-        description: body.description != null ? String(body.description) : undefined,
+        name,
+        description:
+          body.description != null ? String(body.description) : undefined,
         trigger,
-        subject: String(body.subject ?? ''),
-        body: String(body.body ?? ''),
+        subject,
+        body: bodyText,
         status: body.status === 'paused' ? 'paused' : 'active',
-        community_id:
-          body.community_id != null && body.community_id !== ''
-            ? Number(body.community_id)
-            : null,
+        community_id: communityId,
       });
       return Response.json({
         success: true,

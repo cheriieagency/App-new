@@ -56,6 +56,7 @@ import UpgradeModal from '@/components/common/UpgradeModal';
 import { PlanLockBadge } from '@/components/common/FeatureGate';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
+import { toast } from 'sonner';
 
 type EmailResponse = {
   total_subscribers: number;
@@ -394,29 +395,64 @@ export default function EmailAdminPanel() {
 
   const upsertAutomation = useMutation({
     mutationFn: async () => {
+      const name = autoName.trim();
+      const subject = autoSubject.trim();
+      const bodyText = autoBody.trim();
+      if (!name || !subject || !bodyText) {
+        throw new Error('Name, subject, and body are required');
+      }
+      const communityId =
+        Number.isFinite(Number(workspaceCommunityId)) &&
+        Number(workspaceCommunityId) > 0
+          ? Number(workspaceCommunityId)
+          : null;
+
       const r = await fetch('/api/admin/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'upsert_automation',
           id: editingAutomationId ?? undefined,
-          name: autoName,
-          description: autoDescription,
+          name,
+          description: autoDescription.trim(),
           trigger: autoTrigger,
-          subject: autoSubject,
-          body: autoBody,
+          subject,
+          body: bodyText,
           status: autoStatus,
-          community_id: workspaceCommunityId,
+          community_id: communityId,
+          workspaceId: activeWorkspace.id,
         }),
       });
-      if (!r.ok) throw new Error('Failed');
-      return r.json();
+      const payload = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        throw new Error(
+          typeof payload.error === 'string'
+            ? payload.error
+            : typeof payload.message === 'string'
+              ? payload.message
+              : 'Failed to save automation'
+        );
+      }
+      return payload as { success?: boolean; automation?: EmailAutomation };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-email'] });
+    onSuccess: async (payload) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin-email'] });
       setAutomationEditorOpen(false);
+      setEditingAutomationId(null);
+      const savedName = payload.automation?.name || autoName.trim();
+      toast.success(t('automationSaved', locale), {
+        description: savedName,
+      });
       setFlash(t('automationSaved', locale));
       setTimeout(() => setFlash(''), 2200);
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof Error ? err.message : 'Failed to save automation';
+      toast.error(msg);
+      setFlash(msg);
+      setTimeout(() => setFlash(''), 4500);
     },
   });
 
@@ -871,7 +907,12 @@ export default function EmailAdminPanel() {
               </div>
             </div>
 
-            <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0">
+            <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0 space-y-2">
+              {flash && upsertAutomation.isError ? (
+                <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                  {flash}
+                </p>
+              ) : null}
               <button
                 type="button"
                 disabled={
@@ -888,7 +929,9 @@ export default function EmailAdminPanel() {
                 ) : (
                   <CheckCircle2 size={14} />
                 )}
-                {t('saveAutomation', locale)}
+                {upsertAutomation.isPending
+                  ? t('loading', locale)
+                  : t('saveAutomation', locale)}
               </button>
             </div>
           </div>
