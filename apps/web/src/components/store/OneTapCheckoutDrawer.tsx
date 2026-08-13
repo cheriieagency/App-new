@@ -254,6 +254,7 @@ export default function OneTapCheckoutDrawer({
               method,
               productType: product.type,
               kind: product.kind,
+              google_calendar_enabled: product.google_calendar_enabled !== false,
             },
           }),
         });

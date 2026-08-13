@@ -49,6 +49,8 @@ export type StoreProduct = {
   require_custom_fields?: boolean;
   grants_community_access?: boolean;
   access_community_id?: number | null;
+  /** Bio coaching: create Google Calendar + Meet on purchase */
+  google_calendar_enabled?: boolean;
 };
 
 export type { CollectField, OrderBump, BillingInterval, OfferFulfillment };

@@ -64,6 +64,7 @@ import {
 } from '@/lib/bio-sales';
 import { syncWorkspaceBioAnalytics } from '@/lib/mock-workspace-profiles';
 import RevenueAnalyticsPanel from '@/components/admin/analytics/RevenueAnalyticsPanel';
+import MonthlyReportEngine from '@/components/admin/analytics/MonthlyReportEngine';
 
 const PLATFORM_LABEL: Record<string, string> = {
   instagram: 'Instagram',
@@ -135,7 +136,8 @@ type AnalyticsSubTab =
   | 'reels'
   | 'stories'
   | 'hashtags'
-  | 'linkinbio';
+  | 'linkinbio'
+  | 'monthly';
 
 type PostPerfRow = {
   id: string;
@@ -555,6 +557,7 @@ export default function LaterAnalyticsPanel() {
     { key: 'hashtags', label: t('analyticsHashtags', locale), icon: Hash },
     { key: 'overview', label: t('analyticsOverview', locale), icon: BarChart3 },
     { key: 'linkinbio', label: t('analyticsLinkinBio', locale), icon: Link2 },
+    { key: 'monthly', label: 'Monthly Reports', icon: CalendarDays },
   ];
 
   const activeTabLabel =
@@ -625,7 +628,8 @@ export default function LaterAnalyticsPanel() {
     t('colStatus', locale),
   ];
 
-  const isBioCommerceTab = sub === 'overview' || sub === 'linkinbio';
+  const isBioCommerceTab =
+    sub === 'overview' || sub === 'linkinbio' || sub === 'monthly';
 
   // Social tabs need connected APIs; Revenue + Link in bio come from Bio Builder sales.
   if (!socialsLoading && !hasConnectedSocials && !isBioCommerceTab) {
@@ -881,6 +885,8 @@ export default function LaterAnalyticsPanel() {
       )}
 
       {sub === 'overview' && <RevenueAnalyticsPanel />}
+
+      {sub === 'monthly' && <MonthlyReportEngine />}
 
       {sub === 'audience' && (
         <AudienceInsights

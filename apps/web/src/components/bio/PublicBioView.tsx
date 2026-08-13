@@ -64,6 +64,10 @@ function bioBlockAsCheckoutProduct(block: WorkspaceBioBlock): StoreProduct {
     order_bump: null,
     grants_community_access: block.grants_community_access === true,
     access_community_id: block.access_community_id ?? null,
+    google_calendar_enabled:
+      block.type === 'coaching'
+        ? block.google_calendar_enabled !== false
+        : block.google_calendar_enabled === true,
   };
 }
 

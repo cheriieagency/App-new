@@ -107,14 +107,19 @@ export function looksLikeCoachingProduct(input: {
   productType?: string | null;
   metadata?: Record<string, unknown> | null;
 }): boolean {
+  const meta = input.metadata || {};
+  // Explicit opt-out from Bio Builder coaching block.
+  if (meta.google_calendar_enabled === false) return false;
+
   const title = (input.productTitle || '').toLowerCase();
   const type = (input.productType || '').toLowerCase();
-  const metaType = String(input.metadata?.productType || input.metadata?.type || '').toLowerCase();
+  const metaType = String(meta.productType || meta.type || '').toLowerCase();
   if (
     type === 'coaching' ||
     metaType === 'coaching' ||
     type === 'service' ||
-    metaType === 'strategy'
+    metaType === 'strategy' ||
+    meta.google_calendar_enabled === true
   ) {
     return true;
   }

@@ -30,6 +30,8 @@ export type WorkspaceBioBlock = {
   /** When true, purchase unlocks membership in access_community_id. */
   grants_community_access?: boolean;
   access_community_id?: number | null;
+  /** Coaching / 1:1 — create Google Calendar + Meet on purchase. */
+  google_calendar_enabled?: boolean;
 };
 
 export type WorkspaceBioData = {

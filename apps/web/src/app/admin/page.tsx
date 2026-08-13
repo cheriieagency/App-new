@@ -106,6 +106,7 @@ import {
   type BioTheme,
 } from '@/lib/bio-theme';
 import BioBuilderDesignTab from '@/components/admin/BioBuilderDesignTab';
+import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
 import {
   SOCIAL_BRAND_ICONS,
   type SocialBrandId,
@@ -182,6 +183,8 @@ interface BioBlock {
   grants_community_access?: boolean;
   /** Target community when grants_community_access is true. */
   access_community_id?: number | null;
+  /** Coaching: auto-create Google Calendar + Meet on checkout. */
+  google_calendar_enabled?: boolean;
 }
 
 function parsePriceInput(value: string): number | null {
@@ -452,6 +455,10 @@ function normalizeBioBlock(block: Partial<BioBlock> & { id: string }): BioBlock 
       typeof block.access_community_id === 'number' && Number.isFinite(block.access_community_id)
         ? block.access_community_id
         : null,
+    google_calendar_enabled:
+      block.type === 'coaching'
+        ? block.google_calendar_enabled !== false
+        : block.google_calendar_enabled === true,
   };
 }
 
@@ -930,6 +937,110 @@ function MobilePreview({
   );
 }
 
+/** Coaching block: toggle Google Calendar / Meet booking + connect CTA. */
+function CoachingGoogleCalendarControls({
+  enabled,
+  onChange,
+}: {
+  enabled: boolean;
+  onChange: (enabled: boolean) => void;
+}) {
+  const { activeWorkspace } = useWorkspace();
+  const workspaceId = activeWorkspace?.id;
+  const { data: status } = useQuery({
+    queryKey: ['google-status', workspaceId],
+    queryFn: async () => {
+      const qs = workspaceId
+        ? `?workspaceId=${encodeURIComponent(workspaceId)}`
+        : '';
+      const r = await fetch(`/api/admin/google/status${qs}`);
+      if (!r.ok) throw new Error('status failed');
+      return r.json() as Promise<{ connected: boolean; email: string | null }>;
+    },
+    enabled: Boolean(workspaceId),
+  });
+  const { data: health } = useQuery({
+    queryKey: ['google-health'],
+    queryFn: async () => {
+      const r = await fetch('/api/admin/google/health');
+      if (!r.ok) throw new Error('health failed');
+      return r.json() as Promise<{
+        oauthReady: boolean;
+        issues: string[];
+        hint: string;
+      }>;
+    },
+  });
+
+  const connected = Boolean(status?.connected);
+  const connectUrl = workspaceId
+    ? `/api/auth/google/login?workspaceId=${encodeURIComponent(workspaceId)}`
+    : '/api/auth/google/login';
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-2.5 space-y-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-600 inline-flex items-center gap-1.5">
+            <CalendarDays size={12} className="text-[#F472B6]" />
+            Google Calendar & Meet
+          </p>
+          <p className="text-[10px] text-slate-400 font-medium leading-snug mt-0.5">
+            Auto-create a Meet link when someone buys this 1:1 session.
+          </p>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => onChange(false)}
+            className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[10px] font-bold border transition-colors ${
+              !enabled
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Off
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(true)}
+            className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[10px] font-bold border transition-colors ${
+              enabled
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            On
+          </button>
+        </div>
+      </div>
+      {enabled && !connected && (
+        <div className="rounded-lg border border-[#E9D5FF] bg-[#FDF4FF] px-2.5 py-2 space-y-2">
+          <p className="text-[10px] font-semibold text-slate-700 leading-snug">
+            {health?.oauthReady === false
+              ? health.hint
+              : 'Connect Google to enable Calendar + Meet for this coaching block.'}
+          </p>
+          {health?.oauthReady !== false && (
+            <a
+              href={connectUrl}
+              className="inline-flex items-center justify-center h-10 min-h-[40px] w-full rounded-lg bg-[#2B2568] text-white text-[11px] font-extrabold"
+            >
+              Connect Google Calendar
+            </a>
+          )}
+        </div>
+      )}
+      {enabled && connected && (
+        <p className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-2 font-medium">
+          Connected ✓ {status?.email ? `· ${status.email}` : ''} — Meet links
+          send on purchase.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Bio drag block ─────────────────────────────────────────────────────────────
 function BioDragBlock({
   block,
@@ -1209,6 +1320,14 @@ function BioDragBlock({
                   </div>
                 )}
               </div>
+              {block.type === 'coaching' && (
+                <CoachingGoogleCalendarControls
+                  enabled={block.google_calendar_enabled !== false}
+                  onChange={(enabled) =>
+                    onUpdate(index, { google_calendar_enabled: enabled })
+                  }
+                />
+              )}
               <div className="flex gap-1.5 flex-wrap">
                 {['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6B7280', '#9b8afb'].map(
                   (c) => (
@@ -1232,6 +1351,12 @@ function BioDragBlock({
               {block.grants_community_access && accessCommunity && (
                 <p className="text-[9px] text-emerald-600 font-semibold truncate mt-0.5">
                   {t('unlocksLabel', locale)} · {accessCommunity.name}
+                </p>
+              )}
+              {block.type === 'coaching' && block.google_calendar_enabled !== false && (
+                <p className="text-[9px] text-[#2B2568] font-semibold truncate mt-0.5 inline-flex items-center gap-1">
+                  <CalendarDays size={10} className="text-[#F472B6]" />
+                  Google Calendar + Meet
                 </p>
               )}
               {isStore && block.destination_url && (
@@ -1481,7 +1606,7 @@ function AvatarUploader({
   );
 }
 
-// ── Social links editor ────────────────────────────────────────────────────────
+// ── Social links list (add via the single “Add Link / Product” drawer) ─────────
 function SocialLinksEditor({
   links,
   onChange,
@@ -1489,149 +1614,67 @@ function SocialLinksEditor({
   links: SocialLink[];
   onChange: (links: SocialLink[]) => void;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [newPlatform, setNewPlatform] = useState('instagram');
-  const [newUrl, setNewUrl] = useState('');
-  const handleAdd = () => {
-    if (!newUrl.trim()) return;
-    const platform = SOCIAL_PLATFORMS.find((p) => p.id === newPlatform);
-    let finalUrl = newUrl.trim();
-    if (platform && platform.prefix && !finalUrl.startsWith('http'))
-      finalUrl = platform.prefix + finalUrl.replace('@', '');
-    onChange([...links, { platform: newPlatform, url: finalUrl }]);
-    setNewUrl('');
-    setAdding(false);
-  };
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
           <GlobeIcon size={12} /> Social media links
         </h4>
-        {!adding && (
-          <button
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 h-7 px-3 rounded-xl bg-blue-100 text-blue-600 text-[11px] font-black hover:bg-blue-200 transition-colors"
-          >
-            <Plus size={11} /> Add link
-          </button>
-        )}
+        <span className="text-[10px] font-semibold text-slate-400">
+          Use Add Link / Product
+        </span>
       </div>
-      <div className="space-y-2 mb-3">
-        {links.length === 0 && !adding && (
-          <div className="text-center py-5 text-zinc-300">
-            <GlobeIcon size={20} className="mx-auto mb-1.5" />
-            <p className="text-xs font-bold">No social links yet</p>
-            <p className="text-[10px]">Add your first link</p>
+      <div className="space-y-2">
+        {links.length === 0 && (
+          <div className="text-center py-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 text-slate-400">
+            <GlobeIcon size={20} className="mx-auto mb-1.5 opacity-50" />
+            <p className="text-xs font-bold text-slate-500">No social links yet</p>
+            <p className="text-[10px] mt-0.5">
+              Open Add Link / Product → Social media
+            </p>
           </div>
         )}
         {links.map((link, i) => {
-          const plat = SOCIAL_PLATFORMS.find((p) => p.id === link.platform) ?? SOCIAL_PLATFORMS[6];
+          const plat =
+            SOCIAL_PLATFORMS.find((p) => p.id === link.platform) ?? SOCIAL_PLATFORMS[6];
           return (
             <div
-              key={i}
-              className="flex items-center gap-2 p-2 rounded-xl bg-zinc-50 border border-zinc-100 group"
+              key={`${link.platform}-${i}`}
+              className="flex items-center gap-2 p-2.5 min-h-[44px] rounded-xl bg-slate-50 border border-slate-100 group"
             >
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ background: `${plat.color}15`, color: plat.color }}
               >
                 <SocialPlatformIcon id={plat.id} size={14} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-wider mb-0.5">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-0.5">
                   {plat.label}
                 </p>
                 <input
                   value={link.url}
                   onChange={(e) =>
-                    onChange(links.map((l, idx) => (idx === i ? { ...l, url: e.target.value } : l)))
+                    onChange(
+                      links.map((l, idx) => (idx === i ? { ...l, url: e.target.value } : l))
+                    )
                   }
-                  className="w-full text-xs text-zinc-700 bg-transparent focus:outline-none truncate"
+                  className="w-full text-xs text-slate-700 bg-transparent focus:outline-none truncate"
                   placeholder="https://..."
                 />
               </div>
               <button
+                type="button"
                 onClick={() => onChange(links.filter((_, idx) => idx !== i))}
-                className="w-6 h-6 rounded-lg bg-red-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-lg bg-red-50 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
+                aria-label="Remove social link"
               >
-                <X size={10} className="text-red-400" />
+                <X size={12} className="text-red-400" />
               </button>
             </div>
           );
         })}
       </div>
-      {adding && (
-        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 space-y-3">
-          <div>
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-              Choose platform
-            </label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {SOCIAL_PLATFORMS.map((p) => {
-                const active = newPlatform === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setNewPlatform(p.id)}
-                    className={`flex flex-col items-center gap-1.5 p-2.5 min-h-[44px] rounded-xl border text-center transition-all ${
-                      active
-                        ? 'border-[var(--nc-coral)] bg-white shadow-sm'
-                        : 'border-zinc-200 bg-white hover:border-zinc-300'
-                    }`}
-                  >
-                    <span
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: `${p.color}14`, color: p.color }}
-                    >
-                      <SocialPlatformIcon id={p.id} size={16} />
-                    </span>
-                    <span className="text-[9px] font-bold text-zinc-600 leading-tight">
-                      {p.label.split(' ')[0]}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
-              URL or username
-            </label>
-            <input
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-              placeholder={
-                SOCIAL_PLATFORMS.find((p) => p.id === newPlatform)?.prefix ?? 'https://...'
-              }
-              className="w-full h-9 rounded-xl border border-zinc-200 bg-white px-3 text-xs font-medium focus:outline-none focus:border-indigo-300"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAdd();
-                if (e.key === 'Escape') setAdding(false);
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleAdd}
-              disabled={!newUrl.trim()}
-              className="flex-1 h-9 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-extrabold disabled:opacity-40 transition-all flex items-center justify-center gap-1.5"
-            >
-              <Plus size={12} /> Add
-            </button>
-            <button
-              onClick={() => {
-                setAdding(false);
-                setNewUrl('');
-              }}
-              className="h-9 px-4 rounded-xl border border-zinc-200 text-xs font-bold text-zinc-500 hover:bg-zinc-50 transition-colors"
-            >
-              Avbryt
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1832,8 +1875,9 @@ export default function AdminPage() {
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [publishDialogFirst, setPublishDialogFirst] = useState(false);
   const [publishDialogHandle, setPublishDialogHandle] = useState('creator');
-  const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [drawerSocialPlatform, setDrawerSocialPlatform] = useState('instagram');
+  const [drawerSocialUrl, setDrawerSocialUrl] = useState('');
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   // Creator communities available for product → membership unlock.
   const bioCommunities = useMemo(() => listManagedCommunities(), []);
@@ -1945,9 +1989,26 @@ export default function AdminPage() {
         emoji: def.emoji,
         color: def.color,
         visible: true,
+        google_calendar_enabled: type === 'coaching',
       },
     ]);
-    setAddBlockOpen(false);
+    setAddDrawerOpen(false);
+  };
+
+  const addSocialLinkFromDrawer = () => {
+    if (!drawerSocialUrl.trim()) return;
+    const platform = SOCIAL_PLATFORMS.find((p) => p.id === drawerSocialPlatform);
+    let finalUrl = drawerSocialUrl.trim();
+    if (platform?.prefix && !finalUrl.startsWith('http')) {
+      finalUrl = platform.prefix + finalUrl.replace('@', '');
+    }
+    setSocialLinks((prev) => [
+      ...prev,
+      { platform: drawerSocialPlatform, url: finalUrl },
+    ]);
+    setDrawerSocialUrl('');
+    setDrawerSocialPlatform('instagram');
+    setAddDrawerOpen(false);
   };
 
   const addStoreProduct = () => {
@@ -3264,7 +3325,7 @@ export default function AdminPage() {
                       onClick={() => setBioSubTab(key)}
                       className={`relative h-11 min-h-[44px] px-4 text-xs whitespace-nowrap transition-colors border-b-2 ${
                         active
-                          ? 'border-indigo-600 text-indigo-600 font-bold'
+                          ? 'border-[#F472B6] text-[#2B2568] font-bold'
                           : 'border-transparent text-slate-400 font-semibold hover:text-slate-700'
                       }`}
                     >
@@ -3284,120 +3345,204 @@ export default function AdminPage() {
               <div className={`${bioSubTab === 'design' ? 'lg:col-span-8' : 'lg:col-span-7'} space-y-4`}>
                 {bioSubTab === 'blocks' && (
                   <>
-                    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 space-y-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                      <div className="flex items-center justify-between gap-2">
+                    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 space-y-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
                           <h3 className="text-sm font-black text-slate-900">
                             {t('activeBlocksTitle', locale)}
                           </h3>
-                          <p className="text-xs text-slate-500">{t('activeBlocksSub', locale)}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {t('activeBlocksSub', locale)}
+                          </p>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setAddDrawerOpen(true)}
-                          className="h-11 min-h-[44px] px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-extrabold inline-flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
+                          onClick={() => {
+                            setDrawerSocialUrl('');
+                            setAddDrawerOpen(true);
+                          }}
+                          className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 hover:bg-[#1a1848] transition-colors self-start sm:self-auto"
                         >
-                          <Plus size={13} /> {t('addLinkOrProduct', locale)}
+                          <Plus size={14} /> {t('addLinkOrProduct', locale)}
                         </button>
                       </div>
 
                       <SocialLinksEditor links={socialLinks} onChange={setSocialLinks} />
 
-                      <p className="font-bold text-xs text-slate-900 uppercase tracking-wider">
-                        {t('linksAndLeadMagnets', locale)}
-                      </p>
-                      <div className="space-y-2" onDragEnd={handleDrop}>
-                        {blocks.map((block, i) =>
-                          block.category === 'store' ? null : (
-                            <BioDragBlock
-                              key={block.id}
-                              block={block}
-                              index={i}
-                              dragging={dragIndex}
-                              handle={bioHandle}
-                              communities={bioCommunities}
-                              onDragStart={handleDragStart}
-                              onDragOver={handleDragOver}
-                              onDrop={handleDrop}
-                              onUpdate={updateBlock}
-                              onDelete={deleteBlock}
-                              onToggle={toggleBlock}
-                            />
-                          )
+                      <div>
+                        <p className="font-bold text-[10px] text-slate-400 uppercase tracking-[0.14em] mb-2">
+                          {t('linksAndLeadMagnets', locale)}
+                        </p>
+                        <div className="space-y-2" onDragEnd={handleDrop}>
+                          {blocks.map((block, i) =>
+                            block.category === 'store' ? null : (
+                              <BioDragBlock
+                                key={block.id}
+                                block={block}
+                                index={i}
+                                dragging={dragIndex}
+                                handle={bioHandle}
+                                communities={bioCommunities}
+                                onDragStart={handleDragStart}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                                onUpdate={updateBlock}
+                                onDelete={deleteBlock}
+                                onToggle={toggleBlock}
+                              />
+                            )
+                          )}
+                        </div>
+                        {blocks.filter((b) => b.category !== 'store').length === 0 && (
+                          <p className="text-sm font-bold text-zinc-400 text-center py-6">
+                            {t('noLinksYet', locale)}
+                          </p>
                         )}
                       </div>
-                      {blocks.filter((b) => b.category !== 'store').length === 0 && (
-                        <p className="text-sm font-bold text-zinc-400 text-center py-6">
-                          {t('noLinksYet', locale)}
-                        </p>
-                      )}
 
-                      <p className="font-bold text-xs text-slate-900 uppercase tracking-wider pt-2">
-                        {t('storeProductsTitle', locale)}
-                      </p>
-                      <div className="space-y-2" onDragEnd={handleDrop}>
-                        {blocks.map((block, i) =>
-                          block.category === 'store' ? (
-                            <BioDragBlock
-                              key={block.id}
-                              block={block}
-                              index={i}
-                              dragging={dragIndex}
-                              handle={bioHandle}
-                              communities={bioCommunities}
-                              onDragStart={handleDragStart}
-                              onDragOver={handleDragOver}
-                              onDrop={handleDrop}
-                              onUpdate={updateBlock}
-                              onDelete={deleteBlock}
-                              onToggle={toggleBlock}
-                            />
-                          ) : null
+                      <div>
+                        <p className="font-bold text-[10px] text-slate-400 uppercase tracking-[0.14em] mb-2">
+                          {t('storeProductsTitle', locale)}
+                        </p>
+                        <div className="space-y-2" onDragEnd={handleDrop}>
+                          {blocks.map((block, i) =>
+                            block.category === 'store' ? (
+                              <BioDragBlock
+                                key={block.id}
+                                block={block}
+                                index={i}
+                                dragging={dragIndex}
+                                handle={bioHandle}
+                                communities={bioCommunities}
+                                onDragStart={handleDragStart}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                                onUpdate={updateBlock}
+                                onDelete={deleteBlock}
+                                onToggle={toggleBlock}
+                              />
+                            ) : null
+                          )}
+                        </div>
+                        {blocks.filter((b) => b.category === 'store').length === 0 && (
+                          <p className="text-sm font-bold text-zinc-400 text-center py-6">
+                            {t('noStoreProductsYet', locale)}
+                          </p>
                         )}
                       </div>
-                      {blocks.filter((b) => b.category === 'store').length === 0 && (
-                        <p className="text-sm font-bold text-zinc-400 text-center py-6">
-                          {t('noStoreProductsYet', locale)}
-                        </p>
-                      )}
                     </div>
 
                     {addDrawerOpen && (
                       <>
-                        <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setAddDrawerOpen(false)} />
+                        <div
+                          className="fixed inset-0 bg-black/40 z-40"
+                          onClick={() => setAddDrawerOpen(false)}
+                        />
                         <div className="fixed right-0 top-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl p-5 overflow-y-auto">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-black text-[#1f2430]">
-                              {t('addLinkOrProduct', locale)}
-                            </h3>
-                            <button type="button" onClick={() => setAddDrawerOpen(false)} className="h-11 w-11 rounded-xl hover:bg-zinc-100 inline-flex items-center justify-center">
+                          <div className="flex items-center justify-between mb-5">
+                            <div>
+                              <h3 className="text-sm font-black text-slate-900">
+                                {t('addLinkOrProduct', locale)}
+                              </h3>
+                              <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                                Links, products, social & coaching
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setAddDrawerOpen(false)}
+                              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-slate-100 inline-flex items-center justify-center"
+                              aria-label="Close"
+                            >
                               <X size={16} />
                             </button>
                           </div>
-                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Links</p>
+
+                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+                            Links
+                          </p>
                           <div className="space-y-1 mb-5">
                             {LINK_BLOCK_TYPES.map((bt) => (
                               <button
                                 key={bt.type}
                                 type="button"
-                                onClick={() => {
-                                  addLinkBlock(bt.type);
-                                  setAddDrawerOpen(false);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-xs font-bold text-zinc-700 hover:bg-zinc-50 min-h-[44px] text-left"
+                                onClick={() => addLinkBlock(bt.type)}
+                                className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 min-h-[44px] text-left border border-transparent hover:border-slate-100"
                               >
-                                <span>{bt.emoji}</span> {bt.label}
+                                <span className="text-base w-6 text-center">{bt.emoji}</span>
+                                <span className="flex-1">{bt.label}</span>
+                                {bt.type === 'coaching' ? (
+                                  <span className="text-[9px] font-bold uppercase tracking-wide text-[#F472B6] bg-[#FDF2F8] px-1.5 py-0.5 rounded">
+                                    Calendar
+                                  </span>
+                                ) : null}
                               </button>
                             ))}
                           </div>
-                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">Products</p>
+
+                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+                            Social media
+                          </p>
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-3 mb-5">
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {SOCIAL_PLATFORMS.map((p) => {
+                                const active = drawerSocialPlatform === p.id;
+                                return (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => setDrawerSocialPlatform(p.id)}
+                                    className={`flex flex-col items-center gap-1 p-2 min-h-[44px] rounded-xl border text-center transition-all ${
+                                      active
+                                        ? 'border-[#F472B6] bg-white shadow-sm'
+                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                    }`}
+                                  >
+                                    <span
+                                      className="w-7 h-7 rounded-lg flex items-center justify-center"
+                                      style={{ background: `${p.color}14`, color: p.color }}
+                                    >
+                                      <SocialPlatformIcon id={p.id} size={14} />
+                                    </span>
+                                    <span className="text-[9px] font-bold text-slate-600 leading-tight">
+                                      {p.label.split(' ')[0]}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <input
+                              value={drawerSocialUrl}
+                              onChange={(e) => setDrawerSocialUrl(e.target.value)}
+                              placeholder={
+                                SOCIAL_PLATFORMS.find((p) => p.id === drawerSocialPlatform)
+                                  ?.prefix ?? 'https://...'
+                              }
+                              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium focus:outline-none focus:border-[#F472B6]"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') addSocialLinkFromDrawer();
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={addSocialLinkFromDrawer}
+                              disabled={!drawerSocialUrl.trim()}
+                              className="w-full h-11 min-h-[44px] rounded-xl bg-[#F472B6] text-white text-xs font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-1.5"
+                            >
+                              <Plus size={13} /> Add social link
+                            </button>
+                          </div>
+
+                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+                            Products
+                          </p>
                           <button
                             type="button"
                             onClick={() => {
                               addStoreProduct();
                               setAddDrawerOpen(false);
                             }}
-                            className="w-full h-11 min-h-[44px] rounded-xl bg-[#1f2430] text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5"
+                            className="w-full h-11 min-h-[44px] rounded-xl bg-[#2B2568] text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5"
                           >
                             <ShoppingBag size={13} /> Add Product
                           </button>
@@ -3497,6 +3642,16 @@ export default function AdminPage() {
                           className="rounded-xl border-zinc-200 resize-none min-h-[60px] text-sm"
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-black text-slate-900 px-0.5">
+                        Booking integrations
+                      </h3>
+                      <p className="text-xs text-slate-500 px-0.5 mb-1">
+                        Connect Google so 1:1 Coaching blocks can create Calendar events + Meet links on purchase.
+                      </p>
+                      <GoogleIntegrationCard />
                     </div>
                   </div>
                 )}

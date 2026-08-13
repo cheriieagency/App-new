@@ -106,7 +106,18 @@ export const googleEnv = {
   clientSecret: () => readEnv('GOOGLE_CLIENT_SECRET'),
   /** Optional — enables official Google Picker UI when set */
   pickerApiKey: () =>
-    readEnv('NEXT_PUBLIC_GOOGLE_API_KEY') || readEnv('GOOGLE_API_KEY'),
+    readEnv('NEXT_PUBLIC_GOOGLE_API_KEY') ||
+    readEnv('GOOGLE_API_KEY') ||
+    readEnv('GOOGLE_DRIVE_API_KEY') ||
+    readEnv('GOOGLE_CALENDAR_API_KEY'),
+  driveApiKey: () =>
+    readEnv('GOOGLE_DRIVE_API_KEY') ||
+    readEnv('NEXT_PUBLIC_GOOGLE_API_KEY') ||
+    readEnv('GOOGLE_API_KEY'),
+  calendarApiKey: () =>
+    readEnv('GOOGLE_CALENDAR_API_KEY') ||
+    readEnv('NEXT_PUBLIC_GOOGLE_API_KEY') ||
+    readEnv('GOOGLE_API_KEY'),
   oauthRequiredKeys: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const,
 };
 
@@ -191,6 +202,12 @@ export const vercelEnv = {
   requiredKeys: ['VERCEL_AUTH_BEARER_TOKEN', 'VERCEL_PROJECT_ID'] as const,
 };
 
+/** Vercel Cron / scheduled jobs — Authorization: Bearer ${CRON_SECRET} */
+export const cronEnv = {
+  secret: () => readEnv('CRON_SECRET'),
+  requiredKeys: ['CRON_SECRET'] as const,
+};
+
 /** Aggregated export — prefer named groups above when importing. */
 export const env = {
   openai: openaiEnv,
@@ -204,4 +221,5 @@ export const env = {
   database: databaseEnv,
   resend: resendEnv,
   vercel: vercelEnv,
+  cron: cronEnv,
 } as const;
