@@ -88,7 +88,8 @@ function mapRule(row: Record<string, unknown>) {
   }
 
   return {
-    id: Number(row.id),
+    // Keep as string — live DB uses uuid; Number(uuid) → NaN.
+    id: String(row.id ?? ''),
     workspaceId: String(row.workspace_id ?? ''),
     title: String(row.title || 'New DM Automation'),
     triggerKeywords,
@@ -310,8 +311,11 @@ export async function POST(request: Request) {
 
     const idRaw = body.id ?? body.automationId;
     const id =
-      idRaw != null && String(idRaw).trim() !== ''
-        ? Number(idRaw)
+      idRaw != null &&
+      String(idRaw).trim() !== '' &&
+      String(idRaw).trim() !== 'NaN' &&
+      String(idRaw).trim() !== 'undefined'
+        ? String(idRaw).trim()
         : null;
 
     // Serialize keywords for pg text[] via JSON → array cast (safe for Pool.query).
@@ -325,7 +329,7 @@ export async function POST(request: Request) {
 
     let rows: Record<string, unknown>[] = [];
 
-    if (id != null && !Number.isNaN(id)) {
+    if (id) {
       rows = await updateAutomationRow({
         id,
         workspaceId,
@@ -531,7 +535,7 @@ async function insertAutomationRow(input: {
 }
 
 async function updateAutomationRow(input: {
-  id: number;
+  id: string;
   workspaceId: string;
   title: string;
   keywordsJson: string;
@@ -678,75 +682,64 @@ export async function DELETE(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    let idRaw: string | null = searchParams.get('id');
-    // workspaceId is optional — kept only for logging / soft scoping.
-    let workspaceId: string | null =
-      searchParams.get('workspaceId') ||
-      searchParams.get('workspace_id') ||
-      null;
+    let id = searchParams.get('id');
 
-    // DELETE bodies are often empty — never require JSON.
-    if (!idRaw) {
+    // HTTP DELETE usually has no body — parse JSON only as a fallback.
+    if (!id) {
       try {
         const body = (await request.json()) as {
           id?: unknown;
           automationId?: unknown;
-          workspaceId?: unknown;
-          workspace_id?: unknown;
         };
-        idRaw =
-          body.id != null
+        id =
+          body?.id != null
             ? String(body.id)
-            : body.automationId != null
+            : body?.automationId != null
               ? String(body.automationId)
               : null;
-        workspaceId =
-          workspaceId ||
-          (body.workspaceId != null ? String(body.workspaceId) : null) ||
-          (body.workspace_id != null ? String(body.workspace_id) : null);
       } catch {
-        /* no body — ignore */
+        // Request body was empty
       }
     }
 
-    if (!workspaceId) {
-      workspaceId = await resolveWorkspaceId(request, null);
-    }
-
-    const id = Number(idRaw);
-    if (!idRaw || Number.isNaN(id) || id <= 0) {
+    // Guard against Number(uuid) → 'NaN' from older clients.
+    if (
+      !id ||
+      typeof id !== 'string' ||
+      id === 'NaN' ||
+      id === 'undefined' ||
+      !id.trim()
+    ) {
       return NextResponse.json(
-        { error: 'id is required', success: false },
+        { error: 'Valid UUID id is required' },
         { status: 400 }
       );
     }
 
+    const ruleId = id.trim();
+
     if (!process.env.DATABASE_URL?.trim()) {
       return NextResponse.json(
-        { error: 'DATABASE_URL required', success: false },
+        { error: 'DATABASE_URL required' },
         { status: 503 }
       );
     }
 
     try {
       await ensureDmAutomationsSchema();
-    } catch (schemaErr) {
-      console.warn('[DELETE automations] schema ensure', schemaErr);
+    } catch {
+      /* best-effort */
     }
 
-    // Primary path: delete by unique rule id only (workspaceId not required).
-    let deleted: Record<string, unknown>[] = [];
+    // Delete by raw string id (uuid or text) — never Number()/parseInt.
     try {
-      deleted = (await sql`
+      await sql`
         DELETE FROM public.dm_automations
-        WHERE id = ${id}
-        RETURNING id, workspace_id
-      `) as Record<string, unknown>[];
+        WHERE id = ${ruleId}
+      `;
     } catch (dbErr) {
-      console.error('[DELETE automations] sql', dbErr);
       return NextResponse.json(
         {
-          success: false,
           error:
             dbErr instanceof Error ? dbErr.message : 'Failed to delete rule',
         },
@@ -754,21 +747,14 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Soft success when already deleted.
-    return NextResponse.json({
-      success: true,
-      deletedId: id,
-      deleted: id,
-      workspaceId: deleted?.[0]?.workspace_id
-        ? String(deleted[0].workspace_id)
-        : workspaceId,
-    });
-  } catch (err) {
-    console.error('[DELETE /api/admin/inbox/automations]', err);
+    return NextResponse.json(
+      { success: true, deletedId: ruleId },
+      { status: 200 }
+    );
+  } catch (err: unknown) {
     return NextResponse.json(
       {
-        success: false,
-        error: err instanceof Error ? err.message : 'Delete failed',
+        error: err instanceof Error ? err.message : 'Server error',
       },
       { status: 500 }
     );

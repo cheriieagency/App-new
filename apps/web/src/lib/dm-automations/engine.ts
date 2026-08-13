@@ -23,7 +23,7 @@ export type IncomingCommentEvent = {
 };
 
 export type DmAutomationRow = {
-  id: number;
+  id: string;
   workspace_id: string;
   title: string;
   trigger_keywords: string[];
@@ -169,7 +169,7 @@ async function loadActiveRules(workspaceId: string): Promise<DmAutomationRow[]> 
     ORDER BY id DESC
   `;
   return (Array.isArray(rows) ? rows : []).map((r) => ({
-    id: Number(r.id),
+    id: String(r.id),
     workspace_id: String(r.workspace_id),
     title: String(r.title || 'Rule'),
     trigger_keywords: Array.isArray(r.trigger_keywords)
@@ -201,7 +201,7 @@ export async function processCommentAutomationEvent(
 ): Promise<{
   matched: boolean;
   sent: boolean;
-  automationId?: number;
+  automationId?: string;
   error?: string;
 }> {
   if (!process.env.DATABASE_URL?.trim()) {
@@ -277,29 +277,50 @@ export async function processCommentAutomationEvent(
   }
 
   const token = account.pageAccessToken || account.accessToken;
-  const endpointId = account.pageId || account.igUserId;
+  // Prefer IG user id for /{ig-user-id}/messages private replies.
+  const endpointCandidates = [
+    account.igUserId,
+    account.pageId,
+  ].filter((v): v is string => Boolean(v && String(v).trim()));
 
   let dmMessageId: string | null = null;
   try {
-    // 1) Private reply via comment_id (canonical Comment-to-DM).
-    try {
-      const priv = await sendInstagramPrivateReply({
-        igOrPageId: endpointId,
-        accessToken: token,
-        commentId: event.commentId,
-        message: dmBody,
-      });
-      dmMessageId = priv.id;
-    } catch (privErr) {
-      console.warn('[dm-automations] private reply failed, trying user DM', privErr);
-      // 2) Fallback: recipient scoped id as specified in the product prompt.
-      const userDm = await sendInstagramDmToUser({
-        igUserId: account.igUserId,
-        accessToken: token,
-        recipientId: event.commenterId,
-        message: dmBody,
-      });
-      dmMessageId = userDm.id;
+    // CRITICAL: private reply MUST use recipient.comment_id (not from.id).
+    let lastPrivError: unknown = null;
+    for (const endpointId of endpointCandidates) {
+      try {
+        const priv = await sendInstagramPrivateReply({
+          igOrPageId: endpointId,
+          accessToken: token,
+          commentId: event.commentId,
+          message: dmBody,
+        });
+        dmMessageId = priv.id;
+        lastPrivError = null;
+        break;
+      } catch (privErr) {
+        lastPrivError = privErr;
+        console.warn(
+          '[dm-automations] private reply failed for endpoint',
+          endpointId,
+          privErr
+        );
+      }
+    }
+
+    // Last resort only — may still fail outside 24h window.
+    if (!dmMessageId) {
+      try {
+        const userDm = await sendInstagramDmToUser({
+          igUserId: account.igUserId,
+          accessToken: token,
+          recipientId: event.commenterId,
+          message: dmBody,
+        });
+        dmMessageId = userDm.id;
+      } catch (userDmErr) {
+        throw lastPrivError || userDmErr;
+      }
     }
 
     if (matchedRule.reply_to_comment_publicly) {

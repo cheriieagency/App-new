@@ -875,33 +875,45 @@ export async function sendInstagramDm(input: {
 
 /**
  * Private Reply to an Instagram comment → opens a DM thread (Comment-to-DM).
- * Preferred over recipient.id for keyword automations (7-day comment window).
+ * CRITICAL: recipient MUST be `{ comment_id }` (not user id) to bypass the 24h window.
+ * Uses Graph API v21.0 as required for Instagram messaging private replies.
  */
 export async function sendInstagramPrivateReply(input: {
-  /** Page id or IG user id that owns the messaging endpoint. */
+  /** Instagram Business Account id (preferred) or linked Page id. */
   igOrPageId: string;
   accessToken: string;
   commentId: string;
   message: string;
 }): Promise<{ id: string }> {
-  const url = new URL(
-    `${GRAPH_BASE}/${encodeURIComponent(input.igOrPageId)}/messages`
-  );
-  const res = await fetch(url.toString(), {
+  const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
+    input.igOrPageId
+  )}/messages`;
+
+  const dispatchPayload = {
+    recipient: {
+      // MUST use comment_id — user id hits the 24h messaging window block.
+      comment_id: input.commentId,
+    },
+    message: {
+      text: input.message,
+    },
+  };
+
+  const res = await fetch(messagingUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      recipient: { comment_id: input.commentId },
-      message: { text: input.message },
-      messaging_product: 'instagram',
-      access_token: input.accessToken,
-    }),
+    headers: {
+      Authorization: `Bearer ${input.accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(dispatchPayload),
   });
+
   const json = (await res.json()) as {
     message_id?: string;
     id?: string;
-    error?: { message?: string };
+    error?: { message?: string; code?: number; error_subcode?: number };
   };
+
   if (!res.ok || !(json.message_id || json.id)) {
     throw new Error(
       json.error?.message ||

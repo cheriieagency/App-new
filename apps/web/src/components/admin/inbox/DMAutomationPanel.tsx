@@ -25,7 +25,8 @@ import { useLanguage } from '@/lib/locale-context';
 import { localeTag } from '@/lib/i18n';
 
 type AutomationRule = {
-  id: number;
+  /** UUID string from public.dm_automations — never coerce with Number(). */
+  id: string;
   title: string;
   triggerKeywords: string[];
   dmMessageText: string;
@@ -50,7 +51,7 @@ type AutomationsPayload = {
 };
 
 type FormState = {
-  id?: number;
+  id?: string;
   title: string;
   triggerKeywords: string;
   dmMessageText: string;
@@ -208,17 +209,18 @@ export default function DMAutomationPanel() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (automationId: number) => {
-      // Query-string only — DELETE bodies are unreliable across browsers/proxies.
+    mutationFn: async (automationId: string) => {
+      const id = String(automationId ?? '').trim();
+      if (!id || id === 'NaN' || id === 'undefined') {
+        throw new Error('Invalid automation ID');
+      }
+
       const res = await fetch(
-        `/api/admin/inbox/automations?id=${encodeURIComponent(String(automationId))}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-        }
+        `/api/admin/inbox/automations?id=${encodeURIComponent(id)}`,
+        { method: 'DELETE', credentials: 'include' }
       );
       if (!res.ok) {
-        let message = `Delete failed (${res.status})`;
+        let message = `Failed to delete automation (${res.status})`;
         try {
           const errJson = (await res.json()) as { error?: string };
           if (errJson?.error) message = errJson.error;
@@ -229,10 +231,11 @@ export default function DMAutomationPanel() {
       }
       return res.json().catch(() => ({
         success: true,
-        deletedId: automationId,
+        deletedId: id,
       }));
     },
-    onMutate: async (automationId: number) => {
+    onMutate: async (automationId: string) => {
+      const id = String(automationId);
       await qc.cancelQueries({
         queryKey: ['dm-automations', activeWorkspace.id],
       });
@@ -240,19 +243,20 @@ export default function DMAutomationPanel() {
         'dm-automations',
         activeWorkspace.id,
       ]);
-      // Instant UI update — filter out deleted rule from local cache.
+      // Instant UI update — filter out deleted rule (no page reload).
       if (previous) {
-        const nextAutomations = (previous.automations || []).filter(
-          (a) => a.id !== automationId
-        );
         qc.setQueryData<AutomationsPayload>(
           ['dm-automations', activeWorkspace.id],
           {
             ...previous,
-            automations: nextAutomations,
+            automations: (previous.automations || []).filter(
+              (a) => String(a.id) !== id
+            ),
             kpis: {
               ...previous.kpis,
-              activeTriggers: nextAutomations.filter((a) => a.isActive).length,
+              activeTriggers: (previous.automations || []).filter(
+                (a) => String(a.id) !== id && a.isActive
+              ).length,
             },
           }
         );
@@ -260,7 +264,7 @@ export default function DMAutomationPanel() {
       return { previous };
     },
     onSuccess: () => {
-      toast.success('Rule deleted');
+      toast.success('Automation rule deleted successfully');
       void qc.invalidateQueries({
         queryKey: ['dm-automations', activeWorkspace.id],
       });
@@ -272,7 +276,7 @@ export default function DMAutomationPanel() {
           ctx.previous
         );
       }
-      toast.error(err instanceof Error ? err.message : 'Delete failed');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete automation');
     },
   });
 
@@ -349,7 +353,7 @@ export default function DMAutomationPanel() {
 
   const openEdit = (rule: AutomationRule) => {
     setForm({
-      id: rule.id,
+      id: String(rule.id),
       title: rule.title,
       triggerKeywords: rule.triggerKeywords.join(', '),
       dmMessageText: rule.dmMessageText,
@@ -541,7 +545,7 @@ export default function DMAutomationPanel() {
                     type="button"
                     onClick={() => {
                       if (confirm('Delete this automation rule?')) {
-                        deleteMutation.mutate(rule.id);
+                        deleteMutation.mutate(String(rule.id));
                       }
                     }}
                     className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-rose-100 bg-rose-50 text-rose-700 inline-flex items-center justify-center gap-1.5 text-xs font-bold"
