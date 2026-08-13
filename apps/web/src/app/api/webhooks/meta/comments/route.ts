@@ -40,10 +40,19 @@ type AutomationRow = {
   title?: string | null;
 };
 
-/** Strip hashtags/punctuation and lowercase for keyword matching. */
+/** Normalize env verify token — strip whitespace and wrapping quotes. */
+function expectedVerifyToken(): string {
+  return String(process.env.META_WEBHOOK_VERIFY_TOKEN ?? '')
+    .trim()
+    .replace(/^['"]+|['"]+$/g, '')
+    .trim();
+}
+
+/** Strip leading #, punctuation; lowercase for keyword matching. */
 function cleanCommentText(raw: string): string {
   return raw
     .toLowerCase()
+    .replace(/^#+/, '')
     .replace(/[#@]/g, ' ')
     .replace(/[^\p{L}\p{N}\s_]/gu, ' ')
     .replace(/\s+/g, ' ')
@@ -64,38 +73,66 @@ function parseKeywords(raw: unknown): string[] {
 function buildDmText(rule: AutomationRow): string {
   const text = String(rule.dm_message_text || '').trim();
   const url = String(rule.cta_button_url || '').trim();
+  // Spec: `${dm_message_text}\n\n${cta_button_url}`
   if (url) return `${text}\n\n${url}`.trim();
   return text;
 }
 
+/**
+ * Lookup social account by entryId (platform_user_id), then page_id fallback.
+ */
 async function lookupSocialAccount(
   entryId: string
 ): Promise<SocialAccountRow | null> {
   if (!process.env.DATABASE_URL?.trim() || !entryId) return null;
+
+  const mapRow = (row: Record<string, unknown> | null | undefined) => {
+    if (!row?.workspace_id || !row?.access_token) return null;
+    return {
+      workspace_id: String(row.workspace_id),
+      platform: String(row.platform || ''),
+      platform_user_id: String(row.platform_user_id || ''),
+      page_id: row.page_id != null ? String(row.page_id) : null,
+      access_token: String(row.access_token),
+    } satisfies SocialAccountRow;
+  };
+
   try {
-    const rows = await sql`
+    // 1) Exact platform_user_id match (IG scoped user id or Page id).
+    const byPlatformUser = await sql`
+      SELECT workspace_id, platform, platform_user_id, page_id, access_token
+      FROM public.social_accounts
+      WHERE platform IN ('instagram', 'facebook')
+        AND access_token IS NOT NULL
+        AND access_token <> ''
+        AND platform_user_id = ${entryId}
+      ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
+      LIMIT 1
+    `;
+    const hit = mapRow(
+      Array.isArray(byPlatformUser)
+        ? (byPlatformUser[0] as Record<string, unknown>)
+        : null
+    );
+    if (hit) return hit;
+
+    // 2) Fallback: page_id or meta.ig_user_id.
+    const byPage = await sql`
       SELECT workspace_id, platform, platform_user_id, page_id, access_token
       FROM public.social_accounts
       WHERE platform IN ('instagram', 'facebook')
         AND access_token IS NOT NULL
         AND access_token <> ''
         AND (
-          platform_user_id = ${entryId}
-          OR page_id = ${entryId}
+          page_id = ${entryId}
           OR COALESCE(meta->>'ig_user_id', '') = ${entryId}
         )
       ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
       LIMIT 1
     `;
-    const row = Array.isArray(rows) ? rows[0] : null;
-    if (!row?.workspace_id || !row?.access_token) return null;
-    return {
-      workspace_id: String(row.workspace_id),
-      platform: String(row.platform),
-      platform_user_id: String(row.platform_user_id || ''),
-      page_id: row.page_id != null ? String(row.page_id) : null,
-      access_token: String(row.access_token),
-    };
+    return mapRow(
+      Array.isArray(byPage) ? (byPage[0] as Record<string, unknown>) : null
+    );
   } catch (error) {
     console.warn('[Meta Webhook] social_accounts lookup failed', error);
     return null;
@@ -146,32 +183,45 @@ async function recentlyMessaged(
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get('hub.mode');
-  const token = url.searchParams.get('hub.verify_token');
+  const receivedToken = url.searchParams.get('hub.verify_token');
   const challenge = url.searchParams.get('hub.challenge');
 
-  const verifyToken = (process.env.META_WEBHOOK_VERIFY_TOKEN ?? '').trim();
+  const expectedToken = expectedVerifyToken();
+  const normalizedReceived = String(receivedToken ?? '')
+    .trim()
+    .replace(/^['"]+|['"]+$/g, '')
+    .trim();
 
   if (
     mode === 'subscribe' &&
-    verifyToken.length > 0 &&
-    token === verifyToken &&
+    expectedToken.length > 0 &&
+    normalizedReceived === expectedToken &&
     challenge != null
   ) {
-    return new Response(challenge, { status: 200 });
+    console.log('[Meta Webhook Verified]', challenge);
+    return new Response(challenge, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' },
+    });
   }
 
+  console.warn('[Meta Webhook Verification Failed]', {
+    received: receivedToken,
+    expected: expectedToken,
+    mode,
+  });
   return new Response('Forbidden', { status: 403 });
 }
 
 export async function POST(request: Request) {
-  // Meta MUST receive 200 quickly — never throw out of this handler.
+  // Meta MUST receive 200 quickly — wrap everything so we never 500.
   try {
     let body: WebhookBody;
     try {
       body = (await request.json()) as WebhookBody;
     } catch {
       console.warn('[Meta Webhook] invalid JSON body');
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     console.log('[Meta Webhook Incoming]', JSON.stringify(body, null, 2));
@@ -179,7 +229,7 @@ export async function POST(request: Request) {
     const objectType = String(body?.object || '').toLowerCase();
     if (objectType && objectType !== 'instagram' && objectType !== 'page') {
       console.log('[Meta Webhook] Ignoring object type:', objectType);
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     const entry = body?.entry?.[0];
@@ -190,7 +240,7 @@ export async function POST(request: Request) {
 
     if (!value) {
       console.log('[Meta Webhook] No change value present, ignoring.');
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     // Skip non-comment feed noise (likes, shares, etc.).
@@ -198,11 +248,11 @@ export async function POST(request: Request) {
     const verb = String(value.verb || 'add').toLowerCase();
     if (field === 'feed' && item && item !== 'comment') {
       console.log('[Meta Webhook] Ignoring non-comment feed item:', item);
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
     if (verb && verb !== 'add' && verb !== 'edited') {
       console.log('[Meta Webhook] Ignoring verb:', verb);
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     const from = (value.from || {}) as {
@@ -215,9 +265,7 @@ export async function POST(request: Request) {
     const commentId = String(value.id || value.comment_id || '').trim();
     const commentText = String(value.text || value.message || '').trim();
     const mediaId = String(media.id || value.post_id || '').trim() || null;
-    const commenterId = String(
-      from.id || value.sender_id || ''
-    ).trim();
+    const commenterId = String(from.id || value.sender_id || '').trim();
     const commenterUsername =
       (from.username && String(from.username)) ||
       (from.name && String(from.name)) ||
@@ -236,28 +284,29 @@ export async function POST(request: Request) {
 
     // Guard: Ignore empty comments
     if (!commentId || !commentText) {
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // Guard: Self-comment check (don't trigger on creator's own comments)
+    // Guard: Self-comment (creator commenting on own post)
     if (commenterId && entryId && commenterId === entryId) {
       console.log('[Meta Webhook] Self-comment detected, skipping auto-DM.');
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     if (!process.env.DATABASE_URL?.trim()) {
-      console.warn('[Meta Webhook] DATABASE_URL missing — cannot match automations.');
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      console.warn(
+        '[Meta Webhook] DATABASE_URL missing — cannot match automations.'
+      );
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // Supabase / Postgres workspace & Page Access Token lookup
     const account = await lookupSocialAccount(entryId);
     if (!account) {
       console.warn(
         '[Meta Webhook] No active social account found for ID:',
         entryId
       );
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     const rules = await loadActiveAutomations(account.workspace_id);
@@ -266,7 +315,7 @@ export async function POST(request: Request) {
         '[Meta Webhook] No active dm_automations for workspace',
         account.workspace_id
       );
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     const cleaned = cleanCommentText(commentText);
@@ -275,7 +324,6 @@ export async function POST(request: Request) {
 
     for (const rule of rules) {
       const keywords = parseKeywords(rule.trigger_keywords);
-      // Match against both raw + cleaned text (covers #hundra / HUNDRA / punctuation).
       const kw =
         findMatchingKeyword(commentText, keywords) ||
         findMatchingKeyword(cleaned, keywords);
@@ -288,7 +336,7 @@ export async function POST(request: Request) {
 
     if (!matchedRule || !matchedKeyword) {
       console.log('[Meta Webhook] No keyword match for comment:', commentText);
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     console.log('[Meta Webhook] Matched rule', {
@@ -297,7 +345,10 @@ export async function POST(request: Request) {
       title: matchedRule.title,
     });
 
-    if (commenterId && (await recentlyMessaged(account.workspace_id, commenterId))) {
+    if (
+      commenterId &&
+      (await recentlyMessaged(account.workspace_id, commenterId))
+    ) {
       console.log('[Meta Webhook] Rate-limited (10m) for commenter', commenterId);
       try {
         await sql`
@@ -321,16 +372,19 @@ export async function POST(request: Request) {
       } catch (logErr) {
         console.warn('[Meta Webhook] dm_logs skip insert failed', logErr);
       }
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
     const dmText = buildDmText(matchedRule);
     if (!dmText) {
-      console.warn('[Meta Webhook] Matched rule has empty DM body', matchedRule.id);
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
+      console.warn(
+        '[Meta Webhook] Matched rule has empty DM body',
+        matchedRule.id
+      );
+      return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    // Prefer entryId (IG scoped / Page id from webhook), then stored ids.
+    // Prefer webhook entryId for /{ig-user-id|page-id}/messages, then stored ids.
     const messagingEndpointIds = [
       entryId,
       account.platform_user_id,
@@ -342,22 +396,18 @@ export async function POST(request: Request) {
     let dmMessageId: string | null = null;
     let lastGraphError: string | null = null;
 
-    // Private Reply REQUIRES recipient.comment_id — never recipient.id / from.id.
-    if (!commentId) {
-      console.warn(
-        '[Meta Webhook] Refusing Private Reply — missing commentId'
-      );
-      return NextResponse.json({ success: true, received: true }, { status: 200 });
-    }
-
     for (const endpointId of messagingEndpointIds) {
-      // CRITICAL: Meta Instagram Graph API Private Reply shape (v21.0).
+      // MANDATORY: recipient.comment_id for Instagram Private Replies from comments.
       const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
         endpointId
       )}/messages`;
       const dispatchPayload = {
-        recipient: { comment_id: commentId },
-        message: { text: dmText },
+        recipient: {
+          comment_id: commentId,
+        },
+        message: {
+          text: dmText,
+        },
       };
 
       try {
@@ -374,7 +424,11 @@ export async function POST(request: Request) {
           id?: string;
           error?: { message?: string };
         };
-        console.log('[Meta DM Dispatch Result]', graphRes.status, graphData);
+        console.log(
+          '[Meta Private Reply Result]',
+          graphRes.status,
+          graphData
+        );
 
         if (graphRes.ok && (graphData.message_id || graphData.id)) {
           dmMessageId = String(graphData.message_id || graphData.id);
@@ -382,13 +436,18 @@ export async function POST(request: Request) {
           break;
         }
         lastGraphError =
-          graphData.error?.message || `private_reply_failed_${graphRes.status}`;
+          graphData.error?.message ||
+          `private_reply_failed_${graphRes.status}`;
       } catch (fetchErr) {
         lastGraphError =
           fetchErr instanceof Error
             ? fetchErr.message
             : 'private_reply_network_error';
-        console.warn('[Meta DM Dispatch network]', endpointId, lastGraphError);
+        console.warn(
+          '[Meta Private Reply network]',
+          endpointId,
+          lastGraphError
+        );
       }
     }
 
@@ -481,17 +540,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        received: true,
-        matched: true,
-        sent: Boolean(dmMessageId),
-        automationId: matchedRule.id,
-        keyword: matchedKeyword,
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('[Meta Webhook] unhandled error', error);
     return NextResponse.json({ success: true }, { status: 200 });
