@@ -333,6 +333,9 @@ export default function SocialAccountsPanel({
         throw new Error(message);
       }
       return r.json() as Promise<{
+        success?: boolean;
+        subscribedCount?: number;
+        details?: Array<{ ok: boolean; error?: string }>;
         ready?: boolean;
         blockers?: string[];
         subscribeResults?: Array<{ targetId: string; ok: boolean }>;
@@ -340,17 +343,22 @@ export default function SocialAccountsPanel({
     },
     onSuccess: (json) => {
       const okCount =
-        json.subscribeResults?.filter((row) => row.ok).length ?? 0;
-      if (json.ready || okCount > 0) {
+        json.subscribedCount ??
+        json.details?.filter((row) => row.ok).length ??
+        json.subscribeResults?.filter((row) => row.ok).length ??
+        0;
+      if (json.success || json.ready || okCount > 0) {
         toast.success(
           `Re-synced Meta webhooks (${okCount} account${okCount === 1 ? '' : 's'}).`
         );
       } else {
+        const firstDetailError = json.details?.find((d) => d.error)?.error;
         toast.error(
-          (json.blockers?.join(' ') || 'Could not re-subscribe Meta webhooks.').slice(
-            0,
-            180
-          )
+          (
+            json.blockers?.join(' ') ||
+            firstDetailError ||
+            'Could not re-subscribe Meta webhooks.'
+          ).slice(0, 180)
         );
       }
     },

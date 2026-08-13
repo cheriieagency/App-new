@@ -166,6 +166,16 @@ export async function upsertMetaSocialAccounts(input: {
   );
 
   for (const page of facebookPages) {
+    // Always persist the Page-specific access_token (never the user token).
+    const pageAccessToken = String(page.access_token || '').trim();
+    if (!pageAccessToken) {
+      console.warn(
+        '[social_accounts] skipping page without page.access_token',
+        page.id
+      );
+      continue;
+    }
+
     if (storeFacebook && !rows.some((r) => r.platform === 'facebook')) {
       // One Facebook row per user (UNIQUE user_id, platform) — keep first page.
       const saved = await upsertSocialAccountRow({
@@ -173,14 +183,21 @@ export async function upsertMetaSocialAccounts(input: {
         platform: 'facebook',
         platformUserId: page.id,
         platformUserName: page.name,
-        accessToken: page.access_token,
+        accessToken: pageAccessToken,
         expiresIn: input.expiresIn,
         workspaceId,
         pageId: page.id,
         pageName: page.name,
         handle: page.name,
-        meta: page.category ? { category: page.category } : null,
+        meta: {
+          ...(page.category ? { category: page.category } : {}),
+          token_source: 'page',
+        },
       });
+      console.log(
+        '[social_accounts] stored Facebook Page Access Token',
+        page.id
+      );
       rows.push({
         id: `fb-${page.id}`,
         user_id: input.userId,
@@ -191,7 +208,7 @@ export async function upsertMetaSocialAccounts(input: {
         avatar_url: saved.avatar_url,
         followers_count: null,
         media_count: null,
-        access_token: page.access_token,
+        access_token: pageAccessToken,
         token_expires_at: null,
         page_id: page.id,
         page_name: page.name,
@@ -223,11 +240,24 @@ export async function upsertMetaSocialAccounts(input: {
     const handle = ig.username
       ? `@${ig.username.replace(/^@/, '')}`
       : null;
-    // Page token when available; otherwise long-lived user token (Business Portfolio).
-    const accessToken =
-      (page?.access_token && page.access_token.trim()) || userToken;
+    // Prefer the linked Facebook Page Access Token for IG (required for subscribed_apps + messaging).
+    const pageAccessToken =
+      page?.access_token && !String(page.id || '').startsWith('user-')
+        ? String(page.access_token).trim()
+        : '';
+    const accessToken = pageAccessToken || userToken;
     if (!accessToken) {
       throw new Error('No page or user access token available for Instagram');
+    }
+    if (!pageAccessToken) {
+      console.warn(
+        '[social_accounts] Instagram stored with user token — reconnect after granting pages_manage_metadata so Page Access Token is available'
+      );
+    } else {
+      console.log(
+        '[social_accounts] stored Instagram with Page Access Token',
+        { igUserId: ig.id, pageId: page?.id }
+      );
     }
     const saved = await upsertSocialAccountRow({
       userId: input.userId,
@@ -246,7 +276,7 @@ export async function upsertMetaSocialAccounts(input: {
       meta: {
         media_count: ig.media_count ?? null,
         followers_count: ig.followers_count ?? null,
-        token_source: page?.access_token ? 'page' : 'user_long_lived',
+        token_source: pageAccessToken ? 'page' : 'user_long_lived',
       },
     });
     rows.push({

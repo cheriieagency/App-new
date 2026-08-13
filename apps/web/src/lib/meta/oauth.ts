@@ -20,16 +20,16 @@ export const META_OAUTH_SCOPES = [
   'public_profile',
   'email',
   'pages_show_list',
-  'pages_read_engagement',
   'pages_manage_posts',
-  // Required for Page Messaging + Instagram Messaging webhooks/conversations.
+  'pages_read_engagement',
+  // Required so /{page-id}/subscribed_apps succeeds with a Page Access Token.
   'pages_manage_metadata',
+  // Page + IG Messaging (Inbox DMs / private replies).
   'pages_messaging',
   'instagram_basic',
   'instagram_content_publish',
   'instagram_manage_insights',
   'instagram_manage_comments',
-  // Instagram Messaging API (Inbox DMs via Page conversations).
   'instagram_manage_messages',
   'business_management',
 ] as const;

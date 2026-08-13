@@ -17,8 +17,6 @@ import {
   extractCommentEventsFromWebhook,
   findMatchingKeyword,
 } from '@/lib/dm-automations/engine';
-import { subscribeMetaAccountsAfterConnect } from '@/lib/meta/subscribe-webhooks';
-
 async function resolveWorkspaceId(
   request: Request,
   bodyWorkspaceId?: unknown
@@ -117,8 +115,9 @@ export async function POST(request: Request) {
       console.warn('[automations/test] schema ensure', schemaErr);
     }
 
-    // Always (re)subscribe connected Meta accounts to app webhooks.
-    const subscribeResults: Array<{
+    // (Re)subscribe connected Meta accounts — Page Access Token + platform_user_id.
+    const subscribeDetails: Array<{
+      platform: string;
       targetId: string;
       ok: boolean;
       error?: string;
@@ -133,63 +132,133 @@ export async function POST(request: Request) {
           AND access_token <> ''
       `;
       for (const row of Array.isArray(metaAccounts) ? metaAccounts : []) {
-        const pageId =
-          row.page_id != null
-            ? String(row.page_id)
-            : row.platform === 'facebook' && row.platform_user_id
-              ? String(row.platform_user_id)
-              : null;
-        const igUserId =
-          row.platform === 'instagram' && row.platform_user_id
-            ? String(row.platform_user_id)
-            : null;
-        const token = String(row.access_token || '');
-        const batch = await subscribeMetaAccountsAfterConnect({
-          pageId,
-          pageAccessToken: token,
-          igUserId,
-          fallbackAccessToken: token,
-        });
-        for (const r of batch) {
-          subscribeResults.push({
-            targetId: r.targetId,
-            ok: r.ok,
-            error: r.error,
+        const platform = String(row.platform || '');
+        const token = String(row.access_token || '').trim();
+        // Spec: POST /{platform_user_id}/subscribed_apps with Page Access Token.
+        const platformUserId =
+          row.platform_user_id != null
+            ? String(row.platform_user_id).trim()
+            : '';
+        if (!platformUserId || !token) {
+          subscribeDetails.push({
+            platform,
+            targetId: platformUserId || '(missing)',
+            ok: false,
+            error: 'missing_platform_user_id_or_access_token',
+          });
+          continue;
+        }
+
+        // POST /{platform_user_id}/subscribed_apps with Page Access Token in body.
+        const subscribeUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(platformUserId)}/subscribed_apps`;
+        try {
+          const graphRes = await fetch(subscribeUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              access_token: token,
+              subscribed_fields: ['feed', 'comments', 'messages', 'mentions'],
+            }),
+          });
+          const graphJson = (await graphRes.json().catch(() => ({}))) as {
+            success?: boolean;
+            error?: { message?: string };
+          };
+          if (!graphRes.ok || graphJson.error) {
+            const message =
+              graphJson.error?.message ||
+              `subscribed_apps failed (${graphRes.status})`;
+            console.warn(
+              '[automations/test] subscribed_apps error',
+              platform,
+              platformUserId,
+              message
+            );
+            subscribeDetails.push({
+              platform,
+              targetId: platformUserId,
+              ok: false,
+              error: message,
+            });
+          } else {
+            console.log(
+              '[automations/test] subscribed_apps ok',
+              platform,
+              platformUserId
+            );
+            subscribeDetails.push({
+              platform,
+              targetId: platformUserId,
+              ok: true,
+            });
+          }
+        } catch (fetchErr) {
+          const message =
+            fetchErr instanceof Error
+              ? fetchErr.message
+              : 'subscribed_apps_network_error';
+          console.warn(
+            '[automations/test] subscribed_apps network',
+            platformUserId,
+            message
+          );
+          subscribeDetails.push({
+            platform,
+            targetId: platformUserId,
+            ok: false,
+            error: message,
           });
         }
       }
     } catch (subErr) {
       console.warn('[automations/test] subscribed_apps', subErr);
+      subscribeDetails.push({
+        platform: 'unknown',
+        targetId: '',
+        ok: false,
+        error:
+          subErr instanceof Error
+            ? subErr.message
+            : 'subscribed_apps_query_failed',
+      });
     }
 
+    const subscribedCount = subscribeDetails.filter((r) => r.ok).length;
+    const subscribeResults = subscribeDetails;
+
     if (action === 'resubscribe_webhooks') {
-      const okCount = subscribeResults.filter((r) => r.ok).length;
-      return NextResponse.json(
-        dryRunPayload({
-          ok: true,
-          ready: okCount > 0,
-          workspaceId,
-          commentText,
-          action: 'resubscribe_webhooks',
-          subscribeResults,
-          blockers:
-            okCount > 0
-              ? []
-              : [
-                  'Could not subscribe any Meta Page/IG account. Reconnect Instagram under Settings → Socials with messaging + comments permissions.',
-                ],
-          nextSteps:
-            okCount > 0
-              ? [
-                  `Subscribed ${okCount} account(s) to feed/comments/messages/mentions.`,
-                  'Confirm App Dashboard → Webhooks includes Instagram comments callback.',
-                  'Comment a trigger keyword on a post to test live Comment-to-DM.',
-                ]
-              : [
-                  'Reconnect Instagram + Facebook Page, then retry Re-sync Meta Webhooks.',
-                ],
-        })
-      );
+      const errorMessages = subscribeDetails
+        .filter((r) => !r.ok && r.error)
+        .map((r) => `${r.platform}:${r.targetId} — ${r.error}`);
+      return NextResponse.json({
+        success: subscribedCount > 0,
+        subscribedCount,
+        details: subscribeDetails,
+        // Keep UI-compatible fields.
+        ok: true,
+        ready: subscribedCount > 0,
+        workspaceId,
+        action: 'resubscribe_webhooks',
+        subscribeResults,
+        blockers:
+          subscribedCount > 0
+            ? []
+            : [
+                errorMessages[0] ||
+                  'Could not subscribe any Meta Page/IG account. Reconnect under Settings → Socials and grant pages_manage_metadata.',
+                ...errorMessages.slice(1, 3),
+              ],
+        nextSteps:
+          subscribedCount > 0
+            ? [
+                `Subscribed ${subscribedCount} account(s) to feed/comments/messages/mentions.`,
+                'Confirm App Dashboard → Webhooks includes Instagram comments callback.',
+                'Comment a trigger keyword on a post to test live Comment-to-DM.',
+              ]
+            : [
+                'Reconnect Instagram + Facebook Page (consent will re-request pages_manage_metadata), then retry Re-sync Meta Webhooks.',
+              ],
+      });
     }
 
     // Prefer id sort — never depend on created_at / updated_at existing.

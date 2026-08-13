@@ -188,37 +188,26 @@ export async function GET(request: Request) {
       );
     }
 
-    // Step E2 — subscribe Page / IG account to this app's webhooks (comments, messages…).
+    // Step E2 — subscribe each Facebook Page with its Page Access Token.
     try {
-      const { subscribeMetaAccountsAfterConnect } = await import(
-        '@/lib/meta/subscribe-webhooks'
-      );
-      const igPage = resolved.instagramPage;
-      const pageToken =
-        igPage?.access_token ||
-        realPages[0]?.access_token ||
-        longLived.access_token;
-      const pageId = igPage?.id || realPages[0]?.id || null;
-      const subscribeResults = await subscribeMetaAccountsAfterConnect({
-        pageId,
-        pageAccessToken: pageToken,
-        igUserId: resolved.instagram?.id || null,
-        fallbackAccessToken: longLived.access_token,
-      });
-      // Also subscribe every connected Page (feed + messages).
       for (const page of realPages) {
-        if (!page.access_token || page.id === pageId) continue;
-        await subscribeMetaAccountsAfterConnect({
-          pageId: page.id,
-          pageAccessToken: page.access_token,
-          igUserId: null,
-          fallbackAccessToken: longLived.access_token,
-        });
+        if (!page.id || !page.access_token) continue;
+        const subUrl = `https://graph.facebook.com/v21.0/${page.id}/subscribed_apps?subscribed_fields=feed,messages,messaging_postbacks&access_token=${encodeURIComponent(page.access_token)}`;
+        const subRes = await fetch(subUrl, { method: 'POST' });
+        const subJson = (await subRes.json().catch(() => ({}))) as {
+          success?: boolean;
+          error?: { message?: string };
+        };
+        if (!subRes.ok || subJson.error) {
+          console.warn(
+            '[meta/callback] subscribed_apps error',
+            page.id,
+            subJson.error?.message || `HTTP ${subRes.status}`
+          );
+        } else {
+          console.log('[meta/callback] subscribed_apps ok', page.id);
+        }
       }
-      console.log(
-        '[meta/callback] subscribed_apps',
-        subscribeResults.map((r) => `${r.targetId}:${r.ok ? 'ok' : r.error}`)
-      );
     } catch (subError) {
       console.warn('[meta/callback] subscribed_apps skipped', subError);
     }

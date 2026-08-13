@@ -367,6 +367,14 @@ export default function DMAutomationPanel() {
         throw new Error(message);
       }
       return res.json() as Promise<{
+        success?: boolean;
+        subscribedCount?: number;
+        details?: Array<{
+          platform: string;
+          targetId: string;
+          ok: boolean;
+          error?: string;
+        }>;
         ready?: boolean;
         blockers?: string[];
         nextSteps?: string[];
@@ -375,19 +383,33 @@ export default function DMAutomationPanel() {
     },
     onSuccess: (json) => {
       const okCount =
-        json.subscribeResults?.filter((r) => r.ok).length ?? 0;
-      if (json.ready || okCount > 0) {
+        json.subscribedCount ??
+        json.details?.filter((r) => r.ok).length ??
+        json.subscribeResults?.filter((r) => r.ok).length ??
+        0;
+      if (json.success || json.ready || okCount > 0) {
         toast.success(
           `Re-synced Meta webhooks (${okCount} account${okCount === 1 ? '' : 's'}).`
         );
+        const detailErrors =
+          json.details
+            ?.filter((d) => !d.ok && d.error)
+            .map((d) => d.error)
+            .join(' · ') || '';
         setTestResult(
-          json.nextSteps?.join(' ') ||
-            `Subscribed ${okCount} Page/IG account(s) to feed/comments/messages/mentions.`
+          [
+            json.nextSteps?.join(' ') ||
+              `Subscribed ${okCount} Page/IG account(s) to feed/comments/messages/mentions.`,
+            detailErrors ? `Partial errors: ${detailErrors}` : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
         );
       } else {
         const blockers = json.blockers?.length
           ? json.blockers.join(' ')
-          : 'Could not re-subscribe Meta webhooks.';
+          : json.details?.find((d) => d.error)?.error ||
+            'Could not re-subscribe Meta webhooks.';
         toast.error(blockers.slice(0, 180));
         setTestResult(blockers);
       }
