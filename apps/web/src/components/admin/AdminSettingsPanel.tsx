@@ -1588,30 +1588,7 @@ function CustomDomainSettingsCard() {
     setUpgradeOpen,
     upgradeTarget,
   } = useSubscription();
-  const [domain, setDomain] = useState('');
-  const [saved, setSaved] = useState('');
   const canUse = hasFeature('customDomain');
-
-  const save = async () => {
-    if (!canUse) {
-      requestUpgrade('pro');
-      return;
-    }
-    const r = await fetch('/api/admin/custom-domain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain: domain.trim() }),
-    });
-    if (r.status === 403) {
-      requestUpgrade('pro');
-      return;
-    }
-    if (!r.ok) {
-      setSaved('Could not save domain');
-      return;
-    }
-    setSaved('Custom domain saved (demo)');
-  };
 
   return (
     <>
@@ -1619,38 +1596,35 @@ function CustomDomainSettingsCard() {
         <div className="flex items-center gap-2 flex-wrap">
           <PlanLockBadge minPlan="pro" />
           <span className="text-xs font-medium text-slate-500">
-            Link yourname.se to your bio & community
+            Link yourname.se to your bio & community via Vercel DNS
           </span>
         </div>
-        <label className="block">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
-            Custom domain
-          </span>
-          <input
-            type="text"
-            value={domain}
-            disabled={!canUse}
-            onChange={(e) => setDomain(e.target.value)}
-            placeholder="yourname.se"
-            className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 disabled:bg-slate-50 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#F472B6]/30"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={() => void save()}
-          className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#0F172A] text-white text-sm font-bold disabled:opacity-50"
-        >
-          {canUse ? 'Save domain' : 'Unlock on Pro'}
-        </button>
-        {saved && (
-          <p className="text-xs font-semibold text-emerald-700">{saved}</p>
-        )}
-        {!canUse && (
-          <FeatureGate
-            feature="customDomain"
-            title="Custom Domain Linking"
-            description="Connect yourname.se on the Pro plan."
-          />
+        <p className="text-sm text-slate-600 leading-relaxed">
+          Connect an apex domain (A → 76.76.21.21) or subdomain (CNAME →
+          cname.vercel-dns.com). Pro plan required.
+        </p>
+        {canUse ? (
+          <a
+            href="/admin/settings/domain"
+            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#0F172A] text-white text-sm font-bold"
+          >
+            Manage custom domain
+          </a>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => requestUpgrade('pro')}
+              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#0F172A] text-white text-sm font-bold"
+            >
+              Unlock on Pro
+            </button>
+            <FeatureGate
+              feature="customDomain"
+              title="Custom Domain Linking"
+              description="Connect yourname.se on the Pro plan."
+            />
+          </>
         )}
       </div>
       <UpgradeModal

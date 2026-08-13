@@ -168,6 +168,19 @@ export const resendEnv = {
   requiredKeys: ['RESEND_API_KEY'] as const,
 };
 
+// ---------------------------------------------------------------------------
+// 9. Vercel (custom domains)
+// ---------------------------------------------------------------------------
+export const vercelEnv = {
+  /** Personal / team token — https://vercel.com/account/tokens */
+  token: () =>
+    readEnv('VERCEL_AUTH_BEARER_TOKEN') || readEnv('VERCEL_TOKEN'),
+  projectId: () =>
+    readEnv('VERCEL_PROJECT_ID') || readEnv('VERCEL_PROJECT_ID_WEB'),
+  teamId: () => readEnv('VERCEL_TEAM_ID'),
+  requiredKeys: ['VERCEL_AUTH_BEARER_TOKEN', 'VERCEL_PROJECT_ID'] as const,
+};
+
 /** Aggregated export — prefer named groups above when importing. */
 export const env = {
   openai: openaiEnv,
@@ -180,4 +193,5 @@ export const env = {
   supabase: supabaseEnv,
   database: databaseEnv,
   resend: resendEnv,
+  vercel: vercelEnv,
 } as const;

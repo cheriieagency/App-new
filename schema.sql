@@ -35,9 +35,35 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   xp              integer NOT NULL DEFAULT 0 CHECK (xp >= 0),
   level           integer NOT NULL DEFAULT 1 CHECK (level >= 1),
   is_onboarded    boolean NOT NULL DEFAULT false,
+  custom_domain   text,
+  custom_domain_verified boolean NOT NULL DEFAULT false,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_custom_domain_uidx
+  ON public.profiles (custom_domain)
+  WHERE custom_domain IS NOT NULL;
+
+-- Brand workspaces (custom domain routing for Pro)
+CREATE TABLE IF NOT EXISTS public.workspaces (
+  id                      text PRIMARY KEY,
+  user_id                 text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  name                    text,
+  slug                    text,
+  default_community_slug  text,
+  custom_domain           text,
+  custom_domain_verified  boolean NOT NULL DEFAULT false,
+  created_at              timestamptz NOT NULL DEFAULT now(),
+  updated_at              timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS workspaces_custom_domain_uidx
+  ON public.workspaces (custom_domain)
+  WHERE custom_domain IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS workspaces_user_idx
+  ON public.workspaces (user_id);
 
 CREATE INDEX IF NOT EXISTS profiles_role_idx ON public.profiles (role);
 CREATE INDEX IF NOT EXISTS profiles_handle_idx ON public.profiles (handle);

@@ -11,15 +11,72 @@ import {
   pathMatchesPrefix,
 } from '@/lib/platform-role';
 
+/** Platform hosts that should NOT trigger custom-domain rewrites. */
+function isPlatformHost(host: string): boolean {
+  const h = host.toLowerCase().split(':')[0];
+  if (!h) return true;
+  if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.localhost')) {
+    return true;
+  }
+  if (h === 'clikd.app' || h.endsWith('.clikd.app')) return true;
+  if (h.endsWith('.vercel.app')) return true;
+  return false;
+}
+
 /**
- * Enforce member ↔ creator split:
- * - Members may only use dashboard (+ related member routes)
- * - Creators/admins may only use admin / planner
- * - Dual-access is encoded in the role cookie (`member+dual` / `creator+dual`)
- *   Legacy `clikd_dual_access=1` is still honored during migration.
+ * 1) Custom domain → rewrite to public bio (URL bar stays on customer domain)
+ * 2) Platform host → enforce member ↔ creator studio split
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hostHeader = request.headers.get('host') || '';
+  const host = hostHeader.toLowerCase().split(':')[0];
+
+  // Skip static / API / Next internals for custom-domain handling.
+  const isAsset =
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/favicon') ||
+    /\.\w{2,5}$/.test(pathname);
+
+  if (!isPlatformHost(host) && !isAsset) {
+    try {
+      const resolveUrl = new URL('/api/domains/resolve', request.url);
+      resolveUrl.searchParams.set('host', host);
+      const res = await fetch(resolveUrl.toString(), {
+        headers: { 'x-middleware-domain-resolve': '1' },
+        next: { revalidate: 30 },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          found?: boolean;
+          rewrite_bio?: string | null;
+          rewrite_community?: string | null;
+        };
+        if (data.found) {
+          // Root (and unknown paths) → bio storefront; keep /communities/* if present.
+          const target =
+            pathname === '/' || pathname === ''
+              ? data.rewrite_bio || data.rewrite_community
+              : pathname.startsWith('/communities')
+                ? null
+                : pathname.startsWith('/bio')
+                  ? null
+                  : data.rewrite_bio;
+
+          if (target && pathname !== target) {
+            const url = request.nextUrl.clone();
+            url.pathname = target;
+            return NextResponse.rewrite(url);
+          }
+        }
+      }
+    } catch {
+      /* fall through to normal routing */
+    }
+  }
+
+  // --- Role split (admin vs member) on platform hosts ---
   const parsed = parsePlatformRoleCookie(
     request.cookies.get(PLATFORM_ROLE_COOKIE)?.value
   );
@@ -27,7 +84,6 @@ export function middleware(request: NextRequest) {
   const dual = parsed.dual || legacyDual;
   const creator = isCreatorRole(parsed.role);
 
-  // Dual-access QA accounts keep both member + creator studios open.
   if (dual) {
     return NextResponse.next();
   }
@@ -45,12 +101,10 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/communities/:path*',
-    '/events/:path*',
-    '/classroom/:path*',
-    '/live/:path*',
-    '/admin/:path*',
-    '/planner/:path*',
+    /*
+     * Match all paths except Next internals & common static files.
+     * Custom domains need `/` matched; role split still applies on platform hosts.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
