@@ -103,6 +103,35 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
     ALTER TABLE public.dm_logs
       ADD COLUMN IF NOT EXISTS dm_message_id text
   `);
+  // Older tables may have been created without these — CREATE IF NOT EXISTS won't add them.
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS comment_text text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS comment_id text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS media_id text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS commenter_username text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS error_message text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS automation_id uuid
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS status text DEFAULT 'sent'
+  `);
 
   // Soft sync CTA aliases.
   try {
