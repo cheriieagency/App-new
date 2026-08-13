@@ -4,7 +4,7 @@ import IntegritetContent from './content';
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description:
-    'How clikd: collects, uses, stores, and protects personal data on clikd.app — GDPR, UK GDPR, and CCPA disclosures.',
+    'How Cheriie AB / clikd: collects, uses, stores, and protects personal data on clikd.app — GDPR and UK GDPR.',
   alternates: { canonical: '/legal/integritet' },
 };
 

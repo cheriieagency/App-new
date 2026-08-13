@@ -354,7 +354,7 @@ export const DICT_EN: NestedDict = {
     termsSummary: 'The rules that govern your use of the clikd: platform.',
     cookiesTitle: 'Cookie Policy',
     cookiesSummary: 'How we use cookies and similar technologies.',
-    gdprTitle: 'GDPR Statement',
+    gdprTitle: 'GDPR Statement & Data Processing Summary',
     gdprSummary: 'Our commitment to EU/EEA data protection rights.',
     lastUpdated: 'Last updated',
     backToHome: 'Back to home',

@@ -4,12 +4,14 @@ import { LegalDoc, LegalH2 } from '@/components/legal/LegalDoc';
 
 export default function IntegritetContent() {
   return (
-    <LegalDoc doc="privacy" updated="August 11, 2026">
+    <LegalDoc doc="privacy" updated="August 10, 2026">
       <p>
-        This Privacy Policy describes how clikd: (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;)
+        This Privacy Policy describes how clikd:, provided and operated by Cheriie AB (org. nr:
+        559527-2393, VAT: SE559527239301, &quot;we&quot;, &quot;us&quot;, &quot;our&quot;),
         collects, uses, stores, and protects your personal data when you use our website (
         <a href="https://clikd.app">https://clikd.app</a>), applications, social media planning
-        tools, bio storefronts, member communities, and associated services (&quot;the Service&quot;).
+        tools, bio storefronts, member communities, AI copilot features, custom domain services, and
+        associated services (&quot;the Service&quot;).
       </p>
       <p>
         We respect your personal privacy and process all personal data in compliance with the EU
@@ -19,35 +21,53 @@ export default function IntegritetContent() {
 
       <LegalH2 section="privacyS1" />
       <p>
-        clikd: is the Data Controller responsible for processing your personal data on the platform.
+        Cheriie AB is the Data Controller responsible for processing your personal data on the
+        clikd: platform.
       </p>
       <ul>
         <li>
-          Official Website: <a href="https://clikd.app">https://clikd.app</a>
+          <strong>Legal Entity:</strong> Cheriie AB
         </li>
         <li>
-          Privacy &amp; GDPR Contact:{' '}
-          <a href="mailto:privacy@clikd.app">privacy@clikd.app</a>
+          <strong>Org. nr:</strong> 559527-2393
         </li>
         <li>
-          Support &amp; Legal Inquiries:{' '}
-          <a href="mailto:legal@clikd.app">legal@clikd.app</a>
+          <strong>VAT Registration Number:</strong> SE559527239301
+        </li>
+        <li>
+          <strong>Registered Address:</strong> Sturegatan 18 A, 211 50 Malmö, Sweden
+        </li>
+        <li>
+          <strong>Official Website:</strong>{' '}
+          <a href="https://clikd.app">https://clikd.app</a>
+        </li>
+        <li>
+          <strong>Privacy, Legal &amp; GDPR Contact:</strong>{' '}
+          <a href="mailto:hello@clikd.app">hello@clikd.app</a>
+        </li>
+        <li>
+          <strong>Support Inquiries:</strong>{' '}
+          <a href="mailto:hello@clikd.app">hello@clikd.app</a>
         </li>
       </ul>
 
       <LegalH2 section="privacyS2" />
       <p>
-        We collect data directly provided by you, data generated through your use of the Service, and
-        data received from third-party social media platforms that you choose to connect to your
-        account.
+        We collect data directly provided by you, data generated through your use of the Service,
+        and data received from third-party social media and AI platforms that you choose to connect
+        to your account.
       </p>
 
       <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
-        A. Account &amp; Profile Information
+        A. Account, Profile &amp; Custom Domain Information
       </h3>
       <p>
         Name, email address, encrypted password, profile avatar, username/handle, and preferred
         language.
+      </p>
+      <p>
+        For PRO Users: Custom domain names (e.g., yourname.se), CNAME/A-record verification states,
+        and Vercel SSL routing status.
       </p>
       <p>
         For Creators: Business details, tax registration number / personal identity number (for
@@ -55,127 +75,126 @@ export default function IntegritetContent() {
       </p>
 
       <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
-        B. Payment &amp; Transaction Data
+        B. AI Copilot &amp; Prompt Inputs (OpenAI API)
       </h3>
       <p>
-        When purchasing subscriptions, digital products, or memberships, we collect transaction
-        history, purchase amounts, and chosen payment methods (Mobile, Card, or Bank Transfer).
+        When you use our AI Copilot tools (such as automated social caption generation, content
+        polishing, or AI member Q&amp;A), we process the text prompts, tone selections, and topic
+        inputs you provide.
+      </p>
+      <p>
+        Note: AI inputs are processed transiently via the official OpenAI API to generate response
+        content and are not used by us or OpenAI to train public AI models.
+      </p>
+
+      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+        C. Payment &amp; Transaction Data
+      </h3>
+      <p>
+        When purchasing subscriptions, digital products, or community memberships, we collect
+        transaction history, purchase amounts, and chosen payment methods (Swish, Vipps, Card, or
+        Bank Transfer).
       </p>
       <p>
         Note: All card and direct payments are securely processed by our certified payment partners
-        (e.g., Stripe and card processors). clikd: never stores full credit card numbers or sensitive banking
-        details on our servers.
+        (Stripe, Swish). clikd: and Cheriie AB never store full credit card numbers or sensitive
+        banking details on our servers.
       </p>
 
       <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
-        C. Social Media &amp; Third-Party API Data
+        D. Social Media &amp; Direct Messaging Data (APIs)
       </h3>
       <p>
-        When you connect your social media accounts (e.g., Instagram, TikTok, LinkedIn, YouTube) to
-        our Content Planner and Analytics Suite, we collect:
+        When you connect third-party platforms (Instagram, Facebook, TikTok, Pinterest, YouTube,
+        LinkedIn) to our Content Planner, Social Inbox, and Analytics Suite, we collect:
       </p>
       <ul>
         <li>
-          User ID, account handle, profile picture, follower counts, and valid access tokens.
+          User ID, account handle, profile picture, follower counts, and valid OAuth access tokens.
         </li>
         <li>
-          Content and media (images, videos, captions, hashtags) uploaded or scheduled through the
-          Service.
+          Scheduled media (images, videos, captions, hashtags, Pinterest Pins, TikTok drafts).
         </li>
         <li>
-          Performance and analytics data for scheduled posts (e.g., impressions, reach, clicks,
-          engagement metrics).
-        </li>
-      </ul>
-
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
-        D. Usage &amp; Technical Data
-      </h3>
-      <ul>
-        <li>
-          IP address, device specifications, browser type, operating system, login timestamps, and
-          clickstream behavior.
+          Performance and analytics data (impressions, reach, clicks, video views, engagement rates).
         </li>
         <li>
-          Necessary cookies and session tokens to keep you authenticated and remember your workspace
-          preferences.
+          <strong>Direct Messaging Data (Instagram DMs &amp; Meta Messenger):</strong> When enabled
+          for your Social Inbox or automated comment-to-DM flows, we process incoming message text,
+          sender handles, and automated response triggers.
         </li>
       </ul>
 
       <LegalH2 section="privacyS3" />
       <p>
-        To provide scheduling, cross-posting, and analytics features, clikd: integrates with official
-        third-party APIs. By connecting your accounts, you agree to the processing of data in
-        accordance with each platform&apos;s respective terms:
+        To provide multi-channel scheduling, messaging, and AI generation, clikd: integrates with
+        official third-party APIs. By connecting your accounts, you agree to the processing of data
+        in accordance with each platform&apos;s respective terms:
       </p>
 
       <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
-        A. YouTube API Services (Google)
-      </h3>
-      <ul>
-        <li>
-          Our Service utilizes YouTube API Services to enable video previewing, Short scheduling, and
-          channel metrics.
-        </li>
-        <li>
-          By using YouTube features within clikd:, you agree to be bound by the{' '}
-          <a
-            href="https://www.youtube.com/t/terms"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            YouTube Terms of Service
-          </a>{' '}
-          and the{' '}
-          <a
-            href="https://policies.google.com/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Google Privacy Policy
-          </a>
-          .
-        </li>
-        <li>
-          You can revoke clikd:&apos;s access to your Google/YouTube data at any time via{' '}
-          <a
-            href="https://myaccount.google.com/permissions"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Google Security Settings
-          </a>
-          .
-        </li>
-      </ul>
-
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
-        B. Meta (Instagram Graph API &amp; Facebook Platform)
-      </h3>
-      <ul>
-        <li>
-          We process Meta data strictly in compliance with Meta&apos;s Platform Terms and Developer
-          Policies.
-        </li>
-        <li>
-          We store only valid OAuth access tokens required to schedule posts and fetch analytics.
-        </li>
-        <li>
-          To request the deletion of your Meta-related data from our platform, you can use our
-          automated data deletion callback endpoint at{' '}
-          <a href="https://clikd.app/api/auth/data-deletion">
-            https://clikd.app/api/auth/data-deletion
-          </a>{' '}
-          or contact <a href="mailto:privacy@clikd.app">privacy@clikd.app</a>.
-        </li>
-      </ul>
-
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
-        C. TikTok API &amp; LinkedIn API
+        A. OpenAI API (AI Copilot Suite)
       </h3>
       <p>
-        Data received from TikTok and LinkedIn is processed solely to perform the scheduling,
-        publishing, and analytics functions requested by you within the Service.
+        We utilize the OpenAI API (gpt-4o-mini / gpt-4o) for social caption generation and AI
+        assistants. Data sent to OpenAI is governed by OpenAI&apos;s Business Privacy Policy.
+      </p>
+
+      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+        B. Pinterest API
+      </h3>
+      <p>
+        We utilize the Pinterest Developer API (boards:read, boards:write, pins:read, pins:write) to
+        publish and schedule Pins. Your interaction with Pinterest is subject to the Pinterest
+        Privacy Policy.
+      </p>
+
+      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+        C. TikTok API (Display &amp; Content Posting API)
+      </h3>
+      <p>
+        Data received from TikTok (account stats, video lists, Direct Post uploads) is processed in
+        accordance with the TikTok Privacy Policy.
+      </p>
+
+      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+        D. Meta (Instagram Graph API, Facebook &amp; Messenger API)
+      </h3>
+      <p>
+        We process Meta data strictly in compliance with Meta&apos;s Platform Terms. To request
+        automated deletion of your Meta data, visit{' '}
+        <a href="https://clikd.app/api/auth/data-deletion">
+          https://clikd.app/api/auth/data-deletion
+        </a>{' '}
+        or contact <a href="mailto:hello@clikd.app">hello@clikd.app</a>.
+      </p>
+
+      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+        E. YouTube API Services (Google)
+      </h3>
+      <p>
+        Our Service utilizes YouTube API Services. By using YouTube features in clikd:, you agree to
+        the{' '}
+        <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">
+          YouTube Terms of Service
+        </a>{' '}
+        and{' '}
+        <a
+          href="https://policies.google.com/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Google Privacy Policy
+        </a>
+        . Manage access via{' '}
+        <a
+          href="https://myaccount.google.com/permissions"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Google Security Settings
+        </a>
+        .
       </p>
 
       <LegalH2 section="privacyS4" />
@@ -197,11 +216,17 @@ export default function IntegritetContent() {
           <tbody className="text-slate-700">
             <tr className="border-b border-slate-100 align-top">
               <td className="px-3 py-2.5">
-                Provide &amp; Operate the Service (Account, Content Planner, Bio Storefront,
-                Community)
+                Provide &amp; Operate the Service (Planner, Bio Store, Community, Custom Domains)
               </td>
-              <td className="px-3 py-2.5">Account Details, Profile Data, Usage Data</td>
+              <td className="px-3 py-2.5">
+                Account Details, Custom Domain Records, Usage Data
+              </td>
               <td className="px-3 py-2.5">Performance of a Contract (Art. 6.1 b)</td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="px-3 py-2.5">AI Content Generation &amp; Assistance</td>
+              <td className="px-3 py-2.5">Text Prompts, Topic Inputs, Tone Preferences</td>
+              <td className="px-3 py-2.5">Performance of a Contract (Initiated by User)</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
               <td className="px-3 py-2.5">Process Payments, Payouts &amp; Taxes</td>
@@ -211,19 +236,19 @@ export default function IntegritetContent() {
               </td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
-              <td className="px-3 py-2.5">Social Media Publishing &amp; Scheduling</td>
-              <td className="px-3 py-2.5">API Tokens, Scheduled Media, Captions</td>
+              <td className="px-3 py-2.5">Social Media &amp; Pinterest Publishing</td>
+              <td className="px-3 py-2.5">API Tokens, Scheduled Pins/Posts, Captions</td>
               <td className="px-3 py-2.5">Performance of a Contract (Initiated by User)</td>
             </tr>
             <tr className="border-b border-slate-100 align-top">
-              <td className="px-3 py-2.5">Customer Support, Debugging &amp; Security</td>
-              <td className="px-3 py-2.5">Account Data, IP Address, Correspondence</td>
-              <td className="px-3 py-2.5">Legitimate Interest (Art. 6.1 f)</td>
+              <td className="px-3 py-2.5">Social Inbox &amp; Automated Direct Messaging</td>
+              <td className="px-3 py-2.5">Message Sender Handles, Message Content</td>
+              <td className="px-3 py-2.5">Legitimate Interest / Contract</td>
             </tr>
             <tr className="align-top">
-              <td className="px-3 py-2.5">Direct Marketing &amp; Newsletters</td>
-              <td className="px-3 py-2.5">Email Address</td>
-              <td className="px-3 py-2.5">Consent (Art. 6.1 a) or Legitimate Interest</td>
+              <td className="px-3 py-2.5">Customer Support, Debugging &amp; Security</td>
+              <td className="px-3 py-2.5">Account Data, IP Address, Technical Logs</td>
+              <td className="px-3 py-2.5">Legitimate Interest (Art. 6.1 f)</td>
             </tr>
           </tbody>
         </table>
@@ -231,199 +256,106 @@ export default function IntegritetContent() {
 
       <LegalH2 section="privacyS5" />
       <p>
-        We never sell your personal data to third parties. We share data only with trusted service
-        providers (sub-processors) under strict Data Processing Agreements (DPA):
+        We never sell your personal data. We share data only with trusted third-party sub-processors
+        under strict Data Processing Agreements (DPA):
       </p>
-      <ul>
-        <li>
-          <strong>Hosting &amp; Infrastructure:</strong> Vercel Inc. and Supabase Inc. (Database and
-          hosting within EU/EEA or approved safeguards).
-        </li>
-        <li>
-          <strong>Payment Gateways:</strong> Stripe Inc. and local mobile payment partners (For
-          secure payment processing).
-        </li>
-        <li>
-          <strong>Accounting Sync:</strong> Fortnox AB (For automated Nordic VAT and invoice
-          logging).
-        </li>
-        <li>
-          <strong>Transactional Email:</strong> Infrastructure providers for password resets and
-          notification delivery.
-        </li>
-      </ul>
+      <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+        <table className="w-full min-w-[560px] text-left text-sm border-collapse">
+          <thead>
+            <tr className="bg-slate-50 text-slate-900">
+              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">Sub-processor</th>
+              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">Purpose</th>
+              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">Location</th>
+              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+                Transfer Safeguard
+              </th>
+            </tr>
+          </thead>
+          <tbody className="text-slate-700">
+            <tr className="border-b border-slate-100 align-top">
+              <td className="px-3 py-2.5">Supabase Inc.</td>
+              <td className="px-3 py-2.5">Relational Database, Auth &amp; Realtime</td>
+              <td className="px-3 py-2.5">EU (Frankfurt)</td>
+              <td className="px-3 py-2.5">GDPR DPA / EU Hosting</td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="px-3 py-2.5">Vercel Inc.</td>
+              <td className="px-3 py-2.5">Web Application Hosting &amp; Custom Domain SSL</td>
+              <td className="px-3 py-2.5">EU / Global Edge</td>
+              <td className="px-3 py-2.5">EU-U.S. Data Privacy Framework</td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="px-3 py-2.5">OpenAI LLC</td>
+              <td className="px-3 py-2.5">AI Copilot Text Generation</td>
+              <td className="px-3 py-2.5">USA</td>
+              <td className="px-3 py-2.5">Data Privacy Framework / DPA</td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="px-3 py-2.5">Stripe Inc.</td>
+              <td className="px-3 py-2.5">Payment Processing &amp; Subscription Billing</td>
+              <td className="px-3 py-2.5">EU / USA</td>
+              <td className="px-3 py-2.5">PCI-DSS Level 1 / DPA</td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="px-3 py-2.5">Meta Platforms Inc.</td>
+              <td className="px-3 py-2.5">Instagram, Facebook &amp; Messenger API</td>
+              <td className="px-3 py-2.5">EU / USA</td>
+              <td className="px-3 py-2.5">Meta Platform Terms / SCCs</td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="px-3 py-2.5">TikTok Inc.</td>
+              <td className="px-3 py-2.5">TikTok Content Posting &amp; Analytics API</td>
+              <td className="px-3 py-2.5">EU / USA</td>
+              <td className="px-3 py-2.5">TikTok Developer DPA</td>
+            </tr>
+            <tr className="border-b border-slate-100 align-top">
+              <td className="px-3 py-2.5">Pinterest Inc.</td>
+              <td className="px-3 py-2.5">Pinterest Pin Publishing &amp; Board API</td>
+              <td className="px-3 py-2.5">USA</td>
+              <td className="px-3 py-2.5">Pinterest Developer Terms</td>
+            </tr>
+            <tr className="align-top">
+              <td className="px-3 py-2.5">Fortnox AB</td>
+              <td className="px-3 py-2.5">Nordic VAT Calculation &amp; Invoice Sync</td>
+              <td className="px-3 py-2.5">Sweden</td>
+              <td className="px-3 py-2.5">Swedish Accounting Laws</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <LegalH2 section="privacyS6" />
-      <p>
-        We store your personal data only as long as necessary to fulfill the purposes outlined in
-        this policy:
-      </p>
+      <p>You have the following rights regarding your personal data:</p>
       <ul>
         <li>
-          <strong>Active Account:</strong> Data is retained while your clikd: account remains active.
+          <strong>Right of Access &amp; Portability:</strong> Request a copy or structured export of
+          your personal data.
         </li>
         <li>
-          <strong>Account Termination:</strong> Upon account deletion request, your personal profile,
-          storefronts, and social API tokens are deleted or anonymized within 30 days.
-        </li>
-        <li>
-          <strong>Accounting Requirements:</strong> Invoices and transaction records are retained for
-          up to 7 years to comply with statutory accounting laws.
-        </li>
-      </ul>
-
-      <LegalH2 section="privacyS7" />
-      <p>
-        Under European and UK data protection laws, you have the following rights regarding your
-        personal data:
-      </p>
-      <ul>
-        <li>
-          <strong>Right of Access (Data Portability):</strong> Request a copy of the personal data we
-          hold about you.
-        </li>
-        <li>
-          <strong>Right to Rectification:</strong> Request correction of inaccurate or incomplete
-          data.
+          <strong>Right to Rectification:</strong> Request correction of inaccurate information.
         </li>
         <li>
           <strong>Right to Erasure (&quot;Right to be Forgotten&quot;):</strong> Request deletion of
-          your data when it is no longer required for its original purpose.
+          your account and associated social API tokens.
         </li>
         <li>
-          <strong>Right to Restrict &amp; Object:</strong> Object to data processing based on
-          legitimate interests or request processing restriction.
-        </li>
-        <li>
-          <strong>Right to Withdraw Consent:</strong> Revoke marketing or processing consent at any
-          time.
+          <strong>Right to Withdraw Consent / Disconnect:</strong> You can disconnect any social
+          media account (Instagram, Pinterest, TikTok, YouTube, LinkedIn) at any time via Settings
+          → Socials in your dashboard. This immediately deletes all stored OAuth tokens.
         </li>
       </ul>
       <p>
-        To exercise your rights, email us at{' '}
-        <a href="mailto:privacy@clikd.app">privacy@clikd.app</a>. We respond to all requests within
-        30 days.
+        To exercise your rights, contact{' '}
+        <a href="mailto:hello@clikd.app">hello@clikd.app</a>. We respond to all requests within 30
+        days.
       </p>
 
-      <LegalH2 section="privacyS8" />
-      <p>You retain full control over connected social media accounts at all times:</p>
-      <ul>
-        <li>
-          <strong>In-App Management:</strong> Navigate to Settings → Connected Accounts in your
-          dashboard and click &quot;Disconnect&quot; next to any platform. This immediately revokes
-          and deletes our stored access tokens.
-        </li>
-        <li>
-          <strong>Platform Security Settings:</strong> You can revoke access directly from your
-          security settings on Google, Meta, TikTok, or LinkedIn.
-        </li>
-        <li>
-          <strong>Data Deletion Endpoint:</strong> Meta users can track data deletion status at{' '}
-          <a href="https://clikd.app/api/auth/data-deletion">
-            https://clikd.app/api/auth/data-deletion
-          </a>
-          .
-        </li>
-      </ul>
-
-      <LegalH2 section="privacyS9" />
+      <LegalH2 section="privacyS7" />
       <p>
-        When personal data is transferred outside the European Economic Area (EEA) or the United
-        Kingdom, we ensure appropriate safeguards are implemented in accordance with Chapter V of the
-        GDPR (such as Standard Contractual Clauses (SCCs) approved by the European Commission or
-        EU-U.S. Data Privacy Framework certification).
+        We may update this policy periodically to reflect platform enhancements or legal
+        requirements. Material updates will be notified via email or displayed in the Service at
+        least 14 days prior to taking effect.
       </p>
-
-      <LegalH2 section="privacyS10" />
-      <p>
-        If you reside in California or other US states with applicable privacy regulations (such as
-        CCPA/CPRA), the following disclosures apply:
-      </p>
-      <ul>
-        <li>
-          <strong>No Sale or Sharing:</strong> clikd: does not sell your personal information or
-          share it for cross-context behavioral advertising.
-        </li>
-        <li>
-          <strong>Your Rights:</strong> You have the right to request access to the categories and
-          specific pieces of personal information we have collected about you, request deletion of
-          your information, and be free from discrimination for exercising your privacy rights.
-        </li>
-        <li>
-          <strong>Exercising Rights:</strong> You or an authorized agent may submit a privacy request
-          by emailing <a href="mailto:privacy@clikd.app">privacy@clikd.app</a>.
-        </li>
-      </ul>
-
-      <LegalH2 section="privacyS11" />
-      <p>
-        Our Service is not directed to individuals under the age of 16. We do not knowingly collect
-        personal data from children. If you become aware that a child has provided us with personal
-        data, please contact <a href="mailto:privacy@clikd.app">privacy@clikd.app</a> so we can take
-        immediate steps to remove such information.
-      </p>
-
-      <LegalH2 section="privacyS12" />
-      <p>
-        If you believe our processing of your personal data violates regulations, you have the right
-        to lodge a complaint with your local supervisory authority:
-      </p>
-      <ul>
-        <li>
-          Sweden: Integritetsskyddsmyndigheten (IMY) —{' '}
-          <a href="https://www.imy.se" target="_blank" rel="noopener noreferrer">
-            www.imy.se
-          </a>
-        </li>
-        <li>
-          Norway: Datatilsynet —{' '}
-          <a href="https://www.datatilsynet.no" target="_blank" rel="noopener noreferrer">
-            www.datatilsynet.no
-          </a>
-        </li>
-        <li>
-          Denmark: Datatilsynet —{' '}
-          <a href="https://www.datatilsynet.dk" target="_blank" rel="noopener noreferrer">
-            www.datatilsynet.dk
-          </a>
-        </li>
-        <li>
-          Finland: Data Ombudsman&apos;s Office —{' '}
-          <a href="https://www.tietosuoja.fi" target="_blank" rel="noopener noreferrer">
-            www.tietosuoja.fi
-          </a>
-        </li>
-        <li>
-          UK: Information Commissioner&apos;s Office (ICO) —{' '}
-          <a href="https://www.ico.org.uk" target="_blank" rel="noopener noreferrer">
-            www.ico.org.uk
-          </a>
-        </li>
-        <li>
-          United States (Federal): Federal Trade Commission (FTC) —{' '}
-          <a href="https://www.ftc.gov" target="_blank" rel="noopener noreferrer">
-            www.ftc.gov
-          </a>
-        </li>
-        <li>
-          United States (California): California Privacy Protection Agency (CPPA) —{' '}
-          <a href="https://cppa.ca.gov" target="_blank" rel="noopener noreferrer">
-            cppa.ca.gov
-          </a>{' '}
-          or California Office of the Attorney General —{' '}
-          <a href="https://oag.ca.gov/privacy" target="_blank" rel="noopener noreferrer">
-            oag.ca.gov/privacy
-          </a>
-        </li>
-      </ul>
-
-      <LegalH2 section="privacyS13" />
-      <p>
-        We may update this policy periodically to reflect changes in our Service or legal
-        requirements. Material updates will be notified via email or prominently announced in the
-        Service at least 14 days prior to taking effect.
-      </p>
-    
     </LegalDoc>
   );
 }
