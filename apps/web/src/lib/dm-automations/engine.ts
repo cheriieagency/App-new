@@ -159,7 +159,11 @@ async function loadActiveRules(workspaceId: string): Promise<DmAutomationRow[]> 
       : [],
     dm_message_text: String(r.dm_message_text || ''),
     cta_button_label:
-      r.cta_button_label != null ? String(r.cta_button_label) : null,
+      r.cta_button_title != null
+        ? String(r.cta_button_title)
+        : r.cta_button_label != null
+          ? String(r.cta_button_label)
+          : null,
     cta_button_url:
       r.cta_button_url != null ? String(r.cta_button_url) : null,
     reply_to_comment_publicly: Boolean(r.reply_to_comment_publicly),

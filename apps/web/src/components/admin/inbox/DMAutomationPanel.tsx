@@ -93,14 +93,26 @@ export default function DMAutomationPanel() {
       : `${window.location.origin}/bio`;
   }, [activeWorkspace.handle, activeWorkspace.bio?.handle]);
 
-  const { data, isLoading } = useQuery<AutomationsPayload>({
+  const { data, isLoading, isError, error, refetch } = useQuery<AutomationsPayload>({
     queryKey: ['dm-automations', activeWorkspace.id],
     queryFn: async () => {
       const res = await fetch(
         `/api/admin/inbox/automations?workspaceId=${encodeURIComponent(activeWorkspace.id)}`,
-        { headers: { 'x-workspace-id': activeWorkspace.id } }
+        {
+          headers: { 'x-workspace-id': activeWorkspace.id },
+          credentials: 'include',
+        }
       );
-      if (!res.ok) throw new Error('Failed to load automations');
+      if (!res.ok) {
+        let message = `Failed to load automations (${res.status})`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson?.error) message = errJson.error;
+        } catch {
+          /* non-JSON */
+        }
+        throw new Error(message);
+      }
       return res.json();
     },
     enabled: Boolean(activeWorkspace.id),
@@ -117,6 +129,7 @@ export default function DMAutomationPanel() {
           title: payload.title,
           triggerKeywords: payload.triggerKeywords,
           dmMessageText: payload.dmMessageText,
+          ctaButtonTitle: payload.ctaButtonLabel,
           ctaButtonLabel: payload.ctaButtonLabel,
           ctaButtonUrl: payload.ctaButtonUrl || storefrontDefault,
           replyToCommentPublicly: payload.replyToCommentPublicly,
@@ -124,9 +137,24 @@ export default function DMAutomationPanel() {
           isActive: payload.isActive,
         }),
       });
-      const json = (await res.json()) as { error?: string; automation?: AutomationRule };
-      if (!res.ok) throw new Error(json.error || 'Could not save rule');
-      return json;
+      if (!res.ok) {
+        let message = `Could not save rule (${res.status})`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson?.error) message = errJson.error;
+        } catch {
+          /* non-JSON error body */
+        }
+        throw new Error(message);
+      }
+      try {
+        return (await res.json()) as {
+          success?: boolean;
+          automation?: AutomationRule;
+        };
+      } catch {
+        throw new Error('Server returned invalid JSON');
+      }
     },
     onSuccess: () => {
       toast.success(form.id ? 'Rule updated' : 'Comment-to-DM rule created');
@@ -150,6 +178,7 @@ export default function DMAutomationPanel() {
           title: rule.title,
           triggerKeywords: rule.triggerKeywords,
           dmMessageText: rule.dmMessageText,
+          ctaButtonTitle: rule.ctaButtonLabel,
           ctaButtonLabel: rule.ctaButtonLabel,
           ctaButtonUrl: rule.ctaButtonUrl,
           replyToCommentPublicly: rule.replyToCommentPublicly,
@@ -157,9 +186,17 @@ export default function DMAutomationPanel() {
           isActive: !rule.isActive,
         }),
       });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(json.error || 'Toggle failed');
-      return json;
+      if (!res.ok) {
+        let message = `Toggle failed (${res.status})`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson?.error) message = errJson.error;
+        } catch {
+          /* non-JSON */
+        }
+        throw new Error(message);
+      }
+      return res.json().catch(() => ({}));
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['dm-automations', activeWorkspace.id] });
@@ -176,9 +213,17 @@ export default function DMAutomationPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, workspaceId: activeWorkspace.id }),
       });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(json.error || 'Delete failed');
-      return json;
+      if (!res.ok) {
+        let message = `Delete failed (${res.status})`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson?.error) message = errJson.error;
+        } catch {
+          /* non-JSON */
+        }
+        throw new Error(message);
+      }
+      return res.json().catch(() => ({}));
     },
     onSuccess: () => {
       toast.success('Rule deleted');
@@ -245,6 +290,22 @@ export default function DMAutomationPanel() {
 
   return (
     <div className="space-y-4">
+      {isError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <p>
+            Could not load automations:{' '}
+            {error instanceof Error ? error.message : 'Unknown error'}
+          </p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {kpiCards.map((k) => (
           <div key={k.label} className={adminKpiClass}>
