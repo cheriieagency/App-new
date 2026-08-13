@@ -36,13 +36,18 @@ async function resolveWorkspaceId(
   bodyWorkspaceId?: unknown
 ): Promise<string | null> {
   const jar = await cookies();
+  const url = new URL(request.url);
+  const fromBody =
+    typeof bodyWorkspaceId === 'string' ? bodyWorkspaceId.trim() : '';
+
   return (
-    (typeof bodyWorkspaceId === 'string' && bodyWorkspaceId.trim()) ||
-    new URL(request.url).searchParams.get('workspaceId')?.trim() ||
+    fromBody ||
+    url.searchParams.get('workspaceId')?.trim() ||
+    url.searchParams.get('workspace_id')?.trim() ||
     request.headers.get('x-workspace-id')?.trim() ||
     request.headers.get('x-active-workspace-id')?.trim() ||
-    jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
-    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE)?.value?.trim() ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value?.trim() ||
     null
   );
 }
@@ -666,41 +671,135 @@ async function updateAutomationRow(input: {
 }
 
 export async function DELETE(request: Request) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const url = new URL(request.url);
-  let body: { id?: unknown; workspaceId?: unknown } = {};
   try {
-    body = (await request.json()) as typeof body;
-  } catch {
-    body = {};
-  }
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  const workspaceId = await resolveWorkspaceId(request, body.workspaceId);
-  const id = Number(body.id ?? url.searchParams.get('id'));
-  if (!workspaceId || !id || Number.isNaN(id)) {
-    return Response.json(
-      { error: 'id and workspaceId required' },
-      { status: 400 }
+    const url = new URL(request.url);
+    let body: {
+      id?: unknown;
+      workspaceId?: unknown;
+      workspace_id?: unknown;
+    } = {};
+    try {
+      const raw = await request.text();
+      body = raw.trim()
+        ? (JSON.parse(raw) as typeof body)
+        : {};
+    } catch {
+      body = {};
+    }
+
+    const id = Number(
+      url.searchParams.get('id') ??
+        body.id ??
+        url.searchParams.get('automationId')
+    );
+    if (!id || Number.isNaN(id)) {
+      return NextResponse.json(
+        { error: 'id required', success: false },
+        { status: 400 }
+      );
+    }
+
+    let workspaceId = await resolveWorkspaceId(
+      request,
+      body.workspaceId ?? body.workspace_id
+    );
+
+    if (!process.env.DATABASE_URL?.trim()) {
+      return NextResponse.json(
+        { error: 'DATABASE_URL required', success: false },
+        { status: 503 }
+      );
+    }
+
+    try {
+      await ensureDmAutomationsSchema();
+    } catch (schemaErr) {
+      console.warn('[DELETE automations] schema ensure', schemaErr);
+    }
+
+    // If workspaceId was omitted, resolve it from the rule row itself.
+    if (!workspaceId) {
+      try {
+        const owned = await sql`
+          SELECT workspace_id
+          FROM public.dm_automations
+          WHERE id = ${id}
+          LIMIT 1
+        `;
+        if (owned?.[0]?.workspace_id) {
+          workspaceId = String(owned[0].workspace_id);
+        }
+      } catch (lookupErr) {
+        console.warn('[DELETE automations] workspace lookup', lookupErr);
+      }
+    }
+
+    if (!workspaceId) {
+      // Still allow delete-by-id for the authenticated creator when cookie is missing.
+      try {
+        const deleted = await sql`
+          DELETE FROM public.dm_automations
+          WHERE id = ${id}
+            AND (user_id = ${session.user.id} OR user_id IS NULL)
+          RETURNING id
+        `;
+        if (deleted?.[0]?.id) {
+          return NextResponse.json({
+            success: true,
+            ok: true,
+            deletedId: id,
+            deleted: id,
+          });
+        }
+      } catch {
+        /* fall through */
+      }
+      return NextResponse.json(
+        {
+          error: 'Could not resolve workspace for this rule',
+          success: false,
+        },
+        { status: 400 }
+      );
+    }
+
+    const deleted = await sql`
+      DELETE FROM public.dm_automations
+      WHERE id = ${id}
+        AND workspace_id = ${workspaceId}
+      RETURNING id
+    `;
+
+    if (!deleted?.[0]?.id) {
+      // Soft success if already gone — keep UI snappy.
+      return NextResponse.json({
+        success: true,
+        ok: true,
+        deletedId: id,
+        deleted: id,
+        message: 'Rule not found or already deleted',
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      ok: true,
+      deletedId: id,
+      deleted: id,
+    });
+  } catch (err) {
+    console.error('[DELETE /api/admin/inbox/automations]', err);
+    return NextResponse.json(
+      {
+        success: false,
+        error: err instanceof Error ? err.message : 'Delete failed',
+      },
+      { status: 500 }
     );
   }
-
-  if (!process.env.DATABASE_URL?.trim()) {
-    return Response.json({ error: 'DATABASE_URL required' }, { status: 503 });
-  }
-
-  await ensureDmAutomationsSchema();
-  await sql`
-    DELETE FROM public.dm_automations
-    WHERE id = ${id}
-      AND workspace_id = ${workspaceId}
-  `;
-
-  return Response.json({ ok: true, deleted: id });
 }
-
-/** PATCH-style toggle via POST with { id, isActive } only — handled above.
- * Extra DELETE-friendly GET query already covered. */

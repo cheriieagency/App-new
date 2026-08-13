@@ -209,11 +209,20 @@ export default function DMAutomationPanel() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch('/api/admin/inbox/automations', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, workspaceId: activeWorkspace.id }),
-      });
+      const ws = encodeURIComponent(activeWorkspace.id);
+      const res = await fetch(
+        `/api/admin/inbox/automations?id=${encodeURIComponent(String(id))}&workspaceId=${ws}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-workspace-id': activeWorkspace.id,
+            'x-active-workspace-id': activeWorkspace.id,
+          },
+          credentials: 'include',
+          body: JSON.stringify({ id, workspaceId: activeWorkspace.id }),
+        }
+      );
       if (!res.ok) {
         let message = `Delete failed (${res.status})`;
         try {
@@ -224,13 +233,47 @@ export default function DMAutomationPanel() {
         }
         throw new Error(message);
       }
-      return res.json().catch(() => ({}));
+      return res.json().catch(() => ({ success: true, deletedId: id }));
+    },
+    onMutate: async (id: number) => {
+      await qc.cancelQueries({
+        queryKey: ['dm-automations', activeWorkspace.id],
+      });
+      const previous = qc.getQueryData<AutomationsPayload>([
+        'dm-automations',
+        activeWorkspace.id,
+      ]);
+      if (previous) {
+        const nextAutomations = (previous.automations || []).filter(
+          (r) => r.id !== id
+        );
+        qc.setQueryData<AutomationsPayload>(
+          ['dm-automations', activeWorkspace.id],
+          {
+            ...previous,
+            automations: nextAutomations,
+            kpis: {
+              ...previous.kpis,
+              activeTriggers: nextAutomations.filter((r) => r.isActive).length,
+            },
+          }
+        );
+      }
+      return { previous };
     },
     onSuccess: () => {
       toast.success('Rule deleted');
-      void qc.invalidateQueries({ queryKey: ['dm-automations', activeWorkspace.id] });
+      void qc.invalidateQueries({
+        queryKey: ['dm-automations', activeWorkspace.id],
+      });
     },
-    onError: (err) => {
+    onError: (err, _id, ctx) => {
+      if (ctx?.previous) {
+        qc.setQueryData(
+          ['dm-automations', activeWorkspace.id],
+          ctx.previous
+        );
+      }
       toast.error(err instanceof Error ? err.message : 'Delete failed');
     },
   });
