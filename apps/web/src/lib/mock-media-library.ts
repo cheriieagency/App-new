@@ -90,7 +90,7 @@ export function createMediaFolder(
   const folder: MediaFolder = {
     id: `folder-${Date.now()}`,
     name: input.name.trim() || 'Untitled folder',
-    color: input.color || '#9089F0',
+    color: input.color || '#2B2568',
     description: (input.description ?? '').trim(),
     created_at: new Date().toISOString(),
     owner_user_id: userId,
@@ -141,6 +141,29 @@ export function addMediaAsset(
   };
   storeFor(userId).assets.unshift(asset);
   return asset;
+}
+
+/** Move an asset into another folder (or Brand assets root). */
+export function moveMediaAsset(
+  userId: string,
+  assetId: string,
+  folderId: string | null
+): MediaAsset | null {
+  const store = storeFor(userId);
+  const asset = store.assets.find((a) => a.id === assetId);
+  if (!asset) return null;
+  const nextFolder =
+    !folderId || isMediaLibraryRoot(folderId)
+      ? MEDIA_LIBRARY_ROOT_ID
+      : folderId;
+  if (
+    nextFolder !== MEDIA_LIBRARY_ROOT_ID &&
+    !store.folders.some((f) => f.id === nextFolder)
+  ) {
+    return null;
+  }
+  asset.folder_id = nextFolder;
+  return { ...asset };
 }
 
 export function deleteMediaFolder(userId: string, id: string): boolean {

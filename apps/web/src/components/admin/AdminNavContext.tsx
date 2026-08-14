@@ -62,17 +62,41 @@ function normalizeTabParam(raw: string | null): AdminSection | null {
   return null;
 }
 
+/** Build an /admin deep-link so Projects state survives /planner ↔ /admin remounts. */
+export function adminProjectsHref(opts?: {
+  campaignId?: string | null;
+  create?: boolean;
+}): string {
+  const params = new URLSearchParams();
+  params.set('tab', 'projects');
+  if (opts?.campaignId) params.set('campaign', opts.campaignId);
+  if (opts?.create) params.set('create', '1');
+  return `/admin?${params.toString()}`;
+}
+
 function writeUrl(
   tab: AdminSection,
-  opts: { campaignId?: string | null; folderId?: string | null }
+  opts: {
+    campaignId?: string | null;
+    folderId?: string | null;
+    create?: boolean;
+  }
 ) {
   try {
+    // Only rewrite query when already on /admin — never pollute /planner URLs.
+    if (!window.location.pathname.startsWith('/admin')) return;
+
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
     if (tab === 'projects' && opts.campaignId) {
       url.searchParams.set('campaign', opts.campaignId);
     } else {
       url.searchParams.delete('campaign');
+    }
+    if (tab === 'projects' && opts.create) {
+      url.searchParams.set('create', '1');
+    } else {
+      url.searchParams.delete('create');
     }
     if (tab === 'media' && opts.folderId) {
       url.searchParams.set('folder', opts.folderId);
@@ -102,6 +126,11 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
     if (campaign) setActiveCampaignIdState(campaign);
     const folder = params.get('folder');
     if (folder) setActiveMediaFolderIdState(folder);
+    // Deep-link create form (e.g. from /planner sidebar → /admin?tab=projects&create=1)
+    if (params.get('create') === '1' && (next === 'projects' || !next)) {
+      setSectionState('projects');
+      setCreateProjectOpenState(true);
+    }
   }, []);
 
   const setSection = useCallback((s: AdminSection) => {
@@ -125,7 +154,7 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
     setCreateProjectOpenState(false);
     setActiveMediaFolderIdState(null);
     setCreateMediaFolderOpenState(false);
-    writeUrl('projects', { campaignId: id, folderId: null });
+    writeUrl('projects', { campaignId: id, folderId: null, create: false });
   }, []);
 
   const setCreateProjectOpen = useCallback((open: boolean) => {
@@ -133,11 +162,17 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
     if (open) {
       setSectionState('projects');
       setActiveCampaignIdState((prev) => {
-        writeUrl('projects', { campaignId: prev, folderId: null });
+        writeUrl('projects', { campaignId: prev, folderId: null, create: true });
         return prev;
       });
+    } else {
+      writeUrl('projects', {
+        campaignId: activeCampaignId,
+        folderId: null,
+        create: false,
+      });
     }
-  }, []);
+  }, [activeCampaignId]);
 
   const setActiveMediaFolderId = useCallback((id: string | null) => {
     setActiveMediaFolderIdState(id);

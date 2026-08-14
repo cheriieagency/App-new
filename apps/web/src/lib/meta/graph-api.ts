@@ -98,24 +98,44 @@ export async function fetchInstagramInsights(
   igUserId: string,
   accessToken: string
 ): Promise<InstagramInsights> {
-  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(igUserId)}/insights`);
-  url.searchParams.set('metric', 'impressions,reach,profile_views');
-  url.searchParams.set('period', 'day');
-  url.searchParams.set('access_token', accessToken);
+  // Meta deprecated account "impressions" — use currently allowed day metrics.
+  const metricSets = [
+    'reach,profile_views,views',
+    'reach,profile_views',
+    'reach,follower_count',
+  ];
 
-  const data = await graphJson<{
-    data?: Array<{ name: string; values?: Array<{ value: number }> }>;
-  }>(url.toString());
+  let lastError: unknown = null;
+  for (const metric of metricSets) {
+    try {
+      const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(igUserId)}/insights`);
+      url.searchParams.set('metric', metric);
+      url.searchParams.set('period', 'day');
+      url.searchParams.set('access_token', accessToken);
 
-  const out: InstagramInsights = { raw: data };
-  for (const metric of data.data ?? []) {
-    const value = metric.values?.[metric.values.length - 1]?.value;
-    if (typeof value !== 'number') continue;
-    if (metric.name === 'impressions') out.impressions = value;
-    if (metric.name === 'reach') out.reach = value;
-    if (metric.name === 'profile_views') out.profile_views = value;
+      const data = await graphJson<{
+        data?: Array<{ name: string; values?: Array<{ value: number }> }>;
+      }>(url.toString());
+
+      const out: InstagramInsights = { raw: data };
+      for (const row of data.data ?? []) {
+        const value = row.values?.[row.values.length - 1]?.value;
+        if (typeof value !== 'number') continue;
+        if (row.name === 'impressions' || row.name === 'views') {
+          out.impressions = value;
+        }
+        if (row.name === 'reach') out.reach = value;
+        if (row.name === 'profile_views') out.profile_views = value;
+      }
+      return out;
+    } catch (error) {
+      lastError = error;
+    }
   }
-  return out;
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Instagram insights unavailable');
 }
 
 export type DemoBreakdownRow = { key: string; label: string; value: number; pct: number };
@@ -519,7 +539,11 @@ function flattenIgInsights(item: InstagramMediaItem): InstagramMediaItem {
   let reach = 0;
   for (const metric of item.insights?.data ?? []) {
     const value = Number(metric.values?.[0]?.value) || 0;
-    if (metric.name === 'impressions' || metric.name === 'plays') {
+    if (
+      metric.name === 'impressions' ||
+      metric.name === 'views' ||
+      metric.name === 'plays'
+    ) {
       impressions = Math.max(impressions, value);
     }
     if (metric.name === 'reach') reach = value;
@@ -536,8 +560,12 @@ export async function fetchInstagramMedia(
   accessToken: string,
   limit = 50
 ): Promise<InstagramMediaItem[]> {
-  const withInsights =
-    'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,insights.metric(impressions,reach,plays,total_interactions)';
+  // Media insights: `plays` is invalid for many media types — prefer views.
+  const insightFieldAttempts = [
+    'insights.metric(impressions,reach,views,total_interactions)',
+    'insights.metric(impressions,reach,total_interactions)',
+    'insights.metric(impressions,reach)',
+  ];
   const basic =
     'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count';
 
@@ -550,19 +578,14 @@ export async function fetchInstagramMedia(
     return (data.data ?? []).map(flattenIgInsights);
   }
 
-  try {
-    return await load(withInsights);
-  } catch (error) {
-    console.warn('[graph] IG media+insights failed, retrying without insights', error);
+  for (const insights of insightFieldAttempts) {
     try {
-      // Retry with classic impressions/reach only (plays may be unsupported).
-      return await load(
-        'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,insights.metric(impressions,reach)'
-      );
-    } catch {
-      return load(basic);
+      return await load(`${basic},${insights}`);
+    } catch (error) {
+      console.warn('[graph] IG media+insights failed, retrying', error);
     }
   }
+  return load(basic);
 }
 
 export type InstagramStoryItem = {

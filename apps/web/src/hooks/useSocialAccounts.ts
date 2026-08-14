@@ -178,6 +178,26 @@ export function useSocialAccounts(enabled = true) {
     void queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
   }, [pathname, session?.user?.id, enabled, queryClient]);
 
+  // When the API remaps a foreign/legacy workspace (e.g. default-my-workspace)
+  // onto the IG-linked owned workspace, keep the sidebar cookie in sync.
+  useEffect(() => {
+    const resolved = query.data?.workspace_id?.trim();
+    if (!resolved || !workspaceCtx?.setActiveWorkspaceId) return;
+    if (resolved === workspaceId) return;
+    const preferredEmpty =
+      !workspaceId ||
+      workspaceId === 'default-my-workspace' ||
+      !(query.data?.accounts ?? []).some((a) => a.connected);
+    if (!preferredEmpty && workspaceId) return;
+    workspaceCtx.setActiveWorkspaceId(resolved);
+  }, [
+    enabled,
+    query.data?.workspace_id,
+    query.data?.accounts,
+    workspaceCtx,
+    workspaceId,
+  ]);
+
   const accounts = query.data?.accounts ?? [];
   const connectedAccounts = useMemo(
     () => accounts.filter((a) => a.connected),

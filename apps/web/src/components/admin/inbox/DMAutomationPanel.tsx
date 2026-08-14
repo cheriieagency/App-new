@@ -4,7 +4,7 @@
  * Inbox → Automations: Comment-to-DM keyword rules (ManyChat-style).
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Loader2,
@@ -43,6 +43,7 @@ type AutomationRule = {
 
 type AutomationsPayload = {
   ok?: boolean;
+  workspaceId?: string;
   automations: AutomationRule[];
   kpis: {
     activeTriggers: number;
@@ -50,6 +51,7 @@ type AutomationsPayload = {
     storefrontClicks: number;
     conversionRate: number;
   };
+  message?: string;
 };
 
 type FormState = {
@@ -79,7 +81,7 @@ const EMPTY_FORM: FormState = {
 export default function DMAutomationPanel() {
   const { locale } = useLanguage();
   const tag = localeTag(locale);
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, setActiveWorkspaceId } = useWorkspace();
   const qc = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -121,6 +123,13 @@ export default function DMAutomationPanel() {
     },
     enabled: Boolean(activeWorkspace.id),
   });
+
+  // Keep UI workspace aligned with the server-owned workspace used for rules.
+  useEffect(() => {
+    const resolved = data?.workspaceId?.trim();
+    if (!resolved || resolved === activeWorkspace.id) return;
+    setActiveWorkspaceId(resolved);
+  }, [data?.workspaceId, activeWorkspace.id, setActiveWorkspaceId]);
 
   const saveMutation = useMutation({
     mutationFn: async (payload: FormState) => {

@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Trash2 } from 'lucide-react';
+import { Folder, FolderKanban, Plus, Trash2 } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
-import { adminCardClass } from '@/components/admin/AdminUi';
+import AdminEmptyState from '@/components/admin/AdminEmptyState';
+import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
+import ProjectVisionBoard from '@/components/admin/ProjectVisionBoard';
 import ContentPlannerShell from '@/components/planner/ContentPlannerShell';
 import {
   Dialog,
@@ -22,8 +24,8 @@ import type { CampaignLabel } from '@/lib/mock-content-planner';
 const COLORS = ['#F472B6', '#9089F0', '#10B981', '#F59E0B', '#2B2568', '#0EA5E9'];
 
 /**
- * Projects section: same Planner chrome/views, scoped to posts tagged
- * with the active campaign from the sidebar submenu.
+ * Projects section: overview of all projects as folders; open one to see
+ * planner content scoped to that campaign label.
  */
 export default function ProjectsPanel() {
   const { locale } = useLanguage();
@@ -42,33 +44,37 @@ export default function ProjectsPanel() {
   const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
   const creating = createProjectOpen;
 
-  const { data: campaignsData } = useQuery<{ campaigns: CampaignLabel[] }>({
+  const { data: campaignsData, isLoading } = useQuery<{ campaigns: CampaignLabel[] }>({
     queryKey: ['planner-campaigns'],
     queryFn: async () => {
-      const r = await fetch('/api/planner/campaigns');
+      const r = await fetch('/api/planner/campaigns', { credentials: 'include' });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
   });
 
   const campaigns = campaignsData?.campaigns ?? [];
-  const activeId =
-    activeCampaignId && campaigns.some((c) => c.id === activeCampaignId)
-      ? activeCampaignId
-      : campaigns[0]?.id ?? null;
-  const active = campaigns.find((c) => c.id === activeId) ?? null;
 
-  useEffect(() => {
-    if (!activeCampaignId && campaigns[0]) {
-      setActiveCampaignId(campaigns[0].id);
-    }
-  }, [activeCampaignId, campaigns, setActiveCampaignId]);
+  // A–Z so the folder grid reads as a sorted project library.
+  const sortedProjects = useMemo(
+    () =>
+      [...campaigns].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      ),
+    [campaigns]
+  );
+
+  const active =
+    activeCampaignId && campaigns.some((c) => c.id === activeCampaignId)
+      ? (campaigns.find((c) => c.id === activeCampaignId) ?? null)
+      : null;
 
   const createMutation = useMutation({
     mutationFn: async () => {
       const r = await fetch('/api/planner/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'create', name, color, description }),
       });
       if (!r.ok) throw new Error('create failed');
@@ -88,6 +94,7 @@ export default function ProjectsPanel() {
       const r = await fetch('/api/planner/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'delete', id }),
       });
       if (!r.ok) throw new Error('delete failed');
@@ -182,13 +189,81 @@ export default function ProjectsPanel() {
     );
   }
 
+  // No project selected → show every project as a sorted folder.
   if (!active) {
     return (
       <div className="space-y-6">
-        <div className={`${adminCardClass} py-16 text-center text-slate-400`}>
-          <FolderKanban size={28} className="mx-auto mb-2 opacity-40" />
-          <p className="text-sm font-semibold">{t('selectProjectHint', locale)}</p>
-        </div>
+        <AdminPageHeader
+          eyebrow={t('adminNavProjects', locale)}
+          title={t('projectsTitle', locale)}
+          description={
+            activeWorkspace
+              ? tf('projectsSub', locale, { name: activeWorkspace.name })
+              : undefined
+          }
+          actions={
+            <button
+              type="button"
+              onClick={() => setCreateProjectOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors"
+            >
+              <Plus size={14} strokeWidth={2.5} />
+              {t('createProject', locale)}
+            </button>
+          }
+        />
+
+        {isLoading ? (
+          <div className={`${adminCardClass} py-16 text-center text-sm text-slate-400`}>
+            {t('loading', locale)}
+          </div>
+        ) : sortedProjects.length === 0 ? (
+          <AdminEmptyState
+            icon={FolderKanban}
+            headline={t('noProjectsYet', locale)}
+            description={t('selectProjectHint', locale)}
+            ctaLabel={`+ ${t('createProject', locale)}`}
+            onCta={() => setCreateProjectOpen(true)}
+          />
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+              {t('projectsFoldersHint', locale)}
+            </p>
+            <div className="flex flex-wrap items-start gap-4 sm:gap-5">
+              {sortedProjects.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => setActiveCampaignId(project.id)}
+                  className="flex flex-col items-center gap-1.5 min-w-[72px] max-w-[96px] rounded-xl p-1.5 hover:opacity-90 transition-opacity"
+                >
+                  <div
+                    className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl text-white flex items-center justify-center"
+                    style={{ background: project.color || '#9089F0' }}
+                  >
+                    <Folder size={26} />
+                  </div>
+                  <p className="text-sm font-extrabold text-slate-900 text-center line-clamp-2 leading-snug">
+                    {project.name}
+                  </p>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setCreateProjectOpen(true)}
+                className="flex flex-col items-center gap-1.5 min-w-[72px] max-w-[96px] rounded-xl p-1.5 hover:opacity-90 transition-opacity"
+              >
+                <div className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl border-2 border-dashed border-slate-300 text-slate-400 flex items-center justify-center">
+                  <Plus size={22} strokeWidth={2.25} />
+                </div>
+                <p className="text-sm font-extrabold text-slate-500 text-center line-clamp-2 leading-snug">
+                  {t('createProject', locale)}
+                </p>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -202,7 +277,9 @@ export default function ProjectsPanel() {
         title={active.name}
         description={
           active.description ||
-          tf('projectsSub', locale, { name: activeWorkspace.name })
+          (activeWorkspace
+            ? tf('projectsSub', locale, { name: activeWorkspace.name })
+            : undefined)
         }
         headerExtra={
           <button
@@ -215,6 +292,7 @@ export default function ProjectsPanel() {
           </button>
         }
       />
+      <ProjectVisionBoard campaign={active} />
       {deleteDialog}
     </div>
   );

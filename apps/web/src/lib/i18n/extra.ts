@@ -625,6 +625,18 @@ export type ExtraKey =
   | 'projectDescPlaceholder'
   | 'noProjectsYet'
   | 'selectProjectHint'
+  | 'projectsFoldersHint'
+  | 'visionboardEyebrow'
+  | 'visionboardTitle'
+  | 'visionboardSub'
+  | 'visionboardUpload'
+  | 'visionboardFromLibrary'
+  | 'visionboardEmpty'
+  | 'visionboardNotePlaceholder'
+  | 'visionboardUntitled'
+  | 'visionboardSaveFailed'
+  | 'visionboardImagesOnly'
+  | 'visionboardLibraryEmpty'
   | 'linkedPosts'
   | 'noPostsInProject'
   | 'deleteProjectConfirm'
@@ -1759,7 +1771,19 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   projectNamePlaceholder: 'e.g. Summer Launch 2026',
   projectDescPlaceholder: 'Short description of this campaign…',
   noProjectsYet: 'No projects yet',
-  selectProjectHint: 'Select a project to see linked content',
+  selectProjectHint: 'Create a project folder to organize and plan linked content',
+  projectsFoldersHint: 'Projects — open a folder to plan its content',
+  visionboardEyebrow: 'Inspiration',
+  visionboardTitle: 'Visionboard',
+  visionboardSub: 'Pin reference images that define the look and feel of this project.',
+  visionboardUpload: 'Upload image',
+  visionboardFromLibrary: 'From media library',
+  visionboardEmpty: 'Drop inspiration here — upload or pick from your library',
+  visionboardNotePlaceholder: 'Optional note for the next pin…',
+  visionboardUntitled: 'Untitled pin',
+  visionboardSaveFailed: 'Could not save visionboard',
+  visionboardImagesOnly: 'Only images can be pinned to the visionboard',
+  visionboardLibraryEmpty: 'No images in your media library yet',
   linkedPosts: 'linked posts',
   noPostsInProject: 'No content tagged with this project yet. Tag posts in Post Studio.',
   deleteProjectConfirm: 'Delete this project label? Posts keep their content but lose this tag.',
@@ -2701,7 +2725,19 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   projectNamePlaceholder: 't.ex. Summer Launch 2026',
   projectDescPlaceholder: 'Kort beskrivning av kampanjen…',
   noProjectsYet: 'Inga projekt ännu',
-  selectProjectHint: 'Välj ett projekt för att se kopplat content',
+  selectProjectHint: 'Skapa en projektmapp för att organisera och planera kopplat content',
+  projectsFoldersHint: 'Projekt — öppna en mapp för att planera innehållet',
+  visionboardEyebrow: 'Inspiration',
+  visionboardTitle: 'Visionboard',
+  visionboardSub: 'Fäst referensbilder som sätter tonen för projektet.',
+  visionboardUpload: 'Ladda upp bild',
+  visionboardFromLibrary: 'Från mediabiblioteket',
+  visionboardEmpty: 'Lägg till inspiration — ladda upp eller välj från biblioteket',
+  visionboardNotePlaceholder: 'Valfri anteckning för nästa pin…',
+  visionboardUntitled: 'Namnlös pin',
+  visionboardSaveFailed: 'Kunde inte spara visionboard',
+  visionboardImagesOnly: 'Endast bilder kan fästas på visionboarden',
+  visionboardLibraryEmpty: 'Inga bilder i mediabiblioteket ännu',
   linkedPosts: 'kopplade inlägg',
   noPostsInProject: 'Inget content taggat med detta projekt ännu. Tagga i Post Studio.',
   deleteProjectConfirm: 'Ta bort denna projektetikett? Inläggen behålls men tappar taggen.',
@@ -3504,7 +3540,19 @@ navFeatures: 'Ominaisuudet',
   projectNamePlaceholder: 'esim. Summer Launch 2026',
   projectDescPlaceholder: 'Lyhyt kuvaus kampanjasta…',
   noProjectsYet: 'Ei projekteja vielä',
-  selectProjectHint: 'Valitse projekti nähdäksesi linkitetyn sisällön',
+  selectProjectHint: 'Luo projektimappa organisoidaksesi ja suunnitellaksesi sisältöä',
+  projectsFoldersHint: 'Projektit — avaa kansio suunnitellaksesi sisältöä',
+  visionboardEyebrow: 'Inspiraatio',
+  visionboardTitle: 'Visionboard',
+  visionboardSub: 'Kiinnitä referenssikuvat, jotka määrittävät projektin ilmeen.',
+  visionboardUpload: 'Lataa kuva',
+  visionboardFromLibrary: 'Mediakirjastosta',
+  visionboardEmpty: 'Lisää inspiraatiota — lataa tai valitse kirjastosta',
+  visionboardNotePlaceholder: 'Valinnainen muistiinpano seuraavalle pinille…',
+  visionboardUntitled: 'Nimetön pin',
+  visionboardSaveFailed: 'Visionboardin tallennus epäonnistui',
+  visionboardImagesOnly: 'Vain kuvia voi kiinnittää visionboardiin',
+  visionboardLibraryEmpty: 'Mediakirjastossa ei ole vielä kuvia',
   linkedPosts: 'linkitettyä julkaisua',
   noPostsInProject: 'Ei sisältöä tällä projektilla vielä. Merkitse Post Studiossa.',
   deleteProjectConfirm: 'Poista tämä projektitunniste? Julkaisut säilyvät, mutta tunniste poistuu.',

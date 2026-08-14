@@ -15,6 +15,7 @@ import {
   bufferToDataUrl,
   insertMediaLibraryRow,
 } from '@/lib/media/library';
+import { MEDIA_LIBRARY_ROOT_ID } from '@/lib/mock-media-library';
 
 const MAX_BYTES = 12 * 1024 * 1024; // 12 MB — data-URL friendly
 
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
       source: 'google_drive',
       externalId: fileId,
       target,
+      folderId: MEDIA_LIBRARY_ROOT_ID,
       metadata: { mimeType, exported: downloaded.exported },
     });
 

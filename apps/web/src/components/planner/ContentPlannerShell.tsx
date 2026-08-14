@@ -293,14 +293,18 @@ export default function ContentPlannerShell({
     return null;
   }
 
+  // Feed Grid lives on the main Planner only — Projects use Visionboard instead.
+  const showFeedTab = !embedded && !campaignId;
+
   const viewTabs = (
     [
       { key: 'board' as const, label: t('boardKanban', locale), icon: Columns3 },
       { key: 'calendar' as const, label: t('calendarTab', locale), icon: CalendarDays },
       { key: 'table' as const, label: t('tableTab', locale), icon: LayoutList },
-      ...(platformFilter === 'all' ||
-      platformFilter === 'instagram' ||
-      platformFilter === 'tiktok'
+      ...(showFeedTab &&
+      (platformFilter === 'all' ||
+        platformFilter === 'instagram' ||
+        platformFilter === 'tiktok')
         ? [{ key: 'feed' as const, label: t('feedGridTab', locale), icon: LayoutGrid }]
         : []),
       { key: 'notes' as const, label: t('notesTab', locale), icon: NotebookPen },
@@ -423,7 +427,7 @@ export default function ContentPlannerShell({
             rescheduleMutation.mutate({ id, scheduledAt })
           }
         />
-      ) : view === 'feed' ? (
+      ) : view === 'feed' && showFeedTab ? (
         <FeedGridPlanner
           posts={posts}
           workspace={workspaces.find((w) => w.id === activeWorkspaceId) ?? null}
@@ -474,28 +478,17 @@ export default function ContentPlannerShell({
   if (embedded) {
     return (
       <div className="space-y-6">
-        {/* Compact search + create when admin chrome has no planner actions */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-          <div className="relative w-full max-w-md">
-            <Search
-              size={15}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('searchPosts', locale)}
-              className="w-full bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-3 py-2.5 min-h-[44px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => openStudio(null)}
-            className="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 min-h-[44px] rounded-xl transition-colors flex-shrink-0"
-          >
-            <Plus size={14} strokeWidth={2.5} />
-            {t('createPost', locale)}
-          </button>
+        <div className="relative w-full max-w-md">
+          <Search
+            size={15}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('searchPosts', locale)}
+            className="w-full bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-3 py-2.5 min-h-[44px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
+          />
         </div>
         {pageHeader}
         {views}

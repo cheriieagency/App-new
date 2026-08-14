@@ -107,6 +107,14 @@ export type PlannerPost = {
 };
 
 /** Campaign / project label used to group scheduled content by initiative. */
+export type VisionPin = {
+  id: string;
+  url: string;
+  title: string;
+  note: string;
+  created_at: string;
+};
+
 export type CampaignLabel = {
   id: string;
   name: string;
@@ -115,6 +123,8 @@ export type CampaignLabel = {
   created_at: string;
   /** Session user that owns this campaign label (isolation). */
   owner_user_id?: string;
+  /** Moodboard / visionboard pins for this project. */
+  vision_pins?: VisionPin[];
 };
 
 export type ConnectedSocialAccount = {
@@ -522,7 +532,9 @@ export function createCampaignLabel(input: {
 
 export function updateCampaignLabel(
   id: string,
-  patch: Partial<Pick<CampaignLabel, 'name' | 'color' | 'description'>>,
+  patch: Partial<
+    Pick<CampaignLabel, 'name' | 'color' | 'description' | 'vision_pins'>
+  >,
   ownerUserId?: string
 ): CampaignLabel | null {
   const c = campaigns.find((x) => x.id === id);
@@ -533,6 +545,7 @@ export function updateCampaignLabel(
   if (patch.name !== undefined) c.name = patch.name.trim() || c.name;
   if (patch.color !== undefined) c.color = patch.color;
   if (patch.description !== undefined) c.description = patch.description.trim();
+  if (patch.vision_pins !== undefined) c.vision_pins = patch.vision_pins;
   return c;
 }
 

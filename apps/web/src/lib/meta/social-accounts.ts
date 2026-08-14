@@ -151,7 +151,7 @@ async function upsertProfileFromInstagram(input: {
     }
   }
 
-  // 2) Optional followers_count — omit entirely if column is missing.
+  // 2) Optional followers_count — only if migration applied (see 20260812_meta_profile_fields.sql).
   if (
     typeof input.followersCount === 'number' &&
     Number.isFinite(input.followersCount)
@@ -163,10 +163,11 @@ async function upsertProfileFromInstagram(input: {
         WHERE id = ${input.userId}
       `;
     } catch (followersError) {
+      // Column may be missing until migration runs — never fail Meta sync.
       console.warn(
-        '[social_accounts] profiles.followers_count skipped (column missing?)',
-        followersError
+        '[social_accounts] profiles.followers_count skipped (apply 20260812_meta_profile_fields.sql)'
       );
+      void followersError;
     }
   }
 }

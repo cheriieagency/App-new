@@ -98,6 +98,7 @@ export default function GoogleDriveImportButton({
       toast.success(`Imported ${json.fileName || 'file'}`);
       setOpen(false);
       void qc.invalidateQueries({ queryKey: ['media-folder'] });
+      void qc.invalidateQueries({ queryKey: ['media-folders'] });
       void qc.invalidateQueries({ queryKey: ['media-library-db'] });
       onImported?.({
         fileUrl: json.fileUrl || '',

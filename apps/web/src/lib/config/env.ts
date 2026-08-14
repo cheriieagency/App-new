@@ -164,9 +164,12 @@ export const supabaseEnv = {
   url: () => readEnv('NEXT_PUBLIC_SUPABASE_URL'),
   anonKey: () => readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
   serviceRoleKey: () => readEnv('SUPABASE_SERVICE_ROLE_KEY'),
+  /** Optional public Storage bucket (default: media). */
+  storageBucket: () => readEnv('SUPABASE_STORAGE_BUCKET') ?? 'media',
   requiredKeys: [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
   ] as const,
 };
 

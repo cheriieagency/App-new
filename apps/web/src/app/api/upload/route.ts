@@ -1,4 +1,7 @@
-/** Local upload handler — returns a data URL so photos work without cloud storage. */
+/**
+ * Upload handler — prefers Supabase Storage (service role) for public HTTPS URLs.
+ * Falls back to data URLs when Supabase is not configured (local demo).
+ */
 
 import {
   resolveWorkspacePlan,
@@ -6,6 +9,39 @@ import {
   minPlanForFeature,
   upgradeRequiredResponse,
 } from '@/lib/plan-guard';
+import { isSupabaseAdminConfigured } from '@/lib/supabase/admin';
+import { uploadToSupabaseStorage } from '@/lib/supabase/storage';
+
+function dataUrlFromBuffer(buffer: Buffer, mimeType: string): string {
+  return `data:${mimeType};base64,${buffer.toString('base64')}`;
+}
+
+async function resolveStoredUrl(input: {
+  buffer: Buffer;
+  mimeType: string;
+  fileName?: string;
+}): Promise<{ url: string; mimeType: string; storage: 'supabase' | 'data_url' }> {
+  if (isSupabaseAdminConfigured()) {
+    try {
+      const stored = await uploadToSupabaseStorage({
+        bytes: input.buffer,
+        mimeType: input.mimeType,
+        fileName: input.fileName,
+        folder: 'uploads',
+      });
+      if (stored?.url) {
+        return { url: stored.url, mimeType: input.mimeType, storage: 'supabase' };
+      }
+    } catch (error) {
+      console.error('[upload] Supabase Storage failed — falling back to data URL', error);
+    }
+  }
+  return {
+    url: dataUrlFromBuffer(input.buffer, input.mimeType),
+    mimeType: input.mimeType,
+    storage: 'data_url',
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -31,14 +67,20 @@ export async function POST(request: Request) {
         });
       }
 
-      // Allow lesson PDFs / images up to 10 MB as data URLs for local demo.
-      if (file.size > 10 * 1024 * 1024) {
+      // Storage allows larger assets; data-URL fallback stays at 10 MB.
+      const maxBytes = isSupabaseAdminConfigured() ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxBytes) {
         return Response.json({ error: 'File too large' }, { status: 413 });
       }
+
       const buffer = Buffer.from(await file.arrayBuffer());
       const mimeType = file.type || 'application/octet-stream';
-      const url = `data:${mimeType};base64,${buffer.toString('base64')}`;
-      return Response.json({ url, mimeType });
+      const result = await resolveStoredUrl({
+        buffer,
+        mimeType,
+        fileName: file.name,
+      });
+      return Response.json(result);
     }
 
     if (contentType.includes('application/json')) {
@@ -46,13 +88,23 @@ export async function POST(request: Request) {
       if (typeof body?.base64 === 'string') {
         const mimeType = body.mimeType || 'image/jpeg';
         const raw = body.base64.replace(/^data:[^;]+;base64,/, '');
-        return Response.json({
-          url: `data:${mimeType};base64,${raw}`,
+        const buffer = Buffer.from(raw, 'base64');
+        if (buffer.byteLength > (isSupabaseAdminConfigured() ? 50 : 10) * 1024 * 1024) {
+          return Response.json({ error: 'File too large' }, { status: 413 });
+        }
+        const result = await resolveStoredUrl({
+          buffer,
           mimeType,
+          fileName: typeof body.fileName === 'string' ? body.fileName : 'upload.bin',
         });
+        return Response.json(result);
       }
       if (typeof body?.url === 'string') {
-        return Response.json({ url: body.url, mimeType: body.mimeType ?? null });
+        return Response.json({
+          url: body.url,
+          mimeType: body.mimeType ?? null,
+          storage: 'passthrough',
+        });
       }
       return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
     }

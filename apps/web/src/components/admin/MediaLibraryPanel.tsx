@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Trash2, Upload } from 'lucide-react';
+import { Folder, Pencil, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
@@ -28,7 +28,33 @@ import {
 import GoogleDriveImportButton from '@/components/admin/GoogleDriveImportButton';
 import useUpload from '@/utils/useUpload';
 
-const COLORS = ['#F472B6', '#9089F0', '#10B981', '#F59E0B', '#2B2568', '#0EA5E9'];
+/* Swatches ordered by hue family so similar colors sit beside each other. */
+const COLORS = [
+  // Pinks
+  '#F472B6', // signature pink
+  '#EC4899', // fuchsia
+  // Purples / violets
+  '#2B2568', // midnight periwinkle (default)
+  '#9089F0', // soft periwinkle
+  '#A78BFA', // lilac
+  '#8B5CF6', // violet
+  '#6366F1', // indigo
+  // Blues / teals
+  '#0EA5E9', // sky
+  '#14B8A6', // teal
+  // Greens
+  '#10B981', // mint
+  '#84CC16', // lime
+  // Warm
+  '#F59E0B', // amber
+  '#F97316', // orange
+  '#EF4444', // coral red
+  // Neutrals
+  '#64748B', // slate
+  '#0F172A', // dark ink
+];
+const DEFAULT_FOLDER_COLOR = '#2B2568';
+const MEDIA_DND_TYPE = 'application/x-clikd-media-asset';
 
 /**
  * Media Library: images/videos organized by folders from the sidebar submenu.
@@ -45,20 +71,30 @@ export default function MediaLibraryPanel() {
   } = useAdminNav();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
-  const [color, setColor] = useState(COLORS[1]);
+  const [color, setColor] = useState(DEFAULT_FOLDER_COLOR);
   const [description, setDescription] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState('');
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [draggingAssetId, setDraggingAssetId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [upload, { loading: uploading }] = useUpload();
   const creating = createMediaFolderOpen;
 
   const { data: foldersData } = useQuery<{ folders: MediaFolder[] }>({
-    queryKey: ['media-folders'],
+    queryKey: ['media-folders', activeWorkspace.id],
     queryFn: async () => {
-      const r = await fetch('/api/admin/media');
+      const r = await fetch('/api/admin/media', {
+        headers: activeWorkspace.id
+          ? {
+              'x-workspace-id': activeWorkspace.id,
+              'x-active-workspace-id': activeWorkspace.id,
+            }
+          : undefined,
+        credentials: 'include',
+      });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
@@ -96,10 +132,19 @@ export default function MediaLibraryPanel() {
     folder: MediaFolder | null;
     assets: MediaAsset[];
   }>({
-    queryKey: ['media-folder', activeId],
+    queryKey: ['media-folder', activeId, activeWorkspace.id],
     queryFn: async () => {
       const r = await fetch(
-        `/api/admin/media?folder=${encodeURIComponent(activeId)}`
+        `/api/admin/media?folder=${encodeURIComponent(activeId)}`,
+        {
+          headers: activeWorkspace.id
+            ? {
+                'x-workspace-id': activeWorkspace.id,
+                'x-active-workspace-id': activeWorkspace.id,
+              }
+            : undefined,
+          credentials: 'include',
+        }
       );
       if (!r.ok) throw new Error('Failed');
       return r.json();
@@ -108,12 +153,53 @@ export default function MediaLibraryPanel() {
   });
 
   const assets = folderDetail?.assets ?? [];
+  // Nested folders under Brand assets (sidebar categories) — shown as cards in root.
+  const nestedFolders = useMemo(
+    () => folders.filter((f) => !isMediaLibraryRoot(f.id)),
+    [folders]
+  );
+  // Root query returns every asset — use that for folder counts + loose files only in grid.
+  const assetCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of assets) {
+      const key =
+        a.folder_id && !isMediaLibraryRoot(a.folder_id)
+          ? a.folder_id
+          : MEDIA_LIBRARY_ROOT_ID;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return counts;
+  }, [assets]);
+  const visibleAssets = isRoot
+    ? assets.filter(
+        (a) => !a.folder_id || isMediaLibraryRoot(a.folder_id)
+      )
+    : assets;
+  const hasContent = isRoot
+    ? nestedFolders.length > 0 || visibleAssets.length > 0
+    : visibleAssets.length > 0;
+
+  const workspaceHeaders: Record<string, string> = activeWorkspace.id
+    ? {
+        'x-workspace-id': activeWorkspace.id,
+        'x-active-workspace-id': activeWorkspace.id,
+      }
+    : {};
 
   const createMutation = useMutation({
     mutationFn: async () => {
       const r = await fetch('/api/admin/media', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activeWorkspace.id
+            ? {
+                'x-workspace-id': activeWorkspace.id,
+                'x-active-workspace-id': activeWorkspace.id,
+              }
+            : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ action: 'create', name, color, description }),
       });
       if (!r.ok) throw new Error('create failed');
@@ -123,6 +209,7 @@ export default function MediaLibraryPanel() {
       queryClient.invalidateQueries({ queryKey: ['media-folders'] });
       setName('');
       setDescription('');
+      setColor(DEFAULT_FOLDER_COLOR);
       setCreateMediaFolderOpen(false);
       setActiveMediaFolderId(data.folder.id);
     },
@@ -132,7 +219,16 @@ export default function MediaLibraryPanel() {
     mutationFn: async (nextName: string) => {
       const r = await fetch('/api/admin/media', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activeWorkspace.id
+            ? {
+                'x-workspace-id': activeWorkspace.id,
+                'x-active-workspace-id': activeWorkspace.id,
+              }
+            : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'rename',
           id: activeId,
@@ -159,7 +255,16 @@ export default function MediaLibraryPanel() {
       }
       const r = await fetch('/api/admin/media', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activeWorkspace.id
+            ? {
+                'x-workspace-id': activeWorkspace.id,
+                'x-active-workspace-id': activeWorkspace.id,
+              }
+            : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'upload',
           folderId: activeId,
@@ -167,6 +272,7 @@ export default function MediaLibraryPanel() {
           label: file.name,
           fileName: file.name,
           fileType: file.type,
+          sizeBytes: file.size,
           kind: file.type.startsWith('video/') ? 'video' : 'image',
         }),
       });
@@ -175,6 +281,7 @@ export default function MediaLibraryPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media-folder', activeId] });
+      queryClient.invalidateQueries({ queryKey: ['media-folder'] });
       queryClient.invalidateQueries({ queryKey: ['media-folders'] });
       toast.success('Uploaded from your device');
     },
@@ -183,11 +290,61 @@ export default function MediaLibraryPanel() {
     },
   });
 
+  const moveMutation = useMutation({
+    mutationFn: async ({
+      assetId,
+      folderId,
+    }: {
+      assetId: string;
+      folderId: string;
+    }) => {
+      const r = await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...workspaceHeaders,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'move',
+          assetId,
+          folderId,
+        }),
+      });
+      if (!r.ok) throw new Error('Could not move file');
+      return r.json() as Promise<{ asset: MediaAsset }>;
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['media-folder'] });
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+      const dest =
+        isMediaLibraryRoot(vars.folderId)
+          ? 'Brand assets'
+          : nestedFolders.find((f) => f.id === vars.folderId)?.name ||
+            'folder';
+      toast.success(`Moved to ${dest}`);
+    },
+    onError: () => toast.error('Could not move file'),
+    onSettled: () => {
+      setDropTargetId(null);
+      setDraggingAssetId(null);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const r = await fetch('/api/admin/media', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activeWorkspace.id
+            ? {
+                'x-workspace-id': activeWorkspace.id,
+                'x-active-workspace-id': activeWorkspace.id,
+              }
+            : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ action: 'delete', id }),
       });
       if (!r.ok) throw new Error('delete failed');
@@ -206,6 +363,86 @@ export default function MediaLibraryPanel() {
     if (!files?.length) return;
     Array.from(files).forEach((file) => uploadMutation.mutate(file));
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const onAssetDragStart = (e: DragEvent, assetId: string) => {
+    e.dataTransfer.setData(MEDIA_DND_TYPE, assetId);
+    e.dataTransfer.setData('text/plain', assetId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingAssetId(assetId);
+  };
+
+  const onAssetDragEnd = () => {
+    setDraggingAssetId(null);
+    setDropTargetId(null);
+  };
+
+  const onFolderDragOver = (e: DragEvent, folderId: string) => {
+    if (
+      !e.dataTransfer.types.includes(MEDIA_DND_TYPE) &&
+      !e.dataTransfer.types.includes('Files')
+    ) {
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = e.dataTransfer.types.includes(MEDIA_DND_TYPE)
+      ? 'move'
+      : 'copy';
+    setDropTargetId(folderId);
+  };
+
+  const onFolderDragLeave = (e: DragEvent, folderId: string) => {
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
+    if (dropTargetId === folderId) setDropTargetId(null);
+  };
+
+  const onFolderDrop = (e: DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetId(null);
+
+    const assetId =
+      e.dataTransfer.getData(MEDIA_DND_TYPE) ||
+      e.dataTransfer.getData('text/plain');
+    if (assetId) {
+      moveMutation.mutate({ assetId, folderId });
+      return;
+    }
+
+    // OS file drop onto a folder → upload straight into that folder.
+    const files = e.dataTransfer.files;
+    if (!files?.length) return;
+    Array.from(files).forEach(async (file) => {
+      try {
+        const result = await upload({ file });
+        if (!result.url) throw new Error(result.error || 'Upload failed');
+        const r = await fetch('/api/admin/media', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...workspaceHeaders,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            action: 'upload',
+            folderId,
+            imageUrl: result.url,
+            label: file.name,
+            fileName: file.name,
+            fileType: file.type,
+            sizeBytes: file.size,
+            kind: file.type.startsWith('video/') ? 'video' : 'image',
+          }),
+        });
+        if (!r.ok) throw new Error('Could not save to media library');
+        queryClient.invalidateQueries({ queryKey: ['media-folder'] });
+        queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+        toast.success('Uploaded to folder');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Upload failed');
+      }
+    });
   };
 
   const deviceUploadButton = (
@@ -319,6 +556,8 @@ export default function MediaLibraryPanel() {
                 queryClient.invalidateQueries({
                   queryKey: ['media-folder', activeId],
                 });
+                queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+                queryClient.invalidateQueries({ queryKey: ['media-folder'] });
               }}
             />
             {!isRoot ? (
@@ -344,7 +583,7 @@ export default function MediaLibraryPanel() {
         >
           {t('loading', locale)}
         </div>
-      ) : assets.length === 0 ? (
+      ) : !hasContent ? (
         <AdminEmptyState
           icon={Upload}
           headline="No media in this folder yet"
@@ -360,42 +599,156 @@ export default function MediaLibraryPanel() {
                   queryClient.invalidateQueries({
                     queryKey: ['media-folder', activeId],
                   });
+                  queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+                  queryClient.invalidateQueries({ queryKey: ['media-folder'] });
                 }}
               />
             </span>
           }
         />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {assets.map((m) => (
-            <div
-              key={m.id}
-              className={`${adminCardClass} overflow-hidden text-left`}
-            >
-              {m.kind === 'video' ? (
-                <video
-                  src={m.image}
-                  className="w-full aspect-square object-cover bg-slate-100"
-                  muted
-                  playsInline
-                />
+        <div className="space-y-5">
+          {/* Folders row — icon + label only, above the photo grid */}
+          <div className="space-y-2">
+              {isRoot ? (
+                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                  Folders — drag files onto a folder to sort
+                </p>
               ) : (
-                <img
-                  src={m.image}
-                  alt={m.label}
-                  className="w-full aspect-square object-cover"
-                />
+                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                  Drag files onto Brand assets to move them back
+                </p>
               )}
-              <div className="p-3">
-                <p className="text-sm font-semibold text-slate-900 truncate">
-                  {m.label}
-                </p>
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mt-0.5">
-                  {m.kind} · {m.platform}
-                </p>
+
+              <div className="flex flex-wrap items-start gap-4 sm:gap-5">
+                {!isRoot ? (
+                  <button
+                    type="button"
+                    onClick={() => setActiveMediaFolderId(MEDIA_LIBRARY_ROOT_ID)}
+                    onDragOver={(e) => onFolderDragOver(e, MEDIA_LIBRARY_ROOT_ID)}
+                    onDragLeave={(e) =>
+                      onFolderDragLeave(e, MEDIA_LIBRARY_ROOT_ID)
+                    }
+                    onDrop={(e) => onFolderDrop(e, MEDIA_LIBRARY_ROOT_ID)}
+                    className={`flex flex-col items-center gap-1.5 min-w-[72px] max-w-[96px] rounded-xl p-1.5 transition-all ${
+                      dropTargetId === MEDIA_LIBRARY_ROOT_ID
+                        ? 'ring-2 ring-[#F472B6] ring-offset-2'
+                        : 'hover:opacity-90'
+                    }`}
+                  >
+                    <div className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl bg-[#2B2568] text-white flex items-center justify-center">
+                      <Folder size={26} />
+                    </div>
+                    <p className="text-sm font-extrabold text-slate-900 text-center line-clamp-2 leading-snug">
+                      Brand assets
+                    </p>
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                      Drop to unfile
+                    </p>
+                  </button>
+                ) : null}
+
+                {isRoot
+                  ? nestedFolders.map((folder) => {
+                      const count = assetCounts.get(folder.id) || 0;
+                      const isHot = dropTargetId === folder.id;
+                      return (
+                        <button
+                          key={folder.id}
+                          type="button"
+                          onClick={() => setActiveMediaFolderId(folder.id)}
+                          onDragOver={(e) => onFolderDragOver(e, folder.id)}
+                          onDragLeave={(e) => onFolderDragLeave(e, folder.id)}
+                          onDrop={(e) => onFolderDrop(e, folder.id)}
+                          className={`flex flex-col items-center gap-1.5 min-w-[72px] max-w-[96px] rounded-xl p-1.5 transition-all ${
+                            isHot
+                              ? 'ring-2 ring-[#F472B6] ring-offset-2'
+                              : 'hover:opacity-90'
+                          }`}
+                        >
+                          <div
+                            className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl text-white flex items-center justify-center"
+                            style={{
+                              background: folder.color || DEFAULT_FOLDER_COLOR,
+                            }}
+                          >
+                            <Folder size={26} />
+                          </div>
+                          <p className="text-sm font-extrabold text-slate-900 text-center line-clamp-2 leading-snug">
+                            {folder.name}
+                          </p>
+                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
+                            {count} {count === 1 ? 'file' : 'files'}
+                          </p>
+                        </button>
+                      );
+                    })
+                  : null}
+
+                {isRoot ? (
+                  <button
+                    type="button"
+                    onClick={() => setCreateMediaFolderOpen(true)}
+                    className="flex flex-col items-center gap-1.5 min-w-[72px] max-w-[96px] rounded-xl p-1.5 hover:opacity-90 transition-opacity"
+                  >
+                    <div className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl border-2 border-dashed border-slate-300 text-slate-400 flex items-center justify-center">
+                      <Folder size={24} />
+                    </div>
+                    <p className="text-sm font-extrabold text-slate-700 text-center leading-snug">
+                      New folder
+                    </p>
+                    <p className="text-[10px] font-semibold text-slate-400 text-center leading-snug">
+                      Organize brand assets
+                    </p>
+                  </button>
+                ) : null}
               </div>
             </div>
-          ))}
+
+          {/* Photo / video grid */}
+          {visibleAssets.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {visibleAssets.map((m) => (
+                <div
+                  key={m.id}
+                  draggable
+                  onDragStart={(e) => onAssetDragStart(e, m.id)}
+                  onDragEnd={onAssetDragEnd}
+                  className={`${adminCardClass} overflow-hidden text-left cursor-grab active:cursor-grabbing transition-opacity ${
+                    draggingAssetId === m.id ? 'opacity-50' : ''
+                  }`}
+                >
+                  {m.kind === 'video' ? (
+                    <video
+                      src={m.image}
+                      className="w-full aspect-square object-cover bg-slate-100 pointer-events-none"
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={m.image}
+                      alt={m.label}
+                      className="w-full aspect-square object-cover pointer-events-none"
+                      draggable={false}
+                    />
+                  )}
+                  <div className="p-3">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {m.label}
+                    </p>
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mt-0.5">
+                      {m.kind} · {m.platform} · drag to folder
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : isRoot && nestedFolders.length > 0 ? (
+            <p className="text-sm text-slate-400 font-medium">
+              No unfiled photos yet — upload files or drag them into a folder.
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -497,35 +850,41 @@ function CreateFolderForm({
         placeholder={t('mediaFolderDescPlaceholder', locale)}
         className="w-full min-h-[72px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-slate-900/5"
       />
-      <div className="flex flex-wrap items-center gap-2">
-        {COLORS.map((c) => (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 w-full">
+        <div className="grid grid-cols-8 gap-2.5 w-fit max-w-full">
+          {COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setColor(c)}
+              className={`w-9 h-9 min-h-[36px] min-w-[36px] justify-self-center rounded-full transition-transform ${
+                color === c
+                  ? 'ring-2 ring-offset-2 ring-slate-900 scale-110'
+                  : 'hover:scale-105'
+              }`}
+              style={{ background: c }}
+              aria-label={`Folder color ${c}`}
+              aria-pressed={color === c}
+            />
+          ))}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center ml-auto">
           <button
-            key={c}
             type="button"
-            onClick={() => setColor(c)}
-            className={`w-8 h-8 min-h-[32px] rounded-full ${
-              color === c ? 'ring-2 ring-offset-2 ring-slate-400' : ''
-            }`}
-            style={{ background: c }}
-            aria-label={c}
-          />
-        ))}
-        <div className="flex-1" />
-        <button
-          type="button"
-          onClick={onCancel}
-          className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50"
-        >
-          {t('cancel', locale)}
-        </button>
-        <button
-          type="button"
-          disabled={!name.trim() || saving}
-          onClick={onSave}
-          className="h-11 min-h-[44px] px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 disabled:opacity-40"
-        >
-          {t('save', locale)}
-        </button>
+            onClick={onCancel}
+            className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50"
+          >
+            {t('cancel', locale)}
+          </button>
+          <button
+            type="button"
+            disabled={!name.trim() || saving}
+            onClick={onSave}
+            className="h-11 min-h-[44px] px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 disabled:opacity-40"
+          >
+            {t('save', locale)}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -69,7 +69,8 @@ export default function CarouselMediaUploader({
     queryKey: ['media-folder', MEDIA_LIBRARY_ROOT_ID, 'picker'],
     queryFn: async () => {
       const r = await fetch(
-        `/api/admin/media?folder=${encodeURIComponent(MEDIA_LIBRARY_ROOT_ID)}`
+        `/api/admin/media?folder=${encodeURIComponent(MEDIA_LIBRARY_ROOT_ID)}`,
+        { credentials: 'include' }
       );
       if (!r.ok) throw new Error('Failed to load media library');
       return r.json() as Promise<{ assets: MediaAsset[] }>;

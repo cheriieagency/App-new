@@ -187,7 +187,7 @@ export default function PostStudioModal({
   const { data: campaignsData } = useQuery<{ campaigns: CampaignLabel[] }>({
     queryKey: ['planner-campaigns'],
     queryFn: async () => {
-      const r = await fetch('/api/planner/campaigns');
+      const r = await fetch('/api/planner/campaigns', { credentials: 'include' });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
@@ -217,6 +217,7 @@ export default function PostStudioModal({
       const r = await fetch('/api/planner/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'create',
           name: newProjectName.trim(),
@@ -316,6 +317,7 @@ export default function PostStudioModal({
       const r = await fetch('/api/planner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'polish', caption }),
       });
       const data = await r.json();
@@ -364,6 +366,7 @@ export default function PostStudioModal({
       const r = await fetch('/api/planner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'upsert',
           id: post?.id,
@@ -484,6 +487,7 @@ export default function PostStudioModal({
       const r = await fetch('/api/planner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           action: 'comment',
           id: post.id,

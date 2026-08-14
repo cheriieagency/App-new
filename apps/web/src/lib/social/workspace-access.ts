@@ -61,13 +61,41 @@ export async function userOwnsWorkspace(
   }
 }
 
+/**
+ * Prefer a workspace that already has Instagram connected (inbox / automations),
+ * then most recently updated, then oldest row. Avoids empty remaps when the
+ * browser cookie points at a foreign/legacy id like default-my-workspace.
+ */
 async function findPrimaryWorkspaceId(userId: string): Promise<string | null> {
+  try {
+    const withIg = await sql`
+      SELECT w.id
+      FROM public.workspaces w
+      INNER JOIN public.social_accounts sa
+        ON sa.workspace_id::text = w.id::text
+       AND sa.user_id::text = ${userId}
+       AND lower(sa.platform::text) = 'instagram'
+       AND sa.access_token IS NOT NULL
+       AND sa.access_token <> ''
+      WHERE w.user_id::text = ${userId}
+      ORDER BY
+        CASE WHEN sa.handle IS NOT NULL AND sa.handle <> '' THEN 0 ELSE 1 END,
+        w.updated_at DESC NULLS LAST,
+        w.created_at DESC NULLS LAST,
+        w.id DESC
+      LIMIT 1
+    `;
+    if (Array.isArray(withIg) && withIg[0]?.id) return String(withIg[0].id);
+  } catch (error) {
+    console.warn('[workspace-access] IG-linked workspace lookup failed', error);
+  }
+
   try {
     const rows = await sql`
       SELECT id
       FROM public.workspaces
       WHERE user_id::text = ${userId}
-      ORDER BY created_at ASC NULLS LAST, id ASC
+      ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
       LIMIT 1
     `;
     if (Array.isArray(rows) && rows[0]?.id) return String(rows[0].id);
@@ -77,7 +105,7 @@ async function findPrimaryWorkspaceId(userId: string): Promise<string | null> {
         SELECT id
         FROM public.workspaces
         WHERE user_id = ${userId}
-        ORDER BY created_at ASC NULLS LAST, id ASC
+        ORDER BY created_at DESC NULLS LAST, id DESC
         LIMIT 1
       `;
       if (Array.isArray(rows) && rows[0]?.id) return String(rows[0].id);

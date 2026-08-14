@@ -10,7 +10,33 @@ import {
   listCampaignLabels,
   listPostsForCampaign,
   updateCampaignLabel,
+  type VisionPin,
 } from '@/lib/mock-content-planner';
+
+function sanitizeVisionPins(raw: unknown): VisionPin[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const row = item as Record<string, unknown>;
+      const url = typeof row.url === 'string' ? row.url.trim() : '';
+      if (!url) return null;
+      return {
+        id:
+          typeof row.id === 'string' && row.id.trim()
+            ? row.id.trim()
+            : `pin-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        url,
+        title: typeof row.title === 'string' ? row.title.trim() : '',
+        note: typeof row.note === 'string' ? row.note.trim() : '',
+        created_at:
+          typeof row.created_at === 'string' && row.created_at
+            ? row.created_at
+            : new Date().toISOString(),
+      } satisfies VisionPin;
+    })
+    .filter((p): p is VisionPin => !!p);
+}
 
 export async function GET(request: Request) {
   const session = await requireApiSession();
@@ -61,6 +87,7 @@ export async function POST(request: Request) {
           color: typeof body.color === 'string' ? body.color : undefined,
           description:
             typeof body.description === 'string' ? body.description : undefined,
+          vision_pins: sanitizeVisionPins(body.vision_pins),
         },
         userId
       );

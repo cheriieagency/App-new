@@ -23,7 +23,7 @@ import WorkspaceSelector from '@/components/planner/WorkspaceSelector';
 import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
 import AdminPlanModal, { useAdminPlan } from '@/components/admin/AdminPlanModal';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { useAdminNav, type AdminSection } from '@/components/admin/AdminNavContext';
+import { useAdminNav, type AdminSection, adminProjectsHref } from '@/components/admin/AdminNavContext';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { useLanguage } from '@/lib/i18n';
 import type { NestedKey } from '@/lib/i18n';
@@ -94,7 +94,7 @@ export default function AdminSidebar() {
   const { data: campaignsData } = useQuery<{ campaigns: CampaignLabel[] }>({
     queryKey: ['planner-campaigns'],
     queryFn: async () => {
-      const r = await fetch('/api/planner/campaigns');
+      const r = await fetch('/api/planner/campaigns', { credentials: 'include' });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
@@ -102,9 +102,17 @@ export default function AdminSidebar() {
   const campaigns = campaignsData?.campaigns ?? [];
 
   const { data: mediaData } = useQuery<{ folders: { id: string; name: string; color: string }[] }>({
-    queryKey: ['media-folders'],
+    queryKey: ['media-folders', activeWorkspaceId],
     queryFn: async () => {
-      const r = await fetch('/api/admin/media');
+      const r = await fetch('/api/admin/media', {
+        headers: activeWorkspaceId
+          ? {
+              'x-workspace-id': activeWorkspaceId,
+              'x-active-workspace-id': activeWorkspaceId,
+            }
+          : undefined,
+        credentials: 'include',
+      });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
@@ -153,12 +161,8 @@ export default function AdminSidebar() {
     if (section === 'media') setMediaOpen(true);
   }, [section]);
 
-  // When Projects opens with no campaign selected, pick the first one.
-  useEffect(() => {
-    if (section !== 'projects') return;
-    if (activeCampaignId && campaigns.some((c) => c.id === activeCampaignId)) return;
-    if (campaigns[0]) setActiveCampaignId(campaigns[0].id);
-  }, [section, activeCampaignId, campaigns, setActiveCampaignId]);
+  // When Projects opens, keep current selection (or none) — overview shows all folders.
+  // Do not auto-pick the first campaign.
 
   // When Media opens with no / invalid folder, land on the permanent Brand assets root.
   useEffect(() => {
@@ -447,12 +451,16 @@ export default function AdminSidebar() {
                     <button
                       type="button"
                       onClick={() => {
-                        const nextOpen = section === 'projects' ? !projectsOpen : true;
-                        setProjectsOpen(nextOpen);
                         setMediaOpen(false);
-                        setSection('projects');
+                        // On overview, chevron toggles the list; from a project, return to folder grid.
+                        if (section === 'projects' && !activeCampaignId) {
+                          setProjectsOpen((open) => !open);
+                        } else {
+                          setProjectsOpen(true);
+                        }
+                        setActiveCampaignId(null);
                         if (!pathname.startsWith('/admin')) {
-                          router.push(href);
+                          router.push(adminProjectsHref());
                         }
                       }}
                       className={className}
@@ -494,7 +502,12 @@ export default function AdminSidebar() {
                               <button
                                 key={c.id}
                                 type="button"
-                                onClick={() => setActiveCampaignId(c.id)}
+                                onClick={() => {
+                                  setActiveCampaignId(c.id);
+                                  if (!pathname.startsWith('/admin')) {
+                                    router.push(adminProjectsHref({ campaignId: c.id }));
+                                  }
+                                }}
                                 className={[
                                   'w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-left transition-colors',
                                   selected
@@ -517,10 +530,11 @@ export default function AdminSidebar() {
                         <button
                           type="button"
                           onClick={() => {
-                            setSection('projects');
                             if (!pathname.startsWith('/admin')) {
-                              router.push('/admin?tab=projects');
+                              router.push(adminProjectsHref({ create: true }));
+                              return;
                             }
+                            setSection('projects');
                             setCreateProjectOpen(true);
                           }}
                           className="w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-left text-slate-500 hover:bg-slate-50 hover:text-[#1a1848] font-medium transition-colors"
