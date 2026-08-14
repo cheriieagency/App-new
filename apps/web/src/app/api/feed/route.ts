@@ -2,6 +2,7 @@ import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { applyPostPinOverride } from '@/lib/demo-pin-state';
+import { ensureCommunitiesSchema } from '@/lib/communities/schema';
 
 function withDemoPins(posts: Array<Record<string, unknown>>) {
   return posts.map((p) =>
@@ -30,6 +31,8 @@ export async function GET() {
     if (!process.env.DATABASE_URL?.trim()) {
       return Response.json([]);
     }
+
+    await ensureCommunitiesSchema();
 
     const posts = await sql`
       SELECT p.*,
@@ -74,10 +77,23 @@ export async function POST(request: Request) {
 
     if (!content?.trim()) return Response.json({ error: 'Content required' }, { status: 400 });
 
+    await ensureCommunitiesSchema();
+
+    const communityIdRaw = (body as { community_id?: number | string | null }).community_id;
+    const communityId =
+      communityIdRaw != null && communityIdRaw !== ''
+        ? Number(communityIdRaw)
+        : null;
+    const scopedCommunityId =
+      communityId != null && Number.isFinite(communityId) && communityId > 0
+        ? communityId
+        : null;
+
     const post = await sql`
-      INSERT INTO posts (user_id, user_name, user_image, content, tag, image_url)
+      INSERT INTO posts (user_id, community_id, user_name, user_image, content, tag, image_url)
       VALUES (
         ${session.user.id},
+        ${scopedCommunityId},
         ${session.user.name},
         ${session.user.image ?? null},
         ${content},

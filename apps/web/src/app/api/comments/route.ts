@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { MOCK_COMMENTS } from '@/lib/mock-demo-content';
 import { applyCommentPinOverride, demoCommentPinOverrides } from '@/lib/demo-pin-state';
+import { ensureCommunitiesSchema } from '@/lib/communities/schema';
 
 function withDemoPins(comments: Array<Record<string, unknown>>) {
   return comments.map((c) =>
@@ -36,6 +37,8 @@ export async function GET(request: Request) {
       void MOCK_COMMENTS;
       return Response.json([]);
     }
+
+    await ensureCommunitiesSchema();
 
     const comments = await sql`
       SELECT id, post_id, user_id, user_name, content, parent_id,

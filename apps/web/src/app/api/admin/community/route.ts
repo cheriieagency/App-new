@@ -6,6 +6,7 @@ import {
   getMockCommunityAdminPayload,
 } from '@/lib/mock-community-admin';
 import { demoPostPinOverrides } from '@/lib/demo-pin-state';
+import { ensureCommunitiesSchema } from '@/lib/communities/schema';
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -43,12 +44,15 @@ export async function GET(request: Request) {
   });
 
   try {
+    await ensureCommunitiesSchema();
+
     // Prefer the requested community (workspace-bound) so admin never falls to mock.
     let communities: Record<string, unknown>[] = [];
     if (communityId) {
       const byId = await sql`
         SELECT id, name, slug, description, category, cover_color,
-               member_count, COALESCE(is_published, true) AS is_published
+               member_count, COALESCE(is_published, true) AS is_published,
+               workspace_id, avatar_url, cover_url, is_free, monthly_price_sek
         FROM communities
         WHERE id = ${communityId}
         LIMIT 1
@@ -61,7 +65,8 @@ export async function GET(request: Request) {
     if (communities.length === 0) {
       const owned = await sql`
         SELECT id, name, slug, description, category, cover_color,
-               member_count, COALESCE(is_published, true) AS is_published
+               member_count, COALESCE(is_published, true) AS is_published,
+               workspace_id, avatar_url, cover_url, is_free, monthly_price_sek
         FROM communities
         WHERE creator_id = ${session.user.id}
            OR id IN (
@@ -81,59 +86,89 @@ export async function GET(request: Request) {
       communities.find((c) => Number(c.id) === communityId) ?? communities[0];
     const cid = Number((selected as { id: number }).id);
 
-    const [members, posts, commentRows] = await sql.transaction([
-      sql`
-        SELECT u.id, u.name, u.email, u.image,
-               cm.role, cm.joined_at
-        FROM community_memberships cm
-        JOIN "user" u ON u.id = cm.user_id
-        WHERE cm.community_id = ${cid}
-        ORDER BY
-          CASE cm.role
-            WHEN 'owner' THEN 0
-            WHEN 'moderator' THEN 1
-            ELSE 2
-          END,
-          cm.joined_at DESC
-      `,
-      sql`
-        SELECT p.*,
-               (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id)::int AS like_count,
-               (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count
-        FROM posts p
-        WHERE p.community_id = ${cid}
-        ORDER BY p.is_pinned DESC, p.created_at DESC
-        LIMIT 50
-      `,
-      sql`
-        SELECT c.id, c.post_id, c.user_id, c.user_name, c.content,
-               c.parent_id, c.media_url, c.media_type,
-               c.is_pinned, c.pinned_at, c.created_at
-        FROM comments c
-        JOIN posts p ON p.id = c.post_id
-        WHERE p.community_id = ${cid}
-        ORDER BY c.is_pinned DESC, c.created_at ASC
-      `,
-    ]);
+    let members: unknown[] = [];
+    let posts: unknown[] = [];
+    let commentRows: unknown[] = [];
+    try {
+      // Parallel reads (avoid broken sql.transaction Promise handling for UI load).
+      const [memberRows, postRows, commentList] = await Promise.all([
+        sql`
+          SELECT u.id, u.name, u.email, u.image,
+                 cm.role, cm.joined_at
+          FROM community_memberships cm
+          JOIN "user" u ON u.id = cm.user_id
+          WHERE cm.community_id = ${cid}
+          ORDER BY
+            CASE cm.role
+              WHEN 'owner' THEN 0
+              WHEN 'moderator' THEN 1
+              ELSE 2
+            END,
+            cm.joined_at DESC
+        `,
+        sql`
+          SELECT p.*,
+                 (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id)::int AS like_count,
+                 (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)::int AS comment_count
+          FROM posts p
+          WHERE p.community_id = ${cid}
+          ORDER BY p.is_pinned DESC, p.created_at DESC
+          LIMIT 50
+        `,
+        sql`
+          SELECT c.id, c.post_id, c.user_id, c.user_name, c.content,
+                 c.parent_id, c.media_url, c.media_type,
+                 c.is_pinned, c.pinned_at, c.created_at
+          FROM comments c
+          JOIN posts p ON p.id = c.post_id
+          WHERE p.community_id = ${cid}
+          ORDER BY c.is_pinned DESC, c.created_at ASC
+        `,
+      ]);
+      members = memberRows as unknown[];
+      posts = postRows as unknown[];
+      commentRows = commentList as unknown[];
+    } catch (feedError) {
+      // Degrade gracefully — still return community shell + members if feed schema lags.
+      console.warn('[GET /api/admin/community] feed query failed', feedError);
+      try {
+        members = (await sql`
+          SELECT u.id, u.name, u.email, u.image,
+                 cm.role, cm.joined_at
+          FROM community_memberships cm
+          JOIN "user" u ON u.id = cm.user_id
+          WHERE cm.community_id = ${cid}
+          ORDER BY cm.joined_at DESC
+        `) as unknown[];
+      } catch (memberError) {
+        console.warn('[GET /api/admin/community] members query failed', memberError);
+      }
+    }
 
-    const commentsByPost = new Map<number, typeof commentRows>();
-    for (const row of commentRows as Array<{ post_id: number }>) {
+    const commentsByPost = new Map<number, unknown[]>();
+    for (const row of (Array.isArray(commentRows) ? commentRows : []) as Array<{
+      post_id: number;
+    }>) {
       const list = commentsByPost.get(row.post_id) ?? [];
       list.push(row);
       commentsByPost.set(row.post_id, list);
     }
 
-    const postsWithComments = (posts as Array<{ id: number }>).map((p) => ({
+    const postsWithComments = (
+      Array.isArray(posts) ? (posts as Array<{ id: number }>) : []
+    ).map((p) => ({
       ...p,
       comments: commentsByPost.get(p.id) ?? [],
     }));
 
-    const memberList = members as Array<{ role: string; joined_at: string }>;
+    const memberList = (
+      Array.isArray(members) ? members : []
+    ) as Array<{ role: string; joined_at: string }>;
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const joinedThisWeek = memberList.filter(
       (m) => new Date(m.joined_at).getTime() >= weekAgo
     ).length;
-    const commentTotal = (commentRows as unknown[]).length;
+    const commentTotal = Array.isArray(commentRows) ? commentRows.length : 0;
     const likeTotal = postsWithComments.reduce(
       (n, p) => n + Number((p as { like_count?: number }).like_count ?? 0),
       0
@@ -150,27 +185,15 @@ export async function GET(request: Request) {
         moderator_count: memberList.filter((m) => m.role === 'moderator').length,
         like_count: likeTotal,
       },
-      members,
+      members: memberList,
       posts: postsWithComments,
       demo: false,
     });
   } catch (error) {
-    console.error(error);
+    console.error('[GET /api/admin/community]', error);
     // Keep UI usable but never pretend seed mock is production data.
     return Response.json({
-      communities: [],
-      community: null,
-      overview: {
-        member_count: 0,
-        post_count: 0,
-        comment_count: 0,
-        joined_this_week: 0,
-        moderator_count: 0,
-        like_count: 0,
-      },
-      members: [],
-      posts: [],
-      demo: false,
+      ...emptyPayload(null),
       error: 'load_failed',
     });
   }
@@ -181,6 +204,10 @@ export async function POST(request: Request) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
+    if (process.env.DATABASE_URL?.trim()) {
+      await ensureCommunitiesSchema();
+    }
+
     const body = await request.json();
     const { action } = body as { action?: string };
 

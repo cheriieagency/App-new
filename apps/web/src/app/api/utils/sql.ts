@@ -57,8 +57,13 @@ if (databaseUrl) {
       const out: unknown[] = [];
       if (Array.isArray(queries)) {
         for (const q of queries) {
+          // Neon-style: callers pass either lazy fns or already-started sql`` Promises.
           if (typeof q === 'function') {
             out.push(await q(tagged));
+          } else if (q != null && typeof (q as Promise<unknown>).then === 'function') {
+            out.push(await q);
+          } else {
+            out.push(q);
           }
         }
       }

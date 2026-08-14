@@ -14,6 +14,8 @@ import {
   type FeedPost,
 } from '@/lib/community-posts';
 
+import { ensureCommunitiesSchema } from '@/lib/communities/schema';
+
 async function requireSession() {
   return auth.api.getSession({ headers: await headers() });
 }
@@ -26,6 +28,7 @@ async function ensurePostsSchema() {
     return;
   }
   try {
+    await ensureCommunitiesSchema();
     await sql`
       ALTER TABLE posts
         ADD COLUMN IF NOT EXISTS title text,
