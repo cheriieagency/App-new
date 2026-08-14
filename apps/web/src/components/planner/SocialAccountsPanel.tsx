@@ -256,6 +256,7 @@ export default function SocialAccountsPanel({
   const [oauthPlatform, setOauthPlatform] = useState<SocialPlatform | null>(null);
   const [disconnectTarget, setDisconnectTarget] =
     useState<ConnectedSocialAccount | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
     try {
@@ -439,60 +440,138 @@ export default function SocialAccountsPanel({
     toggle.mutate({ platform, connect: true });
   };
 
-  const confirmDisconnect = async () => {
-    if (!disconnectTarget) return;
-    const account = disconnectTarget;
-    setDisconnectTarget(null);
+  const markDisconnectedInCache = (account: ConnectedSocialAccount) => {
+    const patch = (old: unknown) => {
+      if (!old || typeof old !== 'object') return old;
+      const data = old as {
+        accounts?: ConnectedSocialAccount[];
+        connected_count?: number;
+        meta_connected?: boolean;
+        needs_ig_business?: boolean;
+      };
+      const accounts = (data.accounts ?? []).map((a) =>
+        a.platform === account.platform ||
+        (account.id && a.id && a.id === account.id)
+          ? {
+              ...a,
+              connected: false,
+              handle: null,
+              display_name: null,
+              avatar_url: null,
+              connected_at: null,
+              follower_count: null,
+              subscriber_count: null,
+              page_name: null,
+              external_id: null,
+              id: null,
+              platform_user_id: null,
+              workspace_id: null,
+            }
+          : a
+      );
+      const connected = accounts.filter((a) => a.connected);
+      const hasIg = connected.some((a) => a.platform === 'instagram');
+      const hasFb = connected.some((a) => a.platform === 'facebook');
+      return {
+        ...data,
+        accounts,
+        connected_count: connected.length,
+        meta_connected: hasIg || hasFb,
+        needs_ig_business: hasFb && !hasIg,
+      };
+    };
+    queryClient.setQueriesData({ queryKey: ['social-accounts'] }, patch);
+    queryClient.setQueriesData({ queryKey: ['planner-socials'] }, patch);
+  };
 
-    const livePlatforms = new Set([
-      'instagram',
-      'facebook',
-      'youtube',
-      'linkedin',
-      'tiktok',
-      'pinterest',
-      'google',
-    ]);
+  const handleDisconnect = async (account: ConnectedSocialAccount) => {
+    setIsDisconnecting(true);
+    try {
+      const livePlatforms = new Set([
+        'instagram',
+        'facebook',
+        'youtube',
+        'linkedin',
+        'tiktok',
+        'pinterest',
+        'google',
+      ]);
 
-    // Live OAuth rows: delete only that platform via unified disconnect API.
-    if (!demoMode && livePlatforms.has(account.platform)) {
+      if (!demoMode && livePlatforms.has(account.platform)) {
+        const res = await fetch('/api/auth/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            accountId: account.id ?? undefined,
+            platform: account.platform,
+            platformUserId:
+              account.platform_user_id || account.external_id || undefined,
+            workspaceId:
+              account.workspace_id || activeWorkspaceId || undefined,
+          }),
+        });
+
+        const errData = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          message?: string;
+          success?: boolean;
+        };
+
+        if (!res.ok) {
+          toast.error(
+            errData.error || 'Failed to disconnect account'
+          );
+          return;
+        }
+
+        // Optimistic UI update, then re-fetch from server.
+        markDisconnectedInCache(account);
+        toast.success(
+          errData.message || 'Account disconnected successfully'
+        );
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['social-accounts'] }),
+          queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
+          queryClient.invalidateQueries({ queryKey: ['meta-sync'] }),
+        ]);
+      } else {
+        await toggle.mutateAsync({
+          platform: account.platform,
+          connect: false,
+        });
+        markDisconnectedInCache(account);
+        toast.success('Account disconnected successfully');
+      }
+
+      // Mandatory App Review data-deletion callback (best-effort).
       try {
-        const r = await fetch('/api/auth/disconnect', {
+        await fetch('/api/auth/data-deletion', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             platform: account.platform,
-            platformUserId: account.external_id ?? '',
-            workspaceId: activeWorkspaceId,
+            handle: account.handle,
+            display_name: account.display_name,
+            source: 'admin_settings_disconnect',
           }),
         });
-        if (!r.ok) throw new Error('Disconnect failed');
-        await queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
-        await queryClient.invalidateQueries({ queryKey: ['planner-socials'] });
-        await queryClient.invalidateQueries({ queryKey: ['meta-sync'] });
       } catch {
-        /* fall through to demo toggle for local state */
-        await toggle.mutateAsync({ platform: account.platform, connect: false });
+        /* best-effort */
       }
-    } else {
-      await toggle.mutateAsync({ platform: account.platform, connect: false });
+    } catch (err) {
+      console.error('[Disconnect Error]', err);
+      toast.error('Network error while disconnecting account');
+    } finally {
+      setIsDisconnecting(false);
     }
+  };
 
-    // Mandatory App Review data-deletion callback.
-    try {
-      await fetch('/api/auth/data-deletion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          platform: account.platform,
-          handle: account.handle,
-          display_name: account.display_name,
-          source: 'admin_settings_disconnect',
-        }),
-      });
-    } catch {
-      /* best-effort */
-    }
+  const confirmDisconnect = async () => {
+    if (!disconnectTarget || isDisconnecting) return;
+    const account = disconnectTarget;
+    setDisconnectTarget(null);
+    await handleDisconnect(account);
   };
 
   if (isLoading) {
@@ -1065,9 +1144,13 @@ export default function SocialAccountsPanel({
             </button>
             <button
               type="button"
+              disabled={isDisconnecting}
               onClick={() => void confirmDisconnect()}
-              className="min-h-[44px] px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-extrabold"
+              className="min-h-[44px] px-4 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white text-sm font-extrabold inline-flex items-center justify-center gap-2"
             >
+              {isDisconnecting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
               {t('socials.confirmDisconnect')}
             </button>
           </DialogFooter>

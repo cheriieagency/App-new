@@ -1,71 +1,95 @@
 /**
  * POST /api/auth/meta/disconnect
- * Alias kept for Meta-specific callers — delegates to unified disconnect logic.
+ * Meta-specific alias — same ownership rules as /api/auth/disconnect.
  */
 
+import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import {
-  deleteMetaSocialAccount,
-  deleteMetaSocialPlatform,
-} from '@/lib/meta/social-accounts';
+import { deleteSocialAccountRow } from '@/lib/social/persist';
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: unknown;
+  let body: Record<string, unknown> = {};
   try {
-    body = await request.json();
+    body = (await request.json()) as Record<string, unknown>;
   } catch {
-    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const platform =
-    body && typeof body === 'object' && 'platform' in body
-      ? String((body as { platform?: unknown }).platform)
-      : '';
+  const platform = String(body.platform ?? '');
   const platformUserId =
-    body && typeof body === 'object' && 'platformUserId' in body
-      ? String((body as { platformUserId?: unknown }).platformUserId ?? '')
-      : '';
+    typeof body.platformUserId === 'string'
+      ? body.platformUserId.trim()
+      : typeof body.platform_user_id === 'string'
+        ? body.platform_user_id.trim()
+        : '';
+  const accountId =
+    typeof body.accountId === 'string'
+      ? body.accountId.trim()
+      : typeof body.account_id === 'string'
+        ? body.account_id.trim()
+        : '';
+  const workspaceId =
+    typeof body.workspaceId === 'string'
+      ? body.workspaceId.trim()
+      : typeof body.workspace_id === 'string'
+        ? body.workspace_id.trim()
+        : '';
 
-  if (platform !== 'instagram' && platform !== 'facebook') {
-    return Response.json(
-      { error: 'platform must be instagram or facebook' },
+  if (
+    !accountId &&
+    platform !== 'instagram' &&
+    platform !== 'facebook'
+  ) {
+    return NextResponse.json(
+      { error: 'platform must be instagram or facebook (or provide accountId)' },
       { status: 400 }
     );
   }
 
   try {
-    if (platformUserId.trim()) {
-      const result = await deleteMetaSocialAccount({
-        userId: session.user.id,
-        platform,
-        platformUserId,
-      });
-      return Response.json({
-        ok: true,
-        deleted: result.deleted,
-        platform,
-        platformUserId,
-      });
+    const result = await deleteSocialAccountRow({
+      userId: session.user.id,
+      accountId: accountId || null,
+      platform:
+        platform === 'instagram' || platform === 'facebook'
+          ? platform
+          : null,
+      platformUserId: platformUserId || null,
+      workspaceId: workspaceId || null,
+    });
+
+    if (!result.deleted) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Account not found or already disconnected',
+          deleted: false,
+        },
+        { status: 404 }
+      );
     }
 
-    const result = await deleteMetaSocialPlatform({
-      userId: session.user.id,
-      platform,
-    });
-    return Response.json({
+    return NextResponse.json({
+      success: true,
+      message: 'Account disconnected successfully',
       ok: true,
-      deleted: result.deleted > 0,
-      count: result.deleted,
-      platform,
+      deleted: true,
+      deletedIds: result.deletedIds,
+      platform: platform || null,
+      platformUserId: platformUserId || null,
+      accountId: accountId || null,
     });
   } catch (error) {
     console.error('[meta/disconnect]', error);
-    return Response.json({ error: 'Failed to disconnect' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Failed to disconnect' },
+      { status: 500 }
+    );
   }
 }

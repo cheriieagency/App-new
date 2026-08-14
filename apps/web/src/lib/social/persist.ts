@@ -255,6 +255,8 @@ export async function upsertSocialAccountRow(
     subscriber_count:
       input.platform === 'youtube' ? input.followersCount ?? null : null,
     external_id: input.platformUserId,
+    platform_user_id: input.platformUserId,
+    workspace_id: boundWorkspaceId,
   };
 }
 
@@ -271,6 +273,9 @@ function disconnectedStub(platform: SocialPlatform): ConnectedSocialAccount {
     page_name: null,
     company_url: null,
     external_id: null,
+    id: null,
+    platform_user_id: null,
+    workspace_id: null,
   };
 }
 
@@ -319,7 +324,11 @@ function mapRow(raw: Record<string, unknown>): ConnectedSocialAccount {
         : null,
     company_url:
       typeof meta.company_url === 'string' ? meta.company_url : null,
-    external_id: externalId,
+    external_id: externalId || null,
+    id: raw.id != null ? String(raw.id) : null,
+    platform_user_id: externalId || null,
+    workspace_id:
+      raw.workspace_id != null ? String(raw.workspace_id) : null,
   };
 }
 
@@ -390,62 +399,103 @@ export async function listLiveSocialAccountsForUser(input: {
 
 export async function deleteSocialAccountRow(input: {
   userId: string;
-  platform: PersistablePlatform;
+  platform?: PersistablePlatform | null;
   platformUserId?: string | null;
   workspaceId?: string | null;
-}): Promise<{ deleted: boolean }> {
-  if (!process.env.DATABASE_URL?.trim()) return { deleted: false };
+  /** Prefer UUID row id when the UI has it. */
+  accountId?: string | null;
+}): Promise<{ deleted: boolean; deletedIds: string[] }> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return { deleted: false, deletedIds: [] };
+  }
 
   await ensureSocialAccountsSchema();
+  const userId = input.userId.trim();
+  if (!userId) return { deleted: false, deletedIds: [] };
+
+  const accountId = input.accountId?.trim() || null;
   const workspaceId = input.workspaceId?.trim() || null;
+  const platformUserId = input.platformUserId?.trim() || null;
+  const platform = input.platform ?? null;
 
-  if (workspaceId && input.platformUserId?.trim()) {
+  const collect = (rows: unknown): string[] =>
+    Array.isArray(rows)
+      ? rows
+          .map((r) =>
+            r && typeof r === 'object' && 'id' in r
+              ? String((r as { id: unknown }).id)
+              : ''
+          )
+          .filter(Boolean)
+      : [];
+
+  // 1) Exact row by id — still enforce user_id ownership.
+  if (accountId) {
     const rows = await sql`
       DELETE FROM social_accounts
-      WHERE user_id = ${input.userId}
-        AND platform = ${input.platform}
+      WHERE id::text = ${accountId}
+        AND user_id::text = ${userId}
+      RETURNING id
+    `;
+    const ids = collect(rows);
+    if (ids.length > 0) return { deleted: true, deletedIds: ids };
+  }
+
+  // 2) platform + platform_user_id (+ optional workspace)
+  if (platform && platformUserId) {
+    if (workspaceId) {
+      const rows = await sql`
+        DELETE FROM social_accounts
+        WHERE user_id::text = ${userId}
+          AND platform = ${platform}
+          AND workspace_id = ${workspaceId}
+          AND (
+            platform_user_id = ${platformUserId}
+            OR platform_user_id IS NULL
+          )
+        RETURNING id
+      `;
+      const ids = collect(rows);
+      if (ids.length > 0) return { deleted: true, deletedIds: ids };
+    }
+
+    const rows = await sql`
+      DELETE FROM social_accounts
+      WHERE user_id::text = ${userId}
+        AND platform = ${platform}
+        AND platform_user_id = ${platformUserId}
+      RETURNING id
+    `;
+    const ids = collect(rows);
+    if (ids.length > 0) return { deleted: true, deletedIds: ids };
+  }
+
+  // 3) platform + workspace (all matching rows for this user)
+  if (platform && workspaceId) {
+    const rows = await sql`
+      DELETE FROM social_accounts
+      WHERE user_id::text = ${userId}
+        AND platform = ${platform}
         AND workspace_id = ${workspaceId}
-        AND (
-          platform_user_id = ${input.platformUserId}
-          OR platform_user_id IS NULL
-        )
       RETURNING id
     `;
-    if (Array.isArray(rows) && rows.length > 0) return { deleted: true };
+    const ids = collect(rows);
+    if (ids.length > 0) return { deleted: true, deletedIds: ids };
   }
 
-  if (workspaceId) {
+  // 4) Last resort: platform for this user (any workspace they own)
+  if (platform) {
     const rows = await sql`
       DELETE FROM social_accounts
-      WHERE user_id = ${input.userId}
-        AND platform = ${input.platform}
-        AND workspace_id = ${workspaceId}
+      WHERE user_id::text = ${userId}
+        AND platform = ${platform}
       RETURNING id
     `;
-    return { deleted: Array.isArray(rows) && rows.length > 0 };
+    const ids = collect(rows);
+    return { deleted: ids.length > 0, deletedIds: ids };
   }
 
-  if (input.platformUserId?.trim()) {
-    const rows = await sql`
-      DELETE FROM social_accounts
-      WHERE user_id = ${input.userId}
-        AND platform = ${input.platform}
-        AND (
-          platform_user_id = ${input.platformUserId}
-          OR platform_user_id IS NULL
-        )
-      RETURNING id
-    `;
-    if (Array.isArray(rows) && rows.length > 0) return { deleted: true };
-  }
-
-  const rows = await sql`
-    DELETE FROM social_accounts
-    WHERE user_id = ${input.userId}
-      AND platform = ${input.platform}
-    RETURNING id
-  `;
-  return { deleted: Array.isArray(rows) && rows.length > 0 };
+  return { deleted: false, deletedIds: [] };
 }
 
 export function readWorkspaceIdFromRequest(request?: Request | null): string | null {

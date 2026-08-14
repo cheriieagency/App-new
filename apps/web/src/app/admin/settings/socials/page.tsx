@@ -164,6 +164,7 @@ export default function AdminSocialSettingsPage() {
           <NoInstagramBusinessBanner />
         </Suspense>
 
+        {/* Disconnect lives in SocialAccountsPanel (handleDisconnect → /api/auth/disconnect). */}
         <SocialAccountsPanel />
       </main>
     </div>

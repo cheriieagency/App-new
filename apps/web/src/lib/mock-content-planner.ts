@@ -133,6 +133,12 @@ export type ConnectedSocialAccount = {
   company_url?: string | null;
   /** Meta / platform external id (for targeted disconnect). */
   external_id?: string | null;
+  /** social_accounts.id (UUID) — preferred disconnect key. */
+  id?: string | null;
+  /** Alias for external_id / platform_user_id column. */
+  platform_user_id?: string | null;
+  /** Workspace this connection is bound to. */
+  workspace_id?: string | null;
 };
 
 export type AiContentIdea = {
