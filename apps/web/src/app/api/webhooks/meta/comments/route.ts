@@ -3,7 +3,7 @@
  * GET: hub challenge verification
  * POST: keyword match → private reply (recipient.comment_id) + optional public reply
  *
- * CRITICAL: Always respond 200 within Meta's window so the subscription stays active.
+ * CRITICAL: Always respond 200 so Meta never disables the subscription.
  */
 
 import { NextResponse } from 'next/server';
@@ -40,7 +40,11 @@ type AutomationRow = {
   title?: string | null;
 };
 
-/** Normalize env verify token — strip whitespace and wrapping quotes. */
+function ok() {
+  return NextResponse.json({ success: true }, { status: 200 });
+}
+
+/** META_WEBHOOK_VERIFY_TOKEN with trim + optional wrapping quotes stripped. */
 function expectedVerifyToken(): string {
   return String(process.env.META_WEBHOOK_VERIFY_TOKEN ?? '')
     .trim()
@@ -48,7 +52,6 @@ function expectedVerifyToken(): string {
     .trim();
 }
 
-/** Strip leading #, punctuation; lowercase for keyword matching. */
 function cleanCommentText(raw: string): string {
   return raw
     .toLowerCase()
@@ -73,14 +76,11 @@ function parseKeywords(raw: unknown): string[] {
 function buildDmText(rule: AutomationRow): string {
   const text = String(rule.dm_message_text || '').trim();
   const url = String(rule.cta_button_url || '').trim();
-  // Spec: `${dm_message_text}\n\n${cta_button_url}`
   if (url) return `${text}\n\n${url}`.trim();
   return text;
 }
 
-/**
- * Lookup social account by entryId (platform_user_id), then page_id fallback.
- */
+/** platform_user_id === entryId first, then page_id fallback. */
 async function lookupSocialAccount(
   entryId: string
 ): Promise<SocialAccountRow | null> {
@@ -98,7 +98,6 @@ async function lookupSocialAccount(
   };
 
   try {
-    // 1) Exact platform_user_id match (IG scoped user id or Page id).
     const byPlatformUser = await sql`
       SELECT workspace_id, platform, platform_user_id, page_id, access_token
       FROM public.social_accounts
@@ -116,7 +115,6 @@ async function lookupSocialAccount(
     );
     if (hit) return hit;
 
-    // 2) Fallback: page_id or meta.ig_user_id.
     const byPage = await sql`
       SELECT workspace_id, platform, platform_user_id, page_id, access_token
       FROM public.social_accounts
@@ -143,7 +141,6 @@ async function loadActiveAutomations(
   workspaceId: string
 ): Promise<AutomationRow[]> {
   try {
-    await ensureDmAutomationsSchema();
     const rows = await sql`
       SELECT
         id, title, trigger_keywords, dm_message_text, cta_button_url,
@@ -160,42 +157,105 @@ async function loadActiveAutomations(
   }
 }
 
-async function recentlyMessaged(
-  workspaceId: string,
-  commenterId: string
-): Promise<boolean> {
+async function insertDmLog(input: {
+  workspaceId: string;
+  automationId: string;
+  commentId: string;
+  mediaId: string | null;
+  commenterId: string;
+  commenterUsername: string | null;
+  commentText: string;
+  matchedKeyword: string;
+  status: 'sent' | 'failed' | 'skipped';
+  dmMessageId?: string | null;
+  errorMessage?: string | null;
+}): Promise<void> {
+  // Full insert (preferred schema).
   try {
-    const rows = await sql`
-      SELECT id FROM public.dm_logs
-      WHERE workspace_id = ${workspaceId}
-        AND commenter_id = ${commenterId}
-        AND status = 'sent'
-        AND COALESCE(created_at, sent_at, to_timestamp(0))
-              >= (now() - interval '10 minutes')
-      LIMIT 1
+    if (input.status === 'sent') {
+      await sql`
+        INSERT INTO public.dm_logs (
+          workspace_id, automation_id, comment_id, media_id,
+          commenter_id, commenter_username, comment_text,
+          dm_message_id, matched_keyword, status
+        ) VALUES (
+          ${input.workspaceId},
+          ${input.automationId},
+          ${input.commentId},
+          ${input.mediaId},
+          ${input.commenterId},
+          ${input.commenterUsername},
+          ${input.commentText},
+          ${input.dmMessageId ?? null},
+          ${input.matchedKeyword},
+          'sent'
+        )
+      `;
+    } else {
+      await sql`
+        INSERT INTO public.dm_logs (
+          workspace_id, automation_id, comment_id, media_id,
+          commenter_id, commenter_username, comment_text,
+          matched_keyword, status, error_message
+        ) VALUES (
+          ${input.workspaceId},
+          ${input.automationId},
+          ${input.commentId},
+          ${input.mediaId},
+          ${input.commenterId},
+          ${input.commenterUsername},
+          ${input.commentText},
+          ${input.matchedKeyword},
+          ${input.status},
+          ${input.errorMessage ?? null}
+        )
+      `;
+    }
+    return;
+  } catch (fullErr) {
+    console.warn('[Meta Webhook] dm_logs full insert failed, retrying minimal', fullErr);
+  }
+
+  // Minimal fallback when older schemas lack comment_text / media_id / etc.
+  try {
+    await sql`
+      INSERT INTO public.dm_logs (
+        workspace_id, automation_id, comment_id,
+        commenter_id, matched_keyword, status, error_message
+      ) VALUES (
+        ${input.workspaceId},
+        ${input.automationId},
+        ${input.commentId},
+        ${input.commenterId},
+        ${input.matchedKeyword},
+        ${input.status},
+        ${input.errorMessage ?? null}
+      )
     `;
-    return Array.isArray(rows) && rows.length > 0;
-  } catch {
-    return false;
+  } catch (minimalErr) {
+    console.warn('[Meta Webhook] dm_logs minimal insert failed', minimalErr);
   }
 }
 
+/**
+ * GET — Meta webhook verification challenge.
+ */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get('hub.mode');
-  const receivedToken = url.searchParams.get('hub.verify_token');
+  const verifyToken = url.searchParams.get('hub.verify_token');
   const challenge = url.searchParams.get('hub.challenge');
 
-  const expectedToken = expectedVerifyToken();
-  const normalizedReceived = String(receivedToken ?? '')
+  const expected = expectedVerifyToken();
+  const received = String(verifyToken ?? '')
     .trim()
     .replace(/^['"]+|['"]+$/g, '')
     .trim();
 
   if (
     mode === 'subscribe' &&
-    expectedToken.length > 0 &&
-    normalizedReceived === expectedToken &&
+    expected.length > 0 &&
+    received === expected &&
     challenge != null
   ) {
     console.log('[Meta Webhook Verified]', challenge);
@@ -206,22 +266,24 @@ export async function GET(request: Request) {
   }
 
   console.warn('[Meta Webhook Verification Failed]', {
-    received: receivedToken,
-    expected: expectedToken,
     mode,
+    received: verifyToken,
+    expected,
   });
   return new Response('Forbidden', { status: 403 });
 }
 
+/**
+ * POST — Incoming Instagram / Page comment → Private Reply DM.
+ */
 export async function POST(request: Request) {
-  // Meta MUST receive 200 quickly — wrap everything so we never 500.
   try {
     let body: WebhookBody;
     try {
       body = (await request.json()) as WebhookBody;
     } catch {
       console.warn('[Meta Webhook] invalid JSON body');
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
     console.log('[Meta Webhook Incoming]', JSON.stringify(body, null, 2));
@@ -229,7 +291,7 @@ export async function POST(request: Request) {
     const objectType = String(body?.object || '').toLowerCase();
     if (objectType && objectType !== 'instagram' && objectType !== 'page') {
       console.log('[Meta Webhook] Ignoring object type:', objectType);
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
     const entry = body?.entry?.[0];
@@ -240,19 +302,18 @@ export async function POST(request: Request) {
 
     if (!value) {
       console.log('[Meta Webhook] No change value present, ignoring.');
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
-    // Skip non-comment feed noise (likes, shares, etc.).
     const item = String(value.item || '').toLowerCase();
     const verb = String(value.verb || 'add').toLowerCase();
     if (field === 'feed' && item && item !== 'comment') {
       console.log('[Meta Webhook] Ignoring non-comment feed item:', item);
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
     if (verb && verb !== 'add' && verb !== 'edited') {
       console.log('[Meta Webhook] Ignoring verb:', verb);
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
     const from = (value.from || {}) as {
@@ -277,36 +338,42 @@ export async function POST(request: Request) {
       field,
       commentId,
       commentText,
-      mediaId,
       commenterId,
       commenterUsername,
+      mediaId,
     });
 
-    // Guard: Ignore empty comments
+    // Ignore empty comments
     if (!commentId || !commentText) {
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
-    // Guard: Self-comment (creator commenting on own post)
+    // Ignore self-comments
     if (commenterId && entryId && commenterId === entryId) {
       console.log('[Meta Webhook] Self-comment detected, skipping auto-DM.');
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
     if (!process.env.DATABASE_URL?.trim()) {
-      console.warn(
-        '[Meta Webhook] DATABASE_URL missing — cannot match automations.'
-      );
-      return NextResponse.json({ success: true }, { status: 200 });
+      console.warn('[Meta Webhook] DATABASE_URL missing');
+      return ok();
     }
 
+    // Ensure dm_logs / dm_automations columns exist (incl. comment_text).
+    try {
+      await ensureDmAutomationsSchema();
+    } catch (schemaErr) {
+      console.warn('[Meta Webhook] schema ensure failed', schemaErr);
+    }
+
+    // Workspace token lookup: platform_user_id === entryId
     const account = await lookupSocialAccount(entryId);
     if (!account) {
       console.warn(
         '[Meta Webhook] No active social account found for ID:',
         entryId
       );
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
     const rules = await loadActiveAutomations(account.workspace_id);
@@ -315,7 +382,7 @@ export async function POST(request: Request) {
         '[Meta Webhook] No active dm_automations for workspace',
         account.workspace_id
       );
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
     const cleaned = cleanCommentText(commentText);
@@ -336,7 +403,7 @@ export async function POST(request: Request) {
 
     if (!matchedRule || !matchedKeyword) {
       console.log('[Meta Webhook] No keyword match for comment:', commentText);
-      return NextResponse.json({ success: true }, { status: 200 });
+      return ok();
     }
 
     console.log('[Meta Webhook] Matched rule', {
@@ -345,46 +412,14 @@ export async function POST(request: Request) {
       title: matchedRule.title,
     });
 
-    if (
-      commenterId &&
-      (await recentlyMessaged(account.workspace_id, commenterId))
-    ) {
-      console.log('[Meta Webhook] Rate-limited (10m) for commenter', commenterId);
-      try {
-        await sql`
-          INSERT INTO public.dm_logs (
-            workspace_id, automation_id, comment_id, media_id,
-            commenter_id, commenter_username, comment_text,
-            matched_keyword, status, error_message
-          ) VALUES (
-            ${account.workspace_id},
-            ${matchedRule.id},
-            ${commentId},
-            ${mediaId},
-            ${commenterId || 'unknown'},
-            ${commenterUsername},
-            ${commentText},
-            ${matchedKeyword},
-            'skipped',
-            ${'rate_limited_10m'}
-          )
-        `;
-      } catch (logErr) {
-        console.warn('[Meta Webhook] dm_logs skip insert failed', logErr);
-      }
-      return NextResponse.json({ success: true }, { status: 200 });
+    const messageText = buildDmText(matchedRule);
+    if (!messageText) {
+      console.warn('[Meta Webhook] Empty DM body for rule', matchedRule.id);
+      return ok();
     }
 
-    const dmText = buildDmText(matchedRule);
-    if (!dmText) {
-      console.warn(
-        '[Meta Webhook] Matched rule has empty DM body',
-        matchedRule.id
-      );
-      return NextResponse.json({ success: true }, { status: 200 });
-    }
-
-    // Prefer webhook entryId for /{ig-user-id|page-id}/messages, then stored ids.
+    // Spec: POST /{entryId}/messages with recipient.comment_id
+    // Also try stored IG / Page ids if entryId endpoint fails.
     const messagingEndpointIds = [
       entryId,
       account.platform_user_id,
@@ -397,7 +432,6 @@ export async function POST(request: Request) {
     let lastGraphError: string | null = null;
 
     for (const endpointId of messagingEndpointIds) {
-      // MANDATORY: recipient.comment_id for Instagram Private Replies from comments.
       const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
         endpointId
       )}/messages`;
@@ -406,7 +440,7 @@ export async function POST(request: Request) {
           comment_id: commentId,
         },
         message: {
-          text: dmText,
+          text: messageText,
         },
       };
 
@@ -424,11 +458,7 @@ export async function POST(request: Request) {
           id?: string;
           error?: { message?: string };
         };
-        console.log(
-          '[Meta Private Reply Result]',
-          graphRes.status,
-          graphData
-        );
+        console.log('[Meta Private Reply Result]', graphRes.status, graphData);
 
         if (graphRes.ok && (graphData.message_id || graphData.id)) {
           dmMessageId = String(graphData.message_id || graphData.id);
@@ -456,20 +486,20 @@ export async function POST(request: Request) {
       matchedRule.reply_to_comment_publicly === true &&
       String(matchedRule.public_comment_text || '').trim()
     ) {
-      const replyUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
-        commentId
-      )}/replies`;
       try {
-        const replyRes = await fetch(replyUrl, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${account.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: String(matchedRule.public_comment_text).trim(),
-          }),
-        });
+        const replyRes = await fetch(
+          `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}/replies`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${account.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: String(matchedRule.public_comment_text).trim(),
+            }),
+          }
+        );
         const replyData = await replyRes.json().catch(() => ({}));
         console.log('[Meta Public Reply Result]', replyRes.status, replyData);
       } catch (replyErr) {
@@ -478,28 +508,18 @@ export async function POST(request: Request) {
     }
 
     if (dmMessageId) {
-      try {
-        await sql`
-          INSERT INTO public.dm_logs (
-            workspace_id, automation_id, comment_id, media_id,
-            commenter_id, commenter_username, comment_text,
-            dm_message_id, matched_keyword, status
-          ) VALUES (
-            ${account.workspace_id},
-            ${matchedRule.id},
-            ${commentId},
-            ${mediaId},
-            ${commenterId || 'unknown'},
-            ${commenterUsername},
-            ${commentText},
-            ${dmMessageId},
-            ${matchedKeyword},
-            'sent'
-          )
-        `;
-      } catch (logErr) {
-        console.warn('[Meta Webhook] dm_logs sent insert failed', logErr);
-      }
+      await insertDmLog({
+        workspaceId: account.workspace_id,
+        automationId: matchedRule.id,
+        commentId,
+        mediaId,
+        commenterId: commenterId || 'unknown',
+        commenterUsername,
+        commentText,
+        matchedKeyword,
+        status: 'sent',
+        dmMessageId,
+      });
 
       try {
         await sql`
@@ -511,28 +531,18 @@ export async function POST(request: Request) {
         console.warn('[Meta Webhook] total_dms_sent increment failed', incErr);
       }
     } else {
-      try {
-        await sql`
-          INSERT INTO public.dm_logs (
-            workspace_id, automation_id, comment_id, media_id,
-            commenter_id, commenter_username, comment_text,
-            matched_keyword, status, error_message
-          ) VALUES (
-            ${account.workspace_id},
-            ${matchedRule.id},
-            ${commentId},
-            ${mediaId},
-            ${commenterId || 'unknown'},
-            ${commenterUsername},
-            ${commentText},
-            ${matchedKeyword},
-            'failed',
-            ${lastGraphError || 'private_reply_failed'}
-          )
-        `;
-      } catch (logErr) {
-        console.warn('[Meta Webhook] dm_logs failed insert failed', logErr);
-      }
+      await insertDmLog({
+        workspaceId: account.workspace_id,
+        automationId: matchedRule.id,
+        commentId,
+        mediaId,
+        commenterId: commenterId || 'unknown',
+        commenterUsername,
+        commentText,
+        matchedKeyword,
+        status: 'failed',
+        errorMessage: lastGraphError || 'private_reply_failed',
+      });
       console.warn(
         '[Meta Webhook] Private reply failed for comment',
         commentId,
@@ -540,9 +550,9 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return ok();
   } catch (error) {
     console.error('[Meta Webhook] unhandled error', error);
-    return NextResponse.json({ success: true }, { status: 200 });
+    return ok();
   }
 }
