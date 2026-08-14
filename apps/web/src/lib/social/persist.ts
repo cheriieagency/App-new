@@ -10,6 +10,7 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
   readWorkspaceIdFromCookieHeader,
 } from '@/lib/social/oauth-workspace';
+import { ensureWorkspaceOwnedByUser } from '@/lib/social/workspace-access';
 
 export { ACTIVE_WORKSPACE_COOKIE, ACTIVE_WORKSPACE_COOKIE_ALIAS };
 
@@ -171,15 +172,25 @@ export async function upsertSocialAccountRow(
   const displayName = input.platformUserName;
   const metaJson = JSON.stringify(input.meta ?? {});
   const workspaceId = input.workspaceId?.trim() || null;
+  const userId = input.userId?.trim();
 
+  if (!userId) {
+    throw new Error('user_id is required to bind social accounts');
+  }
   if (!workspaceId) {
     throw new Error('workspace_id is required to bind social accounts');
   }
 
-  // Workspace-scoped replace — avoids fighting legacy UNIQUE (user_id, platform).
+  // Never attach tokens to a workspace owned by another user.
+  const access = await ensureWorkspaceOwnedByUser(userId, workspaceId);
+  if (!access.ok) {
+    throw new Error(access.error || 'workspace_forbidden');
+  }
+
+  // Workspace-scoped replace — always scoped to this user_id.
   await sql`
     DELETE FROM social_accounts
-    WHERE user_id = ${input.userId}
+    WHERE user_id = ${userId}
       AND platform = ${input.platform}
       AND workspace_id = ${workspaceId}
   `;
@@ -206,7 +217,7 @@ export async function upsertSocialAccountRow(
       created_at
     )
     VALUES (
-      ${input.userId},
+      ${userId},
       ${input.platform},
       ${input.platformUserId},
       ${input.platformUserName},
@@ -307,11 +318,20 @@ function mapRow(raw: Record<string, unknown>): ConnectedSocialAccount {
   };
 }
 
-/** Live rows for one workspace — never mixes connections across brands. */
+/**
+ * Live rows for the authenticated user only.
+ * Always filters user_id = session user; optional workspace_id narrows further.
+ * Never returns another user's connected accounts.
+ */
 export async function listLiveSocialAccountsForUser(input: {
   userId: string;
   workspaceId?: string | null;
 }): Promise<ConnectedSocialAccount[]> {
+  const userId = input.userId?.trim();
+  if (!userId) {
+    return SOCIAL_PLATFORMS.map(disconnectedStub);
+  }
+
   if (!process.env.DATABASE_URL?.trim()) {
     return SOCIAL_PLATFORMS.map(disconnectedStub);
   }
@@ -320,18 +340,27 @@ export async function listLiveSocialAccountsForUser(input: {
 
   try {
     const workspaceId = input.workspaceId?.trim() || null;
+
+    // When a workspace is specified, confirm it belongs to this user first.
+    if (workspaceId) {
+      const access = await ensureWorkspaceOwnedByUser(userId, workspaceId);
+      if (!access.ok) {
+        return SOCIAL_PLATFORMS.map(disconnectedStub);
+      }
+    }
+
     const rows = workspaceId
       ? await sql`
           SELECT *
           FROM social_accounts
-          WHERE user_id = ${input.userId}
+          WHERE user_id = ${userId}
             AND workspace_id = ${workspaceId}
           ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
         `
       : await sql`
           SELECT *
           FROM social_accounts
-          WHERE user_id = ${input.userId}
+          WHERE user_id = ${userId}
           ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
         `;
 

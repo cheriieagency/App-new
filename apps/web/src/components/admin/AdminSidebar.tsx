@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ElementType } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
   CalendarDays,
@@ -13,10 +13,12 @@ import {
   Inbox,
   Link2,
   Mail,
+  Pencil,
   Plus,
   Settings,
   Users,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import WorkspaceSelector from '@/components/planner/WorkspaceSelector';
 import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
 import AdminPlanModal, { useAdminPlan } from '@/components/admin/AdminPlanModal';
@@ -89,6 +91,9 @@ export default function AdminSidebar() {
   const [planOpen, setPlanOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(section === 'projects');
   const [mediaOpen, setMediaOpen] = useState(section === 'media');
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const queryClient = useQueryClient();
   const { data: planData } = useAdminPlan();
   const plan = normalizeWorkspacePlan(planData?.plan);
 
@@ -110,7 +115,44 @@ export default function AdminSidebar() {
       return r.json();
     },
   });
-  const mediaFolders = mediaData?.folders ?? [];
+  const allMediaFolders = mediaData?.folders ?? [];
+  const rootFolder = allMediaFolders.find((f) => f.id === MEDIA_LIBRARY_ROOT_ID);
+  const rootFolderName = rootFolder?.name || t('mediaLibraryRoot');
+  // Nested only — root is rendered separately above.
+  const mediaFolders = allMediaFolders.filter((f) => f.id !== MEDIA_LIBRARY_ROOT_ID);
+
+  const renameFolderMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const r = await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'rename', id, name }),
+      });
+      if (!r.ok) throw new Error('rename failed');
+      return r.json();
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['media-folder', vars.id] });
+      setRenamingFolderId(null);
+      toast.success('Folder renamed');
+    },
+    onError: () => toast.error('Could not rename folder'),
+  });
+
+  const commitFolderRename = () => {
+    if (!renamingFolderId || renameFolderMutation.isPending) return;
+    const next = renameDraft.trim();
+    const current =
+      renamingFolderId === MEDIA_LIBRARY_ROOT_ID
+        ? rootFolderName
+        : mediaFolders.find((f) => f.id === renamingFolderId)?.name;
+    if (!next || next === current) {
+      setRenamingFolderId(null);
+      return;
+    }
+    renameFolderMutation.mutate({ id: renamingFolderId, name: next });
+  };
 
   useEffect(() => {
     if (section === 'projects') setProjectsOpen(true);
@@ -217,31 +259,82 @@ export default function AdminSidebar() {
                       >
                         {/* Permanent root — all brand assets; not deletable */}
                         <div className="space-y-0.5">
-                          <button
-                            type="button"
-                            onClick={() => setActiveMediaFolderId(MEDIA_LIBRARY_ROOT_ID)}
-                            className={[
-                              'w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-left transition-colors',
-                              activeMediaFolderId === MEDIA_LIBRARY_ROOT_ID
-                                ? 'bg-[#E9D5FF]/70 text-[#1a1848] font-semibold'
-                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium',
-                            ].join(' ')}
-                            aria-current={
-                              activeMediaFolderId === MEDIA_LIBRARY_ROOT_ID
-                                ? 'page'
-                                : undefined
-                            }
-                            aria-expanded="true"
-                            aria-controls="admin-media-folders"
-                          >
-                            <span
-                              className="w-2 h-2 rounded-full flex-shrink-0 bg-[#2B2568]"
-                              aria-hidden
-                            />
-                            <span className="text-[12px] truncate tracking-tight">
-                              {t('mediaLibraryRoot')}
-                            </span>
-                          </button>
+                          {renamingFolderId === MEDIA_LIBRARY_ROOT_ID ? (
+                            <form
+                              className="flex items-center gap-1 px-1"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                commitFolderRename();
+                              }}
+                            >
+                              <span
+                                className="w-2 h-2 rounded-full flex-shrink-0 bg-[#2B2568] ml-2"
+                                aria-hidden
+                              />
+                              <input
+                                autoFocus
+                                value={renameDraft}
+                                onChange={(e) => setRenameDraft(e.target.value)}
+                                onBlur={commitFolderRename}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') setRenamingFolderId(null);
+                                }}
+                                className="flex-1 min-w-0 h-10 min-h-[40px] rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                                aria-label="Rename folder"
+                              />
+                            </form>
+                          ) : (
+                            <div
+                              className={[
+                                'group w-full flex items-center gap-1 rounded-xl transition-colors',
+                                activeMediaFolderId === MEDIA_LIBRARY_ROOT_ID
+                                  ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
+                                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+                              ].join(' ')}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => setActiveMediaFolderId(MEDIA_LIBRARY_ROOT_ID)}
+                                onDoubleClick={() => {
+                                  setRenameDraft(rootFolderName);
+                                  setRenamingFolderId(MEDIA_LIBRARY_ROOT_ID);
+                                }}
+                                className={[
+                                  'flex-1 flex items-center gap-2.5 h-10 min-h-[40px] pl-3 pr-1 rounded-xl text-left',
+                                  activeMediaFolderId === MEDIA_LIBRARY_ROOT_ID
+                                    ? 'font-semibold'
+                                    : 'font-medium',
+                                ].join(' ')}
+                                aria-current={
+                                  activeMediaFolderId === MEDIA_LIBRARY_ROOT_ID
+                                    ? 'page'
+                                    : undefined
+                                }
+                                aria-expanded="true"
+                                aria-controls="admin-media-folders"
+                              >
+                                <span
+                                  className="w-2 h-2 rounded-full flex-shrink-0 bg-[#2B2568]"
+                                  aria-hidden
+                                />
+                                <span className="text-[12px] truncate tracking-tight">
+                                  {rootFolderName}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRenameDraft(rootFolderName);
+                                  setRenamingFolderId(MEDIA_LIBRARY_ROOT_ID);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700"
+                                aria-label="Rename folder"
+                                title="Rename"
+                              >
+                                <Pencil size={12} />
+                              </button>
+                            </div>
+                          )}
 
                           {/* Nested folders under Brand assets (Drive-style) */}
                           <div
@@ -250,27 +343,79 @@ export default function AdminSidebar() {
                           >
                             {mediaFolders.map((f) => {
                               const selected = f.id === activeMediaFolderId;
+                              if (renamingFolderId === f.id) {
+                                return (
+                                  <form
+                                    key={f.id}
+                                    className="flex items-center gap-1 px-1"
+                                    onSubmit={(e) => {
+                                      e.preventDefault();
+                                      commitFolderRename();
+                                    }}
+                                  >
+                                    <span
+                                      className="w-2 h-2 rounded-full flex-shrink-0 ml-2"
+                                      style={{ background: f.color }}
+                                      aria-hidden
+                                    />
+                                    <input
+                                      autoFocus
+                                      value={renameDraft}
+                                      onChange={(e) => setRenameDraft(e.target.value)}
+                                      onBlur={commitFolderRename}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Escape') setRenamingFolderId(null);
+                                      }}
+                                      className="flex-1 min-w-0 h-10 min-h-[40px] rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                                      aria-label="Rename folder"
+                                    />
+                                  </form>
+                                );
+                              }
                               return (
-                                <button
+                                <div
                                   key={f.id}
-                                  type="button"
-                                  onClick={() => setActiveMediaFolderId(f.id)}
                                   className={[
-                                    'w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-left transition-colors',
+                                    'group w-full flex items-center gap-1 rounded-xl transition-colors',
                                     selected
-                                      ? 'bg-[#E9D5FF]/70 text-[#1a1848] font-semibold'
-                                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium',
+                                      ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
+                                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
                                   ].join(' ')}
-                                  aria-current={selected ? 'page' : undefined}
                                 >
-                                  <span
-                                    className="w-2 h-2 rounded-full flex-shrink-0"
-                                    style={{ background: f.color }}
-                                  />
-                                  <span className="text-[12px] truncate tracking-tight">
-                                    {f.name}
-                                  </span>
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveMediaFolderId(f.id)}
+                                    onDoubleClick={() => {
+                                      setRenameDraft(f.name);
+                                      setRenamingFolderId(f.id);
+                                    }}
+                                    className={[
+                                      'flex-1 flex items-center gap-2.5 h-10 min-h-[40px] pl-3 pr-1 rounded-xl text-left',
+                                      selected ? 'font-semibold' : 'font-medium',
+                                    ].join(' ')}
+                                    aria-current={selected ? 'page' : undefined}
+                                  >
+                                    <span
+                                      className="w-2 h-2 rounded-full flex-shrink-0"
+                                      style={{ background: f.color }}
+                                    />
+                                    <span className="text-[12px] truncate tracking-tight">
+                                      {f.name}
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRenameDraft(f.name);
+                                      setRenamingFolderId(f.id);
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700"
+                                    aria-label="Rename folder"
+                                    title="Rename"
+                                  >
+                                    <Pencil size={12} />
+                                  </button>
+                                </div>
                               );
                             })}
                             <button

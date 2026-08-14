@@ -98,10 +98,10 @@ async function loadWorkspaceTokens(
       SELECT platform, platform_user_id, access_token, refresh_token,
              handle, page_id, followers_count, user_id
       FROM social_accounts
-      WHERE workspace_id = ${workspaceId}
+      WHERE user_id = ${userId}
+        AND workspace_id = ${workspaceId}
         AND access_token IS NOT NULL
         AND TRIM(access_token) <> ''
-      ORDER BY CASE WHEN user_id = ${userId} THEN 0 ELSE 1 END
     `;
     const byPlatform = new Map<string, TokenRow>();
     for (const row of (rows as TokenRow[]) ?? []) {

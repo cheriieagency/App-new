@@ -1,7 +1,7 @@
 /**
  * GET /api/socials/accounts
  * Live social_accounts rows for the authenticated user (+ optional workspace).
- * Never returns mock "connected" seeds.
+ * Never returns another user's connections. Unauthenticated → 401.
  */
 
 import { cookies, headers } from 'next/headers';
@@ -11,11 +11,16 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
   listLiveSocialAccountsForUser,
 } from '@/lib/social/persist';
+import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return Response.json({ error: 'Unauthorized', accounts: [] }, { status: 401 });
+  const userId = session?.user?.id?.trim();
+  if (!userId) {
+    return Response.json(
+      { error: 'Unauthorized', accounts: [] },
+      { status: 401 }
+    );
   }
 
   const url = new URL(request.url);
@@ -28,9 +33,28 @@ export async function GET(request: Request) {
     jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
     null;
 
-  // Strict workspace filter — never leak another brand's connections.
+  // Active workspace must belong to this user — never inherit another brand.
+  if (workspaceId) {
+    const access = await requireOwnedWorkspace(userId, workspaceId);
+    if (!access.ok) {
+      return Response.json(
+        {
+          error: access.error,
+          accounts: [],
+          connected_count: 0,
+          meta_connected: false,
+          needs_ig_business: false,
+          workspace_id: workspaceId,
+          source: 'social_accounts',
+        },
+        { status: access.status === 400 ? 400 : 403 }
+      );
+    }
+  }
+
+  // Strict equality: user_id = session.user.id (+ workspace_id when set).
   const accounts = await listLiveSocialAccountsForUser({
-    userId: session.user.id,
+    userId,
     workspaceId,
   });
 

@@ -11,10 +11,12 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
   ensureSocialAccountsSchema,
 } from '@/lib/social/persist';
+import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  const userId = session?.user?.id?.trim();
+  if (!userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -35,14 +37,28 @@ export async function GET(request: Request) {
     });
   }
 
+  const access = await requireOwnedWorkspace(userId, workspaceId);
+  if (!access.ok) {
+    return Response.json(
+      {
+        connected: false,
+        email: null,
+        platformUserId: null,
+        error: access.error,
+        workspaceId,
+      },
+      { status: access.status === 400 ? 400 : 403 }
+    );
+  }
+
   await ensureSocialAccountsSchema();
 
   try {
     const rows = await sql`
       SELECT platform_user_id, platform_user_name, handle, avatar_url, connected_at, meta
       FROM public.social_accounts
-      WHERE user_id = ${session.user.id}
-        AND workspace_id = ${workspaceId}
+      WHERE user_id = ${userId}
+        AND workspace_id = ${access.workspaceId}
         AND platform = 'google'
       LIMIT 1
     `;

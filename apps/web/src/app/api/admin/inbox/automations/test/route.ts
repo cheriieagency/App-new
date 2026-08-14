@@ -18,6 +18,7 @@ import {
   cleanTriggerKeywords,
   findMatchingKeyword,
 } from '@/lib/dm-automations/keywords';
+import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
 async function resolveWorkspaceId(
   request: Request,
   bodyWorkspaceId?: unknown
@@ -65,7 +66,8 @@ function dryRunPayload(extra: Record<string, unknown> = {}) {
 export async function POST(request: Request) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
+    const userId = session?.user?.id?.trim();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -90,6 +92,19 @@ export async function POST(request: Request) {
           nextSteps: ['Select an active workspace and retry.'],
         }),
         { status: 400 }
+      );
+    }
+
+    const access = await requireOwnedWorkspace(userId, workspaceId);
+    if (!access.ok) {
+      return NextResponse.json(
+        dryRunPayload({
+          ok: false,
+          workspaceId,
+          blockers: [access.error],
+          nextSteps: ['Select a workspace you own and retry.'],
+        }),
+        { status: access.status }
       );
     }
 
@@ -138,6 +153,7 @@ export async function POST(request: Request) {
         SELECT platform, platform_user_id, page_id, access_token, meta
         FROM public.social_accounts
         WHERE workspace_id = ${workspaceId}
+          AND user_id = ${userId}
           AND platform IN ('instagram', 'facebook')
           AND access_token IS NOT NULL
           AND access_token <> ''
@@ -351,6 +367,9 @@ export async function POST(request: Request) {
         SELECT *
         FROM public.dm_automations
         WHERE workspace_id = ${workspaceId}
+          AND workspace_id IN (
+            SELECT id FROM public.workspaces WHERE user_id = ${userId}
+          )
         ORDER BY id DESC
       `;
       rules = Array.isArray(rulesRows) ? (rulesRows as Record<string, unknown>[]) : [];
@@ -362,6 +381,9 @@ export async function POST(request: Request) {
                  cta_button_url, is_active
           FROM public.dm_automations
           WHERE workspace_id = ${workspaceId}
+            AND workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id = ${userId}
+            )
           ORDER BY id DESC
         `;
         rules = Array.isArray(fallbackRows)
@@ -419,6 +441,7 @@ export async function POST(request: Request) {
                workspace_id
         FROM public.social_accounts
         WHERE workspace_id = ${workspaceId}
+          AND user_id = ${userId}
           AND platform IN ('instagram', 'facebook')
         ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
       `;

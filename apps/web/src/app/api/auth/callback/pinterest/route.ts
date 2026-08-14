@@ -13,6 +13,7 @@ import {
 } from '@/lib/pinterest/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
+import { ensureWorkspaceOwnedByUser } from '@/lib/social/workspace-access';
 
 function clearState(res: NextResponse) {
   res.cookies.set(PINTEREST_OAUTH_STATE_COOKIE, '', {
@@ -53,11 +54,15 @@ export async function GET(request: Request) {
   if (!workspaceId) return fail('missing_workspace_id');
 
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  if (!session?.user?.id) {
     const signIn = new URL('/account/signin', origin);
     signIn.searchParams.set('callbackUrl', '/admin/settings/socials');
     return NextResponse.redirect(signIn);
   }
+
+  const userId = session.user.id;
+  const workspaceAccess = await ensureWorkspaceOwnedByUser(userId, workspaceId);
+  if (!workspaceAccess.ok) return fail(workspaceAccess.error);
 
   try {
     const tokens = await exchangePinterestCode(code, origin);
@@ -66,7 +71,7 @@ export async function GET(request: Request) {
     if (!username) return fail('pinterest_missing_username');
 
     await upsertOAuthSocialAccount({
-      userId: session.user.id,
+      userId,
       platform: 'pinterest',
       externalId: username,
       handle: `@${username.replace(/^@/, '')}`,
@@ -75,7 +80,7 @@ export async function GET(request: Request) {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? null,
       expiresIn: tokens.expires_in ?? null,
-      workspaceId,
+      workspaceId: workspaceAccess.workspaceId,
     });
 
     const dest = new URL('/admin/settings/socials', origin);

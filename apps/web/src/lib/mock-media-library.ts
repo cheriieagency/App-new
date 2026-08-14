@@ -70,6 +70,45 @@ export function createMediaFolder(input: {
   return folder;
 }
 
+export function renameMediaFolder(
+  id: string,
+  name: string
+): MediaFolder | null {
+  const next = name.trim();
+  if (!next) return null;
+  if (isMediaLibraryRoot(id)) {
+    MEDIA_LIBRARY_ROOT.name = next;
+    return { ...MEDIA_LIBRARY_ROOT };
+  }
+  const folder = folders.find((f) => f.id === id);
+  if (!folder) return null;
+  folder.name = next;
+  return { ...folder };
+}
+
+export function addMediaAsset(input: {
+  folderId?: string | null;
+  label: string;
+  image: string;
+  kind?: 'image' | 'video';
+  platform?: string;
+}): MediaAsset {
+  const folderId =
+    !input.folderId || isMediaLibraryRoot(input.folderId)
+      ? MEDIA_LIBRARY_ROOT_ID
+      : input.folderId;
+  const asset: MediaAsset = {
+    id: `asset-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    folder_id: folderId,
+    label: input.label.trim() || 'Untitled',
+    platform: input.platform || 'upload',
+    kind: input.kind || 'image',
+    image: input.image,
+  };
+  assets.unshift(asset);
+  return asset;
+}
+
 export function deleteMediaFolder(id: string): boolean {
   // Permanent Brand assets root can never be deleted.
   if (isMediaLibraryRoot(id)) return false;

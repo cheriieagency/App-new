@@ -13,6 +13,7 @@ import {
 } from '@/lib/google/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
+import { ensureWorkspaceOwnedByUser } from '@/lib/social/workspace-access';
 import { ensureSocialAccountsSchema } from '@/lib/social/persist';
 
 function clearState(res: NextResponse) {
@@ -54,11 +55,15 @@ export async function GET(request: Request) {
   if (!workspaceId) return fail('missing_workspace_id');
 
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  if (!session?.user?.id) {
     const signIn = new URL('/account/signin', origin);
     signIn.searchParams.set('callbackUrl', '/admin/settings/integrations');
     return NextResponse.redirect(signIn);
   }
+
+  const userId = session.user.id;
+  const workspaceAccess = await ensureWorkspaceOwnedByUser(userId, workspaceId);
+  if (!workspaceAccess.ok) return fail(workspaceAccess.error);
 
   try {
     await ensureSocialAccountsSchema();
@@ -66,7 +71,7 @@ export async function GET(request: Request) {
     const googleUser = await fetchGoogleUserInfo(tokens.access_token);
 
     await upsertOAuthSocialAccount({
-      userId: session.user.id,
+      userId,
       platform: 'google',
       externalId: googleUser.id,
       handle: googleUser.email,
@@ -75,7 +80,7 @@ export async function GET(request: Request) {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? null,
       expiresIn: tokens.expires_in ?? null,
-      workspaceId,
+      workspaceId: workspaceAccess.workspaceId,
     });
 
     const dest = new URL('/admin/settings/integrations', origin);

@@ -69,18 +69,17 @@ async function loadWorkspaceAccounts(
 ): Promise<TokenRow[]> {
   if (!process.env.DATABASE_URL?.trim()) return [];
   try {
-    // Prefer the signed-in user's tokens, but fall back to any workspace token
-    // so shared brand workspaces still load Analytics for every connected API.
+    // Strict isolation — never fall back to another user's tokens.
     const rows = await sql`
       SELECT platform, platform_user_id, access_token, page_id,
              handle, display_name, avatar_url, page_name, user_id
       FROM social_accounts
-      WHERE workspace_id = ${workspaceId}
+      WHERE user_id = ${userId}
+        AND workspace_id = ${workspaceId}
         AND platform IN ('instagram', 'facebook', 'tiktok')
         AND access_token IS NOT NULL
         AND access_token <> ''
       ORDER BY
-        CASE WHEN user_id = ${userId} THEN 0 ELSE 1 END,
         CASE WHEN platform = 'instagram' THEN 0
              WHEN platform = 'facebook' THEN 1
              ELSE 2 END

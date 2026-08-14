@@ -16,6 +16,7 @@ import {
   getDmAutomationCtaColumns,
 } from '@/lib/dm-automations/schema';
 import { cleanTriggerKeywords } from '@/lib/dm-automations/keywords';
+import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
 
 function parseKeywords(input: unknown): string[] {
   return cleanTriggerKeywords(input);
@@ -107,13 +108,22 @@ function mapRule(row: Record<string, unknown>) {
 export async function GET(request: Request) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
+    const userId = session?.user?.id?.trim();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const workspaceId = await resolveWorkspaceId(request);
     if (!workspaceId) {
       return emptyAutomationsResponse({ message: 'Select a workspace' });
+    }
+
+    const access = await requireOwnedWorkspace(userId, workspaceId);
+    if (!access.ok) {
+      return NextResponse.json(
+        { error: access.error, automations: [] },
+        { status: access.status === 400 ? 400 : 403 }
+      );
     }
 
     if (!process.env.DATABASE_URL?.trim()) {
@@ -129,10 +139,14 @@ export async function GET(request: Request) {
 
     let rows: unknown[] = [];
     try {
+      // Strict: workspace must be owned by session user.
       rows = await sql`
         SELECT *
         FROM public.dm_automations
         WHERE workspace_id = ${workspaceId}
+          AND workspace_id IN (
+            SELECT id FROM public.workspaces WHERE user_id = ${userId}
+          )
         ORDER BY id DESC
       `;
     } catch (queryErr) {
@@ -155,6 +169,9 @@ export async function GET(request: Request) {
         SELECT COUNT(*)::int AS dms
         FROM public.dm_logs
         WHERE workspace_id = ${workspaceId}
+          AND workspace_id IN (
+            SELECT id FROM public.workspaces WHERE user_id = ${userId}
+          )
           AND status IN ('sent', 'delivered')
           AND COALESCE(created_at, sent_at, to_timestamp(0)) >= date_trunc('month', now())
       `;
@@ -165,6 +182,9 @@ export async function GET(request: Request) {
           SELECT COUNT(*)::int AS dms
           FROM public.dm_logs
           WHERE workspace_id = ${workspaceId}
+            AND workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id = ${userId}
+            )
             AND status IN ('sent', 'delivered')
         `;
         dmsSentThisMonth = Number(fallback?.[0]?.dms) || 0;
@@ -208,7 +228,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
+    const userId = session?.user?.id?.trim();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -236,6 +257,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const access = await requireOwnedWorkspace(userId, workspaceId);
+    if (!access.ok) {
+      return NextResponse.json(
+        { error: access.error },
+        { status: access.status }
+      );
+    }
+
     if (!process.env.DATABASE_URL?.trim()) {
       return NextResponse.json(
         { error: 'DATABASE_URL required' },
@@ -325,7 +355,8 @@ export async function POST(request: Request) {
     if (id) {
       rows = await updateAutomationRow({
         id,
-        workspaceId,
+        workspaceId: access.workspaceId,
+        userId,
         title,
         keywordsJson,
         dmMessageText,
@@ -338,8 +369,8 @@ export async function POST(request: Request) {
       });
     } else {
       rows = await insertAutomationRow({
-        workspaceId,
-        userId: session.user.id,
+        workspaceId: access.workspaceId,
+        userId,
         title,
         keywordsJson,
         dmMessageText,
@@ -530,6 +561,7 @@ async function insertAutomationRow(input: {
 async function updateAutomationRow(input: {
   id: string;
   workspaceId: string;
+  userId: string;
   title: string;
   keywordsJson: string;
   dmMessageText: string;
@@ -543,6 +575,7 @@ async function updateAutomationRow(input: {
   const {
     id,
     workspaceId,
+    userId,
     title,
     keywordsJson,
     dmMessageText,
@@ -577,6 +610,9 @@ async function updateAutomationRow(input: {
             updated_at = now()
           WHERE id = ${id}
             AND workspace_id = ${workspaceId}
+            AND workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id = ${userId}
+            )
           RETURNING *
         ` as Promise<Record<string, unknown>[]>
     );
@@ -601,6 +637,9 @@ async function updateAutomationRow(input: {
             updated_at = now()
           WHERE id = ${id}
             AND workspace_id = ${workspaceId}
+            AND workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id = ${userId}
+            )
           RETURNING *
         ` as Promise<Record<string, unknown>[]>
     );
@@ -625,6 +664,9 @@ async function updateAutomationRow(input: {
             updated_at = now()
           WHERE id = ${id}
             AND workspace_id = ${workspaceId}
+            AND workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id = ${userId}
+            )
           RETURNING *
         ` as Promise<Record<string, unknown>[]>
     );
@@ -647,6 +689,9 @@ async function updateAutomationRow(input: {
           updated_at = now()
         WHERE id = ${id}
           AND workspace_id = ${workspaceId}
+          AND workspace_id IN (
+            SELECT id FROM public.workspaces WHERE user_id = ${userId}
+          )
         RETURNING *
       ` as Promise<Record<string, unknown>[]>
   );
@@ -674,7 +719,8 @@ async function updateAutomationRow(input: {
 export async function PATCH(request: Request) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
+    const userId = session?.user?.id?.trim();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -694,6 +740,14 @@ export async function PATCH(request: Request) {
       return NextResponse.json(
         { error: 'workspaceId required' },
         { status: 400 }
+      );
+    }
+
+    const access = await requireOwnedWorkspace(userId, workspaceId);
+    if (!access.ok) {
+      return NextResponse.json(
+        { error: access.error },
+        { status: access.status }
       );
     }
 
@@ -752,7 +806,10 @@ export async function PATCH(request: Request) {
           ),
           updated_at = now()
         WHERE id = ${id}
-          AND workspace_id = ${workspaceId}
+          AND workspace_id = ${access.workspaceId}
+          AND workspace_id IN (
+            SELECT id FROM public.workspaces WHERE user_id = ${userId}
+          )
         RETURNING *
       `;
       const row = Array.isArray(rows) ? rows[0] : null;
@@ -769,7 +826,10 @@ export async function PATCH(request: Request) {
       UPDATE public.dm_automations
       SET is_active = ${isActive}, updated_at = now()
       WHERE id = ${id}
-        AND workspace_id = ${workspaceId}
+        AND workspace_id = ${access.workspaceId}
+        AND workspace_id IN (
+          SELECT id FROM public.workspaces WHERE user_id = ${userId}
+        )
       RETURNING *
     `;
     const row = Array.isArray(rows) ? rows[0] : null;
@@ -797,26 +857,37 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
+    const userId = session?.user?.id?.trim();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     let id = searchParams.get('id');
+    const workspaceHint =
+      searchParams.get('workspaceId')?.trim() ||
+      searchParams.get('workspace_id')?.trim() ||
+      null;
 
     // HTTP DELETE usually has no body — parse JSON only as a fallback.
-    if (!id) {
+    let bodyWorkspace: unknown;
+    if (!id || !workspaceHint) {
       try {
         const body = (await request.json()) as {
           id?: unknown;
           automationId?: unknown;
+          workspaceId?: unknown;
+          workspace_id?: unknown;
         };
-        id =
-          body?.id != null
-            ? String(body.id)
-            : body?.automationId != null
-              ? String(body.automationId)
-              : null;
+        if (!id) {
+          id =
+            body?.id != null
+              ? String(body.id)
+              : body?.automationId != null
+                ? String(body.automationId)
+                : null;
+        }
+        bodyWorkspace = body?.workspaceId ?? body?.workspace_id;
       } catch {
         // Request body was empty
       }
@@ -837,6 +908,8 @@ export async function DELETE(request: Request) {
     }
 
     const ruleId = id.trim();
+    const workspaceId =
+      (await resolveWorkspaceId(request, bodyWorkspace)) || workspaceHint;
 
     if (!process.env.DATABASE_URL?.trim()) {
       return NextResponse.json(
@@ -845,18 +918,45 @@ export async function DELETE(request: Request) {
       );
     }
 
+    if (workspaceId) {
+      const access = await requireOwnedWorkspace(userId, workspaceId);
+      if (!access.ok) {
+        return NextResponse.json(
+          { error: access.error },
+          { status: access.status }
+        );
+      }
+    }
+
     try {
       await ensureDmAutomationsSchema();
     } catch {
       /* best-effort */
     }
 
-    // Delete by raw string id (uuid or text) — never Number()/parseInt.
+    // Delete only rules inside workspaces owned by this user.
     try {
-      await sql`
-        DELETE FROM public.dm_automations
-        WHERE id = ${ruleId}
-      `;
+      const deleted = workspaceId
+        ? await sql`
+            DELETE FROM public.dm_automations
+            WHERE id = ${ruleId}
+              AND workspace_id = ${workspaceId}
+              AND workspace_id IN (
+                SELECT id FROM public.workspaces WHERE user_id = ${userId}
+              )
+            RETURNING id
+          `
+        : await sql`
+            DELETE FROM public.dm_automations
+            WHERE id = ${ruleId}
+              AND workspace_id IN (
+                SELECT id FROM public.workspaces WHERE user_id = ${userId}
+              )
+            RETURNING id
+          `;
+      if (!Array.isArray(deleted) || deleted.length === 0) {
+        return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      }
     } catch (dbErr) {
       return NextResponse.json(
         {

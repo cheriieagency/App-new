@@ -27,6 +27,7 @@ import {
   baseOAuthState,
   resolveOAuthWorkspaceId,
 } from '@/lib/social/oauth-workspace';
+import { ensureWorkspaceOwnedByUser } from '@/lib/social/workspace-access';
 
 function clearOAuthState(res: NextResponse) {
   res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
@@ -117,6 +118,17 @@ export async function GET(request: Request) {
     return NextResponse.redirect(signIn);
   }
 
+  const userId = session.user.id;
+  if (!userId) {
+    return failRedirect(origin, 'meta_fetch_failed', 'missing_user_id');
+  }
+
+  // Strict isolation — never bind Meta accounts to another user's workspace.
+  const workspaceAccess = await ensureWorkspaceOwnedByUser(userId, workspaceId);
+  if (!workspaceAccess.ok) {
+    return failRedirect(origin, 'meta_fetch_failed', workspaceAccess.error);
+  }
+
   try {
     // Step A — code → short-lived → long-lived user access token
     let longLived: { access_token: string; expires_in?: number };
@@ -170,12 +182,12 @@ export async function GET(request: Request) {
     // Step D + E — persist Instagram / Facebook into public.social_accounts
     try {
       await upsertMetaSocialAccounts({
-        userId: session.user.id,
+        userId,
         pages: resolved.pages,
         userAccessToken: longLived.access_token,
         expiresIn: longLived.expires_in,
         target,
-        workspaceId,
+        workspaceId: workspaceAccess.workspaceId,
         instagram: resolved.instagram,
         instagramPage: resolved.instagramPage,
       });
@@ -217,7 +229,7 @@ export async function GET(request: Request) {
     if ((target === 'instagram' || target === 'both') && hasIg) {
       try {
         const { syncMetaDataForUser } = await import('@/lib/meta/sync');
-        await syncMetaDataForUser(session.user.id);
+        await syncMetaDataForUser(userId);
       } catch (syncError) {
         console.warn('[meta/callback] sync skipped', syncError);
       }

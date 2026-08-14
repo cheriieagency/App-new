@@ -10,6 +10,7 @@ import {
   listLiveSocialAccountsForUser,
   SOCIAL_PLATFORMS,
 } from '@/lib/social/persist';
+import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
 
 function disconnectedStub(platform: SocialPlatform): ConnectedSocialAccount {
   return {
@@ -24,13 +25,12 @@ function disconnectedStub(platform: SocialPlatform): ConnectedSocialAccount {
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return Response.json({
-      accounts: SOCIAL_PLATFORMS.map(disconnectedStub),
-      demo: true,
-      meta_connected: false,
-      needs_ig_business: false,
-    });
+  const userId = session?.user?.id?.trim();
+  if (!userId) {
+    return Response.json(
+      { error: 'Unauthorized', accounts: [], demo: false },
+      { status: 401 }
+    );
   }
 
   const url = new URL(request.url);
@@ -41,9 +41,27 @@ export async function GET(request: Request) {
     jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
     null;
 
-  // Authenticated: always read live social_accounts — no mock merge.
+  if (workspaceId) {
+    const access = await requireOwnedWorkspace(userId, workspaceId);
+    if (!access.ok) {
+      return Response.json(
+        {
+          error: access.error,
+          accounts: SOCIAL_PLATFORMS.map(disconnectedStub),
+          demo: false,
+          meta_connected: false,
+          needs_ig_business: false,
+          workspace_id: workspaceId,
+          source: 'social_accounts',
+        },
+        { status: access.status === 400 ? 400 : 403 }
+      );
+    }
+  }
+
+  // Authenticated: always read live social_accounts for this user only.
   const accounts = await listLiveSocialAccountsForUser({
-    userId: session.user.id,
+    userId,
     workspaceId,
   });
   const connected = accounts.filter((a) => a.connected);
@@ -62,6 +80,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user?.id) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const platform = body.platform as SocialPlatform;
     const connect = Boolean(body.connect);
