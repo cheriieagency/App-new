@@ -125,12 +125,41 @@ const CHECKLIST_ROWS: Array<{
   },
 ];
 
+type RecentIgComment = {
+  id: string;
+  text: string;
+  username: string | null;
+  createdTime: string | null;
+  mediaId?: string | null;
+};
+
 /** Numeric Instagram comment ids only (rejects keywords like "marsterclass"). */
 function isValidInstagramCommentIdClient(raw: string): boolean {
   const id = String(raw || '')
     .trim()
     .replace(/^["']+|["']+$/g, '');
   return /^\d{10,}$/.test(id);
+}
+
+function formatCommentAge(createdTime: string | null): string {
+  if (!createdTime) return 'nyss';
+  const ts = Date.parse(createdTime);
+  if (!Number.isFinite(ts)) return 'nyss';
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60_000));
+  if (mins < 1) return 'nyss';
+  if (mins < 60) return `${mins} min sedan`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `${hours} h sedan`;
+  const days = Math.round(hours / 24);
+  return `${days} d sedan`;
+}
+
+function formatCommentOption(c: RecentIgComment): string {
+  const user = c.username ? `@${c.username.replace(/^@/, '')}` : '@okänd';
+  const text = (c.text || '').replace(/\s+/g, ' ').trim();
+  const preview =
+    text.length > 48 ? `${text.slice(0, 48).trimEnd()}…` : text || '(tom)';
+  return `${user}: "${preview}" (${formatCommentAge(c.createdTime)})`;
 }
 
 type FormState = {
@@ -168,6 +197,8 @@ export default function DMAutomationPanel() {
   const [liveDiagnostic, setLiveDiagnostic] =
     useState<LiveDiagnosticResult | null>(null);
   const [liveCommentId, setLiveCommentId] = useState('');
+  const [recentComments, setRecentComments] = useState<RecentIgComment[]>([]);
+  const [selectedCommentText, setSelectedCommentText] = useState('');
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -596,7 +627,10 @@ export default function DMAutomationPanel() {
   });
 
   const liveDiagnosticMutation = useMutation({
-    mutationFn: async (opts?: { liveCommentId?: string }) => {
+    mutationFn: async (opts?: {
+      liveCommentId?: string;
+      commentText?: string;
+    }) => {
       const raw = opts?.liveCommentId?.trim() || '';
       // Only forward a numeric Instagram comment id — never keywords.
       const commentId = isValidInstagramCommentIdClient(raw) ? raw : undefined;
@@ -614,7 +648,12 @@ export default function DMAutomationPanel() {
         credentials: 'include',
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
-          ...(commentId ? { liveCommentId: commentId } : {}),
+          ...(commentId
+            ? {
+                liveCommentId: commentId,
+                commentText: opts?.commentText || selectedCommentText || undefined,
+              }
+            : {}),
         }),
       });
       const json = (await res.json().catch(() => ({}))) as LiveDiagnosticResult & {
@@ -666,6 +705,49 @@ export default function DMAutomationPanel() {
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'Live diagnostic failed');
+    },
+  });
+
+  const fetchCommentsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(
+        `/api/admin/inbox/automations/test-live?action=fetch_comments&workspaceId=${encodeURIComponent(activeWorkspace.id)}`,
+        {
+          method: 'GET',
+          headers: { 'x-workspace-id': activeWorkspace.id },
+          credentials: 'include',
+        }
+      );
+      const json = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        comments?: RecentIgComment[];
+        error?: string;
+      };
+      if (!res.ok || json.success === false) {
+        throw new Error(
+          json.error || `Kunde inte hämta kommentarer (${res.status})`
+        );
+      }
+      return Array.isArray(json.comments) ? json.comments : [];
+    },
+    onSuccess: (comments) => {
+      setRecentComments(comments);
+      if (comments.length === 0) {
+        toast.message('Inga senaste kommentarer hittades på Instagram.');
+        return;
+      }
+      toast.success(`Hämtade ${comments.length} kommentar(er) från Instagram.`);
+      // Auto-select the newest comment for one-click live test.
+      const first = comments[0];
+      if (first?.id) {
+        setLiveCommentId(first.id);
+        setSelectedCommentText(first.text || '');
+      }
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof Error ? err.message : 'Kunde inte hämta kommentarer'
+      );
     },
   });
 
@@ -995,6 +1077,63 @@ export default function DMAutomationPanel() {
 
         {/* Always-visible live Private Reply tester (uses test-live + liveCommentId) */}
         <div className="mx-5 sm:mx-7 mt-4 mb-2 rounded-2xl border border-[#2B2568]/15 bg-white px-4 py-4 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => fetchCommentsMutation.mutate()}
+              disabled={fetchCommentsMutation.isPending}
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {fetchCommentsMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <RefreshCw size={16} />
+              )}
+              🔄 Hämta senaste kommentarer från Instagram
+            </button>
+            <button
+              type="button"
+              onClick={() => liveDiagnosticMutation.mutate({})}
+              disabled={liveDiagnosticMutation.isPending}
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {liveDiagnosticMutation.isPending && !liveCommentId.trim() ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Search size={16} />
+              )}
+              Kör diagnostik
+            </button>
+          </div>
+
+          <label className="block min-w-0">
+            <span className="block text-xs font-bold text-slate-700 mb-1.5">
+              Välj senaste Instagram-kommentar
+            </span>
+            <select
+              value={liveCommentId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setLiveCommentId(id);
+                const match = recentComments.find((c) => c.id === id);
+                setSelectedCommentText(match?.text || '');
+              }}
+              disabled={recentComments.length === 0}
+              className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25 disabled:opacity-60"
+            >
+              <option value="">
+                {recentComments.length === 0
+                  ? 'Hämta kommentarer först…'
+                  : 'Välj en kommentar…'}
+              </option>
+              {recentComments.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {formatCommentOption(c)}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <div className="flex flex-col sm:flex-row sm:items-end gap-3">
             <label className="flex-1 min-w-0">
               <span className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -1005,7 +1144,10 @@ export default function DMAutomationPanel() {
                 inputMode="numeric"
                 autoComplete="off"
                 value={liveCommentId}
-                onChange={(e) => setLiveCommentId(e.target.value)}
+                onChange={(e) => {
+                  setLiveCommentId(e.target.value);
+                  setSelectedCommentText('');
+                }}
                 placeholder="t.ex. 17912345678901234"
                 className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25"
               />
@@ -1014,35 +1156,34 @@ export default function DMAutomationPanel() {
               type="button"
               onClick={() => {
                 const id = liveCommentId.trim();
-                if (!id) {
-                  // Diagnostic-only run (no live Graph send).
-                  liveDiagnosticMutation.mutate({});
-                  return;
-                }
-                if (!isValidInstagramCommentIdClient(id)) {
+                if (!id || !isValidInstagramCommentIdClient(id)) {
                   toast.error(
                     'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.'
                   );
                   return;
                 }
-                liveDiagnosticMutation.mutate({ liveCommentId: id });
+                liveDiagnosticMutation.mutate({
+                  liveCommentId: id,
+                  commentText: selectedCommentText,
+                });
               }}
-              disabled={liveDiagnosticMutation.isPending}
+              disabled={
+                liveDiagnosticMutation.isPending ||
+                !isValidInstagramCommentIdClient(liveCommentId)
+              }
               className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-[#1a1848] disabled:opacity-50 shrink-0"
             >
-              {liveDiagnosticMutation.isPending ? (
+              {liveDiagnosticMutation.isPending && liveCommentId.trim() ? (
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <Zap size={16} />
               )}
-              {liveCommentId.trim()
-                ? 'Send Live Private Reply Test'
-                : 'Kör diagnostik'}
+              Kör Live Test-DM
             </button>
           </div>
           <p className="text-[11px] text-slate-500 font-medium">
-            Endast numeriskt comment id (t.ex. 179…) skickar live Private Reply.
-            Nyckelord som “marsterclass” blockeras. Lämna tomt för bara diagnostik.
+            Hämta kommentarer → välj i listan → Kör Live Test-DM. Meta HTTP-svar
+            (200 OK / 400 / 403) visas nedan.
           </p>
         </div>
 

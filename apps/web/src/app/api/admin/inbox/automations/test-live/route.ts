@@ -13,7 +13,10 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
 } from '@/lib/social/persist';
 import { ensureDmAutomationsSchema } from '@/lib/dm-automations/schema';
-import { cleanTriggerKeywords } from '@/lib/dm-automations/keywords';
+import {
+  cleanTriggerKeywords,
+  findMatchingKeyword,
+} from '@/lib/dm-automations/keywords';
 import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 import {
   FACEBOOK_PAGE_SUBSCRIBED_FIELDS,
@@ -300,6 +303,311 @@ function httpStatusLabel(status: number): string {
   return String(status);
 }
 
+export type RecentIgComment = {
+  id: string;
+  text: string;
+  username: string | null;
+  createdTime: string | null;
+  mediaId?: string | null;
+};
+
+type ConnectedIgAccount = {
+  igUserId: string;
+  accessToken: string;
+  pageAccessToken: string;
+  handle: string | null;
+  pageId: string | null;
+};
+
+async function loadConnectedIgAccount(input: {
+  workspaceId: string;
+  userId: string;
+}): Promise<ConnectedIgAccount | null> {
+  try {
+    const rows = await sql`
+      SELECT platform, platform_user_id, page_id, access_token, handle, meta
+      FROM public.social_accounts
+      WHERE workspace_id = ${input.workspaceId}
+        AND user_id = ${input.userId}
+        AND platform IN ('instagram', 'facebook')
+        AND access_token IS NOT NULL
+        AND access_token <> ''
+      ORDER BY
+        CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END,
+        connected_at DESC NULLS LAST
+    `;
+    const list = Array.isArray(rows) ? rows : [];
+    const ig = list.find(
+      (r) => String(r.platform || '').toLowerCase() === 'instagram'
+    );
+    const fb = list.find(
+      (r) => String(r.platform || '').toLowerCase() === 'facebook'
+    );
+    if (!ig) return null;
+
+    const meta =
+      ig.meta && typeof ig.meta === 'object'
+        ? (ig.meta as Record<string, unknown>)
+        : {};
+    const pageTok =
+      (typeof meta.page_access_token === 'string' &&
+        meta.page_access_token.trim()) ||
+      String(fb?.access_token || '').trim() ||
+      String(ig.access_token || '').trim();
+
+    return {
+      igUserId: String(ig.platform_user_id || '').trim(),
+      accessToken: String(ig.access_token || '').trim(),
+      pageAccessToken: pageTok,
+      handle: ig.handle != null ? String(ig.handle) : null,
+      pageId:
+        String(ig.page_id || fb?.page_id || fb?.platform_user_id || '').trim() ||
+        null,
+    };
+  } catch (error) {
+    console.warn('[automations/test-live] loadConnectedIgAccount', error);
+    return null;
+  }
+}
+
+/** Flatten recent media comments into a selectable list (newest first). */
+async function fetchRecentInstagramComments(input: {
+  igUserId: string;
+  accessToken: string;
+  limit?: number;
+}): Promise<{
+  success: boolean;
+  comments: RecentIgComment[];
+  error?: string;
+  metaError?: unknown;
+}> {
+  const limit = Math.min(Math.max(input.limit ?? 5, 1), 10);
+  const url = new URL(
+    `${GRAPH_BASE}/${encodeURIComponent(input.igUserId)}/media`
+  );
+  url.searchParams.set(
+    'fields',
+    'id,caption,comments.limit(10){id,text,username,from,timestamp,created_time}'
+  );
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('access_token', input.accessToken);
+
+  try {
+    const res = await fetch(url.toString());
+    const json = (await res.json().catch(() => ({}))) as {
+      data?: Array<{
+        id?: string;
+        comments?: {
+          data?: Array<{
+            id?: string;
+            text?: string;
+            username?: string;
+            from?: { username?: string; id?: string };
+            timestamp?: string;
+            created_time?: string;
+          }>;
+        };
+      }>;
+      error?: { message?: string; code?: number };
+    };
+
+    if (!res.ok || json.error) {
+      return {
+        success: false,
+        comments: [],
+        error:
+          json.error?.message ||
+          `Failed to fetch Instagram media/comments (HTTP ${res.status})`,
+        metaError: json.error || json,
+      };
+    }
+
+    const comments: RecentIgComment[] = [];
+    for (const media of json.data ?? []) {
+      for (const c of media.comments?.data ?? []) {
+        if (!c.id) continue;
+        comments.push({
+          id: String(c.id),
+          text: String(c.text || ''),
+          username:
+            (c.username && String(c.username)) ||
+            (c.from?.username && String(c.from.username)) ||
+            null,
+          createdTime:
+            (c.timestamp && String(c.timestamp)) ||
+            (c.created_time && String(c.created_time)) ||
+            null,
+          mediaId: media.id ? String(media.id) : null,
+        });
+      }
+    }
+
+    comments.sort((a, b) => {
+      const ta = a.createdTime ? Date.parse(a.createdTime) : 0;
+      const tb = b.createdTime ? Date.parse(b.createdTime) : 0;
+      return tb - ta;
+    });
+
+    return {
+      success: true,
+      comments: comments.slice(0, limit),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      comments: [],
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+async function resolveLiveReplyMessage(input: {
+  workspaceId: string;
+  commentText?: string;
+  explicitMessage?: string;
+}): Promise<{ messageText: string; matchedRuleId: string | null; matchedKeyword: string | null }> {
+  const fallback = 'Hej! Tack för din kommentar på Clikd.';
+  if (input.explicitMessage?.trim()) {
+    return {
+      messageText: input.explicitMessage.trim(),
+      matchedRuleId: null,
+      matchedKeyword: null,
+    };
+  }
+
+  try {
+    const rows = await sql`
+      SELECT id, dm_message_text, cta_button_url, trigger_keywords
+      FROM public.dm_automations
+      WHERE workspace_id = ${input.workspaceId}
+        AND is_active = true
+      ORDER BY id DESC
+    `;
+    const list = Array.isArray(rows) ? rows : [];
+    const commentText = String(input.commentText || '').trim();
+
+    for (const rule of list) {
+      const keywords = cleanTriggerKeywords(rule.trigger_keywords);
+      const kw = commentText
+        ? findMatchingKeyword(commentText, keywords)
+        : keywords[0] || null;
+      if (!kw && commentText) continue;
+      if (!kw && !commentText) {
+        // No comment text — use first active rule body.
+        const text = String(rule.dm_message_text || '').trim();
+        const url = String(rule.cta_button_url || '').trim();
+        const body = url ? `${text}\n\n${url}`.trim() : text;
+        return {
+          messageText: body || fallback,
+          matchedRuleId: String(rule.id),
+          matchedKeyword: null,
+        };
+      }
+      if (kw) {
+        const text = String(rule.dm_message_text || '').trim();
+        const url = String(rule.cta_button_url || '').trim();
+        const body = url ? `${text}\n\n${url}`.trim() : text;
+        return {
+          messageText: body || fallback,
+          matchedRuleId: String(rule.id),
+          matchedKeyword: kw,
+        };
+      }
+    }
+
+    if (list[0]) {
+      const text = String(list[0].dm_message_text || '').trim();
+      const url = String(list[0].cta_button_url || '').trim();
+      const body = url ? `${text}\n\n${url}`.trim() : text;
+      return {
+        messageText: body || fallback,
+        matchedRuleId: String(list[0].id),
+        matchedKeyword: null,
+      };
+    }
+  } catch (error) {
+    console.warn('[automations/test-live] resolveLiveReplyMessage', error);
+  }
+
+  return { messageText: fallback, matchedRuleId: null, matchedKeyword: null };
+}
+
+async function handleFetchComments(request: Request): Promise<NextResponse> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const userId = session?.user?.id?.trim();
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  let bodyWorkspaceId: unknown;
+  if (request.method === 'POST') {
+    try {
+      const body = (await request.json()) as { workspaceId?: unknown };
+      bodyWorkspaceId = body.workspaceId;
+    } catch {
+      bodyWorkspaceId = undefined;
+    }
+  }
+
+  const preferredWorkspaceId = await resolveWorkspaceId(
+    request,
+    bodyWorkspaceId
+  );
+  if (!preferredWorkspaceId) {
+    return NextResponse.json(
+      {
+        success: false,
+        comments: [],
+        error: 'workspaceId required',
+      },
+      { status: 400 }
+    );
+  }
+
+  const access = await resolveStrictUserWorkspace({
+    userId,
+    preferredWorkspaceId,
+    email: session?.user?.email ?? null,
+  });
+  if (!access.ok) {
+    return NextResponse.json(
+      { success: false, comments: [], error: access.error },
+      { status: access.status }
+    );
+  }
+
+  const account = await loadConnectedIgAccount({
+    workspaceId: access.workspaceId,
+    userId,
+  });
+  if (!account?.igUserId || !account.accessToken) {
+    return NextResponse.json({
+      success: false,
+      comments: [],
+      error: 'No Instagram account connected for this workspace.',
+      workspaceId: access.workspaceId,
+    });
+  }
+
+  const result = await fetchRecentInstagramComments({
+    igUserId: account.igUserId,
+    accessToken: account.accessToken,
+    limit: 5,
+  });
+
+  return NextResponse.json({
+    success: result.success,
+    comments: result.comments,
+    error: result.error,
+    metaError: result.metaError,
+    workspaceId: access.workspaceId,
+    account: {
+      igUserId: account.igUserId,
+      handle: account.handle,
+    },
+  });
+}
+
 async function runLiveDiagnostic(
   request: Request
 ): Promise<NextResponse> {
@@ -317,6 +625,8 @@ async function runLiveDiagnostic(
     liveCommentId?: unknown;
     messageText?: unknown;
     message?: unknown;
+    commentText?: unknown;
+    action?: unknown;
   } = {};
   if (request.method === 'POST') {
     try {
@@ -326,12 +636,72 @@ async function runLiveDiagnostic(
     }
   }
 
+  const urlAction = new URL(request.url).searchParams.get('action')?.trim();
+  const bodyAction =
+    typeof body.action === 'string' ? body.action.trim() : '';
+  if (urlAction === 'fetch_comments' || bodyAction === 'fetch_comments') {
+    // Body already consumed on POST — re-run dedicated handler via cloned signals.
+    // For POST we already have workspaceId on body; call inline logic.
+    if (request.method === 'GET') {
+      return handleFetchComments(request);
+    }
+    // POST path: reconstruct fetch using parsed body workspace.
+    const preferredWorkspaceId = await resolveWorkspaceId(
+      request,
+      body.workspaceId
+    );
+    if (!preferredWorkspaceId) {
+      return NextResponse.json(
+        { success: false, comments: [], error: 'workspaceId required' },
+        { status: 400 }
+      );
+    }
+    const access = await resolveStrictUserWorkspace({
+      userId,
+      preferredWorkspaceId,
+      email: session?.user?.email ?? null,
+    });
+    if (!access.ok) {
+      return NextResponse.json(
+        { success: false, comments: [], error: access.error },
+        { status: access.status }
+      );
+    }
+    const account = await loadConnectedIgAccount({
+      workspaceId: access.workspaceId,
+      userId,
+    });
+    if (!account?.igUserId || !account.accessToken) {
+      return NextResponse.json({
+        success: false,
+        comments: [],
+        error: 'No Instagram account connected for this workspace.',
+        workspaceId: access.workspaceId,
+      });
+    }
+    const result = await fetchRecentInstagramComments({
+      igUserId: account.igUserId,
+      accessToken: account.accessToken,
+      limit: 5,
+    });
+    return NextResponse.json({
+      success: result.success,
+      comments: result.comments,
+      error: result.error,
+      metaError: result.metaError,
+      workspaceId: access.workspaceId,
+      account: { igUserId: account.igUserId, handle: account.handle },
+    });
+  }
+
   const liveCommentId =
     typeof body.liveCommentId === 'string' ? body.liveCommentId.trim() : '';
-  const liveMessageText =
+  const commentTextForMatch =
+    typeof body.commentText === 'string' ? body.commentText.trim() : '';
+  const explicitMessage =
     (typeof body.messageText === 'string' && body.messageText.trim()) ||
     (typeof body.message === 'string' && body.message.trim()) ||
-    'Test automation reply';
+    '';
 
   const preferredWorkspaceId = await resolveWorkspaceId(
     request,
@@ -740,6 +1110,13 @@ async function runLiveDiagnostic(
   // ── STEP 6 (optional): Live Private Reply with real comment_id ──────────
   let livePrivateReply: LivePrivateReplyResult | null = null;
   if (liveCommentId) {
+    const resolvedMsg = await resolveLiveReplyMessage({
+      workspaceId,
+      commentText: commentTextForMatch,
+      explicitMessage,
+    });
+    const liveMessageText = resolvedMsg.messageText;
+
     if (!isValidInstagramCommentId(liveCommentId)) {
       // Never dispatch Graph with a keyword / non-numeric id (e.g. "marsterclass").
       livePrivateReply = {
@@ -810,6 +1187,8 @@ async function runLiveDiagnostic(
             payload: livePrivateReply.payload,
             metaResponse: livePrivateReply.metaResponse,
             metaErrorCode: livePrivateReply.metaErrorCode,
+            matchedRuleId: resolvedMsg.matchedRuleId,
+            matchedKeyword: resolvedMsg.matchedKeyword,
             dispatched: true,
           },
         })
@@ -998,6 +1377,10 @@ function buildChecklist(steps: DiagnosticStep[]): Record<ChecklistKey, boolean> 
 
 export async function GET(request: Request) {
   try {
+    const action = new URL(request.url).searchParams.get('action')?.trim();
+    if (action === 'fetch_comments') {
+      return await handleFetchComments(request);
+    }
     return await runLiveDiagnostic(request);
   } catch (error) {
     console.error('[GET /api/admin/inbox/automations/test-live]', error);
