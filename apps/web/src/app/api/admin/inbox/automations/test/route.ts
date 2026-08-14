@@ -131,7 +131,6 @@ export async function POST(request: Request) {
       const {
         subscribeWithPageTokenFallback,
         fetchPageAccessTokensFromUserToken,
-        isInstagramAccountId,
       } = await import('@/lib/meta/subscribe-webhooks');
 
       const metaAccounts = await sql`
@@ -209,22 +208,38 @@ export async function POST(request: Request) {
         }
       }
 
-      const isError3 = (err?: string, code?: number) =>
-        code === 3 ||
-        /#3\b|application does not have the capability|cannot call this api/i.test(
-          String(err || '')
-        );
+      // Subscribe Facebook Pages ONLY (never POST /{instagram_id}/subscribed_apps).
+      // Page fields: feed,messages,messaging_postbacks — covers linked IG.
+      const seenPageIds = new Set<string>();
 
-      // Track whether any Facebook Page subscription succeeded for this workspace.
-      let pageSubscribeOk = false;
+      const subscribePage = async (
+        pageId: string,
+        pageAccessToken: string
+      ) => {
+        if (!pageId || seenPageIds.has(pageId)) return;
+        seenPageIds.add(pageId);
+        const pageResult = await subscribeWithPageTokenFallback({
+          targetId: pageId,
+          platform: 'facebook',
+          pageAccessToken,
+          fallbackPageAccessToken: primaryPageToken || pageAccessToken,
+        });
+        subscribeDetails.push({
+          platform: 'facebook',
+          targetId: pageResult.targetId,
+          fields: pageResult.fields,
+          ok: pageResult.ok,
+          error: pageResult.error,
+          usedFallback: pageResult.usedFallback,
+        });
+      };
 
-      // 1) Subscribe Facebook Pages first (canonical webhook attachment).
       for (const row of rows) {
         if (String(row.platform) !== 'facebook') continue;
         const pageId = String(
           row.page_id || row.platform_user_id || ''
         ).trim();
-        if (!pageId) continue;
+        if (!pageId || pageId.startsWith('1784')) continue;
         const meta =
           row.meta && typeof row.meta === 'object'
             ? (row.meta as Record<string, unknown>)
@@ -245,137 +260,31 @@ export async function POST(request: Request) {
           });
           continue;
         }
-        const pageResult = await subscribeWithPageTokenFallback({
-          targetId: pageId,
-          platform: 'facebook',
-          pageAccessToken,
-          fallbackPageAccessToken: primaryPageToken || pageAccessToken,
-        });
-        if (pageResult.ok) pageSubscribeOk = true;
-        subscribeDetails.push({
-          platform: 'facebook',
-          targetId: pageResult.targetId,
-          fields: pageResult.fields,
-          ok: pageResult.ok,
-          error: pageResult.error,
-          usedFallback: pageResult.usedFallback,
-        });
+        await subscribePage(pageId, pageAccessToken);
       }
 
-      // Also subscribe page ids linked from Instagram rows (if not already done).
+      // Instagram rows → subscribe their linked Facebook Page id (not IG id).
       for (const row of rows) {
         if (String(row.platform) !== 'instagram') continue;
         const pageId = String(row.page_id || '').trim();
-        if (!pageId || subscribeDetails.some((d) => d.targetId === pageId)) {
-          continue;
-        }
+        if (!pageId || pageId.startsWith('1784')) continue;
         const pageAccessToken =
           pageTokenByPageId.get(pageId) ||
           pageTokenByIgId.get(String(row.platform_user_id || '')) ||
           primaryPageToken;
-        if (!pageAccessToken) continue;
-        const pageResult = await subscribeWithPageTokenFallback({
-          targetId: pageId,
-          platform: 'facebook',
-          pageAccessToken,
-          fallbackPageAccessToken: primaryPageToken || pageAccessToken,
-        });
-        if (pageResult.ok) pageSubscribeOk = true;
-        subscribeDetails.push({
-          platform: 'facebook',
-          targetId: pageResult.targetId,
-          fields: pageResult.fields,
-          ok: pageResult.ok,
-          error: pageResult.error,
-          usedFallback: pageResult.usedFallback,
-        });
-      }
-
-      // 2) Secondary IG-scoped subscribed_apps — Error #3 is non-fatal when Page ok.
-      for (const row of rows) {
-        const platform = String(row.platform || '');
-        const platformUserId =
-          row.platform_user_id != null
-            ? String(row.platform_user_id).trim()
-            : '';
-        if (!platformUserId) continue;
-        if (!isInstagramAccountId(platform, platformUserId)) continue;
-
-        const pageId = String(row.page_id || '').trim();
-        const meta =
-          row.meta && typeof row.meta === 'object'
-            ? (row.meta as Record<string, unknown>)
-            : {};
-        const pageAccessToken =
-          pageTokenByIgId.get(platformUserId) ||
-          (pageId ? pageTokenByPageId.get(pageId) : undefined) ||
-          (typeof meta.page_access_token === 'string'
-            ? meta.page_access_token.trim()
-            : '') ||
-          primaryPageToken;
-
         if (!pageAccessToken) {
-          // If Page already subscribed, IG token miss is only a warning.
-          subscribeDetails.push({
-            platform: 'instagram',
-            targetId: platformUserId,
-            ok: pageSubscribeOk,
-            warning: pageSubscribeOk,
-            error: pageSubscribeOk
-              ? 'IG scoped subscribe skipped (Page webhook already active)'
-              : 'missing_page_access_token — reconnect Meta so /me/accounts returns page.access_token',
-          });
+          if (!seenPageIds.size) {
+            subscribeDetails.push({
+              platform: 'facebook',
+              targetId: pageId,
+              ok: false,
+              error:
+                'missing_page_access_token — reconnect Meta so /me/accounts returns page.access_token',
+            });
+          }
           continue;
         }
-
-        const igResult = await subscribeWithPageTokenFallback({
-          targetId: platformUserId,
-          platform: 'instagram',
-          pageAccessToken,
-          fallbackPageAccessToken: primaryPageToken || pageAccessToken,
-        });
-
-        if (
-          !igResult.ok &&
-          pageSubscribeOk &&
-          isError3(igResult.error, igResult.errorCode)
-        ) {
-          console.warn(
-            '[automations/test] IG subscribed_apps Error #3 ignored — Page webhook covers IG',
-            platformUserId,
-            igResult.error
-          );
-          subscribeDetails.push({
-            platform: 'instagram',
-            targetId: igResult.targetId,
-            fields: igResult.fields,
-            ok: true,
-            warning: true,
-            error:
-              'IG scoped subscribe returned Error #3 (non-fatal — Facebook Page subscription is active)',
-            usedFallback: igResult.usedFallback,
-          });
-        } else if (!igResult.ok && pageSubscribeOk) {
-          // Any other IG failure while Page is ok → warning, not blocker.
-          subscribeDetails.push({
-            platform: 'instagram',
-            targetId: igResult.targetId,
-            fields: igResult.fields,
-            ok: true,
-            warning: true,
-            error: `IG scoped subscribe warning: ${igResult.error || 'failed'} (Page webhook active)`,
-            usedFallback: igResult.usedFallback,
-          });
-        } else {
-          subscribeDetails.push({
-            platform: 'instagram',
-            targetId: igResult.targetId,
-            fields: igResult.fields,
-            ok: igResult.ok,
-            error: igResult.error,
-            usedFallback: igResult.usedFallback,
-          });
-        }
+        await subscribePage(pageId, pageAccessToken);
       }
 
       void primaryPageId;
@@ -395,36 +304,25 @@ export async function POST(request: Request) {
     const pageOk = subscribeDetails.some(
       (r) => r.platform === 'facebook' && r.ok
     );
-    const subscribedCount = subscribeDetails.filter((r) => r.ok && !r.warning)
-      .length;
-    const successCount = subscribeDetails.filter((r) => r.ok).length;
-    const warnings = subscribeDetails.filter((r) => r.warning && r.error);
+    const subscribedCount = subscribeDetails.filter((r) => r.ok).length;
     const subscribeResults = subscribeDetails;
-
-    // Workspace is successfully subscribed when any Page (or clean IG) subscribe ok.
-    const workspaceSubscribed =
-      pageOk || subscribeDetails.some((r) => r.ok && !r.warning);
+    const workspaceSubscribed = pageOk;
 
     if (action === 'resubscribe_webhooks') {
-      // Fatal blockers only — never surface IG Error #3 when Page succeeded.
       const fatalErrors = subscribeDetails
-        .filter((r) => !r.ok && !r.warning && r.error)
+        .filter((r) => !r.ok && r.error)
         .map((r) => `${r.platform}:${r.targetId} — ${r.error}`);
-      const warningMessages = warnings.map(
-        (r) => `${r.platform}:${r.targetId} — ${r.error}`
-      );
 
       return NextResponse.json({
         success: workspaceSubscribed,
-        subscribedCount: Math.max(subscribedCount, successCount),
+        subscribedCount,
         details: subscribeDetails,
-        warnings: warningMessages,
+        warnings: [],
         ok: true,
         ready: workspaceSubscribed,
         workspaceId,
         action: 'resubscribe_webhooks',
         subscribeResults,
-        // Empty blockers when Page webhook is active (clean UI).
         blockers: workspaceSubscribed
           ? []
           : [
@@ -434,19 +332,12 @@ export async function POST(request: Request) {
             ],
         nextSteps: workspaceSubscribed
           ? [
-              pageOk
-                ? 'Facebook Page webhooks subscribed successfully (covers linked Instagram).'
-                : `Subscribed ${successCount} account(s).`,
-              ...(warningMessages.length
-                ? [
-                    'Note: IG-scoped subscribed_apps returned a non-fatal warning (Page subscription is enough).',
-                  ]
-                : []),
-              'Confirm App Dashboard → Webhooks includes Instagram comments callback.',
+              'Facebook Page webhooks subscribed (feed,messages,messaging_postbacks) — covers linked Instagram.',
+              'Confirm App Dashboard → Webhooks callback URL is /api/webhooks/meta/comments.',
               'Comment a trigger keyword on a post to test live Comment-to-DM.',
             ]
           : [
-              'Reconnect Instagram + Facebook Page so /me/accounts returns a Page Access Token (fixes Graph Error #3).',
+              'Reconnect Instagram + Facebook Page so /me/accounts returns a Page Access Token.',
               'Grant pages_manage_metadata, then retry Re-sync Meta Webhooks.',
             ],
       });

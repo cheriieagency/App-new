@@ -279,7 +279,7 @@ export async function upsertMetaSocialAccounts(input: {
     const handle = ig.username
       ? `@${ig.username.replace(/^@/, '')}`
       : null;
-    // Prefer the linked Facebook Page Access Token for IG (required for subscribed_apps + messaging).
+    // Prefer the linked Facebook Page Access Token for IG (required for messaging / Private Reply).
     const pageAccessToken =
       page?.access_token && !String(page.id || '').startsWith('user-')
         ? String(page.access_token).trim()

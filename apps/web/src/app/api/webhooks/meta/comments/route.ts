@@ -27,7 +27,10 @@ type SocialAccountRow = {
   platform: string;
   platform_user_id: string;
   page_id: string | null;
+  /** Page Access Token used for Graph Private Reply. */
   access_token: string;
+  /** Instagram Business Account id for POST /{igUserId}/messages. */
+  ig_user_id: string | null;
 };
 
 type AutomationRow = {
@@ -87,20 +90,41 @@ async function lookupSocialAccount(
   if (!process.env.DATABASE_URL?.trim() || !entryId) return null;
 
   const mapRow = (row: Record<string, unknown> | null | undefined) => {
-    if (!row?.workspace_id || !row?.access_token) return null;
+    if (!row?.workspace_id) return null;
+    const meta =
+      row.meta && typeof row.meta === 'object'
+        ? (row.meta as Record<string, unknown>)
+        : {};
+    // Prefer stored Page Access Token (required for Private Reply).
+    const pageAccessToken =
+      (typeof meta.page_access_token === 'string' &&
+        meta.page_access_token.trim()) ||
+      String(row.access_token || '').trim();
+    if (!pageAccessToken) return null;
+
+    const platform = String(row.platform || '');
+    const platformUserId = String(row.platform_user_id || '');
+    const metaIg =
+      typeof meta.ig_user_id === 'string' ? meta.ig_user_id.trim() : '';
+    const igUserId =
+      platform === 'instagram'
+        ? platformUserId
+        : metaIg || null;
+
     return {
       workspace_id: String(row.workspace_id),
-      platform: String(row.platform || ''),
-      platform_user_id: String(row.platform_user_id || ''),
+      platform,
+      platform_user_id: platformUserId,
       page_id: row.page_id != null ? String(row.page_id) : null,
-      access_token: String(row.access_token),
+      access_token: pageAccessToken,
+      ig_user_id: igUserId,
     } satisfies SocialAccountRow;
   };
 
   try {
     // Match IG scoped id, Page id on page_id, or Page id stored as platform_user_id.
     const matched = await sql`
-      SELECT workspace_id, platform, platform_user_id, page_id, access_token
+      SELECT workspace_id, platform, platform_user_id, page_id, access_token, meta
       FROM public.social_accounts
       WHERE platform IN ('instagram', 'facebook')
         AND access_token IS NOT NULL
@@ -121,17 +145,29 @@ async function lookupSocialAccount(
     if (!primary) return null;
 
     // If webhook arrived on Facebook Page id, prefer the IG sibling in same workspace
-    // (same Page Access Token, better /{ig-user-id}/messages endpoint).
+    // so Private Reply goes to POST /{igUserId}/messages.
     if (primary.platform === 'facebook' || primary.page_id === entryId) {
       const workspaceId = primary.workspace_id;
       const igSibling = list.find((r) => r.platform === 'instagram');
       if (igSibling) {
         const ig = mapRow(igSibling);
-        if (ig) return ig;
+        if (ig) {
+          // Keep Page token from FB row when IG row lacks meta.page_access_token.
+          if (
+            !String(
+              (igSibling.meta as Record<string, unknown> | undefined)
+                ?.page_access_token || ''
+            ).trim() &&
+            primary.access_token
+          ) {
+            return { ...ig, access_token: primary.access_token };
+          }
+          return ig;
+        }
       }
       try {
         const igRows = await sql`
-          SELECT workspace_id, platform, platform_user_id, page_id, access_token
+          SELECT workspace_id, platform, platform_user_id, page_id, access_token, meta
           FROM public.social_accounts
           WHERE workspace_id = ${workspaceId}
             AND platform = 'instagram'
@@ -149,7 +185,12 @@ async function lookupSocialAccount(
             ? (igRows[0] as Record<string, unknown>)
             : null
         );
-        if (ig) return ig;
+        if (ig) {
+          return {
+            ...ig,
+            access_token: ig.access_token || primary.access_token,
+          };
+        }
       } catch {
         /* fall through to primary */
       }
@@ -443,67 +484,82 @@ export async function POST(request: Request) {
       return ok();
     }
 
-    // Spec: POST /{entryId}/messages with recipient.comment_id
-    // Also try stored IG / Page ids if entryId endpoint fails.
-    const messagingEndpointIds = [
-      entryId,
-      account.platform_user_id,
-      account.page_id,
-    ].filter((id, idx, arr): id is string =>
-      Boolean(id && String(id).trim() && arr.indexOf(id) === idx)
-    );
+    // Private Reply: POST /{igUserId}/messages with Page Access Token.
+    // Payload must be recipient.comment_id + message.text only.
+    const igUserId =
+      account.ig_user_id ||
+      (account.platform === 'instagram' ? account.platform_user_id : '') ||
+      (String(entryId).startsWith('1784') ? entryId : '');
+
+    if (!igUserId) {
+      console.warn(
+        '[Meta Webhook] No Instagram Business ID for Private Reply',
+        { entryId, workspace: account.workspace_id }
+      );
+      await insertDmLog({
+        workspaceId: account.workspace_id,
+        automationId: matchedRule.id,
+        commentId,
+        mediaId,
+        commenterId: commenterId || 'unknown',
+        commenterUsername,
+        commentText,
+        matchedKeyword,
+        status: 'failed',
+        errorMessage: 'missing_instagram_business_id',
+      });
+      return ok();
+    }
+
+    const pageAccessToken = account.access_token;
+    const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
+      igUserId
+    )}/messages`;
+    const dispatchPayload = {
+      recipient: {
+        comment_id: commentId,
+      },
+      message: {
+        text: messageText,
+      },
+    };
 
     let dmMessageId: string | null = null;
     let lastGraphError: string | null = null;
 
-    for (const endpointId of messagingEndpointIds) {
-      const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
-        endpointId
-      )}/messages`;
-      const dispatchPayload = {
-        recipient: {
-          comment_id: commentId,
+    try {
+      const graphRes = await fetch(messagingUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${pageAccessToken}`,
+          'Content-Type': 'application/json',
         },
-        message: {
-          text: messageText,
-        },
+        body: JSON.stringify(dispatchPayload),
+      });
+      const graphData = (await graphRes.json().catch(() => ({}))) as {
+        message_id?: string;
+        id?: string;
+        error?: { message?: string };
       };
+      console.log('[Meta Private Reply Result]', {
+        igUserId,
+        status: graphRes.status,
+        data: graphData,
+      });
 
-      try {
-        const graphRes = await fetch(messagingUrl, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${account.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(dispatchPayload),
-        });
-        const graphData = (await graphRes.json().catch(() => ({}))) as {
-          message_id?: string;
-          id?: string;
-          error?: { message?: string };
-        };
-        console.log('[Meta Private Reply Result]', graphRes.status, graphData);
-
-        if (graphRes.ok && (graphData.message_id || graphData.id)) {
-          dmMessageId = String(graphData.message_id || graphData.id);
-          lastGraphError = null;
-          break;
-        }
+      if (graphRes.ok && (graphData.message_id || graphData.id)) {
+        dmMessageId = String(graphData.message_id || graphData.id);
+      } else {
         lastGraphError =
           graphData.error?.message ||
           `private_reply_failed_${graphRes.status}`;
-      } catch (fetchErr) {
-        lastGraphError =
-          fetchErr instanceof Error
-            ? fetchErr.message
-            : 'private_reply_network_error';
-        console.warn(
-          '[Meta Private Reply network]',
-          endpointId,
-          lastGraphError
-        );
       }
+    } catch (fetchErr) {
+      lastGraphError =
+        fetchErr instanceof Error
+          ? fetchErr.message
+          : 'private_reply_network_error';
+      console.warn('[Meta Private Reply network]', igUserId, lastGraphError);
     }
 
     // Optional public comment reply

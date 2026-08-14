@@ -188,9 +188,8 @@ export async function GET(request: Request) {
       );
     }
 
-    // Step E2 — STRICT field split + Page Access Tokens only.
-    // Page → feed,messages,messaging_postbacks
-    // Instagram Business → comments,messages,mentions
+    // Step E2 — Page-only subscribed_apps (feed,messages,messaging_postbacks).
+    // Never POST /{instagram_id}/subscribed_apps — Page covers linked IG.
     try {
       const { subscribePagesAndInstagramAfterOAuth } = await import(
         '@/lib/meta/subscribe-webhooks'
@@ -203,28 +202,6 @@ export async function GET(request: Request) {
         pages: realPages,
         fallbackPageAccessToken: primaryPageToken,
       });
-
-      // Also subscribe resolved IG when it came from portfolio (not nested on page).
-      const resolvedIgId = resolved.instagram?.id
-        ? String(resolved.instagram.id)
-        : '';
-      if (
-        resolvedIgId &&
-        primaryPageToken &&
-        !subscribeResults.some((r) => r.targetId === resolvedIgId)
-      ) {
-        const { subscribeWithPageTokenFallback } = await import(
-          '@/lib/meta/subscribe-webhooks'
-        );
-        subscribeResults.push(
-          await subscribeWithPageTokenFallback({
-            targetId: resolvedIgId,
-            platform: 'instagram',
-            pageAccessToken: primaryPageToken,
-            fallbackPageAccessToken: primaryPageToken,
-          })
-        );
-      }
 
       console.log(
         '[meta/callback] subscribed_apps',
