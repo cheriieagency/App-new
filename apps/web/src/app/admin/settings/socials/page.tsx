@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -106,8 +106,19 @@ export default function AdminSocialSettingsPage() {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
   const { t } = useLanguage();
+  // Prevent endless full-page Loading if session never settles.
+  const [sessionTimedOut, setSessionTimedOut] = useState(false);
 
-  if (isPending) {
+  useEffect(() => {
+    if (!isPending) {
+      setSessionTimedOut(false);
+      return;
+    }
+    const t = window.setTimeout(() => setSessionTimedOut(true), 8_000);
+    return () => window.clearTimeout(t);
+  }, [isPending]);
+
+  if (isPending && !sessionTimedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">
         {t('common.loading')}

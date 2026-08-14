@@ -188,7 +188,8 @@ async function loadActiveRules(workspaceId: string): Promise<DmAutomationRow[]> 
     id: String(r.id),
     workspace_id: String(r.workspace_id),
     title: String(r.title || 'Rule'),
-    trigger_keywords: cleanTriggerKeywords(r.trigger_keywords) || [],
+    // Always a cleaned string[] — never leave a broken ternary here.
+    trigger_keywords: cleanTriggerKeywords(r.trigger_keywords),
     dm_message_text: String(r.dm_message_text || ''),
     cta_button_label:
       r.cta_button_title != null

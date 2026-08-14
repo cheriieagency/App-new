@@ -28,6 +28,7 @@ import { localeTag } from '@/lib/i18n';
 type AutomationRule = {
   /** UUID string from public.dm_automations — never coerce with Number(). */
   id: string;
+  workspaceId?: string;
   title: string;
   triggerKeywords: string[];
   dmMessageText: string;
@@ -123,14 +124,24 @@ export default function DMAutomationPanel() {
 
   const saveMutation = useMutation({
     mutationFn: async (payload: FormState) => {
+      // Client-side keyword clean mirrors server: strip #, lowercase, split commas.
+      const cleanedKeywords = payload.triggerKeywords
+        .split(/[,;\n]+/)
+        .map((k) => k.trim().replace(/^#+/, '').toLowerCase())
+        .filter(Boolean);
+
       const res = await fetch('/api/admin/inbox/automations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspace.id,
+        },
+        credentials: 'include',
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
           id: payload.id,
           title: payload.title,
-          triggerKeywords: payload.triggerKeywords,
+          triggerKeywords: cleanedKeywords,
           dmMessageText: payload.dmMessageText,
           ctaButtonTitle: payload.ctaButtonLabel,
           ctaButtonLabel: payload.ctaButtonLabel,
@@ -173,15 +184,17 @@ export default function DMAutomationPanel() {
   const toggleMutation = useMutation({
     mutationFn: async (rule: AutomationRule) => {
       const nextActive = !rule.isActive;
+      const workspaceForRule =
+        rule.workspaceId?.trim() || activeWorkspace.id;
       const res = await fetch('/api/admin/inbox/automations', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-workspace-id': activeWorkspace.id,
+          'x-workspace-id': workspaceForRule,
         },
         credentials: 'include',
         body: JSON.stringify({
-          workspaceId: activeWorkspace.id,
+          workspaceId: workspaceForRule,
           id: String(rule.id),
           isActive: nextActive,
         }),
@@ -196,10 +209,15 @@ export default function DMAutomationPanel() {
         }
         throw new Error(message);
       }
-      return res.json() as Promise<{
+      const json = (await res.json()) as {
         success?: boolean;
         automation?: AutomationRule;
-      }>;
+      };
+      return {
+        ruleId: String(rule.id),
+        nextActive,
+        automation: json.automation,
+      };
     },
     onMutate: async (rule) => {
       const key = ['dm-automations', activeWorkspace.id] as const;
@@ -235,24 +253,35 @@ export default function DMAutomationPanel() {
       }
       toast.error(err instanceof Error ? err.message : 'Toggle failed');
     },
-    onSuccess: (json) => {
-      if (json?.automation) {
-        const key = ['dm-automations', activeWorkspace.id] as const;
-        const current = qc.getQueryData<AutomationsPayload>(key);
-        if (current?.automations) {
-          qc.setQueryData<AutomationsPayload>(key, {
-            ...current,
-            automations: current.automations.map((r) =>
-              String(r.id) === String(json.automation!.id)
-                ? { ...r, ...json.automation }
-                : r
-            ),
-          });
-        }
+    onSuccess: (result) => {
+      const key = ['dm-automations', activeWorkspace.id] as const;
+      const current = qc.getQueryData<AutomationsPayload>(key);
+      if (current?.automations) {
+        const nextActive =
+          result.automation?.isActive ?? result.nextActive;
+        qc.setQueryData<AutomationsPayload>(key, {
+          ...current,
+          automations: current.automations.map((r) =>
+            String(r.id) === String(result.ruleId)
+              ? {
+                  ...r,
+                  ...(result.automation || {}),
+                  isActive: Boolean(nextActive),
+                }
+              : r
+          ),
+          kpis: {
+            ...current.kpis,
+            activeTriggers: current.automations.reduce((n, r) => {
+              const active =
+                String(r.id) === String(result.ruleId)
+                  ? Boolean(nextActive)
+                  : r.isActive;
+              return n + (active ? 1 : 0);
+            }, 0),
+          },
+        });
       }
-      void qc.invalidateQueries({
-        queryKey: ['dm-automations', activeWorkspace.id],
-      });
     },
   });
 
@@ -668,7 +697,13 @@ export default function DMAutomationPanel() {
                     type="button"
                     role="switch"
                     aria-checked={rule.isActive}
-                    disabled={toggleMutation.isPending}
+                    aria-label={
+                      rule.isActive ? 'Pause automation' : 'Activate automation'
+                    }
+                    disabled={
+                      toggleMutation.isPending &&
+                      String(toggleMutation.variables?.id) === String(rule.id)
+                    }
                     onClick={() => toggleMutation.mutate(rule)}
                     className={`relative h-11 min-h-[44px] w-[52px] rounded-full transition-colors disabled:opacity-60 ${
                       rule.isActive ? 'bg-emerald-500' : 'bg-slate-200'

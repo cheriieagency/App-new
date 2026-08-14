@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConnectedSocialAccount } from '@/lib/mock-content-planner';
@@ -16,6 +16,7 @@ export type SocialAccountsResponse = {
   workspace_id?: string | null;
   source?: string;
   demo?: boolean;
+  error?: string;
 };
 
 const SUCCESS_PARAMS = new Set([
@@ -26,6 +27,13 @@ const SUCCESS_PARAMS = new Set([
   'linkedin_connected',
   'tiktok_connected',
 ]);
+
+const EMPTY_RESPONSE: SocialAccountsResponse = {
+  accounts: [],
+  connected_count: 0,
+  workspace_id: null,
+  source: 'empty',
+};
 
 function readStoredWorkspaceId(): string | null {
   if (typeof window === 'undefined') return null;
@@ -45,9 +53,50 @@ function readOAuthSuccessParam(): string | null {
   }
 }
 
+async function fetchSocialAccounts(
+  workspaceId: string | null
+): Promise<SocialAccountsResponse> {
+  try {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set('workspaceId', workspaceId);
+    params.set('_', String(Date.now()));
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+
+    try {
+      const r = await fetch(`/api/socials/accounts?${params}`, {
+        headers: workspaceId
+          ? {
+              'x-workspace-id': workspaceId,
+              'x-active-workspace-id': workspaceId,
+            }
+          : undefined,
+        credentials: 'include',
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+
+      // Always parse JSON — API returns 200 + accounts:[] on soft failures.
+      const json = (await r.json().catch(() => EMPTY_RESPONSE)) as SocialAccountsResponse;
+      return {
+        ...EMPTY_RESPONSE,
+        ...json,
+        accounts: Array.isArray(json.accounts) ? json.accounts : [],
+      };
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  } catch (error) {
+    console.warn('[useSocialAccounts] fetch failed', error);
+    return { ...EMPTY_RESPONSE, source: 'fetch_error' };
+  }
+}
+
 /**
  * Unified live social_accounts fetch for the ACTIVE workspace only.
  * Revalidates when workspace changes or OAuth returns with ?success=…
+ * Loading always clears — never leaves settings on endless "Loading…".
  */
 export function useSocialAccounts(enabled = true) {
   const queryClient = useQueryClient();
@@ -59,6 +108,9 @@ export function useSocialAccounts(enabled = true) {
   const success =
     typeof window !== 'undefined' ? readOAuthSuccessParam() : null;
 
+  // Local loading flag — always cleared in finally so UI never sticks.
+  const [isLoading, setIsLoading] = useState(Boolean(enabled));
+
   const query = useQuery<SocialAccountsResponse>({
     queryKey: [
       'social-accounts',
@@ -66,35 +118,47 @@ export function useSocialAccounts(enabled = true) {
       success ?? '',
       session?.user?.id ?? 'anon',
     ],
-    enabled: enabled && Boolean(workspaceId),
+    enabled,
+    retry: false,
     queryFn: async () => {
-      const ws = workspaceId || readStoredWorkspaceId();
-      if (!ws) {
-        return {
-          accounts: [],
-          connected_count: 0,
-          workspace_id: null,
-          source: 'no_workspace',
-        };
+      setIsLoading(true);
+      try {
+        const ws = workspaceId || readStoredWorkspaceId();
+        return await fetchSocialAccounts(ws);
+      } catch (error) {
+        console.warn('[useSocialAccounts] queryFn error', error);
+        return { ...EMPTY_RESPONSE, source: 'query_error' };
+      } finally {
+        setIsLoading(false);
       }
-      const params = new URLSearchParams();
-      params.set('workspaceId', ws);
-      params.set('_', String(Date.now()));
-      const r = await fetch(`/api/socials/accounts?${params}`, {
-        headers: {
-          'x-workspace-id': ws,
-          'x-active-workspace-id': ws,
-        },
-        credentials: 'include',
-        cache: 'no-store',
-      });
-      if (!r.ok) throw new Error('Failed to load social accounts');
-      return r.json();
     },
     staleTime: 5_000,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    // Soft placeholder so the panel can render while refetching.
+    placeholderData: (prev) => prev ?? EMPTY_RESPONSE,
   });
+
+  // Safety: if react-query never settles, clear local loader after 15s.
+  useEffect(() => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+    const t = window.setTimeout(() => setIsLoading(false), 15_000);
+    return () => window.clearTimeout(t);
+  }, [enabled, workspaceId, session?.user?.id]);
+
+  // Sync local loading with query settle (covers cache hits / disabled paths).
+  useEffect(() => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+    if (query.isFetched || query.isError || query.isSuccess) {
+      setIsLoading(false);
+    }
+  }, [enabled, query.isFetched, query.isError, query.isSuccess]);
 
   useEffect(() => {
     const param = readOAuthSuccessParam();
@@ -103,7 +167,6 @@ export function useSocialAccounts(enabled = true) {
     void query.refetch();
   }, [queryClient, query, success]);
 
-  // Re-fetch whenever the active workspace changes.
   useEffect(() => {
     if (!enabled || !workspaceId) return;
     void queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
@@ -137,8 +200,12 @@ export function useSocialAccounts(enabled = true) {
     return map;
   }, [accounts]);
 
+  // Prefer local isLoading (always cleared) over react-query isLoading.
+  const showLoading = isLoading && !query.isFetched && accounts.length === 0;
+
   return {
     ...query,
+    isLoading: showLoading,
     accounts,
     connectedAccounts,
     byPlatform,

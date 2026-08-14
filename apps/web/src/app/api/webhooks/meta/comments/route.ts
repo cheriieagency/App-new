@@ -246,7 +246,7 @@ async function loadActiveAutomations(
     const rows = await sql`
       SELECT
         id, title, trigger_keywords, dm_message_text, cta_button_url,
-        reply_to_comment_publicly, public_comment_text
+        reply_to_comment_publicly, public_comment_text, is_active
       FROM public.dm_automations
       WHERE workspace_id = ${workspaceId}
         AND is_active = true
@@ -566,13 +566,23 @@ export async function POST(request: Request) {
     }
 
     const cleaned = cleanCommentText(commentText);
+    const commentTokens = commentText
+      .toLowerCase()
+      .replace(/[#@]/g, ' ')
+      .split(/\s+/)
+      .map((w) => w.replace(/^#+/, '').trim())
+      .filter(Boolean);
+
     let matchedRule: AutomationRow | null = null;
     let matchedKeyword: string | null = null;
 
     for (const rule of rules) {
       // Always clean stored keywords (strip #, lowercase) before matching.
       const keywords = cleanTriggerKeywords(rule.trigger_keywords);
+      // Fast array overlap: comment tokens ∩ cleaned keywords (#MER → mer).
+      const overlap = keywords.find((kw) => commentTokens.includes(kw));
       const kw =
+        overlap ||
         findMatchingKeyword(commentText, keywords) ||
         findMatchingKeyword(cleaned, keywords);
       if (kw) {
@@ -586,7 +596,11 @@ export async function POST(request: Request) {
       console.log('[Meta Webhook] No keyword match for comment:', {
         commentText,
         cleaned,
+        commentTokens,
         ruleCount: rules.length,
+        ruleKeywords: rules.map((r) =>
+          cleanTriggerKeywords(r.trigger_keywords)
+        ),
       });
       return ok();
     }

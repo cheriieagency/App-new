@@ -503,6 +503,8 @@ export default function SocialAccountsPanel({
     );
   }
 
+  // Fall through with empty accounts when fetch soft-failed — never block the page.
+
   const byPlatform = new Map(
     (data?.accounts ?? liveAccounts ?? []).map((a) => [a.platform, a])
   );
