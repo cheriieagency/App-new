@@ -125,6 +125,14 @@ const CHECKLIST_ROWS: Array<{
   },
 ];
 
+/** Numeric Instagram comment ids only (rejects keywords like "marsterclass"). */
+function isValidInstagramCommentIdClient(raw: string): boolean {
+  const id = String(raw || '')
+    .trim()
+    .replace(/^["']+|["']+$/g, '');
+  return /^\d{10,}$/.test(id);
+}
+
 type FormState = {
   id?: string;
   title: string;
@@ -589,7 +597,14 @@ export default function DMAutomationPanel() {
 
   const liveDiagnosticMutation = useMutation({
     mutationFn: async (opts?: { liveCommentId?: string }) => {
-      const commentId = opts?.liveCommentId?.trim() || undefined;
+      const raw = opts?.liveCommentId?.trim() || '';
+      // Only forward a numeric Instagram comment id — never keywords.
+      const commentId = isValidInstagramCommentIdClient(raw) ? raw : undefined;
+      if (raw && !commentId) {
+        throw new Error(
+          'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.'
+        );
+      }
       const res = await fetch('/api/admin/inbox/automations/test-live', {
         method: 'POST',
         headers: {
@@ -982,14 +997,16 @@ export default function DMAutomationPanel() {
         <div className="mx-5 sm:mx-7 mt-4 mb-2 rounded-2xl border border-[#2B2568]/15 bg-white px-4 py-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-end gap-3">
             <label className="flex-1 min-w-0">
-              <span className="block text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400 mb-1.5">
-                Live Private Reply — Instagram comment_id
+              <span className="block text-xs font-bold text-slate-700 mb-1.5">
+                Instagram Comment ID (valfritt för live-DM test)
               </span>
               <input
                 type="text"
+                inputMode="numeric"
+                autoComplete="off"
                 value={liveCommentId}
                 onChange={(e) => setLiveCommentId(e.target.value)}
-                placeholder="e.g. 1789… comment id from Graph / webhook"
+                placeholder="t.ex. 17912345678901234"
                 className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25"
               />
             </label>
@@ -998,7 +1015,14 @@ export default function DMAutomationPanel() {
               onClick={() => {
                 const id = liveCommentId.trim();
                 if (!id) {
-                  toast.error('Paste a live Instagram comment_id first');
+                  // Diagnostic-only run (no live Graph send).
+                  liveDiagnosticMutation.mutate({});
+                  return;
+                }
+                if (!isValidInstagramCommentIdClient(id)) {
+                  toast.error(
+                    'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.'
+                  );
                   return;
                 }
                 liveDiagnosticMutation.mutate({ liveCommentId: id });
@@ -1011,12 +1035,14 @@ export default function DMAutomationPanel() {
               ) : (
                 <Zap size={16} />
               )}
-              Send Live Private Reply Test
+              {liveCommentId.trim()
+                ? 'Send Live Private Reply Test'
+                : 'Kör diagnostik'}
             </button>
           </div>
           <p className="text-[11px] text-slate-500 font-medium">
-            Dispatches POST /v21.0/&#123;igUserId&#125;/messages with recipient.comment_id
-            and shows Meta HTTP status (200 OK / 400 / 403) + full error JSON.
+            Endast numeriskt comment id (t.ex. 179…) skickar live Private Reply.
+            Nyckelord som “marsterclass” blockeras. Lämna tomt för bara diagnostik.
           </p>
         </div>
 

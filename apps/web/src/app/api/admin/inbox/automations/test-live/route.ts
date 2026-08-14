@@ -184,6 +184,23 @@ export type LivePrivateReplyResult = {
   statusLabel: string;
 };
 
+/**
+ * Instagram comment ids are numeric Graph ids (commonly 178… / 179… / 180…).
+ * Reject keywords like "marsterclass" before any live Graph dispatch.
+ */
+export function isValidInstagramCommentId(raw: unknown): boolean {
+  const id = String(raw ?? '')
+    .trim()
+    .replace(/^["']+|["']+$/g, '');
+  if (!id) return false;
+  // Pure digits, typically 15–20+ chars; allow 10+ to be safe for shorter test ids.
+  if (!/^\d{10,}$/.test(id)) return false;
+  return true;
+}
+
+const INVALID_COMMENT_ID_MESSAGE =
+  'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.';
+
 async function sendLivePrivateReply(input: {
   igUserId: string;
   accessToken: string;
@@ -194,8 +211,11 @@ async function sendLivePrivateReply(input: {
   const liveCommentId = String(input.liveCommentId || '').trim();
   const messageText =
     String(input.messageText || '').trim() || 'Test automation reply';
-  const endpoint = `${GRAPH_BASE}/${encodeURIComponent(igUserId)}/messages`;
-  const payload = buildPrivateReplyPayload(liveCommentId, messageText);
+  const endpoint = `${GRAPH_BASE}/${encodeURIComponent(igUserId || 'unknown')}/messages`;
+  const payload = buildPrivateReplyPayload(
+    isValidInstagramCommentId(liveCommentId) ? liveCommentId : 'INVALID',
+    messageText
+  );
 
   const empty = (httpStatus: number, metaError: string | null) =>
     ({
@@ -212,11 +232,11 @@ async function sendLivePrivateReply(input: {
       statusLabel: httpStatusLabel(httpStatus),
     }) satisfies LivePrivateReplyResult;
 
+  if (!isValidInstagramCommentId(liveCommentId)) {
+    return empty(400, INVALID_COMMENT_ID_MESSAGE);
+  }
   if (!igUserId) {
     return empty(400, 'Missing Instagram Business Account id for /messages');
-  }
-  if (!liveCommentId) {
-    return empty(400, 'liveCommentId is required');
   }
   if (!input.accessToken?.trim()) {
     return empty(403, 'Missing access token for Private Reply');
@@ -720,47 +740,87 @@ async function runLiveDiagnostic(
   // ── STEP 6 (optional): Live Private Reply with real comment_id ──────────
   let livePrivateReply: LivePrivateReplyResult | null = null;
   if (liveCommentId) {
-    const messagingIgId = igUserId || pageId;
-    const replyToken = pageAccessTokenFromMeta || accessToken;
-    livePrivateReply = await sendLivePrivateReply({
-      igUserId: messagingIgId,
-      accessToken: replyToken,
-      liveCommentId,
-      messageText: liveMessageText,
-    });
-
-    steps.push(
-      step({
-        step: 'LIVE_PRIVATE_REPLY',
-        label: 'Live Private Reply Graph Dispatch',
-        success: livePrivateReply.ok,
-        message: livePrivateReply.ok
-          ? `Private Reply sent — HTTP ${livePrivateReply.statusLabel}`
-          : `Private Reply failed — HTTP ${livePrivateReply.statusLabel}`,
-        metaError: livePrivateReply.metaError,
-        fix: livePrivateReply.ok
-          ? undefined
-          : livePrivateReply.httpStatus === 403
-            ? 'Token lacks messaging permission or Page token required — reconnect Instagram / use Re-sync Meta Webhooks.'
-            : livePrivateReply.httpStatus === 400
-              ? 'Comment id invalid/expired (Private Reply window is short) — paste a fresh Instagram comment id.'
-              : 'Check Meta error payload below and reconnect if needed.',
-        details: {
-          httpStatus: livePrivateReply.httpStatus,
-          statusLabel: livePrivateReply.statusLabel,
-          endpoint: livePrivateReply.endpoint,
-          payload: livePrivateReply.payload,
-          metaResponse: livePrivateReply.metaResponse,
-          metaErrorCode: livePrivateReply.metaErrorCode,
+    if (!isValidInstagramCommentId(liveCommentId)) {
+      // Never dispatch Graph with a keyword / non-numeric id (e.g. "marsterclass").
+      livePrivateReply = {
+        attempted: true,
+        httpStatus: 400,
+        ok: false,
+        endpoint: `${GRAPH_BASE}/{igUserId}/messages`,
+        igUserId: igUserId || pageId || '',
+        liveCommentId,
+        payload: buildPrivateReplyPayload('INVALID', liveMessageText),
+        metaResponse: {
+          error: {
+            message: INVALID_COMMENT_ID_MESSAGE,
+            type: 'OAuthException',
+            code: 100,
+          },
         },
-      })
-    );
-
-    if (!livePrivateReply.ok) {
-      suggestions.push(
-        livePrivateReply.metaError ||
-          `Live Private Reply returned HTTP ${livePrivateReply.statusLabel}`
+        metaError: INVALID_COMMENT_ID_MESSAGE,
+        metaErrorCode: 100,
+        statusLabel: '400',
+      };
+      steps.push(
+        step({
+          step: 'LIVE_PRIVATE_REPLY',
+          label: 'Live Private Reply Graph Dispatch',
+          success: false,
+          message: INVALID_COMMENT_ID_MESSAGE,
+          metaError: INVALID_COMMENT_ID_MESSAGE,
+          fix: 'Paste a numeric Instagram comment id (t.ex. 17912345678901234), not a keyword.',
+          details: {
+            received: liveCommentId,
+            httpStatus: 400,
+            dispatched: false,
+          },
+        })
       );
+      suggestions.push(INVALID_COMMENT_ID_MESSAGE);
+    } else {
+      const messagingIgId = igUserId || pageId;
+      const replyToken = pageAccessTokenFromMeta || accessToken;
+      livePrivateReply = await sendLivePrivateReply({
+        igUserId: messagingIgId,
+        accessToken: replyToken,
+        liveCommentId,
+        messageText: liveMessageText,
+      });
+
+      steps.push(
+        step({
+          step: 'LIVE_PRIVATE_REPLY',
+          label: 'Live Private Reply Graph Dispatch',
+          success: livePrivateReply.ok,
+          message: livePrivateReply.ok
+            ? `Private Reply sent — HTTP ${livePrivateReply.statusLabel}`
+            : `Private Reply failed — HTTP ${livePrivateReply.statusLabel}`,
+          metaError: livePrivateReply.metaError,
+          fix: livePrivateReply.ok
+            ? undefined
+            : livePrivateReply.httpStatus === 403
+              ? 'Token lacks messaging permission or Page token required — reconnect Instagram / use Re-sync Meta Webhooks.'
+              : livePrivateReply.httpStatus === 400
+                ? 'Comment id invalid/expired (Private Reply window is short) — paste a fresh Instagram comment id.'
+                : 'Check Meta error payload below and reconnect if needed.',
+          details: {
+            httpStatus: livePrivateReply.httpStatus,
+            statusLabel: livePrivateReply.statusLabel,
+            endpoint: livePrivateReply.endpoint,
+            payload: livePrivateReply.payload,
+            metaResponse: livePrivateReply.metaResponse,
+            metaErrorCode: livePrivateReply.metaErrorCode,
+            dispatched: true,
+          },
+        })
+      );
+
+      if (!livePrivateReply.ok) {
+        suggestions.push(
+          livePrivateReply.metaError ||
+            `Live Private Reply returned HTTP ${livePrivateReply.statusLabel}`
+        );
+      }
     }
   }
 
