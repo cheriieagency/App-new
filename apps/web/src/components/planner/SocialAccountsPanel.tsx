@@ -439,10 +439,7 @@ export default function SocialAccountsPanel({
       return;
     }
     if (!demoMode && platform === 'tiktok') {
-      window.location.href = withWorkspaceQuery(
-        '/api/auth/tiktok/login?force=true',
-        activeWorkspaceId
-      );
+      startTikTokOAuth(true);
       return;
     }
     if (!demoMode && platform === 'pinterest') {
@@ -531,19 +528,35 @@ export default function SocialAccountsPanel({
       ]);
 
       if (!demoMode && livePlatforms.has(account.platform)) {
-        const res = await fetch('/api/auth/disconnect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            accountId: account.id ?? undefined,
-            platform: account.platform,
-            platformUserId:
-              account.platform_user_id || account.external_id || undefined,
-            workspaceId:
-              account.workspace_id || activeWorkspaceId || undefined,
-          }),
-        });
+        const workspaceId =
+          account.workspace_id || activeWorkspaceId || undefined;
+        const body = {
+          accountId: account.id ?? undefined,
+          platform: account.platform,
+          platformUserId:
+            account.platform_user_id || account.external_id || undefined,
+          workspaceId,
+        };
+
+        // TikTok: dedicated route first (workspace-scoped), then shared disconnect.
+        let res =
+          account.platform === 'tiktok'
+            ? await fetch('/api/auth/tiktok/disconnect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(body),
+              })
+            : null;
+
+        if (!res || (!res.ok && res.status !== 404)) {
+          res = await fetch('/api/auth/disconnect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(body),
+          });
+        }
 
         const errData = (await res.json().catch(() => ({}))) as {
           error?: string;
@@ -551,10 +564,9 @@ export default function SocialAccountsPanel({
           success?: boolean;
         };
 
-        if (!res.ok) {
-          toast.error(
-            errData.error || 'Failed to disconnect account'
-          );
+        // 404 = already gone — treat as successful disconnect for the UI.
+        if (!res.ok && res.status !== 404) {
+          toast.error(errData.error || 'Failed to disconnect account');
           return;
         }
 
@@ -614,33 +626,60 @@ export default function SocialAccountsPanel({
     return withWorkspaceQuery(path, activeWorkspaceId);
   };
 
+  const startTikTokOAuth = (force = true) => {
+    if (!activeWorkspaceId) {
+      toast.error('Select a workspace before connecting TikTok');
+      return;
+    }
+    window.location.href = tiktokLoginUrl(force);
+  };
+
   /** Disconnect current TikTok row, then OAuth with forced account chooser. */
   const handleTikTokSwitchAccount = async (
     currentAccount?: ConnectedSocialAccount | null
   ) => {
     try {
       setIsSwitchingTikTok(true);
+      if (!activeWorkspaceId && !currentAccount?.workspace_id) {
+        toast.error('Select a workspace before switching TikTok account');
+        setIsSwitchingTikTok(false);
+        return;
+      }
+
       const accountId = currentAccount?.id?.trim() || null;
       const platformUserId =
         currentAccount?.platform_user_id ||
         currentAccount?.external_id ||
         null;
+      const workspaceId =
+        currentAccount?.workspace_id || activeWorkspaceId || undefined;
 
-      // 1) Clear existing TikTok row for this user/workspace.
+      // 1) Clear existing TikTok row for this user/workspace (best-effort).
       if (currentAccount?.connected) {
-        const res = await fetch('/api/auth/disconnect', {
+        const body = {
+          accountId: accountId || undefined,
+          platform: 'tiktok' as const,
+          platformUserId: platformUserId || undefined,
+          workspaceId,
+        };
+
+        let res = await fetch('/api/auth/tiktok/disconnect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({
-            accountId: accountId || undefined,
-            platform: 'tiktok',
-            platformUserId: platformUserId || undefined,
-            workspaceId:
-              currentAccount.workspace_id || activeWorkspaceId || undefined,
-          }),
+          body: JSON.stringify(body),
         });
-        if (res.ok) {
+
+        if (!res.ok && res.status !== 404) {
+          res = await fetch('/api/auth/disconnect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(body),
+          });
+        }
+
+        if (res.ok || res.status === 404) {
           markDisconnectedInCache({
             ...currentAccount,
             platform: 'tiktok',
@@ -650,20 +689,16 @@ export default function SocialAccountsPanel({
             queryClient.invalidateQueries({ queryKey: ['social-accounts'] }),
             queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
           ]);
-        } else {
-          const errData = (await res.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          // Continue to OAuth even if already disconnected (404).
-          if (res.status !== 404) {
-            toast.error(errData.error || 'Failed to disconnect TikTok');
-            return;
-          }
+        } else if (res.status === 401) {
+          toast.error('Session expired — sign in again to switch TikTok');
+          setIsSwitchingTikTok(false);
+          return;
         }
+        // Non-404 failures: still continue to OAuth so the user can re-link.
       }
 
-      // 2) Force TikTok account selection / consent.
-      window.location.href = tiktokLoginUrl(true);
+      // 2) Force TikTok authorization UI (disable_auto_auth=1).
+      startTikTokOAuth(true);
     } catch (err) {
       console.error('[TikTok Switch Error]', err);
       toast.error('Could not switch TikTok account');
@@ -917,9 +952,7 @@ export default function SocialAccountsPanel({
               <ConnectOrConnectedButton
                 connected={Boolean(byPlatform.get('tiktok')?.connected)}
                 account={byPlatform.get('tiktok') ?? null}
-                onConnect={() => {
-                  window.location.href = tiktokLoginUrl(true);
-                }}
+                onConnect={() => startTikTokOAuth(true)}
                 onDisconnect={() =>
                   setDisconnectTarget(byPlatform.get('tiktok') ?? null)
                 }

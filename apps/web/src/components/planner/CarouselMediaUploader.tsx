@@ -1,15 +1,51 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
-import { GripVertical, Loader2, Plus, Trash2, Upload, Film, ImageIcon } from 'lucide-react';
+/**
+ * Post Studio media dropzone — device upload, Media Library, or Google Drive.
+ */
+
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Check,
+  FolderOpen,
+  Film,
+  GripVertical,
+  HardDrive,
+  ImageIcon,
+  Images,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import useUpload from '@/utils/useUpload';
 import {
   mediaTypeBadge,
   nextMediaId,
   type PlannerMediaItem,
 } from '@/lib/mock-content-planner';
+import {
+  MEDIA_LIBRARY_ROOT_ID,
+  type MediaAsset,
+} from '@/lib/mock-media-library';
+import GoogleDriveImportButton from '@/components/admin/GoogleDriveImportButton';
 
 const MAX_ITEMS = 10;
+
+function isVideoAsset(input: {
+  kind?: string | null;
+  fileType?: string | null;
+  fileName?: string | null;
+  url?: string | null;
+}): boolean {
+  if (input.kind === 'video') return true;
+  if (input.fileType?.startsWith('video/')) return true;
+  if (input.url?.startsWith('data:video')) return true;
+  return Boolean(input.fileName && /\.(mp4|mov|webm|m4v)$/i.test(input.fileName));
+}
 
 export default function CarouselMediaUploader({
   items,
@@ -22,15 +58,47 @@ export default function CarouselMediaUploader({
   const [dragOver, setDragOver] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [upload, { loading: uploading }] = useUpload();
+
+  const room = Math.max(0, MAX_ITEMS - items.length);
+  const atCap = room <= 0;
+
+  const libraryQuery = useQuery({
+    queryKey: ['media-folder', MEDIA_LIBRARY_ROOT_ID, 'picker'],
+    queryFn: async () => {
+      const r = await fetch(
+        `/api/admin/media?folder=${encodeURIComponent(MEDIA_LIBRARY_ROOT_ID)}`
+      );
+      if (!r.ok) throw new Error('Failed to load media library');
+      return r.json() as Promise<{ assets: MediaAsset[] }>;
+    },
+    enabled: libraryOpen,
+  });
+
+  const libraryAssets = useMemo(
+    () => libraryQuery.data?.assets ?? [],
+    [libraryQuery.data?.assets]
+  );
+
+  const appendItems = useCallback(
+    (incoming: PlannerMediaItem[]) => {
+      if (!incoming.length) return;
+      const next = [...items, ...incoming].slice(0, MAX_ITEMS);
+      onChange(next);
+      if (items.length + incoming.length > MAX_ITEMS) {
+        toast.message(`Only ${MAX_ITEMS} files per post — extra files skipped`);
+      }
+    },
+    [items, onChange]
+  );
 
   const addFiles = useCallback(
     async (files: FileList | null) => {
-      if (!files?.length) return;
-      const room = MAX_ITEMS - items.length;
-      if (room <= 0) return;
+      if (!files?.length || atCap) return;
       const picked = Array.from(files).slice(0, room);
-      const next: PlannerMediaItem[] = [...items];
+      const next: PlannerMediaItem[] = [];
 
       for (const file of picked) {
         const isVideo = file.type.startsWith('video/');
@@ -42,17 +110,35 @@ export default function CarouselMediaUploader({
           type: isVideo ? 'video' : 'image',
         });
       }
-      onChange(next);
+      appendItems(next);
     },
-    [items, onChange, upload]
+    [appendItems, atCap, room, upload]
   );
+
+  const addFromLibrary = () => {
+    if (!selectedIds.size) {
+      toast.message('Select at least one file');
+      return;
+    }
+    const picked = libraryAssets.filter((a) => selectedIds.has(a.id));
+    appendItems(
+      picked.slice(0, room).map((a) => ({
+        id: nextMediaId(),
+        url: a.image,
+        type: a.kind === 'video' ? 'video' : 'image',
+      }))
+    );
+    setSelectedIds(new Set());
+    setLibraryOpen(false);
+  };
 
   const removeAt = (index: number) => {
     onChange(items.filter((_, i) => i !== index));
   };
 
   const reorder = (from: number, to: number) => {
-    if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return;
+    if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length)
+      return;
     const next = [...items];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
@@ -60,6 +146,8 @@ export default function CarouselMediaUploader({
   };
 
   const badge = mediaTypeBadge(items);
+  const sourceBtn =
+    'inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 bg-white text-[11px] font-extrabold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:pointer-events-none';
 
   return (
     <div className="space-y-3">
@@ -92,7 +180,7 @@ export default function CarouselMediaUploader({
       <div
         onDragOver={(e) => {
           e.preventDefault();
-          setDragOver(true);
+          if (!atCap) setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
@@ -100,13 +188,12 @@ export default function CarouselMediaUploader({
           setDragOver(false);
           void addFiles(e.dataTransfer.files);
         }}
-        onClick={() => items.length < MAX_ITEMS && fileRef.current?.click()}
-        className={`relative rounded-2xl border-2 border-dashed min-h-[120px] flex flex-col items-center justify-center gap-2 transition-colors ${
-          items.length >= MAX_ITEMS
-            ? 'border-zinc-100 bg-zinc-50 cursor-not-allowed opacity-60'
+        className={`relative rounded-2xl border-2 border-dashed min-h-[120px] flex flex-col items-center justify-center gap-2 transition-colors px-3 py-4 ${
+          atCap
+            ? 'border-zinc-100 bg-zinc-50 opacity-60'
             : dragOver
-              ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)] cursor-pointer'
-              : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300 cursor-pointer'
+              ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)]'
+              : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300'
         }`}
       >
         {uploading ? (
@@ -118,14 +205,66 @@ export default function CarouselMediaUploader({
         ) : (
           <>
             <Upload size={22} className="text-zinc-300" />
-            <p className="text-sm font-bold text-zinc-600">
+            <p className="text-sm font-bold text-zinc-600 text-center">
               Single Image, Video eller Karusell
             </p>
-            <p className="text-[11px] text-zinc-400 font-medium text-center px-4">
-              Dra och släpp eller klicka — upp till {MAX_ITEMS} filer
+            <p className="text-[11px] text-zinc-400 font-medium text-center px-2">
+              Dra och släpp filer här — eller välj källa nedan (max {MAX_ITEMS})
             </p>
           </>
         )}
+      </div>
+
+      {/* Source options: device / Media Library / Google Drive */}
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={atCap || uploading}
+          onClick={() => fileRef.current?.click()}
+          className={sourceBtn}
+        >
+          <HardDrive size={14} />
+          Från enhet
+        </button>
+        <button
+          type="button"
+          disabled={atCap}
+          onClick={() => {
+            setSelectedIds(new Set());
+            setLibraryOpen(true);
+          }}
+          className={sourceBtn}
+        >
+          <Images size={14} />
+          Media Library
+        </button>
+        <GoogleDriveImportButton
+          target="planner"
+          className={sourceBtn}
+          onImported={(file) => {
+            if (!file.fileUrl) {
+              toast.error('Drive import returned no file');
+              return;
+            }
+            if (atCap) {
+              toast.message(`Max ${MAX_ITEMS} files per post`);
+              return;
+            }
+            appendItems([
+              {
+                id: nextMediaId(),
+                url: file.fileUrl,
+                type: isVideoAsset({
+                  fileType: file.fileType,
+                  fileName: file.fileName,
+                  url: file.fileUrl,
+                })
+                  ? 'video'
+                  : 'image',
+              },
+            ]);
+          }}
+        />
       </div>
 
       {items.length > 0 && (
@@ -162,6 +301,7 @@ export default function CarouselMediaUploader({
                 {item.type === 'video' ? (
                   <video src={item.url} className="w-full h-full object-cover" muted />
                 ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={item.url} alt="" className="w-full h-full object-cover" />
                 )}
                 <div className="absolute inset-x-0 top-0 flex items-center justify-between p-1">
@@ -185,7 +325,7 @@ export default function CarouselMediaUploader({
                 </span>
               </div>
             ))}
-            {items.length < MAX_ITEMS && (
+            {!atCap && (
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
@@ -198,6 +338,130 @@ export default function CarouselMediaUploader({
           </div>
         </div>
       )}
+
+      {/* Media Library picker (Brand assets) */}
+      {libraryOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setLibraryOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Media Library"
+            className="relative z-10 w-full sm:max-w-xl bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col"
+          >
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-zinc-100">
+              <div className="min-w-0">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-400">
+                  Media Library
+                </p>
+                <h3 className="font-clikd-wordmark font-extrabold text-lg text-zinc-900 mt-0.5 flex items-center gap-2">
+                  <FolderOpen size={18} className="text-[#F472B6]" />
+                  Brand assets
+                </h3>
+                <p className="text-xs text-zinc-500 font-medium mt-1">
+                  Välj upp till {room} fil{room === 1 ? '' : 'er'} från ditt bibliotek
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLibraryOpen(false)}
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-zinc-50 flex items-center justify-center"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-4 py-4 overflow-y-auto flex-1">
+              {libraryQuery.isLoading ? (
+                <div className="py-12 flex items-center justify-center gap-2 text-sm text-zinc-400">
+                  <Loader2 className="animate-spin" size={16} /> Laddar…
+                </div>
+              ) : libraryAssets.length === 0 ? (
+                <div className="py-10 text-center space-y-2">
+                  <p className="text-sm font-semibold text-zinc-600">
+                    Inga filer i Media Library ännu
+                  </p>
+                  <p className="text-xs text-zinc-400 font-medium px-6">
+                    Ladda upp under Media Library → Brand assets, eller importera från Google Drive.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {libraryAssets.map((asset) => {
+                    const selected = selectedIds.has(asset.id);
+                    const disabled =
+                      !selected && selectedIds.size >= room;
+                    return (
+                      <button
+                        key={asset.id}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(asset.id)) next.delete(asset.id);
+                            else if (next.size < room) next.add(asset.id);
+                            return next;
+                          });
+                        }}
+                        className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-colors disabled:opacity-40 ${
+                          selected
+                            ? 'border-[#F472B6] ring-2 ring-[#F472B6]/25'
+                            : 'border-zinc-100 hover:border-zinc-300'
+                        }`}
+                        title={asset.label}
+                      >
+                        {asset.kind === 'video' ? (
+                          <video
+                            src={asset.image}
+                            className="w-full h-full object-cover"
+                            muted
+                          />
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={asset.image}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        {selected ? (
+                          <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-[#F472B6] text-white flex items-center justify-center">
+                            <Check size={12} strokeWidth={3} />
+                          </span>
+                        ) : null}
+                        <span className="absolute bottom-0 inset-x-0 px-1.5 py-1 bg-black/50 text-[9px] font-bold text-white truncate">
+                          {asset.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="px-4 py-3 border-t border-zinc-100 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold text-zinc-500">
+                {selectedIds.size} valda
+              </p>
+              <button
+                type="button"
+                disabled={!selectedIds.size}
+                onClick={addFromLibrary}
+                className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold disabled:opacity-50"
+              >
+                Lägg till i post
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

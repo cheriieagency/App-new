@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS public.report_automation_configs (
   custom_email_note       text,
   subject_template        text NOT NULL DEFAULT 'Your {{month}} performance report — {{workspace}}',
   hide_ai_on_public_link  boolean NOT NULL DEFAULT false,
+  send_day_of_month       integer NOT NULL DEFAULT 1,
+  last_sent_period        text,
   created_at              timestamptz NOT NULL DEFAULT now(),
   updated_at              timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, workspace_id)
@@ -44,10 +46,15 @@ CREATE TABLE IF NOT EXISTS public.monthly_reports (
 ALTER TABLE public.monthly_reports ADD COLUMN IF NOT EXISTS start_date date;
 ALTER TABLE public.monthly_reports ADD COLUMN IF NOT EXISTS end_date date;
 ALTER TABLE public.monthly_reports ADD COLUMN IF NOT EXISTS date_range_label text NOT NULL DEFAULT '';
+ALTER TABLE public.report_automation_configs ADD COLUMN IF NOT EXISTS send_day_of_month integer NOT NULL DEFAULT 1;
+ALTER TABLE public.report_automation_configs ADD COLUMN IF NOT EXISTS last_sent_period text;
+
+CREATE INDEX IF NOT EXISTS monthly_reports_user_workspace_idx
+  ON public.monthly_reports (user_id, workspace_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS monthly_reports_workspace_idx
   ON public.monthly_reports (workspace_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS report_automation_enabled_idx
-  ON public.report_automation_configs (enabled)
+  ON public.report_automation_configs (enabled, send_day_of_month)
   WHERE enabled = true;

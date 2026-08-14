@@ -1,6 +1,6 @@
 /**
  * POST /api/admin/reports/automation/run
- * Manually run previous-month report + optional email for this workspace.
+ * Manually run previous-month report + optional email for this user+workspace only.
  */
 
 import { cookies, headers } from 'next/headers';
@@ -9,7 +9,11 @@ import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
 } from '@/lib/social/persist';
-import { getAutomationConfig } from '@/lib/reports/persist';
+import {
+  assertReportWorkspaceAccess,
+  getAutomationConfig,
+  markAutomationSent,
+} from '@/lib/reports/persist';
 import { buildAndSaveReport, previousCalendarMonth } from '@/lib/reports/build';
 import { sendMonthlyReportEmails } from '@/lib/reports/email';
 
@@ -47,6 +51,14 @@ export async function POST(request: Request) {
     return Response.json({ error: 'workspaceId required' }, { status: 400 });
   }
 
+  const access = await assertReportWorkspaceAccess({
+    userId: session.user.id,
+    workspaceId,
+  });
+  if (!access.ok) {
+    return Response.json({ error: access.error }, { status: access.status });
+  }
+
   const config = await getAutomationConfig({
     userId: session.user.id,
     workspaceId,
@@ -57,6 +69,7 @@ export async function POST(request: Request) {
       ? config.platforms
       : ['instagram', 'facebook', 'tiktok'];
   const period = previousCalendarMonth(new Date());
+  const periodKey = period.start.slice(0, 7); // YYYY-MM
   const sendEmail = body.sendEmail !== false;
   const recipients = config?.recipient_emails || [];
 
@@ -93,6 +106,14 @@ export async function POST(request: Request) {
         workspaceName:
           body.workspaceName != null ? String(body.workspaceName) : undefined,
       })) as Array<Record<string, unknown>>;
+
+      if (emails.length > 0) {
+        await markAutomationSent({
+          userId: session.user.id,
+          workspaceId,
+          periodKey,
+        });
+      }
     }
 
     return Response.json({

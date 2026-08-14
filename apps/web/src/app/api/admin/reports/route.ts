@@ -1,6 +1,7 @@
 /**
  * GET/POST /api/admin/reports
  * Directory of frozen monthly reports + manual report builder.
+ * Strictly scoped to session user + owned workspace.
  */
 
 import { cookies, headers } from 'next/headers';
@@ -9,7 +10,11 @@ import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
 } from '@/lib/social/persist';
-import { listMonthlyReports } from '@/lib/reports/persist';
+import {
+  assertReportWorkspaceAccess,
+  deleteMonthlyReport,
+  listMonthlyReports,
+} from '@/lib/reports/persist';
 import { buildAndSaveReport } from '@/lib/reports/build';
 
 async function readWorkspaceId(request: Request, bodyWorkspaceId?: unknown) {
@@ -39,8 +44,22 @@ export async function GET(request: Request) {
     });
   }
 
+  const access = await assertReportWorkspaceAccess({
+    userId: session.user.id,
+    workspaceId,
+  });
+  if (!access.ok) {
+    return Response.json(
+      { error: access.error, reports: [] },
+      { status: access.status }
+    );
+  }
+
   try {
-    const reports = await listMonthlyReports(workspaceId);
+    const reports = await listMonthlyReports({
+      userId: session.user.id,
+      workspaceId,
+    });
     return Response.json({ ok: true, workspaceId, reports });
   } catch (error) {
     console.warn('[admin/reports GET]', error);
@@ -86,6 +105,14 @@ export async function POST(request: Request) {
   );
   if (!workspaceId) {
     return Response.json({ error: 'workspaceId required' }, { status: 400 });
+  }
+
+  const access = await assertReportWorkspaceAccess({
+    userId: session.user.id,
+    workspaceId,
+  });
+  if (!access.ok) {
+    return Response.json({ error: access.error }, { status: access.status });
   }
 
   // camelCase + snake_case with non-null date fallbacks
@@ -153,4 +180,37 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+/** DELETE /api/admin/reports?id=…&workspaceId=… — owner + workspace only. */
+export async function DELETE(request: Request) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const url = new URL(request.url);
+  const reportId = url.searchParams.get('id')?.trim() || null;
+  const workspaceId = await readWorkspaceId(request);
+  if (!reportId || !workspaceId) {
+    return Response.json(
+      { error: 'id and workspaceId required' },
+      { status: 400 }
+    );
+  }
+
+  const access = await assertReportWorkspaceAccess({
+    userId: session.user.id,
+    workspaceId,
+  });
+  if (!access.ok) {
+    return Response.json({ error: access.error }, { status: access.status });
+  }
+
+  const deleted = await deleteMonthlyReport({
+    reportId,
+    userId: session.user.id,
+    workspaceId,
+  });
+  return Response.json({ ok: deleted, deleted });
 }

@@ -3,7 +3,6 @@
  * Instagram (Graph media) + Facebook Page posts + TikTok video.list.
  */
 
-import sql from '@/app/api/utils/sql';
 import {
   fetchFacebookPagePosts,
   fetchInstagramMedia,
@@ -11,9 +10,11 @@ import {
   type InstagramMediaItem,
 } from '@/lib/meta/graph-api';
 import {
+  ensureFreshTikTokAccessToken,
   fetchTikTokVideos,
   type TikTokVideoItem,
 } from '@/lib/tiktok/oauth';
+import { loadWorkspaceSocialTokens } from '@/lib/analytics/workspace-tokens';
 
 export type AnalyticsMediaPlatform = 'instagram' | 'facebook' | 'tiktok';
 
@@ -32,39 +33,6 @@ export type AnalyticsMediaItem = {
   view_count?: number | null;
   timestamp?: string | null;
 };
-
-type TokenRow = {
-  platform: string;
-  platform_user_id: string | null;
-  access_token: string | null;
-  page_id: string | null;
-};
-
-async function loadWorkspaceTokens(
-  userId: string,
-  workspaceId: string
-): Promise<TokenRow[]> {
-  if (!process.env.DATABASE_URL?.trim()) return [];
-  try {
-    const rows = await sql`
-      SELECT platform, platform_user_id, access_token, page_id, user_id
-      FROM social_accounts
-      WHERE user_id = ${userId}
-        AND workspace_id = ${workspaceId}
-        AND access_token IS NOT NULL
-        AND TRIM(access_token) <> ''
-    `;
-    // Deduplicate by platform — this user's rows only.
-    const byPlatform = new Map<string, TokenRow>();
-    for (const row of (rows as TokenRow[]) ?? []) {
-      if (!byPlatform.has(row.platform)) byPlatform.set(row.platform, row);
-    }
-    return [...byPlatform.values()];
-  } catch (error) {
-    console.warn('[analytics/media] token load failed', error);
-    return [];
-  }
-}
 
 function fromInstagram(item: InstagramMediaItem): AnalyticsMediaItem {
   return {
@@ -117,8 +85,7 @@ function fromFacebook(item: FacebookPagePostItem): AnalyticsMediaItem {
 }
 
 function fromTikTok(item: TikTokVideoItem): AnalyticsMediaItem {
-  const caption =
-    item.video_description || item.title || null;
+  const caption = item.video_description || item.title || null;
   const created =
     typeof item.create_time === 'number'
       ? new Date(item.create_time * 1000).toISOString()
@@ -140,6 +107,21 @@ function fromTikTok(item: TikTokVideoItem): AnalyticsMediaItem {
   };
 }
 
+/** Sum engagement / views across multi-platform media for overview KPIs. */
+export function aggregateMediaMetrics(media: AnalyticsMediaItem[]) {
+  let likes = 0;
+  let comments = 0;
+  let shares = 0;
+  let views = 0;
+  for (const item of media) {
+    likes += Number(item.like_count) || 0;
+    comments += Number(item.comments_count) || 0;
+    shares += Number(item.shares_count) || 0;
+    views += Number(item.view_count) || 0;
+  }
+  return { likes, comments, shares, views };
+}
+
 /** Fetch recent posts from every connected API that exposes a media list. */
 export async function fetchMultiPlatformMedia(input: {
   userId: string;
@@ -147,11 +129,11 @@ export async function fetchMultiPlatformMedia(input: {
   /** Optional IG media already synced — avoids a second Graph call. */
   instagramMedia?: InstagramMediaItem[] | null;
 }): Promise<AnalyticsMediaItem[]> {
-  const tokens = await loadWorkspaceTokens(input.userId, input.workspaceId);
-  const byPlatform = new Map<string, TokenRow>();
-  for (const row of tokens) {
-    if (!byPlatform.has(row.platform)) byPlatform.set(row.platform, row);
-  }
+  const tokens = await loadWorkspaceSocialTokens({
+    userId: input.userId,
+    workspaceId: input.workspaceId,
+  });
+  const byPlatform = new Map(tokens.map((row) => [row.platform, row]));
 
   const out: AnalyticsMediaItem[] = [];
 
@@ -184,7 +166,14 @@ export async function fetchMultiPlatformMedia(input: {
   const tt = byPlatform.get('tiktok');
   if (tt?.access_token) {
     try {
-      const videos = await fetchTikTokVideos(tt.access_token, 20);
+      const token = await ensureFreshTikTokAccessToken({
+        userId: input.userId,
+        workspaceId: input.workspaceId,
+        accessToken: tt.access_token,
+        refreshToken: tt.refresh_token,
+        expiresAt: tt.expires_at,
+      });
+      const videos = await fetchTikTokVideos(token, 20);
       out.push(...videos.map(fromTikTok));
     } catch (error) {
       console.warn('[analytics/media] TikTok failed', error);

@@ -102,6 +102,18 @@ function toDateInputValue(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
+/** True when an ISO timestamp falls inside [from, to] (inclusive calendar days). */
+function isTimestampInRange(
+  iso: string | null | undefined,
+  from: string,
+  to: string
+): boolean {
+  if (!iso) return false;
+  const day = String(iso).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  return day >= from && day <= to;
+}
+
 function rangeFromPreset(preset: Exclude<DateRangePreset, 'custom'>): AnalyticsDateRange {
   const to = new Date();
   const from = new Date(to);
@@ -113,20 +125,26 @@ function rangeFromPreset(preset: Exclude<DateRangePreset, 'custom'>): AnalyticsD
   return { preset, from: toDateInputValue(from), to: toDateInputValue(to) };
 }
 
-function formatRangeLabel(range: AnalyticsDateRange, locale: Locale) {
-  if (range.preset === '1w') return t('dateRange1Week', locale);
-  if (range.preset === '1m') return t('dateRange1Month', locale);
-  if (range.preset === '3m') return t('dateRange3Months', locale);
-  if (range.preset === '1y') return t('dateRange1Year', locale);
-  if (range.preset === '2y') return t('dateRange2Years', locale);
-  const from = new Date(`${range.from}T12:00:00`);
-  const to = new Date(`${range.to}T12:00:00`);
+function formatCalendarSpan(from: string, to: string, locale: Locale) {
+  const fromD = new Date(`${from}T12:00:00`);
+  const toD = new Date(`${to}T12:00:00`);
   const fmt = new Intl.DateTimeFormat(localeTag(locale), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
-  return `${fmt.format(from)} – ${fmt.format(to)}`;
+  return `${fmt.format(fromD)} – ${fmt.format(toD)}`;
+}
+
+/** Preset label + concrete calendar span so the UI matches the filtered data. */
+function formatRangeLabel(range: AnalyticsDateRange, locale: Locale) {
+  const span = formatCalendarSpan(range.from, range.to, locale);
+  if (range.preset === '1w') return `${t('dateRange1Week', locale)} · ${span}`;
+  if (range.preset === '1m') return `${t('dateRange1Month', locale)} · ${span}`;
+  if (range.preset === '3m') return `${t('dateRange3Months', locale)} · ${span}`;
+  if (range.preset === '1y') return `${t('dateRange1Year', locale)} · ${span}`;
+  if (range.preset === '2y') return `${t('dateRange2Years', locale)} · ${span}`;
+  return span;
 }
 
 type AnalyticsSubTab =
@@ -175,6 +193,8 @@ type PostPerfRow = {
   likes: number;
   comments: number;
   shares: number;
+  /** YYYY-MM-DD publish day for date-range filtering / export. */
+  publishedAt?: string;
 };
 
 const PLATFORM_ORDER = [
@@ -478,6 +498,15 @@ export default function LaterAnalyticsPanel() {
     }));
   }, [analyticsApi?.media, metaSync?.snapshot?.media]);
 
+  /** Only content published inside the selected date range. */
+  const rangedMedia = useMemo(
+    () =>
+      liveMedia.filter((item) =>
+        isTimestampInRange(item.timestamp, dateRange.from, dateRange.to)
+      ),
+    [liveMedia, dateRange.from, dateRange.to]
+  );
+
   const platformSlices = useMemo(() => {
     const fromApi = analyticsApi?.by_platform;
     if (fromApi && Object.keys(fromApi).length > 0) return fromApi;
@@ -528,17 +557,26 @@ export default function LaterAnalyticsPanel() {
   }, [metaSync?.snapshot?.instagram, instagramAccount, platformSlices.instagram]);
 
   const engagement = useMemo(() => {
-    const snap = metaSync?.snapshot;
-    const api = analyticsApi?.metrics;
-    if (!snap && connectedAccounts.length === 0 && !api) {
+    if (!connectedAccounts.length && rangedMedia.length === 0 && !analyticsApi?.metrics) {
       return { ...EMPTY_ENGAGEMENT };
     }
-    const likes = snap?.insights.likes ?? api?.likes ?? 0;
-    const comments = snap?.insights.comments ?? api?.comments ?? 0;
-    const reach = snap?.insights.reach ?? api?.reach ?? 0;
-    const impressions = snap?.insights.impressions ?? api?.impressions ?? 0;
-    const followers = totalFollowers || api?.followers || igProfile.followers || 0;
-    const engagementTotal = likes + comments;
+
+    // KPIs always follow the selected date range (content published in-range).
+    let likes = 0;
+    let comments = 0;
+    let shares = 0;
+    let views = 0;
+    for (const item of rangedMedia) {
+      likes += Number(item.like_count) || 0;
+      comments += Number(item.comments_count) || 0;
+      shares += Number(item.shares_count) || 0;
+      views += Number(item.view_count) || 0;
+    }
+
+    const impressions = Math.max(views, likes + comments + shares);
+    const reach = Math.max(views, impressions);
+    const followers = totalFollowers || igProfile.followers || 0;
+    const engagementTotal = likes + comments + shares;
     return {
       reach,
       views: impressions,
@@ -546,22 +584,32 @@ export default function LaterAnalyticsPanel() {
       followersDelta: 0,
       likes,
       comments,
-      shares: 0,
+      shares,
       saves: 0,
       engagementRate:
-        api?.engagement_rate ??
-        (reach > 0 ? Math.round((engagementTotal / reach) * 1000) / 10 : 0),
+        reach > 0
+          ? Math.round((engagementTotal / reach) * 1000) / 10
+          : 0,
     };
   }, [
-    metaSync?.snapshot,
     analyticsApi?.metrics,
     connectedAccounts.length,
     totalFollowers,
     igProfile.followers,
+    rangedMedia,
   ]);
 
   /** Prefer dedicated /api/analytics/posts; fall back to aggregated media. */
-  const { feedPosts, reelPosts, postAccounts, storyPosts, storyAccounts } =
+  const {
+    feedPosts,
+    reelPosts,
+    allFeedPosts,
+    allReelPosts,
+    postAccounts: rawPostAccounts,
+    storyPosts,
+    allStoryPosts,
+    storyAccounts,
+  } =
     useMemo(() => {
       const platformLabel = (raw?: string | null) => {
         const key = (raw || 'instagram').toLowerCase();
@@ -579,28 +627,37 @@ export default function LaterAnalyticsPanel() {
         likes: item.likes,
         comments: item.comments,
         shares: item.shares ?? 0,
+        publishedAt: String(item.publishedAt || '').slice(0, 10) || undefined,
       });
 
-      const livePosts = postsApi?.posts ?? [];
-      const storyRows = (storiesApi?.posts ?? []).map(fromUnified);
+      const inRange = (iso: string) =>
+        isTimestampInRange(iso, dateRange.from, dateRange.to);
 
-      if (livePosts.length > 0 || (postsApi?.accounts?.length ?? 0) > 0) {
-        const isVideo = (m: UnifiedPostMetric) => {
-          const type = (m.mediaType || '').toUpperCase();
-          return type === 'VIDEO' || type === 'REELS' || m.platform === 'tiktok';
-        };
+      const isVideo = (m: UnifiedPostMetric) => {
+        const type = (m.mediaType || '').toUpperCase();
+        return type === 'VIDEO' || type === 'REELS' || m.platform === 'tiktok';
+      };
+
+      const allLivePosts = postsApi?.posts ?? [];
+      const allStoryRows = (storiesApi?.posts ?? []).map(fromUnified);
+
+      if (allLivePosts.length > 0 || (postsApi?.accounts?.length ?? 0) > 0) {
+        const allFeed = allLivePosts.filter((m) => !isVideo(m)).map(fromUnified);
+        const allReel = allLivePosts.filter((m) => isVideo(m)).map(fromUnified);
         return {
-          feedPosts: livePosts.filter((m) => !isVideo(m)).map(fromUnified),
-          reelPosts: livePosts.filter((m) => isVideo(m)).map(fromUnified),
+          feedPosts: allFeed.filter((m) => inRange(m.publishedAt || '')),
+          reelPosts: allReel.filter((m) => inRange(m.publishedAt || '')),
+          allFeedPosts: allFeed,
+          allReelPosts: allReel,
           postAccounts: postsApi?.accounts ?? [],
-          storyPosts: storyRows,
+          storyPosts: allStoryRows.filter((m) => inRange(m.publishedAt || '')),
+          allStoryPosts: allStoryRows,
           storyAccounts: storiesApi?.accounts ?? [],
         };
       }
 
       // Fallback: older /api/analytics media payload.
-      const media = liveMedia;
-      const toRow = (item: (typeof media)[number]): PostPerfRow => {
+      const toRow = (item: (typeof liveMedia)[number]): PostPerfRow => {
         const likes = item.like_count ?? 0;
         const comments = item.comments_count ?? 0;
         const shares = item.shares_count ?? 0;
@@ -629,18 +686,26 @@ export default function LaterAnalyticsPanel() {
           likes,
           comments,
           shares,
+          publishedAt: item.timestamp
+            ? String(item.timestamp).slice(0, 10)
+            : undefined,
         };
       };
-      const isVideo = (m: (typeof media)[number]) => {
+      const isMediaVideo = (m: (typeof liveMedia)[number]) => {
         const type = (m.media_type || '').toUpperCase();
         const plat = (m.platform || '').toLowerCase();
         return type === 'VIDEO' || type === 'REELS' || plat === 'tiktok';
       };
+      const allFeed = liveMedia.filter((m) => !isMediaVideo(m)).map(toRow);
+      const allReel = liveMedia.filter((m) => isMediaVideo(m)).map(toRow);
       return {
-        feedPosts: media.filter((m) => !isVideo(m)).map(toRow),
-        reelPosts: media.filter((m) => isVideo(m)).map(toRow),
+        feedPosts: allFeed.filter((m) => inRange(m.publishedAt || '')),
+        reelPosts: allReel.filter((m) => inRange(m.publishedAt || '')),
+        allFeedPosts: allFeed,
+        allReelPosts: allReel,
         postAccounts: [] as PlatformAccountPill[],
-        storyPosts: storyRows,
+        storyPosts: allStoryRows.filter((m) => inRange(m.publishedAt || '')),
+        allStoryPosts: allStoryRows,
         storyAccounts: storiesApi?.accounts ?? [],
       };
     }, [
@@ -649,16 +714,74 @@ export default function LaterAnalyticsPanel() {
       storiesApi?.posts,
       storiesApi?.accounts,
       liveMedia,
+      dateRange.from,
+      dateRange.to,
     ]);
 
-  // Social engagement chart (Analytics tab) from Meta media; Revenue tab uses bio checkout series.
+  // Merge Socials connection state so TikTok (and others) don't show CONNECT
+  // when the workspace already has a live token but posts API lagged.
+  const postAccounts = useMemo(() => {
+    const connectedByPlatform = new Map(
+      connectedAccounts.map((a) => [a.platform, a] as const)
+    );
+    const base =
+      rawPostAccounts.length > 0
+        ? rawPostAccounts
+        : (['instagram', 'facebook', 'tiktok'] as const).map(
+            (platform): PlatformAccountPill => {
+              const live = connectedByPlatform.get(platform);
+              return {
+                platform,
+                connected: Boolean(live),
+                handle: live?.handle ?? null,
+                display_name: live?.display_name ?? null,
+                avatar_url: live?.avatar_url ?? null,
+                post_count: 0,
+                status: live ? 'empty' : 'disconnected',
+                message: live
+                  ? 'Connect account or publish content to view analytics'
+                  : 'Connect account or publish content to view analytics',
+              };
+            }
+          );
+
+    return base.map((pill): PlatformAccountPill => {
+      const live = connectedByPlatform.get(pill.platform);
+      if (!live) return pill;
+      if (pill.status !== 'disconnected') {
+        return {
+          ...pill,
+          connected: true,
+          handle: pill.handle || live.handle || null,
+          display_name: pill.display_name || live.display_name || null,
+          avatar_url: pill.avatar_url || live.avatar_url || null,
+        };
+      }
+      return {
+        ...pill,
+        connected: true,
+        handle: live.handle ?? null,
+        display_name: live.display_name ?? null,
+        avatar_url: live.avatar_url ?? null,
+        status: 'empty' as const,
+        message: 'Connect account or publish content to view analytics',
+      };
+    });
+  }, [rawPostAccounts, connectedAccounts]);
+
+  // Social engagement chart — likes from content in the selected date range.
   const socialActivity = useMemo(() => {
     if (!hasConnectedSocials) return [0, 0, 0, 0, 0, 0, 0];
-    if (liveMedia.length >= 7) {
-      return liveMedia.slice(0, 7).map((m) => m.like_count ?? 0).reverse();
+    if (rangedMedia.length >= 7) {
+      return rangedMedia.slice(0, 7).map((m) => m.like_count ?? 0).reverse();
+    }
+    if (rangedMedia.length > 0) {
+      const likes = rangedMedia.map((m) => m.like_count ?? 0);
+      while (likes.length < 7) likes.unshift(0);
+      return likes.slice(-7);
     }
     return [0, 0, 0, 0, 0, 0, 0];
-  }, [hasConnectedSocials, liveMedia]);
+  }, [hasConnectedSocials, rangedMedia]);
 
   const checkoutRevenueSeries = useMemo(() => {
     const live = bioRevenueChart(activeWorkspace.id, 7);
@@ -989,10 +1112,14 @@ export default function LaterAnalyticsPanel() {
         open={exportOpen}
         onOpenChange={setExportOpen}
         workspaceName={activeWorkspace.name}
-        rangeLabel={formatRangeLabel(dateRange, locale)}
+        defaultFrom={dateRange.from}
+        defaultTo={dateRange.to}
         kpis={kpis}
         topProducts={topBioProducts}
         engagement={engagement}
+        posts={allFeedPosts}
+        reels={allReelPosts}
+        stories={allStoryPosts}
       />
 
       {/* Quiet sub-nav — only shown when drilling into detail tabs */}
@@ -1111,6 +1238,8 @@ export default function LaterAnalyticsPanel() {
           workspaceId={activeWorkspace.id}
           workspaceName={activeWorkspace.name}
           enabled={hasConnectedSocials}
+          from={dateRange.from}
+          to={dateRange.to}
         />
       )}
       {sub === 'linkinbio' && (
@@ -1741,9 +1870,18 @@ function ContentPerformanceTab({
                   </span>
                 )}
                 {account.status !== 'ok' && (
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600">
-                    {account.status === 'disconnected' ? 'Connect' : '—'}
-                  </span>
+                  account.status === 'disconnected' ? (
+                    <a
+                      href="/admin/settings/socials"
+                      className="text-[10px] font-mono font-bold uppercase tracking-wider text-pink-600 hover:text-pink-700 underline-offset-2 hover:underline"
+                    >
+                      Connect
+                    </a>
+                  ) : (
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600">
+                      —
+                    </span>
+                  )
                 )}
               </div>
             );
@@ -1868,14 +2006,18 @@ function HashtagsAnalyticsTab({
   workspaceId,
   workspaceName,
   enabled,
+  from,
+  to,
 }: {
   locale: Locale;
   rangeLabel: string;
   workspaceId: string;
   workspaceName: string;
   enabled: boolean;
+  from: string;
+  to: string;
 }) {
-  const { data, isLoading } = useAnalyticsHashtags(enabled);
+  const { data, isLoading } = useAnalyticsHashtags(enabled, { from, to });
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [ideas, setIdeas] = useState<HashtagBucket[]>([]);

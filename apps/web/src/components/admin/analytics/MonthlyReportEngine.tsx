@@ -10,10 +10,12 @@ import {
   CalendarRange,
   Copy,
   ExternalLink,
+  FileDown,
   FileText,
   Loader2,
   Settings2,
   Sparkles,
+  Trash2,
   Wand2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -69,6 +71,7 @@ type AutomationConfig = {
   custom_email_note: string | null;
   subject_template: string;
   hide_ai_on_public_link: boolean;
+  send_day_of_month?: number;
 };
 
 const PLATFORM_OPTIONS = ['instagram', 'facebook', 'tiktok', 'youtube'] as const;
@@ -127,13 +130,28 @@ export default function MonthlyReportEngine() {
     'Your {{month}} performance report — {{workspace}}'
   );
   const [autoHideAi, setAutoHideAi] = useState(false);
+  const [autoSendDay, setAutoSendDay] = useState(1);
+
+  // Never keep another workspace's report selected after switching brands.
+  useEffect(() => {
+    setSelectedReport(null);
+    setPreviewToken(null);
+    setTab('directory');
+  }, [activeWorkspace.id]);
 
   const reportsQuery = useQuery({
     queryKey: ['monthly-reports', activeWorkspace.id],
     queryFn: async () => {
       const r = await fetch(
         `/api/admin/reports?workspaceId=${encodeURIComponent(activeWorkspace.id)}`,
-        { headers: { 'x-workspace-id': activeWorkspace.id } }
+        {
+          headers: {
+            'x-workspace-id': activeWorkspace.id,
+            'x-active-workspace-id': activeWorkspace.id,
+          },
+          credentials: 'include',
+          cache: 'no-store',
+        }
       );
       if (!r.ok) throw new Error('Failed to load reports');
       return r.json() as Promise<{ reports: ReportRow[] }>;
@@ -146,7 +164,14 @@ export default function MonthlyReportEngine() {
     queryFn: async () => {
       const r = await fetch(
         `/api/admin/reports/automation?workspaceId=${encodeURIComponent(activeWorkspace.id)}`,
-        { headers: { 'x-workspace-id': activeWorkspace.id } }
+        {
+          headers: {
+            'x-workspace-id': activeWorkspace.id,
+            'x-active-workspace-id': activeWorkspace.id,
+          },
+          credentials: 'include',
+          cache: 'no-store',
+        }
       );
       if (!r.ok) throw new Error('Failed to load automation');
       return r.json() as Promise<{ config: AutomationConfig }>;
@@ -169,6 +194,9 @@ export default function MonthlyReportEngine() {
         'Your {{month}} performance report — {{workspace}}'
     );
     setAutoHideAi(Boolean(c.hide_ai_on_public_link));
+    setAutoSendDay(
+      Math.min(28, Math.max(1, Number(c.send_day_of_month) || 1))
+    );
   }, [automationQuery.data]);
 
   const buildMutation = useMutation({
@@ -225,7 +253,10 @@ export default function MonthlyReportEngine() {
       }
       const r = await fetch('/api/admin/reports/automation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspace.id,
+        },
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
           workspace_id: activeWorkspace.id,
@@ -235,6 +266,7 @@ export default function MonthlyReportEngine() {
           customEmailNote: autoNote || null,
           subjectTemplate: autoSubject || 'Your {{month}} performance report — {{workspace}}',
           hideAiOnPublicLink: autoHideAi,
+          sendDayOfMonth: autoSendDay,
         }),
       });
       const json = await r.json();
@@ -254,7 +286,10 @@ export default function MonthlyReportEngine() {
     mutationFn: async () => {
       const r = await fetch('/api/admin/reports/automation/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspace.id,
+        },
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
           workspaceName: activeWorkspace.name,
@@ -281,6 +316,31 @@ export default function MonthlyReportEngine() {
     },
   });
 
+  const deleteReport = useMutation({
+    mutationFn: async (reportId: string) => {
+      const r = await fetch(
+        `/api/admin/reports?id=${encodeURIComponent(reportId)}&workspaceId=${encodeURIComponent(activeWorkspace.id)}`,
+        {
+          method: 'DELETE',
+          headers: { 'x-workspace-id': activeWorkspace.id },
+          credentials: 'include',
+        }
+      );
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error || 'Delete failed');
+      return json;
+    },
+    onSuccess: () => {
+      toast.success('Report deleted');
+      setSelectedReport(null);
+      setPreviewToken(null);
+      void qc.invalidateQueries({ queryKey: ['monthly-reports', activeWorkspace.id] });
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
+    },
+  });
+
   const reports = reportsQuery.data?.reports || [];
   const previewReport =
     selectedReport ||
@@ -290,7 +350,7 @@ export default function MonthlyReportEngine() {
 
   const tabs: { key: EngineTab; label: string; icon: React.ElementType }[] = [
     { key: 'directory', label: 'Saved Reports Directory', icon: FileText },
-    { key: 'automation', label: '1st of Month Automation', icon: Settings2 },
+    { key: 'automation', label: 'Monthly email automation', icon: Settings2 },
     { key: 'builder', label: 'Report Builder & AI', icon: Wand2 },
     { key: 'preview', label: 'Client Guest View Preview', icon: ExternalLink },
   ];
@@ -305,6 +365,11 @@ export default function MonthlyReportEngine() {
     );
   };
 
+  const openPdf = (token: string) => {
+    const url = `${shareUrl(token)}?print=1`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="space-y-5">
       <div className={`${adminCardClass} p-4 sm:p-5`}>
@@ -317,7 +382,8 @@ export default function MonthlyReportEngine() {
               Performance snapshots for clients
             </h2>
             <p className="text-sm text-slate-500 mt-1">
-              Freeze metrics, generate AI strategy notes, and share guest links.
+              Freeze metrics for <span className="font-semibold text-slate-700">{activeWorkspace.name}</span> only —
+              reports never cross users or workspaces. Share a guest link or PDF, and email clients on a day you choose each month.
             </p>
           </div>
         </div>
@@ -400,6 +466,13 @@ export default function MonthlyReportEngine() {
                     >
                       <Copy size={13} /> Copy link
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => openPdf(r.public_share_token)}
+                      className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
+                    >
+                      <FileDown size={13} /> PDF
+                    </button>
                     <a
                       href={shareUrl(r.public_share_token)}
                       target="_blank"
@@ -418,6 +491,22 @@ export default function MonthlyReportEngine() {
                       className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold"
                     >
                       Preview
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deleteReport.isPending}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            'Delete this report? The guest link will stop working.'
+                          )
+                        ) {
+                          deleteReport.mutate(r.id);
+                        }
+                      }}
+                      className="h-10 min-h-[40px] px-3 rounded-xl border border-rose-100 text-rose-600 text-xs font-bold inline-flex items-center gap-1.5"
+                    >
+                      <Trash2 size={13} /> Delete
                     </button>
                   </div>
                 </li>
@@ -440,11 +529,12 @@ export default function MonthlyReportEngine() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold text-slate-900">
-                1st-of-month automation
+                Monthly email automation
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Runs at 08:00 UTC on the 1st — previous calendar month snapshot + email.
-                Requires CRON_SECRET + RESEND_API_KEY in production.
+                Scoped to this workspace only. On your chosen day each month (08:00 UTC),
+                we freeze the previous calendar month, create a guest link, and email it
+                to the addresses below. Requires CRON_SECRET + RESEND_API_KEY in production.
               </p>
             </div>
             <button
@@ -452,7 +542,7 @@ export default function MonthlyReportEngine() {
               role="switch"
               aria-checked={autoEnabled}
               onClick={() => setAutoEnabled((v) => !v)}
-              className={`relative h-7 w-12 rounded-full transition-colors ${
+              className={`relative h-7 w-12 rounded-full transition-colors flex-shrink-0 ${
                 autoEnabled ? 'bg-emerald-500' : 'bg-slate-200'
               }`}
             >
@@ -466,6 +556,29 @@ export default function MonthlyReportEngine() {
 
           <label className="block">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+              Send day of month
+            </span>
+            <div className="mt-1.5 flex items-center gap-3">
+              <select
+                value={autoSendDay}
+                onChange={(e) => setAutoSendDay(Number(e.target.value))}
+                className="h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-semibold bg-white"
+              >
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                    {d === 1 ? 'st' : d === 2 ? 'nd' : d === 3 ? 'rd' : 'th'}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">
+                Emails go out on day {autoSendDay} · previous month snapshot
+              </p>
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
               Recipient emails
             </span>
             <input
@@ -474,6 +587,9 @@ export default function MonthlyReportEngine() {
               placeholder="client@brand.com, you@clikd.app"
               className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
             />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Comma-separated. Each email gets the guest link (open / print as PDF).
+            </p>
           </label>
 
           <div>
@@ -687,14 +803,35 @@ export default function MonthlyReportEngine() {
                 <p className="text-xs text-slate-500 font-medium">
                   Guest link preview (same data as public page)
                 </p>
-                <a
-                  href={shareUrl(previewReport.public_share_token)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="h-10 min-h-[40px] px-3 rounded-xl bg-slate-900 text-white text-xs font-bold inline-flex items-center gap-1.5"
-                >
-                  <ExternalLink size={13} /> Open full guest page
-                </a>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(
+                        shareUrl(previewReport.public_share_token)
+                      );
+                      toast.success('Share link copied');
+                    }}
+                    className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
+                  >
+                    <Copy size={13} /> Copy link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openPdf(previewReport.public_share_token)}
+                    className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
+                  >
+                    <FileDown size={13} /> Save as PDF
+                  </button>
+                  <a
+                    href={shareUrl(previewReport.public_share_token)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="h-10 min-h-[40px] px-3 rounded-xl bg-slate-900 text-white text-xs font-bold inline-flex items-center gap-1.5"
+                  >
+                    <ExternalLink size={13} /> Open full guest page
+                  </a>
+                </div>
               </div>
               <GuestReportPreview report={previewReport} />
             </>

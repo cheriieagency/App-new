@@ -1,13 +1,18 @@
 /**
  * GET/POST /api/cron/monthly-reports
- * Vercel Cron — 1st of month 08:00 UTC.
+ * Daily cron at 08:00 UTC — runs automations whose send_day_of_month matches today.
+ * Each config is unique per (user_id, workspace_id); reports never cross users/workspaces.
  * Header: Authorization: Bearer ${CRON_SECRET}
  */
 
 import { cronEnv, missingEnvKeys, missingEnvResponse } from '@/lib/config/env';
-import { listEnabledAutomations } from '@/lib/reports/persist';
+import {
+  listEnabledAutomationsForDay,
+  markAutomationSent,
+} from '@/lib/reports/persist';
 import { buildAndSaveReport, previousCalendarMonth } from '@/lib/reports/build';
 import { sendMonthlyReportEmails } from '@/lib/reports/email';
+import { userOwnsWorkspace } from '@/lib/social/workspace-access';
 
 function authorize(request: Request): boolean {
   const secret = cronEnv.secret();
@@ -28,12 +33,39 @@ async function runCron(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const period = previousCalendarMonth(new Date());
-  const configs = await listEnabledAutomations();
+  const now = new Date();
+  const utcDay = now.getUTCDate();
+  const period = previousCalendarMonth(now);
+  const periodKey = period.start.slice(0, 7); // YYYY-MM of the snapshot month
+  const configs = await listEnabledAutomationsForDay(utcDay);
   const results: Array<Record<string, unknown>> = [];
 
   for (const config of configs) {
     try {
+      // Skip if this user+workspace already sent for this period.
+      if (config.last_sent_period === periodKey) {
+        results.push({
+          userId: config.user_id,
+          workspaceId: config.workspace_id,
+          ok: true,
+          skipped: 'already_sent',
+          periodKey,
+        });
+        continue;
+      }
+
+      // Ownership gate — never build for a workspace the user no longer owns.
+      const owns = await userOwnsWorkspace(config.user_id, config.workspace_id);
+      if (!owns) {
+        results.push({
+          userId: config.user_id,
+          workspaceId: config.workspace_id,
+          ok: false,
+          error: 'workspace_not_owned',
+        });
+        continue;
+      }
+
       const title = period.label
         ? `${period.label} performance report`
         : 'Monthly Analytics Report';
@@ -56,6 +88,7 @@ async function runCron(request: Request) {
 
       if (!report) {
         results.push({
+          userId: config.user_id,
           workspaceId: config.workspace_id,
           ok: false,
           error: 'save_failed',
@@ -70,7 +103,14 @@ async function runCron(request: Request) {
         subjectTemplate: config.subject_template,
       });
 
+      await markAutomationSent({
+        userId: config.user_id,
+        workspaceId: config.workspace_id,
+        periodKey,
+      });
+
       results.push({
+        userId: config.user_id,
         workspaceId: config.workspace_id,
         ok: true,
         reportId: report.id,
@@ -78,8 +118,14 @@ async function runCron(request: Request) {
         emails,
       });
     } catch (error) {
-      console.warn('[cron/monthly-reports] workspace failed', config.workspace_id, error);
+      console.warn(
+        '[cron/monthly-reports] failed',
+        config.user_id,
+        config.workspace_id,
+        error
+      );
       results.push({
+        userId: config.user_id,
         workspaceId: config.workspace_id,
         ok: false,
         error: error instanceof Error ? error.message : 'failed',
@@ -89,7 +135,9 @@ async function runCron(request: Request) {
 
   return Response.json({
     ok: true,
+    utcDay,
     period,
+    periodKey,
     processed: results.length,
     results,
   });

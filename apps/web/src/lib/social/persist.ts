@@ -195,9 +195,9 @@ export async function upsertSocialAccountRow(
   // Workspace-scoped replace — always scoped to this user_id.
   await sql`
     DELETE FROM social_accounts
-    WHERE user_id = ${userId}
+    WHERE user_id::text = ${userId}
       AND platform = ${input.platform}
-      AND workspace_id = ${boundWorkspaceId}
+      AND workspace_id::text = ${boundWorkspaceId}
   `;
 
   await sql`
@@ -468,7 +468,7 @@ export async function deleteSocialAccountRow(input: {
       DELETE FROM social_accounts
       WHERE user_id::text = ${userId}
         AND platform = ${platform}
-        AND workspace_id = ${workspaceId}
+        AND workspace_id::text = ${workspaceId}
       RETURNING id
     `;
     const ids = collect(rows);
@@ -482,7 +482,7 @@ export async function deleteSocialAccountRow(input: {
         DELETE FROM social_accounts
         WHERE user_id::text = ${userId}
           AND platform = ${platform}
-          AND workspace_id = ${workspaceId}
+          AND workspace_id::text = ${workspaceId}
           AND (
             platform_user_id = ${platformUserId}
             OR platform_user_id IS NULL
@@ -510,11 +510,24 @@ export async function deleteSocialAccountRow(input: {
       DELETE FROM social_accounts
       WHERE user_id::text = ${userId}
         AND platform = ${platform}
-        AND workspace_id = ${workspaceId}
+        AND workspace_id::text = ${workspaceId}
       RETURNING id
     `;
     const ids = collect(rows);
     if (ids.length > 0) return { deleted: true, deletedIds: ids };
+  }
+
+  // 3b) Orphan rows: platform with NULL / empty workspace for this user.
+  if (platform) {
+    const orphanRows = await sql`
+      DELETE FROM social_accounts
+      WHERE user_id::text = ${userId}
+        AND platform = ${platform}
+        AND (workspace_id IS NULL OR workspace_id::text = '')
+      RETURNING id
+    `;
+    const orphanIds = collect(orphanRows);
+    if (orphanIds.length > 0) return { deleted: true, deletedIds: orphanIds };
   }
 
   // 4) Last resort: platform for this user (any workspace they own)

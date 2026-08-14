@@ -51,7 +51,9 @@ export function buildTikTokLoginUrl(
     throw new Error('TikTok PKCE code_challenge is required');
   }
 
-  // Force account switcher + explicit consent (especially when force=true / Switch account).
+  // Official Login Kit params only — unsupported keys (prompt, disable_auto_login)
+  // can break authorize in the browser.
+  // https://developers.tiktok.com/doc/login-kit-web
   const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
   authUrl.searchParams.set('client_key', clientKey);
   authUrl.searchParams.set('scope', TIKTOK_OAUTH_SCOPES.join(','));
@@ -60,8 +62,10 @@ export function buildTikTokLoginUrl(
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('code_challenge', codeChallenge);
   authUrl.searchParams.set('code_challenge_method', 'S256');
-  authUrl.searchParams.set('disable_auto_login', 'true');
-  authUrl.searchParams.set('prompt', 'consent');
+  // Force consent / account UI (0 = skip for existing session, 1 = always show).
+  if (options?.forceSelectAccount !== false) {
+    authUrl.searchParams.set('disable_auto_auth', '1');
+  }
   return authUrl.toString();
 }
 
@@ -122,6 +126,104 @@ export async function exchangeTikTokCode(
     );
   }
   return data;
+}
+
+/**
+ * Refresh an expired TikTok access token (Display API).
+ * Docs: https://developers.tiktok.com/doc/oauth-user-access-token-management
+ */
+export async function refreshTikTokAccessToken(
+  refreshToken: string
+): Promise<TikTokTokenResponse> {
+  const clientKey = tiktokEnv.clientKey();
+  const clientSecret = tiktokEnv.clientSecret();
+  if (!clientKey || !clientSecret) {
+    throw new Error('TikTok OAuth credentials missing');
+  }
+
+  const params = new URLSearchParams({
+    client_key: clientKey,
+    client_secret: clientSecret,
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken.trim(),
+  });
+
+  const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  });
+
+  const data = (await res.json()) as TikTokTokenResponse & {
+    error?: string;
+    error_description?: string;
+    message?: string;
+  };
+
+  if (!res.ok || !data.access_token) {
+    throw new Error(
+      data.error_description ||
+        data.message ||
+        data.error ||
+        'TikTok token refresh failed'
+    );
+  }
+  return data;
+}
+
+/**
+ * Return a usable TikTok access token — refresh + persist when near expiry.
+ * Falls back to the stored access token if refresh is unavailable.
+ */
+export async function ensureFreshTikTokAccessToken(input: {
+  userId: string;
+  workspaceId: string;
+  accessToken: string;
+  refreshToken?: string | null;
+  expiresAt?: string | null;
+}): Promise<string> {
+  const accessToken = input.accessToken?.trim();
+  if (!accessToken) throw new Error('TikTok access token missing');
+
+  const refreshToken = input.refreshToken?.trim() || null;
+  const expiresMs = input.expiresAt ? new Date(input.expiresAt).getTime() : NaN;
+  // Refresh 2 minutes before expiry when we have a refresh_token.
+  const needsRefresh =
+    Boolean(refreshToken) &&
+    Number.isFinite(expiresMs) &&
+    expiresMs <= Date.now() + 120_000;
+
+  if (!needsRefresh || !refreshToken) return accessToken;
+
+  try {
+    const tokens = await refreshTikTokAccessToken(refreshToken);
+    const expiresAt =
+      typeof tokens.expires_in === 'number' && tokens.expires_in > 0
+        ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+        : null;
+
+    // Persist refreshed tokens for the workspace TikTok row.
+    try {
+      const sql = (await import('@/app/api/utils/sql')).default;
+      await sql`
+        UPDATE social_accounts
+        SET access_token = ${tokens.access_token},
+            refresh_token = ${tokens.refresh_token ?? refreshToken},
+            expires_at = ${expiresAt},
+            updated_at = now()
+        WHERE user_id::text = ${input.userId}
+          AND workspace_id::text = ${input.workspaceId}
+          AND platform = 'tiktok'
+      `;
+    } catch (persistError) {
+      console.warn('[tiktok] refreshed token persist failed', persistError);
+    }
+
+    return tokens.access_token;
+  } catch (error) {
+    console.warn('[tiktok] token refresh failed — using stored access token', error);
+    return accessToken;
+  }
 }
 
 export type TikTokUserProfile = {

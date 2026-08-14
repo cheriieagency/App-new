@@ -1,6 +1,6 @@
 /**
  * GET/POST /api/admin/reports/automation
- * 1st-of-month automation settings for the active workspace.
+ * Per-user + per-workspace monthly email automation (chosen send day).
  */
 
 import { cookies, headers } from 'next/headers';
@@ -10,6 +10,8 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
 } from '@/lib/social/persist';
 import {
+  assertReportWorkspaceAccess,
+  clampSendDay,
   getAutomationConfig,
   upsertAutomationConfig,
 } from '@/lib/reports/persist';
@@ -33,6 +35,8 @@ const DEFAULT_CONFIG = {
   custom_email_note: null as string | null,
   subject_template: 'Your {{month}} performance report — {{workspace}}',
   hide_ai_on_public_link: false,
+  send_day_of_month: 1,
+  last_sent_period: null as string | null,
 };
 
 export async function GET(request: Request) {
@@ -44,6 +48,14 @@ export async function GET(request: Request) {
   const workspaceId = await readWorkspaceId(request);
   if (!workspaceId) {
     return Response.json({ ok: true, config: { ...DEFAULT_CONFIG, workspace_id: null } });
+  }
+
+  const access = await assertReportWorkspaceAccess({
+    userId: session.user.id,
+    workspaceId,
+  });
+  if (!access.ok) {
+    return Response.json({ error: access.error }, { status: access.status });
   }
 
   const config = await getAutomationConfig({
@@ -83,6 +95,8 @@ async function upsert(request: Request) {
     customEmailNote?: unknown;
     subjectTemplate?: unknown;
     hideAiOnPublicLink?: unknown;
+    sendDayOfMonth?: unknown;
+    send_day_of_month?: unknown;
   } = {};
   try {
     body = (await request.json()) as typeof body;
@@ -95,6 +109,14 @@ async function upsert(request: Request) {
     return Response.json({ error: 'workspaceId required' }, { status: 400 });
   }
 
+  const access = await assertReportWorkspaceAccess({
+    userId: session.user.id,
+    workspaceId,
+  });
+  if (!access.ok) {
+    return Response.json({ error: access.error }, { status: access.status });
+  }
+
   const recipientEmails = Array.isArray(body.recipientEmails)
     ? body.recipientEmails
         .map(String)
@@ -105,6 +127,10 @@ async function upsert(request: Request) {
   const platforms = Array.isArray(body.platforms)
     ? body.platforms.map(String).filter(Boolean)
     : undefined;
+
+  const sendDayRaw = body.sendDayOfMonth ?? body.send_day_of_month;
+  const sendDayOfMonth =
+    sendDayRaw !== undefined ? clampSendDay(sendDayRaw, 1) : undefined;
 
   try {
     const config = await upsertAutomationConfig({
@@ -127,6 +153,7 @@ async function upsert(request: Request) {
         typeof body.hideAiOnPublicLink === 'boolean'
           ? body.hideAiOnPublicLink
           : undefined,
+      sendDayOfMonth,
     });
 
     if (!config) {

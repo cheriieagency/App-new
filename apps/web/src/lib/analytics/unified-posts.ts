@@ -3,12 +3,18 @@
  * Normalizes each API into UnifiedPostMetric for Analytics → Posts.
  */
 
-import sql from '@/app/api/utils/sql';
 import {
   fetchFacebookPagePosts,
   fetchInstagramMedia,
 } from '@/lib/meta/graph-api';
-import { fetchTikTokVideos } from '@/lib/tiktok/oauth';
+import {
+  ensureFreshTikTokAccessToken,
+  fetchTikTokVideos,
+} from '@/lib/tiktok/oauth';
+import {
+  loadWorkspaceSocialTokens,
+  type WorkspaceSocialToken,
+} from '@/lib/analytics/workspace-tokens';
 
 export type UnifiedPostPlatform = 'instagram' | 'facebook' | 'tiktok';
 
@@ -41,16 +47,7 @@ export type PlatformAccountPill = {
   message?: string | null;
 };
 
-type TokenRow = {
-  platform: string;
-  platform_user_id: string | null;
-  access_token: string | null;
-  page_id: string | null;
-  handle: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  page_name: string | null;
-};
+type TokenRow = WorkspaceSocialToken;
 
 function roundEr(likes: number, comments: number, shares: number, denom: number) {
   if (denom <= 0) return 0;
@@ -67,28 +64,7 @@ async function loadWorkspaceAccounts(
   userId: string,
   workspaceId: string
 ): Promise<TokenRow[]> {
-  if (!process.env.DATABASE_URL?.trim()) return [];
-  try {
-    // Strict isolation — never fall back to another user's tokens.
-    const rows = await sql`
-      SELECT platform, platform_user_id, access_token, page_id,
-             handle, display_name, avatar_url, page_name, user_id
-      FROM social_accounts
-      WHERE user_id = ${userId}
-        AND workspace_id = ${workspaceId}
-        AND platform IN ('instagram', 'facebook', 'tiktok')
-        AND access_token IS NOT NULL
-        AND access_token <> ''
-      ORDER BY
-        CASE WHEN platform = 'instagram' THEN 0
-             WHEN platform = 'facebook' THEN 1
-             ELSE 2 END
-    `;
-    return (rows as TokenRow[]) ?? [];
-  } catch (error) {
-    console.warn('[unified-posts] account load failed', error);
-    return [];
-  }
+  return loadWorkspaceSocialTokens({ userId, workspaceId });
 }
 
 async function fetchInstagramPosts(
@@ -169,8 +145,18 @@ async function fetchFacebookPosts(
   });
 }
 
-async function fetchTikTokPosts(token: string): Promise<UnifiedPostMetric[]> {
-  const videos = await fetchTikTokVideos(token, 20);
+async function fetchTikTokPosts(
+  token: string,
+  ctx: { userId: string; workspaceId: string; refreshToken?: string | null; expiresAt?: string | null }
+): Promise<UnifiedPostMetric[]> {
+  const accessToken = await ensureFreshTikTokAccessToken({
+    userId: ctx.userId,
+    workspaceId: ctx.workspaceId,
+    accessToken: token,
+    refreshToken: ctx.refreshToken,
+    expiresAt: ctx.expiresAt,
+  });
+  const videos = await fetchTikTokVideos(accessToken, 20);
   return videos.map((item) => {
     const likes = Number(item.like_count) || 0;
     const comments = Number(item.comment_count) || 0;
@@ -260,7 +246,12 @@ export async function fetchLiveUnifiedPosts(input: {
           if (!pageId) throw new Error('Facebook Page id missing');
           batch = await fetchFacebookPosts(pageId, row.access_token);
         } else if (platform === 'tiktok') {
-          batch = await fetchTikTokPosts(row.access_token);
+          batch = await fetchTikTokPosts(row.access_token, {
+            userId: input.userId,
+            workspaceId: input.workspaceId,
+            refreshToken: row.refresh_token,
+            expiresAt: row.expires_at,
+          });
         }
 
         posts.push(...batch);

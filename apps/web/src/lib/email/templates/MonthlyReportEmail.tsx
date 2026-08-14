@@ -85,13 +85,14 @@ export function MonthlyReportEmail({
 
           <Section style={{ textAlign: 'center' as const, margin: '28px 0' }}>
             <Link href={shareUrl} style={cta}>
-              Open client report
+              Open client report / save PDF
             </Link>
           </Section>
 
           <Text style={paragraph}>
-            This is a verified static snapshot. Share the link with clients —
-            they don&apos;t need a clikd: login.
+            This is a verified static snapshot for this workspace only. Share the
+            link with clients — they don&apos;t need a clikd: login. Use Save as
+            PDF in the browser print dialog if you need a file.
           </Text>
           <Hr style={hr} />
           <Text style={footer}>

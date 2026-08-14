@@ -17,6 +17,7 @@ import {
 } from '@/lib/meta/sync';
 import { fetchMultiPlatformDemographics } from '@/lib/analytics/demographics';
 import {
+  aggregateMediaMetrics,
   fetchMultiPlatformMedia,
   type AnalyticsMediaItem,
 } from '@/lib/analytics/media';
@@ -33,7 +34,7 @@ function onboardingFallback(reason: string, workspaceId: string | null = null) {
     reason,
     workspace_id: workspaceId,
     message:
-      'No connected social accounts found for this workspace. Connect Instagram, Facebook, YouTube, or LinkedIn under Settings → Socials.',
+      'No connected social accounts found for this workspace. Connect Instagram, Facebook, TikTok, YouTube, or LinkedIn under Settings → Socials.',
     cta: {
       label: 'Connect social accounts',
       href: '/admin/settings/socials',
@@ -181,13 +182,6 @@ export async function GET(request: Request) {
         ? followersFromAccounts
         : insights.followers || 0;
 
-    const engagementTotal = (insights.likes || 0) + (insights.comments || 0);
-    const reach = insights.reach || 0;
-    const engagementRate =
-      reach > 0
-        ? Math.round((engagementTotal / reach) * 1000) / 10
-        : 0;
-
     const by_platform: Record<
       PlatformKey,
       {
@@ -263,6 +257,22 @@ export async function GET(request: Request) {
     }
     const hashtags = extractHashtags(media);
 
+    // Prefer Meta insights when present; otherwise roll up IG + FB + TikTok media.
+    const mediaTotals = aggregateMediaMetrics(media);
+    const likes = Math.max(insights.likes || 0, mediaTotals.likes);
+    const comments = Math.max(insights.comments || 0, mediaTotals.comments);
+    const impressions = Math.max(
+      insights.impressions || 0,
+      mediaTotals.views,
+      mediaTotals.likes + mediaTotals.comments + mediaTotals.shares
+    );
+    const reach = Math.max(insights.reach || 0, mediaTotals.views, impressions);
+    const engagementTotal = likes + comments + mediaTotals.shares;
+    const engagementRate =
+      reach > 0
+        ? Math.round((engagementTotal / reach) * 1000) / 10
+        : 0;
+
     // Audience demographics across every connected API for this workspace.
     let demographics = null as Awaited<
       ReturnType<typeof fetchMultiPlatformDemographics>
@@ -282,9 +292,10 @@ export async function GET(request: Request) {
 
     const metrics = {
       reach,
-      impressions: insights.impressions || 0,
-      likes: insights.likes || 0,
-      comments: insights.comments || 0,
+      impressions,
+      likes,
+      comments,
+      shares: mediaTotals.shares,
       followers: totalFollowers,
       profile_views: insights.profile_views || 0,
       engagement_rate: engagementRate,

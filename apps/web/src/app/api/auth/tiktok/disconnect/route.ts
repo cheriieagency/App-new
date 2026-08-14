@@ -44,9 +44,9 @@ export async function POST(request: Request) {
       body.platform_user_id.trim()) ||
     null;
 
-  if (!workspaceId && !accountId) {
+  if (!workspaceId && !accountId && !platformUserId) {
     return NextResponse.json(
-      { error: 'workspaceId or accountId required' },
+      { error: 'workspaceId, accountId, or platformUserId required' },
       { status: 400 }
     );
   }
@@ -58,20 +58,18 @@ export async function POST(request: Request) {
       platform: 'tiktok',
       platformUserId,
       workspaceId,
-      preferWorkspaceScoped: true,
+      preferWorkspaceScoped: Boolean(workspaceId),
     });
 
+    // Already disconnected is success for the UI.
     if (!result.deleted) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Account not found or already disconnected',
-          deleted: false,
-          platform: 'tiktok',
-          workspaceId,
-        },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        success: true,
+        message: 'Account already disconnected',
+        deleted: false,
+        platform: 'tiktok',
+        workspaceId,
+      });
     }
 
     return NextResponse.json({

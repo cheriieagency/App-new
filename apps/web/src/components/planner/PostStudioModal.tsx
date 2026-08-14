@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarClock,
   Check,
   ChevronDown,
   FileText,
+  FolderKanban,
+  Hash,
+  Heart,
   ImageIcon,
   Loader2,
   MessageCircle,
@@ -15,6 +18,7 @@ import {
   Share2,
   Smile,
   Sparkles,
+  Star,
   Trash2,
   X,
 } from 'lucide-react';
@@ -59,6 +63,14 @@ import { useLocale } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
+import {
+  listFavoriteHashtags,
+  mergeHashtagStrings,
+  normalizeHashtagString,
+  removeFavoriteHashtags,
+  saveFavoriteHashtags,
+  type FavoriteHashtagSet,
+} from '@/lib/planner/favorite-hashtags';
 
 const WORKFLOW_LABEL_KEYS: Record<WorkflowStatus, TranslationKey> = {
   IDEA: 'workflowIdeas',
@@ -76,6 +88,15 @@ const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'tiktok', label: 'TikTok' },
   { key: 'linkedin', label: 'LinkedIn' },
   { key: 'youtube', label: 'YouTube' },
+];
+
+const PROJECT_COLORS = [
+  '#F472B6',
+  '#9089F0',
+  '#10B981',
+  '#F59E0B',
+  '#2B2568',
+  '#0EA5E9',
 ];
 
 function toLocalInputValue(iso: string | null | undefined) {
@@ -173,6 +194,52 @@ export default function PostStudioModal({
     enabled: open,
   });
   const campaignLabels = campaignsData?.campaigns ?? [];
+
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectColor, setNewProjectColor] = useState(PROJECT_COLORS[0]);
+  const [favoriteHashtags, setFavoriteHashtags] = useState<FavoriteHashtagSet[]>(
+    []
+  );
+
+  useEffect(() => {
+    if (!open) {
+      setCreatingProject(false);
+      setNewProjectName('');
+      setNewProjectColor(PROJECT_COLORS[0]);
+      return;
+    }
+    setFavoriteHashtags(listFavoriteHashtags(workspaceId));
+  }, [open, workspaceId]);
+
+  const createProjectMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch('/api/planner/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          name: newProjectName.trim(),
+          color: newProjectColor,
+        }),
+      });
+      if (!r.ok) throw new Error('create failed');
+      return r.json() as Promise<{ campaign: CampaignLabel }>;
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ['planner-campaigns'] });
+      setCampaignIds((prev) =>
+        prev.includes(data.campaign.id) ? prev : [...prev, data.campaign.id]
+      );
+      setCreatingProject(false);
+      setNewProjectName('');
+      setNewProjectColor(PROJECT_COLORS[0]);
+      toast.success(t('createProject', locale));
+    },
+    onError: () => {
+      toast.error('Could not create project');
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -559,34 +626,126 @@ export default function PostStudioModal({
         <p className="text-[11px] text-zinc-400 font-medium mb-2">
           {t('campaignLabelsHint', locale)}
         </p>
-        {campaignLabels.length === 0 ? (
-          <p className="text-xs text-zinc-400 font-medium">
-            {t('noProjectsYet', locale)}
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {campaignLabels.map((c) => {
-              const active = campaignIds.includes(c.id);
-              return (
+
+        {creatingProject ? (
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-3 space-y-3">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-zinc-400 flex items-center gap-1.5">
+              <FolderKanban size={12} />
+              {t('newProject', locale)}
+            </p>
+            <input
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              placeholder={t('projectNamePlaceholder', locale)}
+              autoFocus
+              className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/5"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newProjectName.trim()) {
+                  e.preventDefault();
+                  createProjectMutation.mutate();
+                }
+                if (e.key === 'Escape') {
+                  setCreatingProject(false);
+                  setNewProjectName('');
+                }
+              }}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              {PROJECT_COLORS.map((c) => (
                 <button
-                  key={c.id}
+                  key={c}
                   type="button"
-                  onClick={() => toggleCampaign(c.id)}
-                  className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-full border text-xs font-extrabold transition-colors ${
-                    active
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-zinc-100 bg-zinc-50 text-zinc-500 hover:border-zinc-200'
+                  onClick={() => setNewProjectColor(c)}
+                  className={`w-8 h-8 min-h-[32px] rounded-full ${
+                    newProjectColor === c ? 'ring-2 ring-offset-2 ring-zinc-400' : ''
                   }`}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: active ? '#F472B6' : c.color }}
-                  />
-                  {c.name}
-                  {active && <Check size={12} />}
-                </button>
-              );
-            })}
+                  style={{ background: c }}
+                  aria-label={c}
+                />
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingProject(false);
+                  setNewProjectName('');
+                }}
+                className="h-11 min-h-[44px] px-3 rounded-xl text-xs font-semibold text-zinc-500 hover:bg-white"
+              >
+                {t('cancel', locale)}
+              </button>
+              <button
+                type="button"
+                disabled={!newProjectName.trim() || createProjectMutation.isPending}
+                onClick={() => createProjectMutation.mutate()}
+                className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl bg-zinc-900 text-white text-xs font-extrabold disabled:opacity-40"
+              >
+                {createProjectMutation.isPending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Plus size={14} />
+                )}
+                {t('createProject', locale)}
+              </button>
+            </div>
+          </div>
+        ) : campaignLabels.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/60 px-4 py-4 space-y-3">
+            <div className="flex items-start gap-2.5">
+              <FolderKanban size={18} className="text-zinc-300 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-zinc-700">
+                  {t('noProjectsYet', locale)}
+                </p>
+                <p className="text-[11px] text-zinc-400 font-medium mt-0.5 leading-snug">
+                  {t('campaignLabelsHint', locale)}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreatingProject(true)}
+              className="w-full inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold hover:bg-[#1a1848] transition-colors"
+            >
+              <Plus size={14} />
+              {t('createProject', locale)}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {campaignLabels.map((c) => {
+                const active = campaignIds.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleCampaign(c.id)}
+                    className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-full border text-xs font-extrabold transition-colors ${
+                      active
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-zinc-100 bg-zinc-50 text-zinc-500 hover:border-zinc-200'
+                    }`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ background: active ? '#F472B6' : c.color }}
+                    />
+                    {c.name}
+                    {active && <Check size={12} />}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setCreatingProject(true)}
+                className="inline-flex items-center gap-1 h-11 min-h-[44px] px-3 rounded-full border border-dashed border-zinc-200 bg-white text-xs font-extrabold text-zinc-500 hover:border-zinc-300 hover:text-zinc-800 transition-colors"
+              >
+                <Plus size={12} />
+                {t('createProject', locale)}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -681,6 +840,111 @@ export default function PostStudioModal({
           placeholder="#tips #creator #nordic"
           className="h-11 rounded-xl border-zinc-200 font-mono text-xs"
         />
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center justify-between gap-2 h-11 min-h-[44px] flex-1 min-w-[180px] px-3 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-700 hover:bg-zinc-50 transition-colors"
+              >
+                <span className="inline-flex items-center gap-1.5 min-w-0">
+                  <Heart size={13} className="text-[#F472B6] flex-shrink-0" />
+                  <span className="truncate">
+                    Favourites
+                    {favoriteHashtags.length > 0
+                      ? ` (${favoriteHashtags.length})`
+                      : ''}
+                  </span>
+                </span>
+                <ChevronDown size={14} className="text-zinc-400 flex-shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="w-[min(360px,92vw)] z-[80] p-0 overflow-hidden"
+            >
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-zinc-400 px-3 py-2.5">
+                Saved hashtag sets
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="m-0" />
+              {favoriteHashtags.length === 0 ? (
+                <div className="px-3 py-4 text-[11px] text-zinc-400 font-medium leading-snug">
+                  No favourites yet. Add hashtags above, then tap Save favourite.
+                </div>
+              ) : (
+                <div className="max-h-56 overflow-y-auto py-1">
+                  {favoriteHashtags.map((fav) => (
+                    <div
+                      key={fav.id}
+                      className="flex items-start gap-1 px-1.5 py-0.5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHashtags((prev) =>
+                            mergeHashtagStrings(prev, fav.tags)
+                          );
+                          toast.message('Hashtags added');
+                        }}
+                        className="flex-1 min-w-0 text-left rounded-lg px-2 py-2 hover:bg-zinc-50 transition-colors"
+                      >
+                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#F472B6] uppercase tracking-wide">
+                          <Hash size={10} />
+                          Use
+                        </span>
+                        <p className="font-mono text-[11px] font-semibold text-zinc-700 break-words leading-snug mt-0.5">
+                          {fav.tags}
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHashtags(fav.tags)}
+                        className="h-9 min-h-[36px] px-2 mt-1 rounded-lg text-[10px] font-extrabold text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 transition-colors flex-shrink-0"
+                        title="Replace field with this set"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setFavoriteHashtags(
+                            removeFavoriteHashtags(workspaceId, fav.id)
+                          );
+                        }}
+                        className="h-9 w-9 min-h-[36px] min-w-[36px] mt-1 rounded-lg text-zinc-300 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center flex-shrink-0 transition-colors"
+                        aria-label="Remove favourite"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <button
+            type="button"
+            disabled={!normalizeHashtagString(hashtags)}
+            onClick={() => {
+              const saved = saveFavoriteHashtags(workspaceId, hashtags);
+              if (!saved) {
+                toast.message('Add hashtags first');
+                return;
+              }
+              setFavoriteHashtags(listFavoriteHashtags(workspaceId));
+              toast.success('Saved to favourites');
+            }}
+            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-[#FCE7F3] bg-[#FDF2F8] text-[11px] font-extrabold text-[#F472B6] hover:bg-[#FCE7F3] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            title="Save current hashtags to favourites"
+          >
+            <Star size={13} />
+            Save favourite
+          </button>
+        </div>
       </div>
 
       <div>

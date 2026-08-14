@@ -1,9 +1,11 @@
 /**
  * Monthly reports + automation config persistence.
+ * Every row is scoped to (user_id, workspace_id) — never shared across users/workspaces.
  */
 
 import sql from '@/app/api/utils/sql';
 import { randomBytes } from 'crypto';
+import { userOwnsWorkspace } from '@/lib/social/workspace-access';
 
 export type AiInsights = {
   executiveSummary: string;
@@ -91,11 +93,22 @@ export type AutomationConfig = {
   custom_email_note: string | null;
   subject_template: string;
   hide_ai_on_public_link: boolean;
+  /** Day of month to send (1–28). Cron runs daily and matches this day. */
+  send_day_of_month: number;
+  /** Last period key sent, e.g. "2026-07" — prevents duplicate automation runs. */
+  last_sent_period: string | null;
   created_at: string;
   updated_at: string;
 };
 
 let tablesReady: Promise<void> | null = null;
+
+/** Clamp send day to a safe calendar day (avoids Feb 29/30/31 skips). */
+export function clampSendDay(value: unknown, fallback = 1): number {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(28, Math.max(1, n));
+}
 
 /** Idempotent column migrations — always run (not only on first create). */
 async function migrateReportsColumns(): Promise<void> {
@@ -123,6 +136,14 @@ async function migrateReportsColumns(): Promise<void> {
   await sql`
     ALTER TABLE public.report_automation_configs
       ADD COLUMN IF NOT EXISTS hide_ai_on_public_link boolean NOT NULL DEFAULT false
+  `;
+  await sql`
+    ALTER TABLE public.report_automation_configs
+      ADD COLUMN IF NOT EXISTS send_day_of_month integer NOT NULL DEFAULT 1
+  `;
+  await sql`
+    ALTER TABLE public.report_automation_configs
+      ADD COLUMN IF NOT EXISTS last_sent_period text
   `;
   await sql`
     ALTER TABLE public.report_automation_configs
@@ -156,12 +177,16 @@ async function migrateReportsColumns(): Promise<void> {
     WHERE date_range_label IS NULL OR date_range_label = ''
   `;
   await sql`
+    CREATE INDEX IF NOT EXISTS monthly_reports_user_workspace_idx
+      ON public.monthly_reports (user_id, workspace_id, created_at DESC)
+  `;
+  await sql`
     CREATE INDEX IF NOT EXISTS monthly_reports_workspace_idx
       ON public.monthly_reports (workspace_id, created_at DESC)
   `;
   await sql`
     CREATE INDEX IF NOT EXISTS report_automation_enabled_idx
-      ON public.report_automation_configs (enabled)
+      ON public.report_automation_configs (enabled, send_day_of_month)
       WHERE enabled = true
   `;
 }
@@ -182,6 +207,8 @@ export async function ensureReportsSchema(): Promise<void> {
           custom_email_note       text,
           subject_template        text NOT NULL DEFAULT 'Your {{month}} performance report — {{workspace}}',
           hide_ai_on_public_link  boolean NOT NULL DEFAULT false,
+          send_day_of_month       integer NOT NULL DEFAULT 1,
+          last_sent_period        text,
           created_at              timestamptz NOT NULL DEFAULT now(),
           updated_at              timestamptz NOT NULL DEFAULT now(),
           UNIQUE (user_id, workspace_id)
@@ -219,6 +246,31 @@ export async function ensureReportsSchema(): Promise<void> {
 
   await tablesReady;
   await migrateReportsColumns();
+}
+
+/**
+ * Hard gate — caller must own the workspace before any report read/write.
+ * Prevents cross-user / cross-workspace leakage via spoofed workspaceId.
+ */
+export async function assertReportWorkspaceAccess(input: {
+  userId: string;
+  workspaceId: string;
+}): Promise<{ ok: true } | { ok: false; status: 403 | 400; error: string }> {
+  const userId = input.userId?.trim();
+  const workspaceId = input.workspaceId?.trim();
+  if (!userId) return { ok: false, status: 400, error: 'Unauthorized' };
+  if (!workspaceId) {
+    return { ok: false, status: 400, error: 'workspaceId required' };
+  }
+  const owns = await userOwnsWorkspace(userId, workspaceId);
+  if (!owns) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'Workspace not found or not owned by this user',
+    };
+  }
+  return { ok: true };
 }
 
 function newShareToken() {
@@ -279,24 +331,46 @@ function mapAutomation(row: Record<string, unknown>): AutomationConfig {
         'Your {{month}} performance report — {{workspace}}'
     ),
     hide_ai_on_public_link: Boolean(row.hide_ai_on_public_link),
+    send_day_of_month: clampSendDay(row.send_day_of_month, 1),
+    last_sent_period:
+      row.last_sent_period != null ? String(row.last_sent_period) : null,
     created_at: new Date(String(row.created_at)).toISOString(),
     updated_at: new Date(String(row.updated_at)).toISOString(),
   };
 }
 
-export async function listMonthlyReports(
-  workspaceId: string
-): Promise<MonthlyReportRow[]> {
+/** List reports for ONE user inside ONE workspace only. */
+export async function listMonthlyReports(input: {
+  userId: string;
+  workspaceId: string;
+}): Promise<MonthlyReportRow[]> {
   if (!process.env.DATABASE_URL?.trim()) return [];
   await ensureReportsSchema();
-  const rows = await sql`
-    SELECT *
-    FROM public.monthly_reports
-    WHERE workspace_id = ${workspaceId}
-    ORDER BY created_at DESC
-    LIMIT 100
-  `;
-  return (rows || []).map((r) => mapReport(r as Record<string, unknown>));
+  const userId = input.userId.trim();
+  const workspaceId = input.workspaceId.trim();
+  if (!userId || !workspaceId) return [];
+
+  let rows: unknown;
+  try {
+    rows = await sql`
+      SELECT *
+      FROM public.monthly_reports
+      WHERE user_id::text = ${userId}
+        AND workspace_id::text = ${workspaceId}
+      ORDER BY created_at DESC
+      LIMIT 100
+    `;
+  } catch {
+    rows = await sql`
+      SELECT *
+      FROM public.monthly_reports
+      WHERE user_id = ${userId}
+        AND workspace_id = ${workspaceId}
+      ORDER BY created_at DESC
+      LIMIT 100
+    `;
+  }
+  return ((rows as Record<string, unknown>[]) || []).map(mapReport);
 }
 
 export async function insertMonthlyReport(input: {
@@ -329,9 +403,9 @@ export async function insertMonthlyReport(input: {
   const title =
     String(input.title ?? '').trim() || 'Monthly Analytics Report';
   const workspaceId = String(input.workspaceId || '').trim();
-  if (!workspaceId) {
-    throw new Error('workspace_id is required');
-  }
+  const userId = String(input.userId || '').trim();
+  if (!workspaceId) throw new Error('workspace_id is required');
+  if (!userId) throw new Error('user_id is required');
 
   const rows = await sql`
     INSERT INTO public.monthly_reports (
@@ -343,7 +417,7 @@ export async function insertMonthlyReport(input: {
     )
     VALUES (
       ${workspaceId},
-      ${input.userId},
+      ${userId},
       ${input.workspaceName ?? null},
       ${title},
       ${startDate},
@@ -365,6 +439,24 @@ export async function insertMonthlyReport(input: {
   `;
   const row = rows?.[0] as Record<string, unknown> | undefined;
   return row ? mapReport(row) : null;
+}
+
+/** Delete a report only when it belongs to this user + workspace. */
+export async function deleteMonthlyReport(input: {
+  reportId: string;
+  userId: string;
+  workspaceId: string;
+}): Promise<boolean> {
+  if (!process.env.DATABASE_URL?.trim()) return false;
+  await ensureReportsSchema();
+  const rows = await sql`
+    DELETE FROM public.monthly_reports
+    WHERE id::text = ${input.reportId}
+      AND user_id::text = ${input.userId}
+      AND workspace_id::text = ${input.workspaceId}
+    RETURNING id
+  `;
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 export async function getReportByShareToken(
@@ -389,14 +481,25 @@ export async function getAutomationConfig(input: {
 }): Promise<AutomationConfig | null> {
   if (!process.env.DATABASE_URL?.trim()) return null;
   await ensureReportsSchema();
-  const rows = await sql`
-    SELECT *
-    FROM public.report_automation_configs
-    WHERE user_id = ${input.userId}
-      AND workspace_id = ${input.workspaceId}
-    LIMIT 1
-  `;
-  const row = rows?.[0] as Record<string, unknown> | undefined;
+  let rows: unknown;
+  try {
+    rows = await sql`
+      SELECT *
+      FROM public.report_automation_configs
+      WHERE user_id::text = ${input.userId}
+        AND workspace_id::text = ${input.workspaceId}
+      LIMIT 1
+    `;
+  } catch {
+    rows = await sql`
+      SELECT *
+      FROM public.report_automation_configs
+      WHERE user_id = ${input.userId}
+        AND workspace_id = ${input.workspaceId}
+      LIMIT 1
+    `;
+  }
+  const row = (rows as Record<string, unknown>[])?.[0];
   return row ? mapAutomation(row) : null;
 }
 
@@ -409,6 +512,7 @@ export async function upsertAutomationConfig(input: {
   customEmailNote?: string | null;
   subjectTemplate?: string;
   hideAiOnPublicLink?: boolean;
+  sendDayOfMonth?: number;
 }): Promise<AutomationConfig | null> {
   if (!process.env.DATABASE_URL?.trim()) return null;
   await ensureReportsSchema();
@@ -430,11 +534,16 @@ export async function upsertAutomationConfig(input: {
     'Your {{month}} performance report — {{workspace}}';
   const hideAi =
     input.hideAiOnPublicLink ?? existing?.hide_ai_on_public_link ?? false;
+  const sendDay = clampSendDay(
+    input.sendDayOfMonth ?? existing?.send_day_of_month,
+    1
+  );
 
   const rows = await sql`
     INSERT INTO public.report_automation_configs (
       workspace_id, user_id, enabled, recipient_emails, platforms,
-      custom_email_note, subject_template, hide_ai_on_public_link, updated_at
+      custom_email_note, subject_template, hide_ai_on_public_link,
+      send_day_of_month, updated_at
     )
     VALUES (
       ${input.workspaceId},
@@ -445,6 +554,7 @@ export async function upsertAutomationConfig(input: {
       ${customEmailNote},
       ${subjectTemplate},
       ${hideAi},
+      ${sendDay},
       now()
     )
     ON CONFLICT (user_id, workspace_id) DO UPDATE SET
@@ -454,6 +564,7 @@ export async function upsertAutomationConfig(input: {
       custom_email_note = EXCLUDED.custom_email_note,
       subject_template = EXCLUDED.subject_template,
       hide_ai_on_public_link = EXCLUDED.hide_ai_on_public_link,
+      send_day_of_month = EXCLUDED.send_day_of_month,
       updated_at = now()
     RETURNING *
   `;
@@ -461,6 +572,54 @@ export async function upsertAutomationConfig(input: {
   return row ? mapAutomation(row) : null;
 }
 
+/** Mark automation as sent for a period key (YYYY-MM) after successful email. */
+export async function markAutomationSent(input: {
+  userId: string;
+  workspaceId: string;
+  periodKey: string;
+}): Promise<void> {
+  if (!process.env.DATABASE_URL?.trim()) return;
+  await ensureReportsSchema();
+  try {
+    await sql`
+      UPDATE public.report_automation_configs
+      SET last_sent_period = ${input.periodKey},
+          updated_at = now()
+      WHERE user_id::text = ${input.userId}
+        AND workspace_id::text = ${input.workspaceId}
+    `;
+  } catch {
+    await sql`
+      UPDATE public.report_automation_configs
+      SET last_sent_period = ${input.periodKey},
+          updated_at = now()
+      WHERE user_id = ${input.userId}
+        AND workspace_id = ${input.workspaceId}
+    `;
+  }
+}
+
+/**
+ * Enabled automations due today (UTC day-of-month).
+ * Each config is already unique per (user_id, workspace_id).
+ */
+export async function listEnabledAutomationsForDay(
+  dayOfMonth: number
+): Promise<AutomationConfig[]> {
+  if (!process.env.DATABASE_URL?.trim()) return [];
+  await ensureReportsSchema();
+  const day = clampSendDay(dayOfMonth, 1);
+  const rows = await sql`
+    SELECT *
+    FROM public.report_automation_configs
+    WHERE enabled = true
+      AND cardinality(recipient_emails) > 0
+      AND send_day_of_month = ${day}
+  `;
+  return ((rows as Record<string, unknown>[]) || []).map(mapAutomation);
+}
+
+/** @deprecated Prefer listEnabledAutomationsForDay — kept for manual tooling. */
 export async function listEnabledAutomations(): Promise<AutomationConfig[]> {
   if (!process.env.DATABASE_URL?.trim()) return [];
   await ensureReportsSchema();
@@ -470,5 +629,5 @@ export async function listEnabledAutomations(): Promise<AutomationConfig[]> {
     WHERE enabled = true
       AND cardinality(recipient_emails) > 0
   `;
-  return (rows || []).map((r) => mapAutomation(r as Record<string, unknown>));
+  return ((rows as Record<string, unknown>[]) || []).map(mapAutomation);
 }

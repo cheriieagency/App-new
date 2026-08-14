@@ -56,6 +56,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(signIn);
   }
 
+  if (!workspaceId) {
+    const dest = new URL('/admin/settings/socials', request.url);
+    dest.searchParams.set('error', 'missing_workspace_id');
+    return NextResponse.redirect(dest);
+  }
+
   // CSRF nonce + workspace binding embedded in OAuth state.
   const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
   const { codeVerifier, codeChallenge } = createTikTokPkce();
@@ -90,6 +96,6 @@ export async function GET(request: Request) {
     path: '/',
     maxAge: 60 * 10,
   });
-  if (workspaceId) setActiveWorkspaceCookies(res, workspaceId);
+  setActiveWorkspaceCookies(res, workspaceId);
   return res;
 }

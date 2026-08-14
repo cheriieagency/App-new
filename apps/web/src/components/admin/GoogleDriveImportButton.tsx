@@ -24,6 +24,7 @@ type Props = {
     fileUrl: string;
     mediaId: string | number | null;
     fileName: string;
+    fileType?: string | null;
   }) => void;
 };
 
@@ -86,6 +87,7 @@ export default function GoogleDriveImportButton({
         fileUrl?: string;
         mediaId?: string | number | null;
         fileName?: string;
+        fileType?: string | null;
       };
       if (!r.ok || !json.success) {
         throw new Error(json.error || 'Import failed');
@@ -101,6 +103,7 @@ export default function GoogleDriveImportButton({
         fileUrl: json.fileUrl || '',
         mediaId: json.mediaId ?? null,
         fileName: json.fileName || 'file',
+        fileType: json.fileType ?? null,
       });
     },
     onError: (err) => {

@@ -10,12 +10,12 @@
  * - TikTok Display API: no audience demographics endpoints
  */
 
-import sql from '@/app/api/utils/sql';
 import {
   fetchInstagramAudienceDemographics,
   type DemoBreakdownRow,
   type InstagramAudienceDemographics,
 } from '@/lib/meta/graph-api';
+import { loadWorkspaceSocialTokens } from '@/lib/analytics/workspace-tokens';
 
 export type PlatformDemographicsSource =
   | 'instagram'
@@ -92,26 +92,20 @@ async function loadWorkspaceTokens(
   userId: string,
   workspaceId: string
 ): Promise<TokenRow[]> {
-  if (!process.env.DATABASE_URL?.trim()) return [];
-  try {
-    const rows = await sql`
-      SELECT platform, platform_user_id, access_token, refresh_token,
-             handle, page_id, followers_count, user_id
-      FROM social_accounts
-      WHERE user_id = ${userId}
-        AND workspace_id = ${workspaceId}
-        AND access_token IS NOT NULL
-        AND TRIM(access_token) <> ''
-    `;
-    const byPlatform = new Map<string, TokenRow>();
-    for (const row of (rows as TokenRow[]) ?? []) {
-      if (!byPlatform.has(row.platform)) byPlatform.set(row.platform, row);
-    }
-    return [...byPlatform.values()];
-  } catch (error) {
-    console.warn('[demographics] token load failed', error);
-    return [];
-  }
+  const rows = await loadWorkspaceSocialTokens({
+    userId,
+    workspaceId,
+    platforms: ['instagram', 'facebook', 'youtube', 'pinterest', 'tiktok'],
+  });
+  return rows.map((row) => ({
+    platform: row.platform,
+    platform_user_id: row.platform_user_id,
+    access_token: row.access_token,
+    refresh_token: row.refresh_token,
+    handle: row.handle,
+    page_id: row.page_id,
+    followers_count: row.followers_count,
+  }));
 }
 
 // ---------------------------------------------------------------------------
