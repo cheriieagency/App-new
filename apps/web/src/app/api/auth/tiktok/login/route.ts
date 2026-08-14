@@ -1,6 +1,6 @@
 /**
  * GET /api/auth/tiktok/login?workspaceId=…&force=true
- * Starts TikTok OAuth 2.0 bound to the active workspace.
+ * Starts TikTok OAuth 2.0 bound to the active workspace (PKCE S256).
  *
  * Query flags that force account re-selection / consent:
  *   - force=true
@@ -12,8 +12,10 @@ import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { missingEnvKeys, missingEnvResponse, tiktokEnv } from '@/lib/config/env';
 import {
+  TIKTOK_CODE_VERIFIER_COOKIE,
   TIKTOK_OAUTH_STATE_COOKIE,
   buildTikTokLoginUrl,
+  createTikTokPkce,
 } from '@/lib/tiktok/oauth';
 import {
   ACTIVE_WORKSPACE_COOKIE,
@@ -56,11 +58,15 @@ export async function GET(request: Request) {
 
   // CSRF nonce + workspace binding embedded in OAuth state.
   const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
+  const { codeVerifier, codeChallenge } = createTikTokPkce();
   const origin = url.origin;
 
   let loginUrl: string;
   try {
-    loginUrl = buildTikTokLoginUrl(state, origin, { forceSelectAccount: true });
+    loginUrl = buildTikTokLoginUrl(state, origin, {
+      forceSelectAccount: true,
+      codeChallenge,
+    });
   } catch (error) {
     console.error('[tiktok/login]', error);
     const dest = new URL('/admin/settings/socials', request.url);
@@ -70,6 +76,14 @@ export async function GET(request: Request) {
 
   const res = NextResponse.redirect(loginUrl);
   res.cookies.set(TIKTOK_OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 60 * 10,
+  });
+  // PKCE verifier — required on token exchange in the callback.
+  res.cookies.set(TIKTOK_CODE_VERIFIER_COOKIE, codeVerifier, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

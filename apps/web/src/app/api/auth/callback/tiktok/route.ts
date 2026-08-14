@@ -1,12 +1,13 @@
 /**
  * GET /api/auth/callback/tiktok
- * TikTok OAuth callback → social_accounts (workspace-bound) → redirect.
+ * TikTok OAuth callback → exchange code + PKCE verifier → social_accounts → redirect.
  */
 
 import { NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import {
+  TIKTOK_CODE_VERIFIER_COOKIE,
   TIKTOK_OAUTH_STATE_COOKIE,
   exchangeTikTokCode,
   fetchTikTokUserInfo,
@@ -15,14 +16,16 @@ import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
 
-function clearState(res: NextResponse) {
-  res.cookies.set(TIKTOK_OAUTH_STATE_COOKIE, '', {
+function clearOAuthCookies(res: NextResponse) {
+  const clear = {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 0,
-  });
+  };
+  res.cookies.set(TIKTOK_OAUTH_STATE_COOKIE, '', clear);
+  res.cookies.set(TIKTOK_CODE_VERIFIER_COOKIE, '', clear);
 }
 
 export async function GET(request: Request) {
@@ -36,7 +39,7 @@ export async function GET(request: Request) {
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('error', reason);
     const res = NextResponse.redirect(dest);
-    clearState(res);
+    clearOAuthCookies(res);
     return res;
   };
 
@@ -46,6 +49,9 @@ export async function GET(request: Request) {
   const jar = await cookies();
   const expected = jar.get(TIKTOK_OAUTH_STATE_COOKIE)?.value;
   if (!state || !expected || state !== expected) return fail('invalid_state');
+
+  const codeVerifier = jar.get(TIKTOK_CODE_VERIFIER_COOKIE)?.value?.trim();
+  if (!codeVerifier) return fail('missing_code_verifier');
 
   const workspaceId = resolveOAuthWorkspaceId({
     state,
@@ -69,7 +75,7 @@ export async function GET(request: Request) {
   if (!ownedWorkspaceId) return fail('workspace_create_failed');
 
   try {
-    const tokens = await exchangeTikTokCode(code, origin);
+    const tokens = await exchangeTikTokCode(code, origin, codeVerifier);
     const profile = await fetchTikTokUserInfo(tokens.access_token);
     const openId = profile.open_id || tokens.open_id;
     if (!openId) return fail('tiktok_missing_open_id');
@@ -95,7 +101,7 @@ export async function GET(request: Request) {
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', 'tiktok_connected');
     const res = NextResponse.redirect(dest);
-    clearState(res);
+    clearOAuthCookies(res);
     return res;
   } catch (error) {
     console.error('[tiktok/callback]', error);
