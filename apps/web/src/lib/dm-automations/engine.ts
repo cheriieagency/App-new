@@ -292,10 +292,10 @@ export async function processCommentAutomationEvent(
   }
 
   const token = account.pageAccessToken || account.accessToken;
-  // Prefer IG user id for /{ig-user-id}/messages private replies.
+  // Private Reply MUST use Facebook Page id first (IG id → Meta Error #3).
   const endpointCandidates = [
-    account.igUserId,
     account.pageId,
+    account.igUserId,
   ].filter((v): v is string => Boolean(v && String(v).trim()));
 
   let dmMessageId: string | null = null;
@@ -312,6 +312,10 @@ export async function processCommentAutomationEvent(
         });
         dmMessageId = priv.id;
         lastPrivError = null;
+        console.log('[dm-automations] Private Reply OK', {
+          endpointId,
+          usedPageId: endpointId === account.pageId,
+        });
         break;
       } catch (privErr) {
         lastPrivError = privErr;

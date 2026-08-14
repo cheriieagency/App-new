@@ -1140,18 +1140,21 @@ export async function sendInstagramDm(input: {
 
 /**
  * Private Reply to an Instagram comment → opens a DM thread (Comment-to-DM).
- * CRITICAL: recipient MUST be `{ comment_id }` (not user id) to bypass the 24h window.
- * Uses Graph API v21.0 as required for Instagram messaging private replies.
+ * CRITICAL:
+ * - recipient MUST be `{ comment_id }` (not user id) to bypass the 24h window.
+ * - Target MUST be the Facebook Page id (`/{page-id}/messages`) with a Page Access Token.
+ *   Using Instagram Business Account id → Meta Error #3.
  */
 export async function sendInstagramPrivateReply(input: {
-  /** Instagram Business Account id (preferred) or linked Page id. */
+  /** Facebook Page id (required for Private Reply). */
   igOrPageId: string;
   accessToken: string;
   commentId: string;
   message: string;
 }): Promise<{ id: string }> {
+  const targetId = String(input.igOrPageId || '').trim();
   const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
-    input.igOrPageId
+    targetId
   )}/messages`;
 
   const dispatchPayload = {

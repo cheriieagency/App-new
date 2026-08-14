@@ -178,6 +178,8 @@ export type LivePrivateReplyResult = {
   httpStatus: number;
   ok: boolean;
   endpoint: string;
+  /** Messaging target — Facebook Page id (required for Private Reply). */
+  pageId: string;
   igUserId: string;
   liveCommentId: string;
   payload: ReturnType<typeof buildPrivateReplyPayload>;
@@ -204,17 +206,30 @@ export function isValidInstagramCommentId(raw: unknown): boolean {
 const INVALID_COMMENT_ID_MESSAGE =
   'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.';
 
+/**
+ * Comment-to-DM Private Reply MUST hit the Facebook Page messages edge
+ * with a Page Access Token. Posting to /{igUserId}/messages → Meta Error #3.
+ */
 async function sendLivePrivateReply(input: {
-  igUserId: string;
-  accessToken: string;
+  pageId: string;
+  pageAccessToken: string;
+  igUserId?: string;
   liveCommentId: string;
   messageText: string;
 }): Promise<LivePrivateReplyResult> {
+  const pageId = String(input.pageId || '').trim();
+  const pageAccessToken = String(input.pageAccessToken || '').trim();
   const igUserId = String(input.igUserId || '').trim();
   const liveCommentId = String(input.liveCommentId || '').trim();
   const messageText =
-    String(input.messageText || '').trim() || 'Test automation reply';
-  const endpoint = `${GRAPH_BASE}/${encodeURIComponent(igUserId || 'unknown')}/messages`;
+    String(input.messageText || '').trim() ||
+    'Hej! Tack för din kommentar på Clikd.';
+
+  // Prefer /{page-id}/messages; fall back to /me/messages with Page token.
+  const endpoint = pageId
+    ? `${GRAPH_BASE}/${encodeURIComponent(pageId)}/messages`
+    : `${GRAPH_BASE}/me/messages`;
+
   const payload = buildPrivateReplyPayload(
     isValidInstagramCommentId(liveCommentId) ? liveCommentId : 'INVALID',
     messageText
@@ -226,6 +241,7 @@ async function sendLivePrivateReply(input: {
       httpStatus,
       ok: false,
       endpoint,
+      pageId,
       igUserId,
       liveCommentId,
       payload,
@@ -238,18 +254,24 @@ async function sendLivePrivateReply(input: {
   if (!isValidInstagramCommentId(liveCommentId)) {
     return empty(400, INVALID_COMMENT_ID_MESSAGE);
   }
-  if (!igUserId) {
-    return empty(400, 'Missing Instagram Business Account id for /messages');
+  if (!pageId) {
+    return empty(
+      400,
+      'Missing Facebook Page ID for Private Reply. Reconnect Instagram with a linked Facebook Page.'
+    );
   }
-  if (!input.accessToken?.trim()) {
-    return empty(403, 'Missing access token for Private Reply');
+  if (!pageAccessToken) {
+    return empty(
+      403,
+      'Missing Page Access Token for Private Reply. Reconnect Instagram / Facebook Page in Settings → Socials.'
+    );
   }
 
   try {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${input.accessToken}`,
+        Authorization: `Bearer ${pageAccessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -274,16 +296,30 @@ async function sendLivePrivateReply(input: {
       null;
     const ok = res.ok && Boolean(messageId) && !err;
 
+    console.log('[test-live] Private Reply dispatch', {
+      endpoint,
+      pageId,
+      igUserId: igUserId || null,
+      httpStatus: res.status,
+      ok,
+      errorCode: err?.code ?? null,
+    });
+
     return {
       attempted: true,
       httpStatus: res.status,
       ok,
       endpoint,
+      pageId,
       igUserId,
       liveCommentId,
       payload,
       metaResponse,
-      metaError: err?.message ? String(err.message) : ok ? null : `HTTP ${res.status}`,
+      metaError: err?.message
+        ? String(err.message)
+        : ok
+          ? null
+          : `HTTP ${res.status}`,
       metaErrorCode: typeof err?.code === 'number' ? err.code : null,
       statusLabel: httpStatusLabel(res.status),
     };
@@ -345,24 +381,40 @@ async function loadConnectedIgAccount(input: {
     );
     if (!ig) return null;
 
-    const meta =
+    const igMeta =
       ig.meta && typeof ig.meta === 'object'
         ? (ig.meta as Record<string, unknown>)
         : {};
+    const fbMeta =
+      fb?.meta && typeof fb.meta === 'object'
+        ? (fb.meta as Record<string, unknown>)
+        : {};
+
+    // Page Access Token: FB meta → IG meta → FB row token (never prefer IG user token).
     const pageTok =
-      (typeof meta.page_access_token === 'string' &&
-        meta.page_access_token.trim()) ||
-      String(fb?.access_token || '').trim() ||
-      String(ig.access_token || '').trim();
+      (typeof fbMeta.page_access_token === 'string' &&
+        fbMeta.page_access_token.trim()) ||
+      (typeof igMeta.page_access_token === 'string' &&
+        igMeta.page_access_token.trim()) ||
+      (fb ? String(fb.access_token || '').trim() : '') ||
+      '';
+
+    const pageId =
+      String(ig.page_id || '').trim() ||
+      (typeof igMeta.page_id === 'string' ? igMeta.page_id.trim() : '') ||
+      String(fb?.page_id || '').trim() ||
+      (fb && String(fb.platform || '').toLowerCase() === 'facebook'
+        ? String(fb.platform_user_id || '').trim()
+        : '') ||
+      (typeof fbMeta.page_id === 'string' ? fbMeta.page_id.trim() : '') ||
+      null;
 
     return {
       igUserId: String(ig.platform_user_id || '').trim(),
       accessToken: String(ig.access_token || '').trim(),
       pageAccessToken: pageTok,
       handle: ig.handle != null ? String(ig.handle) : null,
-      pageId:
-        String(ig.page_id || fb?.page_id || fb?.platform_user_id || '').trim() ||
-        null,
+      pageId,
     };
   } catch (error) {
     console.warn('[automations/test-live] loadConnectedIgAccount', error);
@@ -867,19 +919,31 @@ async function runLiveDiagnostic(
   const pageIdFromIg = String(ig.page_id || '').trim();
   const pageIdFromFb = String(fbPage?.page_id || fbPage?.platform_user_id || '').trim();
   const pageAccessTokenFromMeta = (() => {
-    const meta =
+    const igMeta =
       ig.meta && typeof ig.meta === 'object'
         ? (ig.meta as Record<string, unknown>)
         : {};
-    if (
-      typeof meta.page_access_token === 'string' &&
-      meta.page_access_token.trim()
-    ) {
-      return meta.page_access_token.trim();
-    }
-    return String(fbPage?.access_token || '').trim() || accessToken;
+    const fbMeta =
+      fbPage?.meta && typeof fbPage.meta === 'object'
+        ? (fbPage.meta as Record<string, unknown>)
+        : {};
+    // Prefer Page token from Facebook row / meta — never IG user token for Private Reply.
+    return (
+      (typeof fbMeta.page_access_token === 'string' &&
+        fbMeta.page_access_token.trim()) ||
+      (typeof igMeta.page_access_token === 'string' &&
+        igMeta.page_access_token.trim()) ||
+      (fbPage ? String(fbPage.access_token || '').trim() : '') ||
+      ''
+    );
   })();
-  const pageId = pageIdFromIg || pageIdFromFb;
+  const pageId =
+    pageIdFromIg ||
+    (typeof (ig.meta as Record<string, unknown> | undefined)?.page_id ===
+    'string'
+      ? String((ig.meta as Record<string, unknown>).page_id).trim()
+      : '') ||
+    pageIdFromFb;
 
   steps.push(
     step({
@@ -1104,7 +1168,7 @@ async function runLiveDiagnostic(
 
   // ── STEP 5: Private reply payload formatting ────────────────────────────
   diagnosePayload(steps, suggestions, {
-    igOrPageId: igUserId || pageId,
+    igOrPageId: pageId || igUserId,
   });
 
   // ── STEP 6 (optional): Live Private Reply with real comment_id ──────────
@@ -1123,8 +1187,9 @@ async function runLiveDiagnostic(
         attempted: true,
         httpStatus: 400,
         ok: false,
-        endpoint: `${GRAPH_BASE}/{igUserId}/messages`,
-        igUserId: igUserId || pageId || '',
+        endpoint: `${GRAPH_BASE}/{page-id}/messages`,
+        pageId: pageId || '',
+        igUserId: igUserId || '',
         liveCommentId,
         payload: buildPrivateReplyPayload('INVALID', liveMessageText),
         metaResponse: {
@@ -1154,51 +1219,138 @@ async function runLiveDiagnostic(
         })
       );
       suggestions.push(INVALID_COMMENT_ID_MESSAGE);
-    } else {
-      const messagingIgId = igUserId || pageId;
-      const replyToken = pageAccessTokenFromMeta || accessToken;
-      livePrivateReply = await sendLivePrivateReply({
-        igUserId: messagingIgId,
-        accessToken: replyToken,
+    } else if (!pageId) {
+      livePrivateReply = {
+        attempted: true,
+        httpStatus: 400,
+        ok: false,
+        endpoint: `${GRAPH_BASE}/{page-id}/messages`,
+        pageId: '',
+        igUserId: igUserId || '',
         liveCommentId,
-        messageText: liveMessageText,
-      });
-
+        payload: buildPrivateReplyPayload(liveCommentId, liveMessageText),
+        metaResponse: {
+          error: {
+            message:
+              'Missing Facebook Page ID — Private Reply requires /{page-id}/messages (not IG id).',
+            code: 3,
+          },
+        },
+        metaError:
+          'Missing Facebook Page ID — reconnect Instagram with a linked Facebook Page.',
+        metaErrorCode: 3,
+        statusLabel: '400',
+      };
       steps.push(
         step({
           step: 'LIVE_PRIVATE_REPLY',
           label: 'Live Private Reply Graph Dispatch',
-          success: livePrivateReply.ok,
-          message: livePrivateReply.ok
-            ? `Private Reply sent — HTTP ${livePrivateReply.statusLabel}`
-            : `Private Reply failed — HTTP ${livePrivateReply.statusLabel}`,
+          success: false,
+          message:
+            'Missing Facebook Page ID. Private Reply must use POST /{page-id}/messages with a Page Access Token.',
           metaError: livePrivateReply.metaError,
-          fix: livePrivateReply.ok
-            ? undefined
-            : livePrivateReply.httpStatus === 403
-              ? 'Token lacks messaging permission or Page token required — reconnect Instagram / use Re-sync Meta Webhooks.'
-              : livePrivateReply.httpStatus === 400
-                ? 'Comment id invalid/expired (Private Reply window is short) — paste a fresh Instagram comment id.'
-                : 'Check Meta error payload below and reconnect if needed.',
+          fix: 'Reconnect Instagram in Settings → Socials and ensure a Facebook Page is linked.',
           details: {
-            httpStatus: livePrivateReply.httpStatus,
-            statusLabel: livePrivateReply.statusLabel,
-            endpoint: livePrivateReply.endpoint,
-            payload: livePrivateReply.payload,
-            metaResponse: livePrivateReply.metaResponse,
-            metaErrorCode: livePrivateReply.metaErrorCode,
-            matchedRuleId: resolvedMsg.matchedRuleId,
-            matchedKeyword: resolvedMsg.matchedKeyword,
-            dispatched: true,
+            igUserId,
+            pageId: null,
+            dispatched: false,
           },
         })
       );
-
-      if (!livePrivateReply.ok) {
-        suggestions.push(
-          livePrivateReply.metaError ||
-            `Live Private Reply returned HTTP ${livePrivateReply.statusLabel}`
+      suggestions.push(
+        'Reconnect Instagram with a linked Facebook Page so page_id + page_access_token are stored.'
+      );
+    } else {
+      const replyToken = pageAccessTokenFromMeta;
+      if (!replyToken) {
+        livePrivateReply = {
+          attempted: true,
+          httpStatus: 403,
+          ok: false,
+          endpoint: `${GRAPH_BASE}/${encodeURIComponent(pageId)}/messages`,
+          pageId,
+          igUserId: igUserId || '',
+          liveCommentId,
+          payload: buildPrivateReplyPayload(liveCommentId, liveMessageText),
+          metaResponse: {
+            error: {
+              message:
+                'Missing Page Access Token — Private Reply cannot use IG user token (Error #3).',
+              code: 3,
+            },
+          },
+          metaError:
+            'Missing Page Access Token. Reconnect Facebook Page / Instagram in Settings → Socials.',
+          metaErrorCode: 3,
+          statusLabel: '403',
+        };
+        steps.push(
+          step({
+            step: 'LIVE_PRIVATE_REPLY',
+            label: 'Live Private Reply Graph Dispatch',
+            success: false,
+            message: livePrivateReply.metaError || 'Missing Page Access Token',
+            metaError: livePrivateReply.metaError,
+            fix: 'Reconnect Instagram with a linked Facebook Page so page_access_token is stored, then retry.',
+            details: {
+              pageId,
+              igUserId,
+              endpoint: livePrivateReply.endpoint,
+              dispatched: false,
+            },
+          })
         );
+        suggestions.push(
+          'Store a Page Access Token (Settings → Socials reconnect) before live Private Reply.'
+        );
+      } else {
+        livePrivateReply = await sendLivePrivateReply({
+          pageId,
+          pageAccessToken: replyToken,
+          igUserId,
+          liveCommentId,
+          messageText: liveMessageText,
+        });
+
+        steps.push(
+          step({
+            step: 'LIVE_PRIVATE_REPLY',
+            label: 'Live Private Reply Graph Dispatch',
+            success: livePrivateReply.ok,
+            message: livePrivateReply.ok
+              ? `Private Reply sent via Page ${pageId} — HTTP ${livePrivateReply.statusLabel}`
+              : `Private Reply failed via Page ${pageId} — HTTP ${livePrivateReply.statusLabel}`,
+            metaError: livePrivateReply.metaError,
+            fix: livePrivateReply.ok
+              ? undefined
+              : livePrivateReply.metaErrorCode === 3 ||
+                  livePrivateReply.httpStatus === 403
+                ? 'Error #3 / 403: must use Facebook Page ID + Page Access Token (not IG user token). Reconnect Page / Re-sync Meta Webhooks.'
+                : livePrivateReply.httpStatus === 400
+                  ? 'Comment id invalid/expired (Private Reply window is short) — pick a fresh comment.'
+                  : 'Check Meta error payload below and reconnect if needed.',
+            details: {
+              httpStatus: livePrivateReply.httpStatus,
+              statusLabel: livePrivateReply.statusLabel,
+              endpoint: livePrivateReply.endpoint,
+              pageId: livePrivateReply.pageId,
+              igUserId: livePrivateReply.igUserId,
+              payload: livePrivateReply.payload,
+              metaResponse: livePrivateReply.metaResponse,
+              metaErrorCode: livePrivateReply.metaErrorCode,
+              matchedRuleId: resolvedMsg.matchedRuleId,
+              matchedKeyword: resolvedMsg.matchedKeyword,
+              dispatched: true,
+            },
+          })
+        );
+
+        if (!livePrivateReply.ok) {
+          suggestions.push(
+            livePrivateReply.metaError ||
+              `Live Private Reply returned HTTP ${livePrivateReply.statusLabel}`
+          );
+        }
       }
     }
   }

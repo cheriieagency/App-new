@@ -32,7 +32,7 @@ type SocialAccountRow = {
   page_id: string | null;
   /** Page Access Token used for Graph Private Reply. */
   access_token: string;
-  /** Instagram Business Account id for POST /{igUserId}/messages. */
+  /** Instagram Business Account id (media/comments lookups). */
   ig_user_id: string | null;
 };
 
@@ -173,14 +173,33 @@ async function lookupSocialAccount(
     if (!account) return null;
 
     // Always prefer Page Access Token from FB sibling when IG lacks meta.page_access_token.
+    // Also fill page_id from the Facebook Page row (required for /{page-id}/messages).
     const fbMapped = fbSibling ? mapRow(fbSibling) : null;
-    if (fbMapped?.access_token) {
+    if (fbMapped) {
       const igMetaTok = String(
         ((igSibling?.meta as Record<string, unknown> | undefined)
           ?.page_access_token as string) || ''
       ).trim();
-      if (!igMetaTok) {
+      if (!igMetaTok && fbMapped.access_token) {
         account = { ...account, access_token: fbMapped.access_token };
+      }
+      if (!account.page_id) {
+        const fbPageId =
+          fbMapped.page_id ||
+          (fbMapped.platform === 'facebook'
+            ? fbMapped.platform_user_id
+            : null);
+        if (fbPageId) {
+          account = { ...account, page_id: fbPageId };
+        }
+      }
+    }
+
+    // meta.page_id fallback on the IG row itself
+    if (!account.page_id && igSibling?.meta && typeof igSibling.meta === 'object') {
+      const metaPage = (igSibling.meta as Record<string, unknown>).page_id;
+      if (typeof metaPage === 'string' && metaPage.trim()) {
+        account = { ...account, page_id: metaPage.trim() };
       }
     }
 
@@ -623,38 +642,26 @@ export async function POST(request: Request) {
       return ok();
     }
 
-    // Private Reply: POST /{igUserId}/messages with Page Access Token.
-    // Payload must be recipient.comment_id + message.text only.
+    // Private Reply MUST use Facebook Page ID + Page Access Token.
+    // POST /{igUserId}/messages with a user token → Meta Error #3.
     const igUserId =
       account.ig_user_id ||
       (account.platform === 'instagram' ? account.platform_user_id : '') ||
       (String(entryId).startsWith('1784') ? entryId : '');
 
-    if (!igUserId) {
-      console.warn(
-        '[Meta Webhook] No Instagram Business ID for Private Reply',
-        { entryId, workspace: account.workspace_id }
-      );
-      await insertDmLog({
-        workspaceId: account.workspace_id,
-        automationId: matchedRule.id,
-        commentId,
-        mediaId,
-        commenterId: commenterId || 'unknown',
-        commenterUsername,
-        commentText,
-        matchedKeyword,
-        status: 'failed',
-        errorMessage: 'missing_instagram_business_id',
-      });
-      return ok();
-    }
+    const pageId =
+      String(account.page_id || '').trim() ||
+      (account.platform === 'facebook'
+        ? String(account.platform_user_id || '').trim()
+        : '') ||
+      (!String(entryId).startsWith('1784') ? String(entryId).trim() : '');
 
     const pageAccessToken = await resolvePageAccessToken(account);
     if (!pageAccessToken) {
       console.warn('[Meta Webhook] Missing Page Access Token for Private Reply', {
         workspace: account.workspace_id,
         igUserId,
+        pageId: pageId || null,
       });
       await insertDmLog({
         workspaceId: account.workspace_id,
@@ -671,8 +678,28 @@ export async function POST(request: Request) {
       return ok();
     }
 
+    if (!pageId) {
+      console.warn(
+        '[Meta Webhook] Missing Facebook Page ID for Private Reply',
+        { entryId, workspace: account.workspace_id, igUserId }
+      );
+      await insertDmLog({
+        workspaceId: account.workspace_id,
+        automationId: matchedRule.id,
+        commentId,
+        mediaId,
+        commenterId: commenterId || 'unknown',
+        commenterUsername,
+        commentText,
+        matchedKeyword,
+        status: 'failed',
+        errorMessage: 'missing_facebook_page_id',
+      });
+      return ok();
+    }
+
     const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
-      igUserId
+      pageId
     )}/messages`;
     const dispatchPayload = {
       recipient: {
@@ -701,7 +728,9 @@ export async function POST(request: Request) {
         error?: { message?: string; code?: number };
       };
       console.log('[Meta Private Reply Result]', {
-        igUserId,
+        endpoint: messagingUrl,
+        pageId,
+        igUserId: igUserId || null,
         status: graphRes.status,
         data: graphData,
         tokenSource: 'page_access_token',
@@ -719,7 +748,7 @@ export async function POST(request: Request) {
         fetchErr instanceof Error
           ? fetchErr.message
           : 'private_reply_network_error';
-      console.warn('[Meta Private Reply network]', igUserId, lastGraphError);
+      console.warn('[Meta Private Reply network]', pageId, lastGraphError);
     }
 
     // Optional public comment reply

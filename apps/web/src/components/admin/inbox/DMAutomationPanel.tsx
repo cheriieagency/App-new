@@ -72,6 +72,7 @@ type LivePrivateReplyResult = {
   httpStatus?: number;
   ok?: boolean;
   endpoint?: string;
+  pageId?: string;
   igUserId?: string;
   liveCommentId?: string;
   payload?: unknown;
@@ -1036,11 +1037,19 @@ export default function DMAutomationPanel() {
                 <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
                   Live Private Reply Result
                 </p>
-                <p className="text-sm font-extrabold text-slate-900 mt-1">
-                  {liveDiagnostic.livePrivateReply.ok ? '✓' : '✗'} HTTP{' '}
-                  {liveDiagnostic.livePrivateReply.statusLabel ||
-                    liveDiagnostic.livePrivateReply.httpStatus}
-                </p>
+                  <p className="text-sm font-extrabold text-slate-900 mt-1">
+                    {liveDiagnostic.livePrivateReply.ok ? '✓' : '✗'} HTTP{' '}
+                    {liveDiagnostic.livePrivateReply.statusLabel ||
+                      liveDiagnostic.livePrivateReply.httpStatus}
+                  </p>
+                  {liveDiagnostic.livePrivateReply.endpoint ? (
+                    <p className="text-[11px] font-mono text-slate-600 mt-1 break-all">
+                      Endpoint: {liveDiagnostic.livePrivateReply.endpoint}
+                      {liveDiagnostic.livePrivateReply.pageId
+                        ? ` · page_id=${liveDiagnostic.livePrivateReply.pageId}`
+                        : ''}
+                    </p>
+                  ) : null}
                 {liveDiagnostic.livePrivateReply.metaError ? (
                   <p className="text-xs text-rose-700 mt-1 font-mono break-words">
                     Meta: {liveDiagnostic.livePrivateReply.metaError}
