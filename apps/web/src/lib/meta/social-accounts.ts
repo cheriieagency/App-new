@@ -229,6 +229,8 @@ export async function upsertMetaSocialAccounts(input: {
         meta: {
           ...(page.category ? { category: page.category } : {}),
           token_source: 'page',
+          page_access_token: pageAccessToken,
+          page_id: page.id,
         },
       });
       console.log(
@@ -314,6 +316,9 @@ export async function upsertMetaSocialAccounts(input: {
         media_count: ig.media_count ?? null,
         followers_count: ig.followers_count ?? null,
         token_source: pageAccessToken ? 'page' : 'user_long_lived',
+        page_access_token: pageAccessToken || null,
+        page_id:
+          page && !String(page.id).startsWith('user-') ? page.id : null,
       },
     });
     rows.push({

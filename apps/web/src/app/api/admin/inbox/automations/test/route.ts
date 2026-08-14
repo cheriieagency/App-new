@@ -115,110 +115,181 @@ export async function POST(request: Request) {
       console.warn('[automations/test] schema ensure', schemaErr);
     }
 
-    // (Re)subscribe — STRICT field split: IG vs Facebook Page (Graph Error #100).
+    // (Re)subscribe — Page Access Token + STRICT IG/Page field split.
+    // Graph Error #3 = wrong token type (User instead of Page) → fallback.
     const subscribeDetails: Array<{
       platform: string;
       targetId: string;
       fields?: string;
       ok: boolean;
       error?: string;
+      usedFallback?: boolean;
     }> = [];
     try {
+      const {
+        subscribeWithPageTokenFallback,
+        fetchPageAccessTokensFromUserToken,
+        isInstagramAccountId,
+      } = await import('@/lib/meta/subscribe-webhooks');
+
       const metaAccounts = await sql`
-        SELECT platform, platform_user_id, page_id, access_token
+        SELECT platform, platform_user_id, page_id, access_token, meta
         FROM public.social_accounts
         WHERE workspace_id = ${workspaceId}
           AND platform IN ('instagram', 'facebook')
           AND access_token IS NOT NULL
           AND access_token <> ''
       `;
-      for (const row of Array.isArray(metaAccounts) ? metaAccounts : []) {
+      const rows = Array.isArray(metaAccounts) ? metaAccounts : [];
+
+      // Workspace primary Page Access Token (Facebook row or meta.page_access_token).
+      let primaryPageToken = '';
+      let primaryPageId = '';
+      for (const row of rows) {
+        const meta =
+          row.meta && typeof row.meta === 'object'
+            ? (row.meta as Record<string, unknown>)
+            : {};
+        const pageTok =
+          (typeof meta.page_access_token === 'string' &&
+            meta.page_access_token.trim()) ||
+          (row.platform === 'facebook' ? String(row.access_token || '') : '');
+        if (pageTok && !primaryPageToken) {
+          primaryPageToken = pageTok;
+          primaryPageId = String(row.page_id || row.platform_user_id || '');
+        }
+      }
+
+      // If we only have a user-looking token, refresh Page tokens via /me/accounts.
+      const maybeUserToken = String(
+        rows.find((r) => {
+          const meta =
+            r.meta && typeof r.meta === 'object'
+              ? (r.meta as Record<string, unknown>)
+              : {};
+          return meta.token_source === 'user_long_lived';
+        })?.access_token || ''
+      ).trim();
+
+      let refreshedPages: Awaited<
+        ReturnType<typeof fetchPageAccessTokensFromUserToken>
+      > = [];
+      if (maybeUserToken || (!primaryPageToken && rows[0]?.access_token)) {
+        refreshedPages = await fetchPageAccessTokensFromUserToken(
+          maybeUserToken || String(rows[0]?.access_token || '')
+        );
+        if (refreshedPages[0]?.pageAccessToken) {
+          primaryPageToken = refreshedPages[0].pageAccessToken;
+          primaryPageId = refreshedPages[0].pageId;
+        }
+      }
+
+      const pageTokenByPageId = new Map<string, string>();
+      const pageTokenByIgId = new Map<string, string>();
+      for (const p of refreshedPages) {
+        pageTokenByPageId.set(p.pageId, p.pageAccessToken);
+        if (p.igUserId) pageTokenByIgId.set(p.igUserId, p.pageAccessToken);
+      }
+      for (const row of rows) {
+        const meta =
+          row.meta && typeof row.meta === 'object'
+            ? (row.meta as Record<string, unknown>)
+            : {};
+        const pageId = String(row.page_id || '').trim();
+        const pageTok =
+          (typeof meta.page_access_token === 'string' &&
+            meta.page_access_token.trim()) ||
+          (row.platform === 'facebook'
+            ? String(row.access_token || '').trim()
+            : '');
+        if (pageId && pageTok) pageTokenByPageId.set(pageId, pageTok);
+        if (row.platform === 'instagram' && pageTok) {
+          pageTokenByIgId.set(String(row.platform_user_id || ''), pageTok);
+        }
+      }
+
+      for (const row of rows) {
         const platform = String(row.platform || '');
-        const token = String(row.access_token || '').trim();
         const platformUserId =
           row.platform_user_id != null
             ? String(row.platform_user_id).trim()
             : '';
-        if (!platformUserId || !token) {
+        if (!platformUserId) {
           subscribeDetails.push({
             platform,
-            targetId: platformUserId || '(missing)',
+            targetId: '(missing)',
             ok: false,
-            error: 'missing_platform_user_id_or_access_token',
+            error: 'missing_platform_user_id',
           });
           continue;
         }
 
-        const isInstagram =
-          platform === 'instagram' ||
-          String(platformUserId).startsWith('1784');
-        // STRICT: never mix Page fields with Instagram fields.
-        const subscribedFields = isInstagram
-          ? 'comments,messages,mentions'
-          : 'feed,messages,messaging_postbacks';
+        const isIg = isInstagramAccountId(platform, platformUserId);
+        const pageId = String(row.page_id || '').trim();
+        const meta =
+          row.meta && typeof row.meta === 'object'
+            ? (row.meta as Record<string, unknown>)
+            : {};
 
-        const subUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
-          platformUserId
-        )}/subscribed_apps?subscribed_fields=${encodeURIComponent(
-          subscribedFields
-        )}&access_token=${encodeURIComponent(token)}`;
+        // Prefer Page Access Token — never use a bare User token when a Page token exists.
+        const pageAccessToken =
+          pageTokenByIgId.get(platformUserId) ||
+          (pageId ? pageTokenByPageId.get(pageId) : undefined) ||
+          (typeof meta.page_access_token === 'string'
+            ? meta.page_access_token.trim()
+            : '') ||
+          (platform === 'facebook' ? String(row.access_token || '').trim() : '') ||
+          primaryPageToken;
 
-        try {
-          const res = await fetch(subUrl, { method: 'POST' });
-          const data = (await res.json().catch(() => ({}))) as {
-            success?: boolean;
-            error?: { message?: string; code?: number };
-          };
-          console.log(
-            '[automations/test] subscribed_apps',
-            {
-              platform,
-              platformUserId,
-              isInstagram,
-              subscribedFields,
-              status: res.status,
-              data,
-            }
-          );
-
-          if (!res.ok || data.error) {
-            const message =
-              data.error?.message ||
-              `subscribed_apps failed (${res.status})`;
-            subscribeDetails.push({
-              platform: isInstagram ? 'instagram' : 'facebook',
-              targetId: platformUserId,
-              fields: subscribedFields,
-              ok: false,
-              error: message,
-            });
-          } else {
-            subscribeDetails.push({
-              platform: isInstagram ? 'instagram' : 'facebook',
-              targetId: platformUserId,
-              fields: subscribedFields,
-              ok: true,
-            });
-          }
-        } catch (fetchErr) {
-          const message =
-            fetchErr instanceof Error
-              ? fetchErr.message
-              : 'subscribed_apps_network_error';
-          console.warn(
-            '[automations/test] subscribed_apps network',
-            platformUserId,
-            message
-          );
+        if (!pageAccessToken) {
           subscribeDetails.push({
-            platform: isInstagram ? 'instagram' : 'facebook',
+            platform: isIg ? 'instagram' : 'facebook',
             targetId: platformUserId,
-            fields: subscribedFields,
             ok: false,
-            error: message,
+            error:
+              'missing_page_access_token — reconnect Meta so /me/accounts returns page.access_token',
+          });
+          continue;
+        }
+
+        // For Instagram: subscribe IG id with comments,messages,mentions
+        // For Facebook: subscribe Page id with feed,messages,messaging_postbacks
+        const result = await subscribeWithPageTokenFallback({
+          targetId: platformUserId,
+          platform: isIg ? 'instagram' : 'facebook',
+          pageAccessToken,
+          fallbackPageAccessToken: primaryPageToken || pageAccessToken,
+        });
+        subscribeDetails.push({
+          platform: isIg ? 'instagram' : 'facebook',
+          targetId: result.targetId,
+          fields: result.fields,
+          ok: result.ok,
+          error: result.error,
+          usedFallback: result.usedFallback,
+        });
+
+        // Instagram rows: also subscribe linked Page id (Page fields) when present.
+        if (isIg && pageId && pageId !== platformUserId) {
+          const pageResult = await subscribeWithPageTokenFallback({
+            targetId: pageId,
+            platform: 'facebook',
+            pageAccessToken:
+              pageTokenByPageId.get(pageId) || pageAccessToken,
+            fallbackPageAccessToken: primaryPageToken || pageAccessToken,
+          });
+          subscribeDetails.push({
+            platform: 'facebook',
+            targetId: pageResult.targetId,
+            fields: pageResult.fields,
+            ok: pageResult.ok,
+            error: pageResult.error,
+            usedFallback: pageResult.usedFallback,
           });
         }
       }
+
+      void primaryPageId;
     } catch (subErr) {
       console.warn('[automations/test] subscribed_apps', subErr);
       subscribeDetails.push({
@@ -265,7 +336,8 @@ export async function POST(request: Request) {
                 'Comment a trigger keyword on a post to test live Comment-to-DM.',
               ]
             : [
-                'Reconnect Instagram + Facebook Page (consent will re-request pages_manage_metadata), then retry Re-sync Meta Webhooks.',
+                'Reconnect Instagram + Facebook Page so /me/accounts returns a Page Access Token (fixes Graph Error #3).',
+                'Grant pages_manage_metadata, then retry Re-sync Meta Webhooks.',
               ],
       });
     }
