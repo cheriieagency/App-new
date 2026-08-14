@@ -124,15 +124,26 @@ function aggregateFromPosts(posts: UnifiedPostMetric[]): HashtagAnalyticsResult 
   };
 }
 
-/** Live hashtag analytics for the active workspace. */
+/** Live hashtag analytics for the active workspace (optional date window). */
 export async function fetchHashtagAnalytics(input: {
   userId: string;
   workspaceId: string;
+  from?: string | null;
+  to?: string | null;
 }): Promise<HashtagAnalyticsResult> {
   const { posts } = await fetchLiveUnifiedPosts({
     userId: input.userId,
     workspaceId: input.workspaceId,
     sort: 'publishedAt',
   });
-  return aggregateFromPosts(posts);
+  const from = String(input.from || '').slice(0, 10);
+  const to = String(input.to || '').slice(0, 10);
+  const ranged =
+    /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)
+      ? posts.filter((p) => {
+          const day = String(p.publishedAt || '').slice(0, 10);
+          return day >= from && day <= to;
+        })
+      : posts;
+  return aggregateFromPosts(ranged);
 }

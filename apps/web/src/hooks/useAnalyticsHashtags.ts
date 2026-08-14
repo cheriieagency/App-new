@@ -13,6 +13,8 @@ export type AnalyticsHashtagsResponse = {
   kpis?: HashtagKpis;
   hashtags?: HashtagStat[];
   message?: string | null;
+  from?: string | null;
+  to?: string | null;
 };
 
 function readStoredWorkspaceId(): string | null {
@@ -24,21 +26,28 @@ function readStoredWorkspaceId(): string | null {
   }
 }
 
-/** Live hashtag stats for Analytics → Hashtags. */
-export function useAnalyticsHashtags(enabled = true) {
+/** Live hashtag stats for Analytics → Hashtags (scoped to optional date range). */
+export function useAnalyticsHashtags(
+  enabled = true,
+  range?: { from?: string; to?: string }
+) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const workspace = useWorkspaceOptional();
   const workspaceId =
     workspace?.activeWorkspace?.id || readStoredWorkspaceId() || '';
+  const from = range?.from || '';
+  const to = range?.to || '';
 
   const query = useQuery({
-    queryKey: ['analytics-hashtags', workspaceId, pathname],
+    queryKey: ['analytics-hashtags', workspaceId, pathname, from, to],
     enabled: Boolean(enabled && workspaceId),
     ...LIVE_ANALYTICS_QUERY,
     queryFn: async (): Promise<AnalyticsHashtagsResponse> => {
       const url = new URL('/api/analytics/hashtags', window.location.origin);
       url.searchParams.set('workspaceId', workspaceId);
+      if (from) url.searchParams.set('from', from);
+      if (to) url.searchParams.set('to', to);
       url.searchParams.set('_', String(Date.now()));
       const res = await fetch(url.toString(), {
         credentials: 'include',
@@ -63,7 +72,7 @@ export function useAnalyticsHashtags(enabled = true) {
   useEffect(() => {
     if (!enabled || !workspaceId) return;
     void queryClient.invalidateQueries({ queryKey: ['analytics-hashtags'] });
-  }, [workspaceId, enabled, queryClient]);
+  }, [workspaceId, enabled, from, to, queryClient]);
 
   return query;
 }

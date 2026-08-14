@@ -44,14 +44,21 @@ export async function GET(request: Request) {
       });
     }
 
+    const from = url.searchParams.get('from')?.trim() || null;
+    const to = url.searchParams.get('to')?.trim() || null;
+
     const result = await fetchHashtagAnalytics({
       userId: session.user.id,
       workspaceId,
+      from,
+      to,
     });
 
     return Response.json({
       ok: true,
       workspace_id: workspaceId,
+      from,
+      to,
       kpis: result.kpis,
       hashtags: result.hashtags,
     });

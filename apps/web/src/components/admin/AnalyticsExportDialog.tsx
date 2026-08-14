@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 import {
@@ -31,6 +31,19 @@ type ExportSection = {
 };
 
 type ExportFormat = 'pdf' | 'csv';
+type ExportPreset = '1w' | '1m' | '3m' | '1y' | 'custom' | 'panel';
+
+type ExportPostRow = {
+  id: string;
+  title: string;
+  platform: string;
+  impressions: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  er: number;
+  publishedAt?: string;
+};
 
 const SECTIONS: ExportSection[] = [
   {
@@ -89,7 +102,9 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceName: string;
-  rangeLabel: string;
+  /** Panel date range — used as the default export window. */
+  defaultFrom: string;
+  defaultTo: string;
   /** Live KPI rows from the analytics panel */
   kpis: { label: string; value: string; delta: string; meta: string }[];
   topProducts: {
@@ -111,7 +126,45 @@ type Props = {
     saves: number;
     engagementRate: number;
   };
+  posts?: ExportPostRow[];
+  reels?: ExportPostRow[];
+  stories?: ExportPostRow[];
 };
+
+function toDateInputValue(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function rangeFromPreset(preset: Exclude<ExportPreset, 'custom' | 'panel'>): {
+  from: string;
+  to: string;
+} {
+  const to = new Date();
+  const from = new Date(to);
+  if (preset === '1w') from.setDate(from.getDate() - 7);
+  else if (preset === '1m') from.setMonth(from.getMonth() - 1);
+  else if (preset === '3m') from.setMonth(from.getMonth() - 3);
+  else from.setFullYear(from.getFullYear() - 1);
+  return { from: toDateInputValue(from), to: toDateInputValue(to) };
+}
+
+function formatExportRangeLabel(from: string, to: string) {
+  try {
+    const fmt = new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    return `${fmt.format(new Date(`${from}T12:00:00`))} – ${fmt.format(
+      new Date(`${to}T12:00:00`)
+    )}`;
+  } catch {
+    return `${from} – ${to}`;
+  }
+}
 
 function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
@@ -134,10 +187,14 @@ export default function AnalyticsExportDialog({
   open,
   onOpenChange,
   workspaceName,
-  rangeLabel,
+  defaultFrom,
+  defaultTo,
   kpis,
   topProducts,
   engagement,
+  posts = [],
+  reels = [],
+  stories = [],
 }: Props) {
   const { t } = useLanguage();
   const [selected, setSelected] = useState<Record<AnalyticsExportSectionId, boolean>>(() =>
@@ -148,6 +205,86 @@ export default function AnalyticsExportDialog({
   );
   const [format, setFormat] = useState<ExportFormat>('pdf');
   const [busy, setBusy] = useState(false);
+  const [preset, setPreset] = useState<ExportPreset>('panel');
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
+
+  // Reset export dates to the panel range whenever the dialog opens.
+  useEffect(() => {
+    if (!open) return;
+    setPreset('panel');
+    setFrom(defaultFrom);
+    setTo(defaultTo);
+  }, [open, defaultFrom, defaultTo]);
+
+  const rangeLabel = useMemo(
+    () => formatExportRangeLabel(from, to),
+    [from, to]
+  );
+
+  const rangedPosts = useMemo(
+    () =>
+      posts.filter((p) => {
+        const day = p.publishedAt || '';
+        return day >= from && day <= to;
+      }),
+    [posts, from, to]
+  );
+  const rangedReels = useMemo(
+    () =>
+      reels.filter((p) => {
+        const day = p.publishedAt || '';
+        return day >= from && day <= to;
+      }),
+    [reels, from, to]
+  );
+  const rangedStories = useMemo(
+    () =>
+      stories.filter((p) => {
+        const day = p.publishedAt || '';
+        return day >= from && day <= to;
+      }),
+    [stories, from, to]
+  );
+
+  const exportEngagement = useMemo(() => {
+    // When export dates match the panel, use live panel KPIs.
+    if (from === defaultFrom && to === defaultTo) return engagement;
+    // Otherwise roll up from content in the export window.
+    const rows = [...rangedPosts, ...rangedReels, ...rangedStories];
+    let likes = 0;
+    let comments = 0;
+    let shares = 0;
+    let impressions = 0;
+    for (const r of rows) {
+      likes += r.likes || 0;
+      comments += r.comments || 0;
+      shares += r.shares || 0;
+      impressions += r.impressions || 0;
+    }
+    const reach = Math.max(impressions, likes + comments + shares);
+    return {
+      ...engagement,
+      likes,
+      comments,
+      shares,
+      views: impressions,
+      reach,
+      engagementRate:
+        reach > 0
+          ? Math.round(((likes + comments + shares) / reach) * 1000) / 10
+          : 0,
+    };
+  }, [
+    from,
+    to,
+    defaultFrom,
+    defaultTo,
+    engagement,
+    rangedPosts,
+    rangedReels,
+    rangedStories,
+  ]);
 
   const selectedCount = useMemo(
     () => SECTIONS.filter((s) => selected[s.id]).length,
@@ -167,10 +304,25 @@ export default function AnalyticsExportDialog({
     );
   };
 
+  const applyPreset = (next: ExportPreset) => {
+    setPreset(next);
+    if (next === 'panel') {
+      setFrom(defaultFrom);
+      setTo(defaultTo);
+      return;
+    }
+    if (next === 'custom') return;
+    const r = rangeFromPreset(next);
+    setFrom(r.from);
+    setTo(r.to);
+  };
+
   const buildCsv = () => {
     const lines: string[] = [];
     lines.push(`Workspace,${csvEscape(workspaceName)}`);
     lines.push(`Date range,${csvEscape(rangeLabel)}`);
+    lines.push(`From,${csvEscape(from)}`);
+    lines.push(`To,${csvEscape(to)}`);
     lines.push(`Exported at,${csvEscape(new Date().toISOString())}`);
     lines.push('');
 
@@ -188,76 +340,105 @@ export default function AnalyticsExportDialog({
     if (selected.overview) {
       lines.push('Engagement Overview');
       lines.push('Metric,Value');
-      lines.push(`Reach,${engagement.reach}`);
-      lines.push(`Views,${engagement.views}`);
-      lines.push(`Followers,${engagement.followers}`);
-      lines.push(`Followers delta,${engagement.followersDelta}`);
-      lines.push(`Likes,${engagement.likes}`);
-      lines.push(`Comments,${engagement.comments}`);
-      lines.push(`Shares,${engagement.shares}`);
-      lines.push(`Saves,${engagement.saves}`);
-      lines.push(`Engagement rate %,${engagement.engagementRate}`);
+      lines.push(`Reach,${exportEngagement.reach}`);
+      lines.push(`Views,${exportEngagement.views}`);
+      lines.push(`Followers,${exportEngagement.followers}`);
+      lines.push(`Followers delta,${exportEngagement.followersDelta}`);
+      lines.push(`Likes,${exportEngagement.likes}`);
+      lines.push(`Comments,${exportEngagement.comments}`);
+      lines.push(`Shares,${exportEngagement.shares}`);
+      lines.push(`Saves,${exportEngagement.saves}`);
+      lines.push(`Engagement rate %,${exportEngagement.engagementRate}`);
       lines.push('');
     }
 
     if (selected.performance) {
       lines.push('Performance');
-      lines.push('Note,Daily revenue & visitors chart included in PDF export');
+      lines.push(
+        `Note,Daily revenue & visitors for ${rangeLabel} — open Analytics in clikd: for the interactive chart`
+      );
       lines.push('');
     }
 
     if (selected.audience) {
       lines.push('Audience');
-      lines.push('Segment,Share');
-      lines.push('Sweden,48%');
-      lines.push('Norway,18%');
-      lines.push('Denmark,14%');
-      lines.push('Finland,9%');
-      lines.push('Other,11%');
+      lines.push('Note,Demographics for the selected workspace (see Audience tab)');
       lines.push('');
     }
 
     if (selected.posts) {
       lines.push('Posts');
-      lines.push('Title,Reach,Engagement');
-      lines.push('Carousel — Niche offer,12400,6.2%');
-      lines.push('Reel hook — Soft CTA,22100,8.1%');
-      lines.push('Static tip — Checklist,8600,4.4%');
+      lines.push('Title,Platform,Reach,Likes,Comments,Shares,Engagement %');
+      for (const p of rangedPosts) {
+        lines.push(
+          [
+            p.title,
+            p.platform,
+            p.impressions,
+            p.likes,
+            p.comments,
+            p.shares,
+            `${p.er}%`,
+          ]
+            .map(csvEscape)
+            .join(',')
+        );
+      }
+      if (rangedPosts.length === 0) {
+        lines.push('No posts in this date range,,,,,');
+      }
       lines.push('');
     }
 
     if (selected.reels) {
       lines.push('Reels');
-      lines.push('Title,Views,Avg watch %');
-      lines.push('3 hooks that convert,48200,54%');
-      lines.push('Bio store walkthrough,31100,61%');
+      lines.push('Title,Platform,Views,Likes,Comments,Shares,Engagement %');
+      for (const p of rangedReels) {
+        lines.push(
+          [
+            p.title,
+            p.platform,
+            p.impressions,
+            p.likes,
+            p.comments,
+            p.shares,
+            `${p.er}%`,
+          ]
+            .map(csvEscape)
+            .join(',')
+        );
+      }
+      if (rangedReels.length === 0) {
+        lines.push('No reels in this date range,,,,,');
+      }
       lines.push('');
     }
 
     if (selected.stories) {
       lines.push('Stories');
-      lines.push('Day,Views,Replies');
-      lines.push('Mon,4200,38');
-      lines.push('Tue,5100,44');
-      lines.push('Wed,4800,41');
+      lines.push('Title,Platform,Views,Likes,Comments,Engagement %');
+      for (const p of rangedStories) {
+        lines.push(
+          [p.title, p.platform, p.impressions, p.likes, p.comments, `${p.er}%`]
+            .map(csvEscape)
+            .join(',')
+        );
+      }
+      if (rangedStories.length === 0) {
+        lines.push('No stories in this date range,,,,,');
+      }
       lines.push('');
     }
 
     if (selected.hashtags) {
       lines.push('Hashtags');
-      lines.push('Tag,Posts,Reach,ER');
-      lines.push('#contentcreator,24,41200,4.8');
-      lines.push('#instantcheckout,11,29400,5.2');
-      lines.push('#nordicbrand,18,33800,4.1');
+      lines.push('Note,See Analytics → Hashtags for the selected date range');
       lines.push('');
     }
 
     if (selected.linkinbio) {
       lines.push('Link-in-bio');
-      lines.push('Block,Clicks,CVR');
-      lines.push('Masterclass CTA,428,12.4%');
-      lines.push('Community join,291,18.2%');
-      lines.push('Starter Pack,164,9.1%');
+      lines.push('Note,Bio clicks for the selected date range — see Link in bio tab');
       lines.push('');
     }
 
@@ -284,6 +465,26 @@ export default function AnalyticsExportDialog({
     return lines.join('\n');
   };
 
+  const postsTable = (rows: ExportPostRow[], empty: string) => {
+    if (rows.length === 0) {
+      return `<p class="muted">${empty}</p>`;
+    }
+    return `
+      <table>
+        <thead><tr><th>Title</th><th>Platform</th><th>Reach</th><th>Likes</th><th>Comments</th><th>ER</th></tr></thead>
+        <tbody>
+          ${rows
+            .slice(0, 40)
+            .map(
+              (p) =>
+                `<tr><td>${p.title}</td><td>${p.platform}</td><td>${p.impressions.toLocaleString('sv-SE')}</td><td>${p.likes.toLocaleString('sv-SE')}</td><td>${p.comments.toLocaleString('sv-SE')}</td><td>${p.er}%</td></tr>`
+            )
+            .join('')}
+        </tbody>
+      </table>
+    `;
+  };
+
   const buildPdfHtml = () => {
     const blocks: string[] = [];
 
@@ -308,12 +509,12 @@ export default function AnalyticsExportDialog({
       blocks.push(`
         <h2>Engagement overview</h2>
         <div class="grid">
-          <div class="card"><div class="label">Reach</div><div class="val">${engagement.reach.toLocaleString('sv-SE')}</div></div>
-          <div class="card"><div class="label">Views</div><div class="val">${engagement.views.toLocaleString('sv-SE')}</div></div>
-          <div class="card"><div class="label">Followers</div><div class="val">${engagement.followers.toLocaleString('sv-SE')}</div></div>
-          <div class="card"><div class="label">Eng. rate</div><div class="val">${engagement.engagementRate}%</div></div>
-          <div class="card"><div class="label">Likes</div><div class="val">${engagement.likes.toLocaleString('sv-SE')}</div></div>
-          <div class="card"><div class="label">Comments</div><div class="val">${engagement.comments.toLocaleString('sv-SE')}</div></div>
+          <div class="card"><div class="label">Reach</div><div class="val">${exportEngagement.reach.toLocaleString('sv-SE')}</div></div>
+          <div class="card"><div class="label">Views</div><div class="val">${exportEngagement.views.toLocaleString('sv-SE')}</div></div>
+          <div class="card"><div class="label">Followers</div><div class="val">${exportEngagement.followers.toLocaleString('sv-SE')}</div></div>
+          <div class="card"><div class="label">Eng. rate</div><div class="val">${exportEngagement.engagementRate}%</div></div>
+          <div class="card"><div class="label">Likes</div><div class="val">${exportEngagement.likes.toLocaleString('sv-SE')}</div></div>
+          <div class="card"><div class="label">Comments</div><div class="val">${exportEngagement.comments.toLocaleString('sv-SE')}</div></div>
         </div>
       `);
     }
@@ -322,97 +523,39 @@ export default function AnalyticsExportDialog({
       blocks.push(`
         <h2>Performance</h2>
         <p class="muted">Daily revenue &amp; visitors for ${rangeLabel}. Open Analytics in clikd: for the interactive chart.</p>
-        <div class="bar-row">${[42, 55, 48, 62, 70, 58, 78]
-          .map(
-            (v) =>
-              `<div class="bar" style="height:${Math.round((v / 78) * 80)}px" title="${v}"></div>`
-          )
-          .join('')}</div>
       `);
     }
 
     if (selected.audience) {
       blocks.push(`
         <h2>Audience</h2>
-        <table>
-          <thead><tr><th>Country</th><th>Share</th></tr></thead>
-          <tbody>
-            <tr><td>Sweden</td><td>48%</td></tr>
-            <tr><td>Norway</td><td>18%</td></tr>
-            <tr><td>Denmark</td><td>14%</td></tr>
-            <tr><td>Finland</td><td>9%</td></tr>
-            <tr><td>Other</td><td>11%</td></tr>
-          </tbody>
-        </table>
+        <p class="muted">Follower totals and demographics for this workspace — see the Audience tab for breakdowns.</p>
       `);
     }
 
     if (selected.posts) {
-      blocks.push(`
-        <h2>Posts</h2>
-        <table>
-          <thead><tr><th>Title</th><th>Reach</th><th>Engagement</th></tr></thead>
-          <tbody>
-            <tr><td>Carousel — Niche offer</td><td>12,400</td><td>6.2%</td></tr>
-            <tr><td>Reel hook — Soft CTA</td><td>22,100</td><td>8.1%</td></tr>
-            <tr><td>Static tip — Checklist</td><td>8,600</td><td>4.4%</td></tr>
-          </tbody>
-        </table>
-      `);
+      blocks.push(`<h2>Posts</h2>${postsTable(rangedPosts, 'No posts in this date range.')}`);
     }
 
     if (selected.reels) {
-      blocks.push(`
-        <h2>Reels</h2>
-        <table>
-          <thead><tr><th>Title</th><th>Views</th><th>Avg watch</th></tr></thead>
-          <tbody>
-            <tr><td>3 hooks that convert</td><td>48,200</td><td>54%</td></tr>
-            <tr><td>Bio store walkthrough</td><td>31,100</td><td>61%</td></tr>
-          </tbody>
-        </table>
-      `);
+      blocks.push(`<h2>Reels</h2>${postsTable(rangedReels, 'No reels in this date range.')}`);
     }
 
     if (selected.stories) {
-      blocks.push(`
-        <h2>Stories</h2>
-        <table>
-          <thead><tr><th>Day</th><th>Views</th><th>Replies</th></tr></thead>
-          <tbody>
-            <tr><td>Mon</td><td>4,200</td><td>38</td></tr>
-            <tr><td>Tue</td><td>5,100</td><td>44</td></tr>
-            <tr><td>Wed</td><td>4,800</td><td>41</td></tr>
-          </tbody>
-        </table>
-      `);
+      blocks.push(`<h2>Stories</h2>${postsTable(rangedStories, 'No stories in this date range.')}`);
     }
 
     if (selected.hashtags) {
       blocks.push(`
         <h2>Hashtags</h2>
-        <table>
-          <thead><tr><th>Tag</th><th>Posts</th><th>Reach</th><th>ER</th></tr></thead>
-          <tbody>
-            <tr><td>#contentcreator</td><td>24</td><td>41,200</td><td>4.8%</td></tr>
-            <tr><td>#instantcheckout</td><td>11</td><td>29,400</td><td>5.2%</td></tr>
-            <tr><td>#nordicbrand</td><td>18</td><td>33,800</td><td>4.1%</td></tr>
-          </tbody>
-        </table>
+        <p class="muted">Hashtag performance for ${rangeLabel} — open Analytics → Hashtags for the full list.</p>
       `);
     }
 
     if (selected.linkinbio) {
       blocks.push(`
         <h2>Link-in-bio</h2>
-        <table>
-          <thead><tr><th>Block</th><th>Clicks</th><th>CVR</th></tr></thead>
-          <tbody>
-            <tr><td>Masterclass CTA</td><td>428</td><td>12.4%</td></tr>
-            <tr><td>Community join</td><td>291</td><td>18.2%</td></tr>
-            <tr><td>Starter Pack</td><td>164</td><td>9.1%</td></tr>
-          </tbody>
-        </table>
+        <p class="muted">Bio store clicks for ${rangeLabel}.</p>
       `);
     }
 
@@ -454,8 +597,6 @@ export default function AnalyticsExportDialog({
     .label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
     .val { font-size: 20px; font-weight: 800; margin-top: 6px; }
     .muted { color: #64748b; font-size: 13px; }
-    .bar-row { display: flex; align-items: flex-end; gap: 8px; height: 100px; padding: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; }
-    .bar { flex: 1; background: linear-gradient(180deg, #F472B6, #2B2568); border-radius: 6px 6px 2px 2px; min-height: 8px; }
     @media print {
       body { background: #fff; padding: 16px; }
       .no-print { display: none !important; }
@@ -478,9 +619,10 @@ export default function AnalyticsExportDialog({
 
   const handleDownload = async () => {
     if (selectedCount === 0) return;
+    if (from > to) return;
     setBusy(true);
     try {
-      const stamp = new Date().toISOString().slice(0, 10);
+      const stamp = `${from}_to_${to}`;
       const safeName = workspaceName.replace(/[^\w\-]+/g, '_').toLowerCase() || 'workspace';
 
       if (format === 'csv') {
@@ -497,7 +639,6 @@ export default function AnalyticsExportDialog({
           win.document.write(html);
           win.document.close();
         } else {
-          // Popup blocked — fall back to HTML download the user can open & print.
           downloadBlob(
             `clikd-analytics-${safeName}-${stamp}.html`,
             new Blob([html], { type: 'text/html;charset=utf-8' })
@@ -510,6 +651,15 @@ export default function AnalyticsExportDialog({
     }
   };
 
+  const presetButtons: { key: ExportPreset; label: string }[] = [
+    { key: 'panel', label: 'Same as panel' },
+    { key: '1w', label: '1 week' },
+    { key: '1m', label: '1 month' },
+    { key: '3m', label: '3 months' },
+    { key: '1y', label: '1 year' },
+    { key: 'custom', label: 'Custom' },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[min(520px,94vw)] rounded-3xl border-slate-200/80 bg-white p-0 gap-0 overflow-hidden shadow-2xl">
@@ -518,12 +668,75 @@ export default function AnalyticsExportDialog({
             {t('admin.export')}
           </DialogTitle>
           <DialogDescription className="text-sm text-slate-500 font-medium mt-1">
-            Choose which parts of the analytics page to include, then download as a visual PDF
-            or CSV spreadsheet.
+            Choose the date range and sections to include, then download as PDF or CSV.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-5 sm:px-6 py-4 max-h-[min(52vh,420px)] overflow-y-auto space-y-4">
+        <div className="px-5 sm:px-6 py-4 max-h-[min(58vh,480px)] overflow-y-auto space-y-4">
+          <div>
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
+              Date range
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {presetButtons.map(({ key, label }) => {
+                const active = preset === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => applyPreset(key)}
+                    className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-bold transition-colors ${
+                      active
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label className="block">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+                  From
+                </span>
+                <input
+                  type="date"
+                  value={from}
+                  max={to}
+                  onChange={(e) => {
+                    setPreset('custom');
+                    setFrom(e.target.value);
+                  }}
+                  className="mt-1 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+                  To
+                </span>
+                <input
+                  type="date"
+                  value={to}
+                  min={from}
+                  onChange={(e) => {
+                    setPreset('custom');
+                    setTo(e.target.value);
+                  }}
+                  className="mt-1 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                />
+              </label>
+            </div>
+            <p className="text-[11px] text-slate-500 font-medium mt-2">
+              Exporting data for{' '}
+              <span className="font-semibold text-slate-700">{rangeLabel}</span>
+              {' · '}
+              {rangedPosts.length} posts · {rangedReels.length} reels ·{' '}
+              {rangedStories.length} stories
+            </p>
+          </div>
+
           <div className="flex items-center justify-between gap-2">
             <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
               Sections · {selectedCount}/{SECTIONS.length}
@@ -647,7 +860,7 @@ export default function AnalyticsExportDialog({
           </button>
           <button
             type="button"
-            disabled={busy || selectedCount === 0}
+            disabled={busy || selectedCount === 0 || from > to}
             onClick={() => void handleDownload()}
             className="min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 disabled:opacity-40 w-full sm:w-auto"
           >
