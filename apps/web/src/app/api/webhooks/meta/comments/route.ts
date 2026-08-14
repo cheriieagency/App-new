@@ -566,25 +566,21 @@ export async function POST(request: Request) {
     }
 
     const cleaned = cleanCommentText(commentText);
-    const commentTokens = commentText
-      .toLowerCase()
-      .replace(/[#@]/g, ' ')
-      .split(/\s+/)
-      .map((w) => w.replace(/^#+/, '').trim())
-      .filter(Boolean);
+    const cleanKeywordsByRule = rules.map((rule) => ({
+      id: String(rule.id),
+      title: rule.title || null,
+      cleanKeywords: cleanTriggerKeywords(rule.trigger_keywords),
+    }));
 
     let matchedRule: AutomationRow | null = null;
     let matchedKeyword: string | null = null;
 
     for (const rule of rules) {
-      // Always clean stored keywords (strip #, lowercase) before matching.
-      const keywords = cleanTriggerKeywords(rule.trigger_keywords);
-      // Fast array overlap: comment tokens ∩ cleaned keywords (#MER → mer).
-      const overlap = keywords.find((kw) => commentTokens.includes(kw));
+      // Normalize DB keywords: strip #, trim, lowercase — then fuzzy / partial match.
+      const cleanKeywords = cleanTriggerKeywords(rule.trigger_keywords);
       const kw =
-        overlap ||
-        findMatchingKeyword(commentText, keywords) ||
-        findMatchingKeyword(cleaned, keywords);
+        findMatchingKeyword(commentText, cleanKeywords) ||
+        findMatchingKeyword(cleaned, cleanKeywords);
       if (kw) {
         matchedRule = rule;
         matchedKeyword = kw;
@@ -592,15 +588,25 @@ export async function POST(request: Request) {
       }
     }
 
+    console.log('[Meta Matcher Check]', {
+      commentText,
+      cleaned,
+      cleanKeywords: cleanKeywordsByRule,
+      matchedRule: matchedRule
+        ? {
+            id: matchedRule.id,
+            title: matchedRule.title || null,
+            keyword: matchedKeyword,
+          }
+        : null,
+    });
+
     if (!matchedRule || !matchedKeyword) {
       console.log('[Meta Webhook] No keyword match for comment:', {
         commentText,
         cleaned,
-        commentTokens,
         ruleCount: rules.length,
-        ruleKeywords: rules.map((r) =>
-          cleanTriggerKeywords(r.trigger_keywords)
-        ),
+        ruleKeywords: cleanKeywordsByRule.map((r) => r.cleanKeywords),
       });
       return ok();
     }

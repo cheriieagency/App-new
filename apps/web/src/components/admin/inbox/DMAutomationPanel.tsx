@@ -67,6 +67,20 @@ type DiagnosticStep = {
   details?: Record<string, unknown>;
 };
 
+type LivePrivateReplyResult = {
+  attempted?: boolean;
+  httpStatus?: number;
+  ok?: boolean;
+  endpoint?: string;
+  igUserId?: string;
+  liveCommentId?: string;
+  payload?: unknown;
+  metaResponse?: Record<string, unknown>;
+  metaError?: string | null;
+  metaErrorCode?: number | null;
+  statusLabel?: string;
+};
+
 type LiveDiagnosticResult = {
   ok?: boolean;
   workspaceId?: string;
@@ -81,6 +95,7 @@ type LiveDiagnosticResult = {
     activeRulesFound: boolean;
     privateReplyPayloadOk: boolean;
   };
+  livePrivateReply?: LivePrivateReplyResult | null;
 };
 
 const CHECKLIST_ROWS: Array<{
@@ -144,6 +159,7 @@ export default function DMAutomationPanel() {
   const [testResult, setTestResult] = useState<string | null>(null);
   const [liveDiagnostic, setLiveDiagnostic] =
     useState<LiveDiagnosticResult | null>(null);
+  const [liveCommentId, setLiveCommentId] = useState('');
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -572,7 +588,8 @@ export default function DMAutomationPanel() {
   });
 
   const liveDiagnosticMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (opts?: { liveCommentId?: string }) => {
+      const commentId = opts?.liveCommentId?.trim() || undefined;
       const res = await fetch('/api/admin/inbox/automations/test-live', {
         method: 'POST',
         headers: {
@@ -580,7 +597,10 @@ export default function DMAutomationPanel() {
           'x-workspace-id': activeWorkspace.id,
         },
         credentials: 'include',
-        body: JSON.stringify({ workspaceId: activeWorkspace.id }),
+        body: JSON.stringify({
+          workspaceId: activeWorkspace.id,
+          ...(commentId ? { liveCommentId: commentId } : {}),
+        }),
       });
       const json = (await res.json().catch(() => ({}))) as LiveDiagnosticResult & {
         error?: string;
@@ -597,12 +617,27 @@ export default function DMAutomationPanel() {
           activeRulesFound: false,
           privateReplyPayloadOk: false,
         },
+        livePrivateReply: json.livePrivateReply ?? null,
       } satisfies LiveDiagnosticResult;
     },
     onSuccess: (json) => {
       setLiveDiagnostic(json);
       if (json.workspaceId && json.workspaceId !== activeWorkspace.id) {
         setActiveWorkspaceId(json.workspaceId);
+      }
+      const live = json.livePrivateReply;
+      if (live?.attempted) {
+        if (live.ok) {
+          toast.success(
+            `Live Private Reply OK — HTTP ${live.statusLabel || live.httpStatus}`
+          );
+        } else {
+          toast.error(
+            live.metaError ||
+              `Live Private Reply failed — HTTP ${live.statusLabel || live.httpStatus}`
+          );
+        }
+        return;
       }
       if (json.ok) {
         toast.success('Live diagnostic passed — Comment-to-DM stack looks ready.');
@@ -712,7 +747,7 @@ export default function DMAutomationPanel() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => liveDiagnosticMutation.mutate()}
+              onClick={() => liveDiagnosticMutation.mutate({})}
               disabled={liveDiagnosticMutation.isPending}
               className="h-11 min-h-[44px] px-4 rounded-xl border border-[#2B2568]/25 bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-[#1a1848] disabled:opacity-50"
             >
@@ -892,6 +927,48 @@ export default function DMAutomationPanel() {
                 </ul>
               </div>
             ) : null}
+
+            {liveDiagnostic.livePrivateReply?.attempted ? (
+              <div
+                className={`rounded-xl border px-3.5 py-3 ${
+                  liveDiagnostic.livePrivateReply.ok
+                    ? 'border-emerald-200 bg-emerald-50/80'
+                    : 'border-rose-200 bg-rose-50/80'
+                }`}
+              >
+                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                  Live Private Reply Result
+                </p>
+                <p className="text-sm font-extrabold text-slate-900 mt-1">
+                  {liveDiagnostic.livePrivateReply.ok ? '✓' : '✗'} HTTP{' '}
+                  {liveDiagnostic.livePrivateReply.statusLabel ||
+                    liveDiagnostic.livePrivateReply.httpStatus}
+                </p>
+                {liveDiagnostic.livePrivateReply.metaError ? (
+                  <p className="text-xs text-rose-700 mt-1 font-mono break-words">
+                    Meta: {liveDiagnostic.livePrivateReply.metaError}
+                    {liveDiagnostic.livePrivateReply.metaErrorCode != null
+                      ? ` (code ${liveDiagnostic.livePrivateReply.metaErrorCode})`
+                      : ''}
+                  </p>
+                ) : null}
+                <p className="text-[11px] font-mono text-slate-500 mt-2 break-all">
+                  {liveDiagnostic.livePrivateReply.endpoint}
+                </p>
+                <pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-slate-900 text-slate-100 text-[11px] p-3 font-mono whitespace-pre-wrap break-words">
+                  {JSON.stringify(
+                    {
+                      httpStatus: liveDiagnostic.livePrivateReply.httpStatus,
+                      statusLabel: liveDiagnostic.livePrivateReply.statusLabel,
+                      payload: liveDiagnostic.livePrivateReply.payload,
+                      metaResponse: liveDiagnostic.livePrivateReply.metaResponse,
+                    },
+                    null,
+                    2
+                  )}
+                </pre>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -900,6 +977,48 @@ export default function DMAutomationPanel() {
             {testResult}
           </div>
         ) : null}
+
+        {/* Always-visible live Private Reply tester (uses test-live + liveCommentId) */}
+        <div className="mx-5 sm:mx-7 mt-4 mb-2 rounded-2xl border border-[#2B2568]/15 bg-white px-4 py-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <label className="flex-1 min-w-0">
+              <span className="block text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400 mb-1.5">
+                Live Private Reply — Instagram comment_id
+              </span>
+              <input
+                type="text"
+                value={liveCommentId}
+                onChange={(e) => setLiveCommentId(e.target.value)}
+                placeholder="e.g. 1789… comment id from Graph / webhook"
+                className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                const id = liveCommentId.trim();
+                if (!id) {
+                  toast.error('Paste a live Instagram comment_id first');
+                  return;
+                }
+                liveDiagnosticMutation.mutate({ liveCommentId: id });
+              }}
+              disabled={liveDiagnosticMutation.isPending}
+              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-[#1a1848] disabled:opacity-50 shrink-0"
+            >
+              {liveDiagnosticMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Zap size={16} />
+              )}
+              Send Live Private Reply Test
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-500 font-medium">
+            Dispatches POST /v21.0/&#123;igUserId&#125;/messages with recipient.comment_id
+            and shows Meta HTTP status (200 OK / 400 / 403) + full error JSON.
+          </p>
+        </div>
 
         {isLoading ? (
           <div className="py-16 flex justify-center text-slate-400">

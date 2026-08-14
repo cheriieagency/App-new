@@ -1,7 +1,7 @@
 /**
  * GET/POST /api/admin/inbox/automations/test-live
  * Live Comment-to-DM diagnostic — validates IG token, webhooks, rules, payload shape.
- * Does NOT send a real Instagram private reply / DM.
+ * POST with `{ liveCommentId }` also attempts a real Graph Private Reply (test dispatch).
  */
 
 import { cookies, headers } from 'next/headers';
@@ -28,7 +28,8 @@ export type DiagnosticStepId =
   | 'TOKEN_VALIDITY'
   | 'WEBHOOK_SUBSCRIPTION'
   | 'AUTOMATION_RULES'
-  | 'PRIVATE_REPLY_PAYLOAD';
+  | 'PRIVATE_REPLY_PAYLOAD'
+  | 'LIVE_PRIVATE_REPLY';
 
 export type DiagnosticStep = {
   step: DiagnosticStepId;
@@ -169,6 +170,116 @@ function validatePrivateReplyPayload(payload: unknown): {
   return { ok: issues.length === 0, issues };
 }
 
+export type LivePrivateReplyResult = {
+  attempted: boolean;
+  httpStatus: number;
+  ok: boolean;
+  endpoint: string;
+  igUserId: string;
+  liveCommentId: string;
+  payload: ReturnType<typeof buildPrivateReplyPayload>;
+  metaResponse: Record<string, unknown>;
+  metaError: string | null;
+  metaErrorCode: number | null;
+  statusLabel: string;
+};
+
+async function sendLivePrivateReply(input: {
+  igUserId: string;
+  accessToken: string;
+  liveCommentId: string;
+  messageText: string;
+}): Promise<LivePrivateReplyResult> {
+  const igUserId = String(input.igUserId || '').trim();
+  const liveCommentId = String(input.liveCommentId || '').trim();
+  const messageText =
+    String(input.messageText || '').trim() || 'Test automation reply';
+  const endpoint = `${GRAPH_BASE}/${encodeURIComponent(igUserId)}/messages`;
+  const payload = buildPrivateReplyPayload(liveCommentId, messageText);
+
+  const empty = (httpStatus: number, metaError: string | null) =>
+    ({
+      attempted: true,
+      httpStatus,
+      ok: false,
+      endpoint,
+      igUserId,
+      liveCommentId,
+      payload,
+      metaResponse: {},
+      metaError,
+      metaErrorCode: null,
+      statusLabel: httpStatusLabel(httpStatus),
+    }) satisfies LivePrivateReplyResult;
+
+  if (!igUserId) {
+    return empty(400, 'Missing Instagram Business Account id for /messages');
+  }
+  if (!liveCommentId) {
+    return empty(400, 'liveCommentId is required');
+  }
+  if (!input.accessToken?.trim()) {
+    return empty(403, 'Missing access token for Private Reply');
+  }
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    const metaResponse = (await res.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
+    const err =
+      metaResponse.error && typeof metaResponse.error === 'object'
+        ? (metaResponse.error as {
+            message?: string;
+            code?: number;
+            error_subcode?: number;
+            type?: string;
+            fbtrace_id?: string;
+          })
+        : null;
+    const messageId =
+      (typeof metaResponse.message_id === 'string' && metaResponse.message_id) ||
+      (typeof metaResponse.id === 'string' && metaResponse.id) ||
+      null;
+    const ok = res.ok && Boolean(messageId) && !err;
+
+    return {
+      attempted: true,
+      httpStatus: res.status,
+      ok,
+      endpoint,
+      igUserId,
+      liveCommentId,
+      payload,
+      metaResponse,
+      metaError: err?.message ? String(err.message) : ok ? null : `HTTP ${res.status}`,
+      metaErrorCode: typeof err?.code === 'number' ? err.code : null,
+      statusLabel: httpStatusLabel(res.status),
+    };
+  } catch (error) {
+    return {
+      ...empty(0, error instanceof Error ? error.message : 'Network error'),
+      statusLabel: 'NETWORK_ERROR',
+    };
+  }
+}
+
+function httpStatusLabel(status: number): string {
+  if (status === 200) return '200 OK';
+  if (status === 400) return '400';
+  if (status === 403) return '403';
+  if (status === 0) return 'NETWORK_ERROR';
+  return String(status);
+}
+
 async function runLiveDiagnostic(
   request: Request
 ): Promise<NextResponse> {
@@ -181,7 +292,12 @@ async function runLiveDiagnostic(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { workspaceId?: unknown } = {};
+  let body: {
+    workspaceId?: unknown;
+    liveCommentId?: unknown;
+    messageText?: unknown;
+    message?: unknown;
+  } = {};
   if (request.method === 'POST') {
     try {
       body = (await request.json()) as typeof body;
@@ -189,6 +305,13 @@ async function runLiveDiagnostic(
       body = {};
     }
   }
+
+  const liveCommentId =
+    typeof body.liveCommentId === 'string' ? body.liveCommentId.trim() : '';
+  const liveMessageText =
+    (typeof body.messageText === 'string' && body.messageText.trim()) ||
+    (typeof body.message === 'string' && body.message.trim()) ||
+    'Test automation reply';
 
   const preferredWorkspaceId = await resolveWorkspaceId(
     request,
@@ -591,11 +714,60 @@ async function runLiveDiagnostic(
 
   // ── STEP 5: Private reply payload formatting ────────────────────────────
   diagnosePayload(steps, suggestions, {
-    igOrPageId: pageId || igUserId,
+    igOrPageId: igUserId || pageId,
   });
 
+  // ── STEP 6 (optional): Live Private Reply with real comment_id ──────────
+  let livePrivateReply: LivePrivateReplyResult | null = null;
+  if (liveCommentId) {
+    const messagingIgId = igUserId || pageId;
+    const replyToken = pageAccessTokenFromMeta || accessToken;
+    livePrivateReply = await sendLivePrivateReply({
+      igUserId: messagingIgId,
+      accessToken: replyToken,
+      liveCommentId,
+      messageText: liveMessageText,
+    });
+
+    steps.push(
+      step({
+        step: 'LIVE_PRIVATE_REPLY',
+        label: 'Live Private Reply Graph Dispatch',
+        success: livePrivateReply.ok,
+        message: livePrivateReply.ok
+          ? `Private Reply sent — HTTP ${livePrivateReply.statusLabel}`
+          : `Private Reply failed — HTTP ${livePrivateReply.statusLabel}`,
+        metaError: livePrivateReply.metaError,
+        fix: livePrivateReply.ok
+          ? undefined
+          : livePrivateReply.httpStatus === 403
+            ? 'Token lacks messaging permission or Page token required — reconnect Instagram / use Re-sync Meta Webhooks.'
+            : livePrivateReply.httpStatus === 400
+              ? 'Comment id invalid/expired (Private Reply window is short) — paste a fresh Instagram comment id.'
+              : 'Check Meta error payload below and reconnect if needed.',
+        details: {
+          httpStatus: livePrivateReply.httpStatus,
+          statusLabel: livePrivateReply.statusLabel,
+          endpoint: livePrivateReply.endpoint,
+          payload: livePrivateReply.payload,
+          metaResponse: livePrivateReply.metaResponse,
+          metaErrorCode: livePrivateReply.metaErrorCode,
+        },
+      })
+    );
+
+    if (!livePrivateReply.ok) {
+      suggestions.push(
+        livePrivateReply.metaError ||
+          `Live Private Reply returned HTTP ${livePrivateReply.statusLabel}`
+      );
+    }
+  }
+
   const checklist = buildChecklist(steps);
-  const allOk = Object.values(checklist).every(Boolean);
+  const allOk =
+    Object.values(checklist).every(Boolean) &&
+    (liveCommentId ? Boolean(livePrivateReply?.ok) : true);
 
   return NextResponse.json({
     ok: allOk,
@@ -612,10 +784,15 @@ async function runLiveDiagnostic(
     steps,
     checklist,
     suggestions,
+    livePrivateReply,
     verifyTokenSet: Boolean(
       (process.env.META_WEBHOOK_VERIFY_TOKEN || '').trim()
     ),
-    note: 'Diagnostic only — no live private reply was sent to Instagram.',
+    note: liveCommentId
+      ? livePrivateReply?.ok
+        ? `Live Private Reply dispatched (HTTP ${livePrivateReply.statusLabel}).`
+        : `Live Private Reply attempted — HTTP ${livePrivateReply?.statusLabel ?? 'unknown'}. See Meta error payload.`
+      : 'Diagnostic only — pass liveCommentId to attempt a real Private Reply.',
   });
 }
 
@@ -722,7 +899,7 @@ function diagnosePayload(
       label: 'Private Reply Graph API Payload Formatted Correctly',
       success: validation.ok,
       message: validation.ok
-        ? `Payload uses recipient.comment_id + message.text (Graph ${GRAPH_V} /messages). Live send skipped.`
+        ? `Payload uses recipient.comment_id + message.text (Graph ${GRAPH_V} /messages).`
         : `Payload validation failed: ${validation.issues.join('; ')}`,
       fix: validation.ok
         ? undefined
