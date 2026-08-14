@@ -78,24 +78,58 @@ async function resolveSocialAccount(
   for (const id of candidates) {
     const rows = await sql`
       SELECT
-        workspace_id, platform_user_id, page_id, access_token, platform, meta
-      FROM public.social_accounts
-      WHERE platform IN ('instagram', 'facebook')
+        sa.workspace_id, sa.platform_user_id, sa.page_id, sa.access_token,
+        sa.platform, sa.meta
+      FROM public.social_accounts sa
+      WHERE sa.platform IN ('instagram', 'facebook')
         AND (
-          platform_user_id = ${id}
-          OR page_id = ${id}
-          OR COALESCE(meta->>'ig_user_id', '') = ${id}
+          sa.platform_user_id = ${id}
+          OR sa.page_id = ${id}
+          OR COALESCE(sa.meta->>'ig_user_id', '') = ${id}
         )
-      ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
-      LIMIT 3
+      ORDER BY
+        CASE WHEN EXISTS (
+          SELECT 1 FROM public.dm_automations a
+          WHERE a.workspace_id = sa.workspace_id AND a.is_active = true
+        ) THEN 0 ELSE 1 END,
+        CASE WHEN COALESCE(sa.meta->>'page_access_token', '') <> '' THEN 0 ELSE 1 END,
+        CASE WHEN sa.platform = 'instagram' THEN 0 ELSE 1 END
+      LIMIT 8
     `;
     if (!Array.isArray(rows) || rows.length === 0) continue;
 
+    const preferredWs = String(rows[0]?.workspace_id || '').trim();
     const ig =
-      rows.find((r) => r.platform === 'instagram') || rows[0];
-    const fb = rows.find((r) => r.platform === 'facebook');
-    const workspaceId = String(ig.workspace_id || '').trim();
-    const accessToken = String(ig.access_token || fb?.access_token || '').trim();
+      rows.find(
+        (r) =>
+          r.platform === 'instagram' &&
+          String(r.workspace_id) === preferredWs
+      ) ||
+      rows.find((r) => r.platform === 'instagram') ||
+      rows[0];
+    const fb =
+      rows.find(
+        (r) =>
+          r.platform === 'facebook' &&
+          String(r.workspace_id) === preferredWs
+      ) || rows.find((r) => r.platform === 'facebook');
+
+    const workspaceId = String(ig.workspace_id || preferredWs || '').trim();
+    const meta =
+      ig.meta && typeof ig.meta === 'object'
+        ? (ig.meta as Record<string, unknown>)
+        : {};
+    const fbMeta =
+      fb?.meta && typeof fb.meta === 'object'
+        ? (fb.meta as Record<string, unknown>)
+        : {};
+    const pageAccessToken =
+      (typeof meta.page_access_token === 'string' &&
+        meta.page_access_token.trim()) ||
+      (typeof fbMeta.page_access_token === 'string' &&
+        fbMeta.page_access_token.trim()) ||
+      String(fb?.access_token || ig.access_token || '').trim();
+    const accessToken = pageAccessToken;
     if (!workspaceId || !accessToken) continue;
 
     return {
@@ -103,9 +137,7 @@ async function resolveSocialAccount(
       igUserId: String(ig.platform_user_id || event.igAccountId || id),
       pageId: String(ig.page_id || fb?.page_id || event.pageId || '') || null,
       accessToken,
-      pageAccessToken: fb?.access_token
-        ? String(fb.access_token)
-        : accessToken,
+      pageAccessToken,
     };
   }
   return null;
@@ -120,7 +152,7 @@ async function recentlyMessaged(input: {
       SELECT id FROM public.dm_logs
       WHERE workspace_id = ${input.workspaceId}
         AND commenter_id = ${input.commenterId}
-        AND status = 'sent'
+        AND status IN ('sent', 'delivered')
         AND COALESCE(created_at, sent_at, to_timestamp(0))
               >= (now() - interval '10 minutes')
       LIMIT 1
@@ -133,7 +165,7 @@ async function recentlyMessaged(input: {
         SELECT id FROM public.dm_logs
         WHERE workspace_id = ${input.workspaceId}
           AND commenter_id = ${input.commenterId}
-          AND status = 'sent'
+          AND status IN ('sent', 'delivered')
         ORDER BY id DESC
         LIMIT 1
       `;

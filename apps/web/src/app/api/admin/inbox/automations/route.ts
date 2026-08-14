@@ -155,7 +155,7 @@ export async function GET(request: Request) {
         SELECT COUNT(*)::int AS dms
         FROM public.dm_logs
         WHERE workspace_id = ${workspaceId}
-          AND status = 'sent'
+          AND status IN ('sent', 'delivered')
           AND COALESCE(created_at, sent_at, to_timestamp(0)) >= date_trunc('month', now())
       `;
       dmsSentThisMonth = Number(monthStats?.[0]?.dms) || 0;
@@ -165,7 +165,7 @@ export async function GET(request: Request) {
           SELECT COUNT(*)::int AS dms
           FROM public.dm_logs
           WHERE workspace_id = ${workspaceId}
-            AND status = 'sent'
+            AND status IN ('sent', 'delivered')
         `;
         dmsSentThisMonth = Number(fallback?.[0]?.dms) || 0;
       } catch {

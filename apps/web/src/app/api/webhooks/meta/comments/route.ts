@@ -115,20 +115,36 @@ async function lookupSocialAccount(
 
   try {
     // Match IG scoped id, Page id on page_id, or Page id stored as platform_user_id.
+    // Prefer workspaces that actually have active Comment-to-DM rules, then Page tokens.
     const matched = await sql`
-      SELECT workspace_id, platform, platform_user_id, page_id, access_token, meta
-      FROM public.social_accounts
-      WHERE platform IN ('instagram', 'facebook')
-        AND access_token IS NOT NULL
-        AND access_token <> ''
+      SELECT
+        sa.workspace_id, sa.platform, sa.platform_user_id, sa.page_id,
+        sa.access_token, sa.meta,
+        EXISTS (
+          SELECT 1
+          FROM public.dm_automations a
+          WHERE a.workspace_id = sa.workspace_id
+            AND a.is_active = true
+        ) AS has_active_rules,
+        (COALESCE(sa.meta->>'page_access_token', '') <> '') AS has_page_token
+      FROM public.social_accounts sa
+      WHERE sa.platform IN ('instagram', 'facebook')
+        AND sa.access_token IS NOT NULL
+        AND sa.access_token <> ''
         AND (
-          platform_user_id = ${entryId}
-          OR page_id = ${entryId}
-          OR COALESCE(meta->>'ig_user_id', '') = ${entryId}
-          OR COALESCE(meta->>'page_id', '') = ${entryId}
+          sa.platform_user_id = ${entryId}
+          OR sa.page_id = ${entryId}
+          OR COALESCE(sa.meta->>'ig_user_id', '') = ${entryId}
+          OR COALESCE(sa.meta->>'page_id', '') = ${entryId}
         )
-      ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
-      LIMIT 5
+      ORDER BY
+        CASE WHEN EXISTS (
+          SELECT 1 FROM public.dm_automations a
+          WHERE a.workspace_id = sa.workspace_id AND a.is_active = true
+        ) THEN 0 ELSE 1 END,
+        CASE WHEN COALESCE(sa.meta->>'page_access_token', '') <> '' THEN 0 ELSE 1 END,
+        CASE WHEN sa.platform = 'instagram' THEN 0 ELSE 1 END
+      LIMIT 10
     `;
     const list = Array.isArray(matched)
       ? (matched as Record<string, unknown>[])
@@ -136,27 +152,42 @@ async function lookupSocialAccount(
     const primary = mapRow(list[0]);
     if (!primary) return null;
 
-    // If webhook arrived on Facebook Page id, prefer the IG sibling in same workspace
-    // so Private Reply goes to POST /{igUserId}/messages.
-    if (primary.platform === 'facebook' || primary.page_id === entryId) {
-      const workspaceId = primary.workspace_id;
-      const igSibling = list.find((r) => r.platform === 'instagram');
-      if (igSibling) {
-        const ig = mapRow(igSibling);
-        if (ig) {
-          // Keep Page token from FB row when IG row lacks meta.page_access_token.
-          if (
-            !String(
-              (igSibling.meta as Record<string, unknown> | undefined)
-                ?.page_access_token || ''
-            ).trim() &&
-            primary.access_token
-          ) {
-            return { ...ig, access_token: primary.access_token };
-          }
-          return ig;
-        }
+    const workspaceId = primary.workspace_id;
+
+    // Prefer IG sibling in the chosen workspace for POST /{igUserId}/messages.
+    const igSibling =
+      list.find(
+        (r) =>
+          r.platform === 'instagram' &&
+          String(r.workspace_id) === workspaceId
+      ) || list.find((r) => r.platform === 'instagram');
+
+    const fbSibling =
+      list.find(
+        (r) =>
+          r.platform === 'facebook' &&
+          String(r.workspace_id) === workspaceId
+      ) || list.find((r) => r.platform === 'facebook');
+
+    let account = igSibling ? mapRow(igSibling) : primary;
+    if (!account) return null;
+
+    // Always prefer Page Access Token from FB sibling when IG lacks meta.page_access_token.
+    const fbMapped = fbSibling ? mapRow(fbSibling) : null;
+    if (fbMapped?.access_token) {
+      const igMetaTok = String(
+        ((igSibling?.meta as Record<string, unknown> | undefined)
+          ?.page_access_token as string) || ''
+      ).trim();
+      if (!igMetaTok) {
+        account = { ...account, access_token: fbMapped.access_token };
       }
+    }
+
+    if (
+      account.platform === 'facebook' ||
+      (!account.ig_user_id && primary.page_id === entryId)
+    ) {
       try {
         const igRows = await sql`
           SELECT workspace_id, platform, platform_user_id, page_id, access_token, meta
@@ -167,6 +198,7 @@ async function lookupSocialAccount(
             AND access_token <> ''
             AND (
               page_id = ${entryId}
+              OR page_id = ${account.page_id}
               OR page_id = ${primary.page_id}
               OR page_id = ${primary.platform_user_id}
             )
@@ -178,17 +210,29 @@ async function lookupSocialAccount(
             : null
         );
         if (ig) {
-          return {
+          account = {
             ...ig,
-            access_token: ig.access_token || primary.access_token,
+            access_token:
+              ig.access_token ||
+              fbMapped?.access_token ||
+              account.access_token,
           };
         }
       } catch {
-        /* fall through to primary */
+        /* keep account */
       }
     }
 
-    return primary;
+    console.log('[Meta Webhook] Resolved account', {
+      entryId,
+      workspace_id: account.workspace_id,
+      platform: account.platform,
+      ig_user_id: account.ig_user_id,
+      page_id: account.page_id,
+      has_active_rules: list[0]?.has_active_rules,
+    });
+
+    return account;
   } catch (error) {
     console.warn('[Meta Webhook] social_accounts lookup failed', error);
     return null;
@@ -215,6 +259,51 @@ async function loadActiveAutomations(
   }
 }
 
+/** Prefer meta.page_access_token from FB Page row in the same workspace. */
+async function resolvePageAccessToken(
+  account: SocialAccountRow
+): Promise<string> {
+  const existing = String(account.access_token || '').trim();
+  try {
+    const rows = await sql`
+      SELECT access_token, meta, platform
+      FROM public.social_accounts
+      WHERE workspace_id = ${account.workspace_id}
+        AND platform IN ('facebook', 'instagram')
+        AND access_token IS NOT NULL
+        AND access_token <> ''
+        AND (
+          page_id = ${account.page_id}
+          OR platform_user_id = ${account.page_id}
+          OR page_id = ${account.platform_user_id}
+          OR platform = 'facebook'
+        )
+      ORDER BY
+        CASE WHEN platform = 'facebook' THEN 0 ELSE 1 END,
+        CASE WHEN COALESCE(meta->>'page_access_token', '') <> '' THEN 0 ELSE 1 END
+      LIMIT 5
+    `;
+    const list = Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
+    for (const row of list) {
+      const meta =
+        row.meta && typeof row.meta === 'object'
+          ? (row.meta as Record<string, unknown>)
+          : {};
+      const fromMeta =
+        typeof meta.page_access_token === 'string'
+          ? meta.page_access_token.trim()
+          : '';
+      if (fromMeta) return fromMeta;
+      if (row.platform === 'facebook' && row.access_token) {
+        return String(row.access_token).trim();
+      }
+    }
+  } catch (error) {
+    console.warn('[Meta Webhook] page token resolve failed', error);
+  }
+  return existing;
+}
+
 async function insertDmLog(input: {
   workspaceId: string;
   automationId: string;
@@ -228,14 +317,58 @@ async function insertDmLog(input: {
   dmMessageId?: string | null;
   errorMessage?: string | null;
 }): Promise<void> {
-  // Full insert (preferred schema).
+  // Ensure older DBs get commenter_id / comment_text before insert.
   try {
-    if (input.status === 'sent') {
+    await ensureDmAutomationsSchema();
+  } catch {
+    /* best-effort */
+  }
+
+  const recipientHandle =
+    String(input.commenterUsername || '').trim() ||
+    String(input.commenterId || '').trim() ||
+    'unknown';
+  // Live DB historically used delivered/failed; map sent → delivered.
+  const status =
+    input.status === 'sent' ? 'delivered' : input.status;
+
+  const attempts: Array<() => Promise<unknown>> = [
+    // Live schema (recipient_handle NOT NULL + optional commenter_*).
+    async () => {
+      await sql`
+        INSERT INTO public.dm_logs (
+          workspace_id, automation_id, platform,
+          recipient_handle, recipient_id,
+          trigger_comment_text, comment_text,
+          comment_id, media_id,
+          commenter_id, commenter_username,
+          matched_keyword, dm_message_id,
+          status, error_message
+        ) VALUES (
+          ${input.workspaceId},
+          ${input.automationId},
+          ${'instagram'},
+          ${recipientHandle},
+          ${input.commenterId || null},
+          ${input.commentText},
+          ${input.commentText},
+          ${input.commentId},
+          ${input.mediaId},
+          ${input.commenterId || null},
+          ${input.commenterUsername},
+          ${input.matchedKeyword},
+          ${input.dmMessageId ?? null},
+          ${status},
+          ${input.errorMessage ?? null}
+        )
+      `;
+    },
+    async () => {
       await sql`
         INSERT INTO public.dm_logs (
           workspace_id, automation_id, comment_id, media_id,
           commenter_id, commenter_username, comment_text,
-          dm_message_id, matched_keyword, status
+          dm_message_id, matched_keyword, status, error_message
         ) VALUES (
           ${input.workspaceId},
           ${input.automationId},
@@ -246,52 +379,35 @@ async function insertDmLog(input: {
           ${input.commentText},
           ${input.dmMessageId ?? null},
           ${input.matchedKeyword},
-          'sent'
-        )
-      `;
-    } else {
-      await sql`
-        INSERT INTO public.dm_logs (
-          workspace_id, automation_id, comment_id, media_id,
-          commenter_id, commenter_username, comment_text,
-          matched_keyword, status, error_message
-        ) VALUES (
-          ${input.workspaceId},
-          ${input.automationId},
-          ${input.commentId},
-          ${input.mediaId},
-          ${input.commenterId},
-          ${input.commenterUsername},
-          ${input.commentText},
-          ${input.matchedKeyword},
           ${input.status},
           ${input.errorMessage ?? null}
         )
       `;
-    }
-    return;
-  } catch (fullErr) {
-    console.warn('[Meta Webhook] dm_logs full insert failed, retrying minimal', fullErr);
-  }
+    },
+    async () => {
+      await sql`
+        INSERT INTO public.dm_logs (
+          workspace_id, automation_id,
+          recipient_handle, matched_keyword, status, error_message
+        ) VALUES (
+          ${input.workspaceId},
+          ${input.automationId},
+          ${recipientHandle},
+          ${input.matchedKeyword},
+          ${status},
+          ${input.errorMessage ?? null}
+        )
+      `;
+    },
+  ];
 
-  // Minimal fallback when older schemas lack comment_text / media_id / etc.
-  try {
-    await sql`
-      INSERT INTO public.dm_logs (
-        workspace_id, automation_id, comment_id,
-        commenter_id, matched_keyword, status, error_message
-      ) VALUES (
-        ${input.workspaceId},
-        ${input.automationId},
-        ${input.commentId},
-        ${input.commenterId},
-        ${input.matchedKeyword},
-        ${input.status},
-        ${input.errorMessage ?? null}
-      )
-    `;
-  } catch (minimalErr) {
-    console.warn('[Meta Webhook] dm_logs minimal insert failed', minimalErr);
+  for (const attempt of attempts) {
+    try {
+      await attempt();
+      return;
+    } catch (err) {
+      console.warn('[Meta Webhook] dm_logs insert attempt failed', err);
+    }
   }
 }
 
@@ -345,6 +461,12 @@ export async function POST(request: Request) {
     }
 
     console.log('[Meta Webhook Incoming]', JSON.stringify(body, null, 2));
+
+    try {
+      await ensureDmAutomationsSchema();
+    } catch (schemaErr) {
+      console.warn('[Meta Webhook] schema ensure skipped', schemaErr);
+    }
 
     const objectType = String(body?.object || '').toLowerCase();
     if (objectType && objectType !== 'instagram' && objectType !== 'page') {
@@ -508,7 +630,27 @@ export async function POST(request: Request) {
       return ok();
     }
 
-    const pageAccessToken = account.access_token;
+    const pageAccessToken = await resolvePageAccessToken(account);
+    if (!pageAccessToken) {
+      console.warn('[Meta Webhook] Missing Page Access Token for Private Reply', {
+        workspace: account.workspace_id,
+        igUserId,
+      });
+      await insertDmLog({
+        workspaceId: account.workspace_id,
+        automationId: matchedRule.id,
+        commentId,
+        mediaId,
+        commenterId: commenterId || 'unknown',
+        commenterUsername,
+        commentText,
+        matchedKeyword,
+        status: 'failed',
+        errorMessage: 'missing_page_access_token',
+      });
+      return ok();
+    }
+
     const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
       igUserId
     )}/messages`;
@@ -536,12 +678,13 @@ export async function POST(request: Request) {
       const graphData = (await graphRes.json().catch(() => ({}))) as {
         message_id?: string;
         id?: string;
-        error?: { message?: string };
+        error?: { message?: string; code?: number };
       };
       console.log('[Meta Private Reply Result]', {
         igUserId,
         status: graphRes.status,
         data: graphData,
+        tokenSource: 'page_access_token',
       });
 
       if (graphRes.ok && (graphData.message_id || graphData.id)) {
@@ -570,7 +713,7 @@ export async function POST(request: Request) {
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${account.access_token}`,
+              Authorization: `Bearer ${pageAccessToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({

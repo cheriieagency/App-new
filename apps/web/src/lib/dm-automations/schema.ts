@@ -122,6 +122,10 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
   `);
   await addColumnSafe(sql`
     ALTER TABLE public.dm_logs
+      ADD COLUMN IF NOT EXISTS commenter_id text
+  `);
+  await addColumnSafe(sql`
+    ALTER TABLE public.dm_logs
       ADD COLUMN IF NOT EXISTS error_message text
   `);
   await addColumnSafe(sql`

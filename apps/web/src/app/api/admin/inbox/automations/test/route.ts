@@ -478,7 +478,7 @@ export async function POST(request: Request) {
         SELECT COUNT(*)::int AS n
         FROM public.dm_logs
         WHERE workspace_id = ${workspaceId}
-          AND status = 'sent'
+          AND status IN ('sent', 'delivered')
       `;
       const topLog = (Array.isArray(logs) ? logs : [])?.[0] || {};
       dmsSentTotal = Number((topLog as { n?: unknown })?.n) || 0;
