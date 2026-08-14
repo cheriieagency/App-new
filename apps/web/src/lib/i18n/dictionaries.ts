@@ -41,6 +41,10 @@ export type NestedDict = {
     dashboard: string;
     getStartedFree: string;
     language: string;
+    /** Visible status when a session exists on the public landing header. */
+    signedIn: string;
+    openCreatorAdmin: string;
+    openMemberDashboard: string;
   };
   hero: {
     badge: string;
@@ -218,6 +222,9 @@ export const DICT_EN: NestedDict = {
     dashboard: 'Dashboard',
     getStartedFree: 'Get started free',
     language: 'Language',
+    signedIn: 'Signed in',
+    openCreatorAdmin: 'Open Admin',
+    openMemberDashboard: 'Open Dashboard',
   },
   hero: {
     badge: 'The all-in-one platform',
@@ -399,6 +406,9 @@ export const DICT_SV: NestedDict = {
     dashboard: 'Dashboard',
     getStartedFree: 'Kom igång gratis',
     language: 'Språk',
+    signedIn: 'Inloggad',
+    openCreatorAdmin: 'Öppna Admin',
+    openMemberDashboard: 'Öppna Dashboard',
   },
   hero: {
     badge: 'Allt-i-ett-plattformen',
@@ -582,6 +592,9 @@ export const DICT_NO: NestedDict = {
     logIn: 'Logg inn',
     getStartedFree: 'Kom i gang gratis',
     language: 'Språk',
+    signedIn: 'Innlogget',
+    openCreatorAdmin: 'Åpne Admin',
+    openMemberDashboard: 'Åpne Dashboard',
   },
   hero: {
     ...DICT_SV.hero,
@@ -687,6 +700,9 @@ export const DICT_DA: NestedDict = {
     logIn: 'Log ind',
     getStartedFree: 'Kom i gang gratis',
     language: 'Sprog',
+    signedIn: 'Logget ind',
+    openCreatorAdmin: 'Åbn Admin',
+    openMemberDashboard: 'Åbn Dashboard',
   },
   hero: {
     ...DICT_SV.hero,
@@ -790,6 +806,9 @@ export const DICT_FI: NestedDict = {
     dashboard: 'Hallinta',
     getStartedFree: 'Aloita ilmaiseksi',
     language: 'Kieli',
+    signedIn: 'Kirjautunut',
+    openCreatorAdmin: 'Avaa Admin',
+    openMemberDashboard: 'Avaa Dashboard',
   },
   hero: {
     badge: 'Kaikki yhdessä -alusta',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Crown, Users } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
@@ -14,8 +14,15 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 
+type LandingHeaderUser = {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+};
+
 type LandingHeaderProps = {
   isLoggedIn: boolean;
+  user?: LandingHeaderUser | null;
 };
 
 type LoginRole = 'member' | 'creator';
@@ -24,13 +31,36 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 }
 
-export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
+function initialsFromUser(user?: LandingHeaderUser | null): string {
+  const name = (user?.name || '').trim();
+  if (name) {
+    const parts = name.split(/\s+/).filter(Boolean);
+    const letters = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() || '');
+    return letters.join('') || 'C';
+  }
+  const email = (user?.email || '').trim();
+  if (email) return email[0]?.toUpperCase() || 'C';
+  return 'C';
+}
+
+function displayNameFromUser(user?: LandingHeaderUser | null): string {
+  const name = (user?.name || '').trim();
+  if (name) return name.split(/\s+/)[0] || name;
+  const email = (user?.email || '').trim();
+  if (email) return email.split('@')[0] || email;
+  return '';
+}
+
+export function LandingHeader({ isLoggedIn, user = null }: LandingHeaderProps) {
   const { t } = useLanguage();
   const [loginOpen, setLoginOpen] = useState(false);
   const [loginRole, setLoginRole] = useState<LoginRole>('member');
   const [loginMenuOpen, setLoginMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { home, isCreator } = usePlatformRole();
+
+  const initials = useMemo(() => initialsFromUser(user), [user]);
+  const firstName = useMemo(() => displayNameFromUser(user), [user]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -92,12 +122,66 @@ export function LandingHeader({ isLoggedIn }: LandingHeaderProps) {
           <LanguageSwitcher className="[&>button]:bg-white [&>button]:border [&>button]:border-slate-200 [&>button]:shadow-sm [&>button]:rounded-xl [&>button]:min-h-11" />
 
           {isLoggedIn ? (
-            <Link
-              href={home}
-              className="bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 min-h-11 transition-colors"
-            >
-              {isCreator ? t('creatorAdmin') : t('nav.dashboard')}
-            </Link>
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              {/* Explicit signed-in status — distinct from the logged-out CTAs */}
+              <span
+                className="hidden sm:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl bg-[#10B981]/12 text-[#047857] text-[11px] font-extrabold tracking-wide uppercase"
+                aria-live="polite"
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-[#10B981]"
+                  aria-hidden
+                />
+                {t('nav.signedIn')}
+              </span>
+              <Link
+                href={home}
+                className="bg-[#0F172A] hover:bg-slate-800 text-white font-bold text-xs pl-1.5 pr-3.5 py-1.5 rounded-xl flex items-center gap-2 min-h-11 transition-colors"
+                aria-label={
+                  firstName
+                    ? `${t('nav.signedIn')}: ${firstName}. ${
+                        isCreator
+                          ? t('nav.openCreatorAdmin')
+                          : t('nav.openMemberDashboard')
+                      }`
+                    : isCreator
+                      ? t('nav.openCreatorAdmin')
+                      : t('nav.openMemberDashboard')
+                }
+              >
+                {user?.image ? (
+                  // Auth provider avatar URL — plain img avoids remote domain config.
+                  <img
+                    src={user.image}
+                    alt=""
+                    className="w-8 h-8 rounded-lg object-cover flex-shrink-0 ring-1 ring-white/20"
+                  />
+                ) : (
+                  <span
+                    className="w-8 h-8 rounded-lg bg-[#2B2568] text-white text-[11px] font-extrabold inline-flex items-center justify-center flex-shrink-0"
+                    aria-hidden
+                  >
+                    {initials}
+                  </span>
+                )}
+                <span className="flex flex-col items-start leading-tight text-left">
+                  {firstName ? (
+                    <span className="text-[10px] font-semibold text-white/70 truncate max-w-[100px] sm:max-w-[140px]">
+                      {firstName}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-[#10B981] sm:hidden">
+                      {t('nav.signedIn')}
+                    </span>
+                  )}
+                  <span className="text-xs font-extrabold">
+                    {isCreator
+                      ? t('nav.openCreatorAdmin')
+                      : t('nav.openMemberDashboard')}
+                  </span>
+                </span>
+              </Link>
+            </div>
           ) : (
             <>
               <Popover open={loginMenuOpen} onOpenChange={setLoginMenuOpen}>

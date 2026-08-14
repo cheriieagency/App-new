@@ -101,7 +101,18 @@ export function LandingPageClient() {
 
   return (
     <div className="nc-landing min-h-screen bg-[#FAFAFA]">
-      <LandingHeader isLoggedIn={!!session} />
+      <LandingHeader
+        isLoggedIn={!!session}
+        user={
+          session?.user
+            ? {
+                name: session.user.name,
+                email: session.user.email,
+                image: session.user.image,
+              }
+            : null
+        }
+      />
       <HeroSection />
       <PlatformSuiteSection />
       <FeaturesSection />
