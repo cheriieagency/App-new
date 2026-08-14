@@ -200,6 +200,7 @@ export default function DMAutomationPanel() {
   const [liveCommentId, setLiveCommentId] = useState('');
   const [recentComments, setRecentComments] = useState<RecentIgComment[]>([]);
   const [selectedCommentText, setSelectedCommentText] = useState('');
+  const [devToolsOpen, setDevToolsOpen] = useState(false);
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -845,19 +846,6 @@ export default function DMAutomationPanel() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => liveDiagnosticMutation.mutate({})}
-              disabled={liveDiagnosticMutation.isPending}
-              className="h-11 min-h-[44px] px-4 rounded-xl border border-[#2B2568]/25 bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-[#1a1848] disabled:opacity-50"
-            >
-              {liveDiagnosticMutation.isPending ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Search size={16} />
-              )}
-              🔍 Kör Live Felsökning i Webbläsaren
-            </button>
-            <button
-              type="button"
               onClick={() => resyncWebhooksMutation.mutate()}
               disabled={resyncWebhooksMutation.isPending}
               className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
@@ -871,329 +859,291 @@ export default function DMAutomationPanel() {
             </button>
             <button
               type="button"
-              onClick={() => testMutation.mutate()}
-              disabled={testMutation.isPending || rules.length === 0}
-              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
-            >
-              {testMutation.isPending ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Zap size={16} />
-              )}
-              Test automation
-            </button>
-            <button
-              type="button"
               onClick={openCreate}
-              className="h-11 min-h-[44px] px-4 rounded-xl bg-clikd-pink text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:opacity-90"
+              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#F472B6] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:opacity-90 shadow-sm shadow-[#F472B6]/25"
             >
               <Plus size={16} />
-              Create Comment-to-DM Rule
+              + Skapa ny regel
             </button>
           </div>
         </div>
 
-        {liveDiagnostic ? (
-          <div className="mx-5 sm:mx-7 mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
-                  Live Comment-to-DM Diagnostic
-                </p>
-                <p className="text-sm font-bold text-slate-900 mt-1">
-                  {liveDiagnostic.ok
-                    ? 'All checks passed'
-                    : 'Issues found — see checklist + Meta errors below'}
-                </p>
-                {liveDiagnostic.note ? (
-                  <p className="text-xs text-slate-500 mt-1">{liveDiagnostic.note}</p>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => setLiveDiagnostic(null)}
-                className="h-9 min-h-[36px] px-3 rounded-lg text-xs font-bold text-slate-600 hover:bg-white border border-transparent hover:border-slate-200 inline-flex items-center gap-1 self-start"
-              >
-                <X size={14} />
-                Dismiss
-              </button>
-            </div>
+        {/* Developer tools — collapsed by default to keep the Automations UI clean */}
+        <div className="mx-5 sm:mx-7 mt-4 mb-4">
+          <button
+            type="button"
+            onClick={() => setDevToolsOpen((v) => !v)}
+            className="w-full sm:w-auto h-11 min-h-[44px] px-3 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 inline-flex items-center gap-2 transition-colors"
+            aria-expanded={devToolsOpen}
+          >
+            <span aria-hidden>🛠️</span>
+            Utvecklarverktyg & Diagnostik (Valfritt)
+            <span className="text-slate-400 font-mono">
+              {devToolsOpen ? '▾' : '▸'}
+            </span>
+          </button>
 
-            <ul className="space-y-2">
-              {CHECKLIST_ROWS.map((row) => {
-                const ok = Boolean(liveDiagnostic.checklist?.[row.key]);
-                const relatedSteps =
-                  liveDiagnostic.steps?.filter((s) =>
-                    row.stepIds.includes(s.step)
-                  ) ?? [];
-                const failed =
-                  relatedSteps.find((s) => !s.success) || relatedSteps[0];
-                return (
-                  <li
-                    key={row.key}
-                    className={`rounded-xl border px-3.5 py-3 flex gap-3 items-start ${
-                      ok
-                        ? 'border-emerald-200/80 bg-emerald-50/70'
-                        : 'border-rose-200/80 bg-rose-50/70'
-                    }`}
-                  >
-                    {ok ? (
-                      <CheckCircle2
-                        size={18}
-                        className="text-emerald-600 flex-shrink-0 mt-0.5"
-                        aria-hidden
-                      />
-                    ) : (
-                      <XCircle
-                        size={18}
-                        className="text-rose-600 flex-shrink-0 mt-0.5"
-                        aria-hidden
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-extrabold text-slate-900">
-                        {ok ? '✓' : '✗'} {row.label}
+          {devToolsOpen ? (
+            <div className="mt-3 space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-5">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => liveDiagnosticMutation.mutate({})}
+                  disabled={liveDiagnosticMutation.isPending}
+                  className="h-11 min-h-[44px] px-4 rounded-xl border border-[#2B2568]/20 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-white disabled:opacity-50"
+                >
+                  {liveDiagnosticMutation.isPending && !liveCommentId.trim() ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Search size={16} />
+                  )}
+                  🔍 Kör Live Felsökning
+                </button>
+                <button
+                  type="button"
+                  onClick={() => testMutation.mutate()}
+                  disabled={testMutation.isPending || rules.length === 0}
+                  className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {testMutation.isPending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Zap size={16} />
+                  )}
+                  Test automation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fetchCommentsMutation.mutate()}
+                  disabled={fetchCommentsMutation.isPending}
+                  className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {fetchCommentsMutation.isPending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={16} />
+                  )}
+                  🔄 Hämta senaste kommentarer
+                </button>
+              </div>
+
+              {testResult ? (
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-medium text-slate-700">
+                  {testResult}
+                </div>
+              ) : null}
+
+              <label className="block min-w-0">
+                <span className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Välj senaste Instagram-kommentar
+                </span>
+                <select
+                  value={liveCommentId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setLiveCommentId(id);
+                    const match = recentComments.find((c) => c.id === id);
+                    setSelectedCommentText(match?.text || '');
+                  }}
+                  disabled={recentComments.length === 0}
+                  className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25 disabled:opacity-60"
+                >
+                  <option value="">
+                    {recentComments.length === 0
+                      ? 'Hämta kommentarer först…'
+                      : 'Välj en kommentar…'}
+                  </option>
+                  {recentComments.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {formatCommentOption(c)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                <label className="flex-1 min-w-0">
+                  <span className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Instagram Comment ID (valfritt för live-DM test)
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={liveCommentId}
+                    onChange={(e) => {
+                      setLiveCommentId(e.target.value);
+                      setSelectedCommentText('');
+                    }}
+                    placeholder="t.ex. 17912345678901234"
+                    className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const id = liveCommentId.trim();
+                    if (!id || !isValidInstagramCommentIdClient(id)) {
+                      toast.error(
+                        'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.'
+                      );
+                      return;
+                    }
+                    liveDiagnosticMutation.mutate({
+                      liveCommentId: id,
+                      commentText: selectedCommentText,
+                    });
+                  }}
+                  disabled={
+                    liveDiagnosticMutation.isPending ||
+                    !isValidInstagramCommentIdClient(liveCommentId)
+                  }
+                  className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-[#1a1848] disabled:opacity-50 shrink-0"
+                >
+                  {liveDiagnosticMutation.isPending && liveCommentId.trim() ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Zap size={16} />
+                  )}
+                  Kör Live Test-DM
+                </button>
+              </div>
+
+              {liveDiagnostic ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div>
+                      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                        Live Comment-to-DM Diagnostic
                       </p>
-                      {failed?.message ? (
-                        <p className="text-xs text-slate-600 mt-1 font-medium">
-                          {failed.message}
-                        </p>
-                      ) : null}
-                      {failed?.metaError ? (
-                        <p className="text-xs text-rose-700 mt-1 font-mono break-words">
-                          Meta: {failed.metaError}
-                        </p>
-                      ) : null}
-                      {!ok && failed?.fix ? (
-                        <p className="text-xs text-[#2B2568] mt-1.5 font-semibold">
-                          Fix: {failed.fix}
+                      <p className="text-sm font-bold text-slate-900 mt-1">
+                        {liveDiagnostic.ok
+                          ? 'All checks passed'
+                          : 'Issues found — see checklist + Meta errors below'}
+                      </p>
+                      {liveDiagnostic.note ? (
+                        <p className="text-xs text-slate-500 mt-1">
+                          {liveDiagnostic.note}
                         </p>
                       ) : null}
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
+                    <button
+                      type="button"
+                      onClick={() => setLiveDiagnostic(null)}
+                      className="h-9 min-h-[36px] px-3 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 inline-flex items-center gap-1 self-start"
+                    >
+                      <X size={14} />
+                      Dismiss
+                    </button>
+                  </div>
 
-            {liveDiagnostic.steps?.length ? (
-              <details className="rounded-xl border border-slate-200 bg-white px-3.5 py-3">
-                <summary className="text-xs font-extrabold text-slate-800 cursor-pointer min-h-[44px] flex items-center">
-                  Full diagnostic log ({liveDiagnostic.steps.length} steps)
-                </summary>
-                <ol className="mt-3 space-y-3 list-decimal pl-4">
-                  {liveDiagnostic.steps.map((s) => (
-                    <li key={s.step} className="text-xs text-slate-700">
-                      <span
-                        className={`font-extrabold ${
-                          s.success ? 'text-emerald-700' : 'text-rose-700'
-                        }`}
-                      >
-                        {s.success ? '✓' : '✗'} {s.step}
-                      </span>
-                      <span className="font-semibold"> — {s.label}</span>
-                      <p className="mt-0.5 text-slate-600">{s.message}</p>
-                      {s.metaError ? (
-                        <p className="mt-0.5 font-mono text-rose-700 break-words">
-                          {s.metaError}
+                  <ul className="space-y-2">
+                    {CHECKLIST_ROWS.map((row) => {
+                      const ok = Boolean(liveDiagnostic.checklist?.[row.key]);
+                      const relatedSteps =
+                        liveDiagnostic.steps?.filter((s) =>
+                          row.stepIds.includes(s.step)
+                        ) ?? [];
+                      const failed =
+                        relatedSteps.find((s) => !s.success) || relatedSteps[0];
+                      return (
+                        <li
+                          key={row.key}
+                          className={`rounded-xl border px-3.5 py-3 flex gap-3 items-start ${
+                            ok
+                              ? 'border-emerald-200/80 bg-emerald-50/70'
+                              : 'border-rose-200/80 bg-rose-50/70'
+                          }`}
+                        >
+                          {ok ? (
+                            <CheckCircle2
+                              size={18}
+                              className="text-emerald-600 flex-shrink-0 mt-0.5"
+                              aria-hidden
+                            />
+                          ) : (
+                            <XCircle
+                              size={18}
+                              className="text-rose-600 flex-shrink-0 mt-0.5"
+                              aria-hidden
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-extrabold text-slate-900">
+                              {ok ? '✓' : '✗'} {row.label}
+                            </p>
+                            {failed?.message ? (
+                              <p className="text-xs text-slate-600 mt-1 font-medium">
+                                {failed.message}
+                              </p>
+                            ) : null}
+                            {failed?.metaError ? (
+                              <p className="text-xs text-rose-700 mt-1 font-mono break-words">
+                                Meta: {failed.metaError}
+                              </p>
+                            ) : null}
+                            {!ok && failed?.fix ? (
+                              <p className="text-xs text-[#2B2568] mt-1.5 font-semibold">
+                                Fix: {failed.fix}
+                              </p>
+                            ) : null}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  {liveDiagnostic.livePrivateReply?.attempted ? (
+                    <div
+                      className={`rounded-xl border px-3.5 py-3 ${
+                        liveDiagnostic.livePrivateReply.ok
+                          ? 'border-emerald-200 bg-emerald-50/80'
+                          : 'border-rose-200 bg-rose-50/80'
+                      }`}
+                    >
+                      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                        Live Private Reply Result
+                      </p>
+                      <p className="text-sm font-extrabold text-slate-900 mt-1">
+                        {liveDiagnostic.livePrivateReply.ok ? '✓' : '✗'} HTTP{' '}
+                        {liveDiagnostic.livePrivateReply.statusLabel ||
+                          liveDiagnostic.livePrivateReply.httpStatus}
+                      </p>
+                      {liveDiagnostic.livePrivateReply.endpoint ? (
+                        <p className="text-[11px] font-mono text-slate-600 mt-1 break-all">
+                          Endpoint: {liveDiagnostic.livePrivateReply.endpoint}
+                          {liveDiagnostic.livePrivateReply.pageId
+                            ? ` · page_id=${liveDiagnostic.livePrivateReply.pageId}`
+                            : ''}
                         </p>
                       ) : null}
-                    </li>
-                  ))}
-                </ol>
-                {liveDiagnostic.tokenScopes?.length ? (
-                  <p className="mt-3 text-[11px] font-mono text-slate-500 break-words">
-                    Token scopes: {liveDiagnostic.tokenScopes.join(', ')}
-                  </p>
-                ) : null}
-              </details>
-            ) : null}
-
-            {liveDiagnostic.suggestions?.length ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-800/80">
-                  Suggested fixes
-                </p>
-                <ul className="mt-1.5 space-y-1">
-                  {liveDiagnostic.suggestions.map((tip) => (
-                    <li
-                      key={tip}
-                      className="text-xs font-semibold text-amber-950"
-                    >
-                      • {tip}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {liveDiagnostic.livePrivateReply?.attempted ? (
-              <div
-                className={`rounded-xl border px-3.5 py-3 ${
-                  liveDiagnostic.livePrivateReply.ok
-                    ? 'border-emerald-200 bg-emerald-50/80'
-                    : 'border-rose-200 bg-rose-50/80'
-                }`}
-              >
-                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
-                  Live Private Reply Result
-                </p>
-                  <p className="text-sm font-extrabold text-slate-900 mt-1">
-                    {liveDiagnostic.livePrivateReply.ok ? '✓' : '✗'} HTTP{' '}
-                    {liveDiagnostic.livePrivateReply.statusLabel ||
-                      liveDiagnostic.livePrivateReply.httpStatus}
-                  </p>
-                  {liveDiagnostic.livePrivateReply.endpoint ? (
-                    <p className="text-[11px] font-mono text-slate-600 mt-1 break-all">
-                      Endpoint: {liveDiagnostic.livePrivateReply.endpoint}
-                      {liveDiagnostic.livePrivateReply.pageId
-                        ? ` · page_id=${liveDiagnostic.livePrivateReply.pageId}`
-                        : ''}
-                    </p>
+                      {liveDiagnostic.livePrivateReply.metaError ? (
+                        <p className="text-xs text-rose-700 mt-1 font-mono break-words">
+                          Meta: {liveDiagnostic.livePrivateReply.metaError}
+                        </p>
+                      ) : null}
+                      <pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-slate-900 text-slate-100 text-[11px] p-3 font-mono whitespace-pre-wrap break-words">
+                        {JSON.stringify(
+                          {
+                            httpStatus:
+                              liveDiagnostic.livePrivateReply.httpStatus,
+                            statusLabel:
+                              liveDiagnostic.livePrivateReply.statusLabel,
+                            pageId: liveDiagnostic.livePrivateReply.pageId,
+                            payload: liveDiagnostic.livePrivateReply.payload,
+                            metaResponse:
+                              liveDiagnostic.livePrivateReply.metaResponse,
+                          },
+                          null,
+                          2
+                        )}
+                      </pre>
+                    </div>
                   ) : null}
-                {liveDiagnostic.livePrivateReply.metaError ? (
-                  <p className="text-xs text-rose-700 mt-1 font-mono break-words">
-                    Meta: {liveDiagnostic.livePrivateReply.metaError}
-                    {liveDiagnostic.livePrivateReply.metaErrorCode != null
-                      ? ` (code ${liveDiagnostic.livePrivateReply.metaErrorCode})`
-                      : ''}
-                  </p>
-                ) : null}
-                <p className="text-[11px] font-mono text-slate-500 mt-2 break-all">
-                  {liveDiagnostic.livePrivateReply.endpoint}
-                </p>
-                <pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-slate-900 text-slate-100 text-[11px] p-3 font-mono whitespace-pre-wrap break-words">
-                  {JSON.stringify(
-                    {
-                      httpStatus: liveDiagnostic.livePrivateReply.httpStatus,
-                      statusLabel: liveDiagnostic.livePrivateReply.statusLabel,
-                      payload: liveDiagnostic.livePrivateReply.payload,
-                      metaResponse: liveDiagnostic.livePrivateReply.metaResponse,
-                    },
-                    null,
-                    2
-                  )}
-                </pre>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {testResult ? (
-          <div className="mx-5 sm:mx-7 mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-700">
-            {testResult}
-          </div>
-        ) : null}
-
-        {/* Always-visible live Private Reply tester (uses test-live + liveCommentId) */}
-        <div className="mx-5 sm:mx-7 mt-4 mb-2 rounded-2xl border border-[#2B2568]/15 bg-white px-4 py-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => fetchCommentsMutation.mutate()}
-              disabled={fetchCommentsMutation.isPending}
-              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
-            >
-              {fetchCommentsMutation.isPending ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <RefreshCw size={16} />
-              )}
-              🔄 Hämta senaste kommentarer från Instagram
-            </button>
-            <button
-              type="button"
-              onClick={() => liveDiagnosticMutation.mutate({})}
-              disabled={liveDiagnosticMutation.isPending}
-              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
-            >
-              {liveDiagnosticMutation.isPending && !liveCommentId.trim() ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Search size={16} />
-              )}
-              Kör diagnostik
-            </button>
-          </div>
-
-          <label className="block min-w-0">
-            <span className="block text-xs font-bold text-slate-700 mb-1.5">
-              Välj senaste Instagram-kommentar
-            </span>
-            <select
-              value={liveCommentId}
-              onChange={(e) => {
-                const id = e.target.value;
-                setLiveCommentId(id);
-                const match = recentComments.find((c) => c.id === id);
-                setSelectedCommentText(match?.text || '');
-              }}
-              disabled={recentComments.length === 0}
-              className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25 disabled:opacity-60"
-            >
-              <option value="">
-                {recentComments.length === 0
-                  ? 'Hämta kommentarer först…'
-                  : 'Välj en kommentar…'}
-              </option>
-              {recentComments.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {formatCommentOption(c)}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-            <label className="flex-1 min-w-0">
-              <span className="block text-xs font-bold text-slate-700 mb-1.5">
-                Instagram Comment ID (valfritt för live-DM test)
-              </span>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                value={liveCommentId}
-                onChange={(e) => {
-                  setLiveCommentId(e.target.value);
-                  setSelectedCommentText('');
-                }}
-                placeholder="t.ex. 17912345678901234"
-                className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => {
-                const id = liveCommentId.trim();
-                if (!id || !isValidInstagramCommentIdClient(id)) {
-                  toast.error(
-                    'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.'
-                  );
-                  return;
-                }
-                liveDiagnosticMutation.mutate({
-                  liveCommentId: id,
-                  commentText: selectedCommentText,
-                });
-              }}
-              disabled={
-                liveDiagnosticMutation.isPending ||
-                !isValidInstagramCommentIdClient(liveCommentId)
-              }
-              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-[#1a1848] disabled:opacity-50 shrink-0"
-            >
-              {liveDiagnosticMutation.isPending && liveCommentId.trim() ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Zap size={16} />
-              )}
-              Kör Live Test-DM
-            </button>
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium">
-            Hämta kommentarer → välj i listan → Kör Live Test-DM. Meta HTTP-svar
-            (200 OK / 400 / 403) visas nedan.
-          </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {isLoading ? (

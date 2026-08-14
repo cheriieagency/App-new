@@ -701,20 +701,28 @@ export async function POST(request: Request) {
     const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
       pageId
     )}/messages`;
+    // Explicit DM body: rule text + optional storefront CTA URL.
+    const dmText = String(matchedRule.dm_message_text || '').trim();
+    const ctaUrl = String(matchedRule.cta_button_url || '').trim();
+    const privateReplyText = ctaUrl
+      ? `${dmText}\n\n${ctaUrl}`.trim()
+      : dmText || messageText;
     const dispatchPayload = {
       recipient: {
         comment_id: commentId,
       },
       message: {
-        text: messageText,
+        text: privateReplyText,
       },
     };
 
     let dmMessageId: string | null = null;
     let lastGraphError: string | null = null;
+    let dmResStatus: number | null = null;
+    let publicResStatus: number | null = null;
 
     try {
-      const graphRes = await fetch(messagingUrl, {
+      const dmRes = await fetch(messagingUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${pageAccessToken}`,
@@ -722,26 +730,19 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify(dispatchPayload),
       });
-      const graphData = (await graphRes.json().catch(() => ({}))) as {
+      dmResStatus = dmRes.status;
+      const graphData = (await dmRes.json().catch(() => ({}))) as {
         message_id?: string;
         id?: string;
         error?: { message?: string; code?: number };
       };
-      console.log('[Meta Private Reply Result]', {
-        endpoint: messagingUrl,
-        pageId,
-        igUserId: igUserId || null,
-        status: graphRes.status,
-        data: graphData,
-        tokenSource: 'page_access_token',
-      });
 
-      if (graphRes.ok && (graphData.message_id || graphData.id)) {
+      if (dmRes.ok && (graphData.message_id || graphData.id)) {
         dmMessageId = String(graphData.message_id || graphData.id);
       } else {
         lastGraphError =
           graphData.error?.message ||
-          `private_reply_failed_${graphRes.status}`;
+          `private_reply_failed_${dmRes.status}`;
       }
     } catch (fetchErr) {
       lastGraphError =
@@ -751,13 +752,14 @@ export async function POST(request: Request) {
       console.warn('[Meta Private Reply network]', pageId, lastGraphError);
     }
 
-    // Optional public comment reply
-    if (
-      matchedRule.reply_to_comment_publicly === true &&
-      String(matchedRule.public_comment_text || '').trim()
-    ) {
+    // STEP B — Public comment reply (ON unless reply_to_comment_publicly === false).
+    const shouldPublicReply = matchedRule.reply_to_comment_publicly !== false;
+    if (shouldPublicReply) {
+      const publicText =
+        String(matchedRule.public_comment_text || '').trim() ||
+        'Kolla din DM! Jag har skickat länken till dig. 📬';
       try {
-        const replyRes = await fetch(
+        const publicRes = await fetch(
           `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}/replies`,
           {
             method: 'POST',
@@ -765,17 +767,27 @@ export async function POST(request: Request) {
               Authorization: `Bearer ${pageAccessToken}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              message: String(matchedRule.public_comment_text).trim(),
-            }),
+            body: JSON.stringify({ message: publicText }),
           }
         );
-        const replyData = await replyRes.json().catch(() => ({}));
-        console.log('[Meta Public Reply Result]', replyRes.status, replyData);
+        publicResStatus = publicRes.status;
+        const replyData = await publicRes.json().catch(() => ({}));
+        if (!publicRes.ok) {
+          console.warn('[Meta Public Reply failed]', publicRes.status, replyData);
+        }
       } catch (replyErr) {
         console.warn('[Meta Webhook] public comment reply failed', replyErr);
       }
     }
+
+    console.log('[Meta Live Private Reply & Public Comment Sent]', {
+      commentId,
+      pageId,
+      dmStatus: dmResStatus,
+      publicReplyStatus: publicResStatus,
+      dmMessageId,
+      matchedKeyword,
+    });
 
     if (dmMessageId) {
       await insertDmLog({
