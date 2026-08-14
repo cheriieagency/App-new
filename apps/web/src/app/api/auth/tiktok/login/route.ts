@@ -1,7 +1,10 @@
 /**
- * GET /api/auth/tiktok/login?workspaceId=…
+ * GET /api/auth/tiktok/login?workspaceId=…&force=true
  * Starts TikTok OAuth 2.0 bound to the active workspace.
- * Always forces account selection + consent (disable_auto_login + prompt=consent).
+ *
+ * Query flags that force account re-selection / consent:
+ *   - force=true
+ *   - prompt=select_account | prompt=consent
  */
 
 import { NextResponse } from 'next/server';
@@ -33,13 +36,21 @@ export async function GET(request: Request) {
     jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
     null;
 
+  const promptParam = (url.searchParams.get('prompt') || '').trim().toLowerCase();
+  const forceParam = (url.searchParams.get('force') || '').trim().toLowerCase();
+  const forceSelectAccount =
+    forceParam === '1' ||
+    forceParam === 'true' ||
+    promptParam === 'select_account' ||
+    promptParam === 'consent';
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     const signIn = new URL('/account/signin', request.url);
-    const cb = workspaceId
-      ? `/api/auth/tiktok/login?workspaceId=${encodeURIComponent(workspaceId)}`
-      : '/api/auth/tiktok/login';
-    signIn.searchParams.set('callbackUrl', cb);
+    const cb = new URL('/api/auth/tiktok/login', url.origin);
+    if (workspaceId) cb.searchParams.set('workspaceId', workspaceId);
+    if (forceSelectAccount) cb.searchParams.set('force', 'true');
+    signIn.searchParams.set('callbackUrl', `${cb.pathname}?${cb.searchParams}`);
     return NextResponse.redirect(signIn);
   }
 
@@ -49,8 +60,7 @@ export async function GET(request: Request) {
 
   let loginUrl: string;
   try {
-    // Includes disable_auto_login=true & prompt=consent via buildTikTokLoginUrl.
-    loginUrl = buildTikTokLoginUrl(state, origin);
+    loginUrl = buildTikTokLoginUrl(state, origin, { forceSelectAccount: true });
   } catch (error) {
     console.error('[tiktok/login]', error);
     const dest = new URL('/admin/settings/socials', request.url);

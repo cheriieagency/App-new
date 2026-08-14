@@ -165,22 +165,29 @@ function ConnectOrConnectedButton({
   account,
   onConnect,
   onDisconnect,
+  onSwitchAccount,
   idleLabel,
   idleClassName,
   icon,
   disconnectLabel = 'Disconnect',
+  switchLabel = 'Switch account',
   helperHint,
+  switchBusy = false,
 }: {
   connected: boolean;
   account?: ConnectedSocialAccount | null;
   onConnect: () => void;
   onDisconnect?: () => void;
+  /** Optional second action (e.g. TikTok Switch account). */
+  onSwitchAccount?: () => void;
   idleLabel: string;
   idleClassName: string;
   icon: ReactNode;
   disconnectLabel?: string;
+  switchLabel?: string;
   /** Small tip under the connect CTA (e.g. per-workspace support). */
   helperHint?: string;
+  switchBusy?: boolean;
 }) {
   if (connected && account) {
     return (
@@ -203,6 +210,21 @@ function ConnectOrConnectedButton({
           >
             <Unplug size={14} />
             {disconnectLabel}
+          </button>
+        ) : null}
+        {onSwitchAccount ? (
+          <button
+            type="button"
+            disabled={switchBusy}
+            onClick={onSwitchAccount}
+            className="mt-2 w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs font-semibold hover:bg-slate-50 disabled:opacity-60 transition-colors"
+          >
+            {switchBusy ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <RefreshCw size={14} />
+            )}
+            {switchLabel}
           </button>
         ) : null}
       </div>
@@ -257,6 +279,7 @@ export default function SocialAccountsPanel({
   const [disconnectTarget, setDisconnectTarget] =
     useState<ConnectedSocialAccount | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isSwitchingTikTok, setIsSwitchingTikTok] = useState(false);
 
   useEffect(() => {
     try {
@@ -407,7 +430,7 @@ export default function SocialAccountsPanel({
     }
     if (!demoMode && platform === 'tiktok') {
       window.location.href = withWorkspaceQuery(
-        '/api/auth/tiktok/login',
+        '/api/auth/tiktok/login?force=true',
         activeWorkspaceId
       );
       return;
@@ -572,6 +595,70 @@ export default function SocialAccountsPanel({
     const account = disconnectTarget;
     setDisconnectTarget(null);
     await handleDisconnect(account);
+  };
+
+  const tiktokLoginUrl = (force = true) => {
+    const path = force
+      ? '/api/auth/tiktok/login?force=true'
+      : '/api/auth/tiktok/login';
+    return withWorkspaceQuery(path, activeWorkspaceId);
+  };
+
+  /** Disconnect current TikTok row, then OAuth with forced account chooser. */
+  const handleTikTokSwitchAccount = async (
+    currentAccount?: ConnectedSocialAccount | null
+  ) => {
+    try {
+      setIsSwitchingTikTok(true);
+      const accountId = currentAccount?.id?.trim() || null;
+      const platformUserId =
+        currentAccount?.platform_user_id ||
+        currentAccount?.external_id ||
+        null;
+
+      // 1) Clear existing TikTok row for this user/workspace.
+      if (currentAccount?.connected) {
+        const res = await fetch('/api/auth/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            accountId: accountId || undefined,
+            platform: 'tiktok',
+            platformUserId: platformUserId || undefined,
+            workspaceId:
+              currentAccount.workspace_id || activeWorkspaceId || undefined,
+          }),
+        });
+        if (res.ok) {
+          markDisconnectedInCache({
+            ...currentAccount,
+            platform: 'tiktok',
+            connected: true,
+          });
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['social-accounts'] }),
+            queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
+          ]);
+        } else {
+          const errData = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          // Continue to OAuth even if already disconnected (404).
+          if (res.status !== 404) {
+            toast.error(errData.error || 'Failed to disconnect TikTok');
+            return;
+          }
+        }
+      }
+
+      // 2) Force TikTok account selection / consent.
+      window.location.href = tiktokLoginUrl(true);
+    } catch (err) {
+      console.error('[TikTok Switch Error]', err);
+      toast.error('Could not switch TikTok account');
+      setIsSwitchingTikTok(false);
+    }
   };
 
   if (isLoading) {
@@ -793,15 +880,17 @@ export default function SocialAccountsPanel({
                 connected={Boolean(byPlatform.get('tiktok')?.connected)}
                 account={byPlatform.get('tiktok') ?? null}
                 onConnect={() => {
-                  window.location.href = withWorkspaceQuery(
-                    '/api/auth/tiktok/login',
-                    activeWorkspaceId
-                  );
+                  window.location.href = tiktokLoginUrl(true);
                 }}
                 onDisconnect={() =>
                   setDisconnectTarget(byPlatform.get('tiktok') ?? null)
                 }
+                onSwitchAccount={() =>
+                  void handleTikTokSwitchAccount(byPlatform.get('tiktok'))
+                }
                 disconnectLabel={t('socials.disconnectAccount')}
+                switchLabel={t('socials.switchAccount')}
+                switchBusy={isSwitchingTikTok}
                 idleLabel="Connect TikTok Account"
                 idleClassName="bg-[#0F172A] hover:bg-[#1e293b]"
                 icon={<TikTokIcon size={16} />}

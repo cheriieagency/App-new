@@ -155,6 +155,7 @@ export type NestedDict = {
     disconnected: string;
     grantPermission: string;
     disconnectAccount: string;
+    switchAccount: string;
     cancel: string;
     oauthTitle: string;
     oauthBody: string;
@@ -332,6 +333,7 @@ export const DICT_EN: NestedDict = {
     disconnected: 'Disconnected',
     grantPermission: 'Grant Permission',
     disconnectAccount: 'Disconnect account',
+    switchAccount: 'Switch account',
     cancel: 'Cancel',
     oauthTitle: 'Connect {platform}',
     oauthBody: 'clikd: is requesting permission to manage your {platform} account.',
@@ -512,6 +514,7 @@ export const DICT_SV: NestedDict = {
     disconnected: 'Frånkopplad',
     grantPermission: 'Ge behörighet',
     disconnectAccount: 'Koppla från konto',
+    switchAccount: 'Byt konto',
     cancel: 'Avbryt',
     oauthTitle: 'Anslut {platform}',
     oauthBody: 'clikd: begär behörighet att hantera ditt {platform}-konto.',
@@ -641,6 +644,7 @@ export const DICT_NO: NestedDict = {
     disconnected: 'Frakoblet',
     grantPermission: 'Gi tillatelse',
     disconnectAccount: 'Koble fra konto',
+    switchAccount: 'Bytt konto',
     cancel: 'Avbryt',
     confirmDisconnect: 'Koble fra',
   },
@@ -743,6 +747,7 @@ export const DICT_DA: NestedDict = {
     disconnected: 'Afbrudt',
     grantPermission: 'Giv tilladelse',
     disconnectAccount: 'Afbryd konto',
+    switchAccount: 'Skift konto',
     cancel: 'Annuller',
     confirmDisconnect: 'Afbryd',
   },
@@ -900,6 +905,7 @@ export const DICT_FI: NestedDict = {
     disconnected: 'Irrotettu',
     grantPermission: 'Myönnä oikeus',
     disconnectAccount: 'Irrota tili',
+    switchAccount: 'Vaihda tiliä',
     cancel: 'Peruuta',
     oauthTitle: 'Yhdistä {platform}',
     oauthBody: 'clikd: pyytää lupaa hallita {platform}-tiliäsi.',
