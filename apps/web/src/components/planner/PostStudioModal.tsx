@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  CalendarClock,
   Check,
+  ChevronDown,
   FileText,
   ImageIcon,
   Loader2,
@@ -16,6 +18,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +29,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import CarouselMediaUploader from '@/components/planner/CarouselMediaUploader';
 import FeedPreview from '@/components/planner/FeedPreview';
 import useUpload from '@/utils/useUpload';
@@ -46,6 +57,8 @@ import {
 } from '@/lib/mock-content-planner';
 import { useLocale } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
+import { useSocialAccounts } from '@/hooks/useSocialAccounts';
+import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 
 const WORKFLOW_LABEL_KEYS: Record<WorkflowStatus, TranslationKey> = {
   IDEA: 'workflowIdeas',
@@ -106,6 +119,16 @@ export default function PostStudioModal({
 }) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const workspaceCtx = useWorkspaceOptional();
+  const workspaceId = workspaceCtx?.activeWorkspace?.id || '';
+  const { data: socialsData } = useSocialAccounts(open);
+  const connectedPlatforms = useMemo(() => {
+    const set = new Set<SocialPlatform>();
+    for (const a of socialsData?.accounts || []) {
+      if (a.connected) set.add(a.platform as SocialPlatform);
+    }
+    return set;
+  }, [socialsData?.accounts]);
   const [leftTab, setLeftTab] = useState<'media' | 'preview'>('media');
   const [rightTab, setRightTab] = useState<'private' | 'public'>('private');
   /** Mobile app layout: one pane at a time. Desktop keeps 3 columns. */
@@ -172,7 +195,15 @@ export default function PostStudioModal({
       setTitle('');
       setCaption('');
       setHashtags('');
-      setPlatforms(['instagram']);
+      setPlatforms(
+        (['instagram', 'facebook', 'tiktok'] as SocialPlatform[]).filter((p) =>
+          connectedPlatforms.has(p)
+        ).length
+          ? (['instagram', 'facebook', 'tiktok'] as SocialPlatform[]).filter(
+              (p) => connectedPlatforms.has(p)
+            )
+          : ['instagram']
+      );
       setWorkflow(defaultScheduledAt ? 'SCHEDULED' : 'IDEA');
       setProject(projectName);
       setScheduledAt(defaultScheduledAt ? toLocalInputValue(defaultScheduledAt) : '');
@@ -227,37 +258,136 @@ export default function PostStudioModal({
     }
   };
 
-  const save = async (publish = false) => {
-    if (!title.trim() || platforms.length === 0 || saving) return;
+  const derivedTitle =
+    title.trim() ||
+    caption.split('\n')[0]?.trim().slice(0, 72) ||
+    t('newPostDefault', locale);
+
+  const save = async (
+    mode: 'draft' | 'schedule' | 'post'
+  ) => {
+    if (!caption.trim() || platforms.length === 0 || saving) return;
+
+    if (mode === 'schedule' && !scheduledAt) {
+      toast.error('Pick a schedule date & time first');
+      return;
+    }
+
+    if (mode === 'post') {
+      const liveTargets = platforms.filter((p) =>
+        connectedPlatforms.has(p)
+      );
+      if (liveTargets.length === 0) {
+        toast.error(
+          'Connect Instagram or Facebook under Settings → Socials for this workspace'
+        );
+        return;
+      }
+    }
+
     setSaving(true);
     try {
-      const nextWorkflow = publish ? 'PUBLISHED' : workflow;
+      const nextWorkflow: WorkflowStatus =
+        mode === 'post'
+          ? 'PUBLISHED'
+          : mode === 'schedule'
+            ? 'SCHEDULED'
+            : 'IDEA';
+
       const r = await fetch('/api/planner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'upsert',
           id: post?.id,
-          title,
+          title: derivedTitle,
           caption,
           hashtags,
           platforms,
           workflow: nextWorkflow,
+          status:
+            mode === 'post'
+              ? 'published'
+              : mode === 'schedule'
+                ? 'scheduled'
+                : 'draft',
           project,
           campaigns: campaignIds,
           assignees,
           subtasks,
           media_items: mediaItems,
-          auto_post: autoPost,
-          scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+          auto_post: mode === 'schedule' ? true : autoPost,
+          scheduled_at:
+            mode === 'schedule' && scheduledAt
+              ? new Date(scheduledAt).toISOString()
+              : mode === 'post'
+                ? new Date().toISOString()
+                : scheduledAt
+                  ? new Date(scheduledAt).toISOString()
+                  : null,
+          published_at: mode === 'post' ? new Date().toISOString() : null,
           actor: 'Ebba',
         }),
       });
       if (!r.ok) throw new Error('save failed');
+
+      if (mode === 'post') {
+        const imageUrl =
+          mediaItems.find((m) => m.type === 'image' && m.url)?.url ||
+          mediaItems.find((m) => m.url)?.url ||
+          '';
+        const publishRes = await fetch('/api/planner/publish', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(workspaceId
+              ? {
+                  'x-workspace-id': workspaceId,
+                  'x-active-workspace-id': workspaceId,
+                }
+              : {}),
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            workspaceId,
+            platforms: platforms.filter((p) => connectedPlatforms.has(p)),
+            caption,
+            hashtags,
+            title: derivedTitle,
+            imageUrl,
+          }),
+        });
+        const publishJson = (await publishRes.json().catch(() => ({}))) as {
+          ok?: boolean;
+          message?: string;
+          error?: string;
+          results?: Array<{ platform: string; ok: boolean; error?: string }>;
+        };
+        if (!publishRes.ok || !publishJson.ok) {
+          const detail =
+            publishJson.error ||
+            publishJson.results?.find((x) => !x.ok)?.error ||
+            publishJson.message ||
+            'Publish failed';
+          toast.error(detail);
+          // Keep planner row as published attempt; don't close silently.
+          onSaved();
+          void queryClient.invalidateQueries({ queryKey: ['planner-campaign'] });
+          return;
+        }
+        toast.success(publishJson.message || 'Posted to connected accounts');
+      } else if (mode === 'schedule') {
+        toast.success('Saved & scheduled');
+      } else {
+        toast.success(t('saveDraft', locale));
+      }
+
       onSaved();
       void queryClient.invalidateQueries({ queryKey: ['planner-campaign'] });
       void queryClient.invalidateQueries({ queryKey: ['planner-campaigns'] });
       onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -360,18 +490,6 @@ export default function PostStudioModal({
 
   const detailsPane = (
     <div className="h-full overflow-y-auto p-4 space-y-4">
-      <div>
-        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-          {t('postTitle', locale)}
-        </label>
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t('postTitle', locale)}
-          className="h-11 rounded-xl border-zinc-200 font-extrabold text-[#2c3340]"
-        />
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
@@ -477,9 +595,13 @@ export default function PostStudioModal({
         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
           Target Platforms
         </p>
+        <p className="text-[11px] text-zinc-400 font-medium mb-2">
+          Post goes live on connected accounts for this workspace only.
+        </p>
         <div className="grid grid-cols-2 gap-2">
           {PLATFORM_OPTIONS.map(({ key, label }) => {
             const checked = platforms.includes(key);
+            const connected = connectedPlatforms.has(key);
             return (
               <label
                 key={key}
@@ -490,7 +612,14 @@ export default function PostStudioModal({
                 }`}
               >
                 <Checkbox checked={checked} onCheckedChange={() => togglePlatform(key)} />
-                {label}
+                <span className="flex-1 min-w-0 truncate">{label}</span>
+                <span
+                  className={`text-[9px] font-black uppercase tracking-wide ${
+                    connected ? 'text-emerald-600' : 'text-zinc-300'
+                  }`}
+                >
+                  {connected ? 'Live' : 'Off'}
+                </span>
               </label>
             );
           })}
@@ -820,7 +949,7 @@ export default function PostStudioModal({
               {project}
             </p>
             <p className="text-sm font-extrabold text-[#2c3340] truncate">
-              {title || 'Nytt inlägg'}
+              {derivedTitle || 'Nytt inlägg'}
             </p>
           </div>
           <button
@@ -829,21 +958,72 @@ export default function PostStudioModal({
           >
             <Share2 size={13} /> Share
           </button>
-          <Button
-            type="button"
-            onClick={() => void save(false)}
-            disabled={saving || !title.trim() || platforms.length === 0}
-            className="h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-extrabold px-3 sm:px-4 text-xs sm:text-sm"
-          >
-            {saving ? (
-              <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-            ) : (
-              <>
-                <span className="sm:hidden">{t('save', locale)}</span>
-                <span className="hidden sm:inline">{t('publishOrSave', locale)}</span>
-              </>
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                disabled={saving || !caption.trim() || platforms.length === 0}
+                className="h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white font-extrabold px-3 sm:px-4 text-xs sm:text-sm gap-1.5"
+              >
+                {saving ? (
+                  <Loader2
+                    size={14}
+                    style={{ animation: 'spin 1s linear infinite' }}
+                  />
+                ) : (
+                  <>
+                    <span className="sm:hidden">Actions</span>
+                    <span className="hidden sm:inline">Publish</span>
+                    <ChevronDown size={14} className="opacity-90" />
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 z-[80]">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-zinc-400">
+                Save options
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                className="h-11 min-h-[44px] gap-2 cursor-pointer font-bold"
+                disabled={saving}
+                onSelect={() => void save('draft')}
+              >
+                <FileText size={14} />
+                {t('saveDraft', locale)}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="h-11 min-h-[44px] gap-2 cursor-pointer font-bold"
+                disabled={saving || !scheduledAt}
+                onSelect={() => void save('schedule')}
+              >
+                <CalendarClock size={14} />
+                {t('schedulePost', locale)}
+                {!scheduledAt ? (
+                  <span className="ml-auto text-[10px] font-medium text-zinc-400">
+                    set date
+                  </span>
+                ) : null}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="h-11 min-h-[44px] gap-2 cursor-pointer font-extrabold text-[var(--nc-coral)]"
+                disabled={
+                  saving ||
+                  ![...platforms].some((p) => connectedPlatforms.has(p))
+                }
+                onSelect={() => void save('post')}
+              >
+                <Send size={14} />
+                {t('publishNow', locale)}
+              </DropdownMenuItem>
+              {platforms.some((p) => !connectedPlatforms.has(p)) ? (
+                <p className="px-2 py-1.5 text-[10px] text-zinc-400 font-medium leading-snug">
+                  Only connected channels (Live) will be posted. Connect others
+                  in Settings → Socials.
+                </p>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
