@@ -34,6 +34,12 @@ export function usePlatformRole(): PlatformRoleState {
         return;
       }
       const data = await res.json();
+      // API returns 200 + role:null when logged out (avoids console 401 noise).
+      if (data.authenticated === false || data.role == null) {
+        setRole(null);
+        setDualAccess(false);
+        return;
+      }
       setRole(normalizePlatformRole(data.role));
       setDualAccess(Boolean(data.dual_access));
     } catch {

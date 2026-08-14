@@ -43,32 +43,44 @@ export async function GET(request: Request) {
     jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
     null;
 
-  const access = await resolveStrictUserWorkspace({
-    userId,
-    preferredWorkspaceId,
-    email: session?.user?.email ?? null,
-  });
+  // Prefer UI workspace first so Connected cards match the sidebar.
+  let workspaceId = preferredWorkspaceId;
+  let accounts = preferredWorkspaceId
+    ? await listLiveSocialAccountsForUser({
+        userId,
+        workspaceId: preferredWorkspaceId,
+      })
+    : SOCIAL_PLATFORMS.map(disconnectedStub);
 
-  if (!access.ok) {
-    return Response.json(
-      {
-        error: access.error,
-        accounts: SOCIAL_PLATFORMS.map(disconnectedStub),
-        demo: false,
-        meta_connected: false,
-        needs_ig_business: false,
-        workspace_id: preferredWorkspaceId,
-        source: 'social_accounts',
-      },
-      { status: access.status === 400 ? 400 : 403 }
-    );
+  if (!accounts.some((a) => a.connected)) {
+    const access = await resolveStrictUserWorkspace({
+      userId,
+      preferredWorkspaceId,
+      email: session?.user?.email ?? null,
+    });
+
+    if (!access.ok) {
+      return Response.json(
+        {
+          error: access.error,
+          accounts: SOCIAL_PLATFORMS.map(disconnectedStub),
+          demo: false,
+          meta_connected: false,
+          needs_ig_business: false,
+          workspace_id: preferredWorkspaceId,
+          source: 'social_accounts',
+        },
+        { status: access.status === 400 ? 400 : 403 }
+      );
+    }
+
+    workspaceId = access.workspaceId;
+    accounts = await listLiveSocialAccountsForUser({
+      userId,
+      workspaceId: access.workspaceId,
+    });
   }
 
-  // Authenticated: live social_accounts for this user + owned workspace only.
-  const accounts = await listLiveSocialAccountsForUser({
-    userId,
-    workspaceId: access.workspaceId,
-  });
   const connected = accounts.filter((a) => a.connected);
   const hasIg = connected.some((a) => a.platform === 'instagram');
   const hasFb = connected.some((a) => a.platform === 'facebook');
@@ -78,7 +90,8 @@ export async function GET(request: Request) {
     demo: false,
     meta_connected: hasIg || hasFb,
     needs_ig_business: hasFb && !hasIg,
-    workspace_id: access.workspaceId,
+    workspace_id: workspaceId,
+    connected_platforms: connected.map((a) => a.platform),
     source: 'social_accounts',
   });
 }

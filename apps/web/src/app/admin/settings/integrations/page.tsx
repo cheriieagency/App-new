@@ -40,6 +40,12 @@ export default function AdminIntegrationsSettingsPage() {
   const router = useRouter();
   const { t } = useLanguage();
 
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/account/signin');
+    }
+  }, [isPending, session, router]);
+
   if (isPending) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">
@@ -48,8 +54,11 @@ export default function AdminIntegrationsSettingsPage() {
     );
   }
   if (!session) {
-    router.push('/account/signin');
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">
+        {t('common.loading')}
+      </div>
+    );
   }
 
   return (

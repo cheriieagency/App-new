@@ -16,7 +16,10 @@ import {
   syncMetaDataForUser,
 } from '@/lib/meta/sync';
 import { fetchMultiPlatformDemographics } from '@/lib/analytics/demographics';
-import { fetchMultiPlatformMedia } from '@/lib/analytics/media';
+import {
+  fetchMultiPlatformMedia,
+  type AnalyticsMediaItem,
+} from '@/lib/analytics/media';
 
 const PLATFORMS = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'] as const;
 
@@ -233,7 +236,7 @@ export async function GET(request: Request) {
     }
 
     // Posts / Reels: Instagram + Facebook Page + TikTok (when tokens exist).
-    let media = (snapshot?.media ?? []).map((item) => ({
+    let media: AnalyticsMediaItem[] = (snapshot?.media ?? []).map((item) => ({
       id: item.id.startsWith('instagram:') ? item.id : `instagram:${item.id}`,
       platform: 'instagram' as const,
       caption: item.caption ?? null,

@@ -1,6 +1,7 @@
 /**
  * GET /api/socials/accounts
- * Live social_accounts for the authenticated user only.
+ * Live social_accounts for the authenticated user + active workspace.
+ * Prefers the client-provided workspace id so Connected UI matches the sidebar.
  */
 
 import { cookies, headers } from 'next/headers';
@@ -22,6 +23,9 @@ function emptyAccounts(): ConnectedSocialAccount[] {
     display_name: null,
     avatar_url: null,
     connected_at: null,
+    id: null,
+    platform_user_id: null,
+    workspace_id: null,
   }));
 }
 
@@ -39,9 +43,14 @@ function okPayload(
     meta_connected: hasIg || hasFb,
     needs_ig_business: hasFb && !hasIg,
     workspace_id: workspaceId,
+    connected_platforms: connected.map((a) => a.platform),
     source: 'social_accounts',
     ...extra,
   };
+}
+
+function hasAnyConnected(accounts: ConnectedSocialAccount[]): boolean {
+  return accounts.some((a) => a.connected);
 }
 
 export async function GET(request: Request) {
@@ -71,34 +80,43 @@ export async function GET(request: Request) {
       jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
       null;
 
+    // 1) Prefer exact active workspace from UI — matches where OAuth bound rows.
     let workspaceId: string | null = preferredWorkspaceId;
-    try {
-      const access = await resolveStrictUserWorkspace({
-        userId,
-        preferredWorkspaceId,
-        email: session?.user?.email ?? null,
-      });
-      if (access.ok) {
-        workspaceId = access.workspaceId;
-      } else {
-        console.warn(
-          '[socials/accounts] workspace resolve soft-fail',
-          access.error
-        );
+    let accounts: ConnectedSocialAccount[] = emptyAccounts();
+
+    if (preferredWorkspaceId) {
+      try {
+        accounts = await listLiveSocialAccountsForUser({
+          userId,
+          workspaceId: preferredWorkspaceId,
+        });
+      } catch (error) {
+        console.warn('[socials/accounts] preferred list failed', error);
       }
-    } catch (error) {
-      console.warn('[socials/accounts] workspace resolve threw', error);
     }
 
-    let accounts: ConnectedSocialAccount[] = emptyAccounts();
-    try {
-      accounts = await listLiveSocialAccountsForUser({
-        userId,
-        workspaceId,
-      });
-    } catch (error) {
-      console.warn('[socials/accounts] list failed', error);
-      accounts = emptyAccounts();
+    // 2) If preferred workspace has no connections, resolve owned workspace and retry.
+    if (!hasAnyConnected(accounts)) {
+      try {
+        const access = await resolveStrictUserWorkspace({
+          userId,
+          preferredWorkspaceId,
+          email: session?.user?.email ?? null,
+        });
+        if (access.ok) {
+          workspaceId = access.workspaceId;
+          if (access.workspaceId !== preferredWorkspaceId) {
+            accounts = await listLiveSocialAccountsForUser({
+              userId,
+              workspaceId: access.workspaceId,
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('[socials/accounts] workspace resolve threw', error);
+      }
+    } else {
+      workspaceId = preferredWorkspaceId;
     }
 
     return Response.json(okPayload(accounts, workspaceId));

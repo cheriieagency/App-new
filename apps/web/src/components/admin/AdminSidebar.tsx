@@ -60,12 +60,6 @@ function planName(plan: WorkspacePlan) {
   return `${PLAN_DISPLAY_NAME[plan]} Plan`;
 }
 
-function planPrice(plan: WorkspacePlan) {
-  if (plan === 'starter') return '8% fee';
-  if (plan === 'creator') return '199 kr';
-  return '699 kr';
-}
-
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -591,13 +585,10 @@ export default function AdminSidebar() {
           <button
             type="button"
             onClick={() => setPlanOpen(true)}
-            className="w-full flex items-center justify-between gap-3 min-h-[44px] group"
+            className="w-full flex items-center min-h-[44px] group"
           >
             <span className="font-mono text-[11px] font-medium text-slate-500 group-hover:text-slate-800 transition-colors">
               {planName(plan)}
-            </span>
-            <span className="font-mono text-[11px] font-medium text-slate-400 group-hover:text-slate-600 transition-colors tabular-nums">
-              {planPrice(plan)}
             </span>
           </button>
         </div>

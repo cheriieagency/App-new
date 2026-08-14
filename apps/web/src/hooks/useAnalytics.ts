@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { NC_WORKSPACE_STORAGE_KEY } from '@/lib/mock-workspace-profiles';
+import { LIVE_ANALYTICS_QUERY } from '@/lib/analytics/live-query';
 
 export type AnalyticsHashtag = {
   tag: string;
@@ -119,7 +120,7 @@ function readStoredWorkspaceId(): string | null {
   }
 }
 
-/** Hydrates /api/analytics for the ACTIVE workspace (all connected APIs). */
+/** Hydrates /api/analytics for the ACTIVE workspace (live, auto-refresh). */
 export function useAnalytics(enabled = true) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -130,6 +131,7 @@ export function useAnalytics(enabled = true) {
   const query = useQuery<AnalyticsApiResponse>({
     queryKey: ['analytics', workspaceId ?? 'none', pathname ?? ''],
     enabled: enabled && Boolean(workspaceId),
+    ...LIVE_ANALYTICS_QUERY,
     queryFn: async () => {
       const ws = workspaceId || readStoredWorkspaceId();
       if (!ws) {
@@ -156,9 +158,6 @@ export function useAnalytics(enabled = true) {
       // Soft-parse even on 401 — route returns structured fallback JSON.
       return r.json();
     },
-    staleTime: 15_000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
   });
 
   // Re-fetch whenever the active workspace changes.

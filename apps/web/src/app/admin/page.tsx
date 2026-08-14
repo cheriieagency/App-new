@@ -2349,6 +2349,13 @@ export default function AdminPage() {
     void syncPublicLive('update', attendeeCount);
   }, [isLive, liveTitle, attendeeCount, streamKey, syncPublicLive]);
 
+  // Redirect unauthenticated users in an effect — never during render (React 19).
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.replace('/account/signin');
+    }
+  }, [isPending, session, router]);
+
   if (isPending)
     return (
       <div className="min-h-screen flex items-center justify-center  text-zinc-400">
@@ -2356,8 +2363,11 @@ export default function AdminPage() {
       </div>
     );
   if (!session) {
-    router.push('/account/signin');
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-zinc-400">
+        {t('loading', locale)}
+      </div>
+    );
   }
 
   const now = Date.now();

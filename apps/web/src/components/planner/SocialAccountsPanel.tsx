@@ -128,6 +128,9 @@ function ConnectedAccountChip({
 }: {
   account: ConnectedSocialAccount;
 }) {
+  const platformLabel =
+    PLATFORM_META[account.platform]?.label ||
+    account.platform.charAt(0).toUpperCase() + account.platform.slice(1);
   const label =
     account.display_name ||
     account.handle ||
@@ -136,15 +139,21 @@ function ConnectedAccountChip({
   return (
     <div className="flex items-center gap-2 min-w-0 mt-2 px-1">
       {account.avatar_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={account.avatar_url}
           alt=""
           className="w-7 h-7 rounded-full object-cover border border-emerald-200 flex-shrink-0"
         />
       ) : (
-        <span className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-200 flex-shrink-0" />
+        <span className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center flex-shrink-0 text-[10px] font-extrabold text-emerald-700 uppercase">
+          {account.platform.slice(0, 2)}
+        </span>
       )}
       <div className="min-w-0">
+        <p className="text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
+          {platformLabel}
+        </p>
         <p className="text-xs font-extrabold text-slate-900 truncate">{label}</p>
         {account.handle && account.handle !== label ? (
           <p className="text-[11px] font-medium text-slate-500 truncate font-mono">
@@ -199,7 +208,8 @@ function ConnectOrConnectedButton({
           className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold cursor-default"
         >
           <CheckCircle2 size={16} strokeWidth={2.5} />
-          Connected ✓
+          Connected ·{' '}
+          {PLATFORM_META[account.platform]?.label || account.platform}
         </button>
         <ConnectedAccountChip account={account} />
         {onDisconnect ? (
@@ -766,6 +776,34 @@ export default function SocialAccountsPanel({
       )}
 
       {needsIgBusiness ? <IgBusinessRequiredBanner /> : null}
+
+      {!demoMode &&
+      (liveAccounts ?? data?.accounts ?? []).some((a) => a.connected) ? (
+        <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-3 flex flex-wrap items-center gap-2">
+          <p className="text-[11px] font-extrabold uppercase tracking-wide text-emerald-800 mr-1">
+            Connected
+          </p>
+          {(liveAccounts ?? data?.accounts ?? [])
+            .filter((a) => a.connected)
+            .map((a) => (
+              <span
+                key={a.platform}
+                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-xl bg-white border border-emerald-200 text-xs font-bold text-slate-800"
+              >
+                {(() => {
+                  const Icon = ICONS[a.platform];
+                  return Icon ? <Icon size={14} /> : null;
+                })()}
+                {PLATFORM_META[a.platform]?.label || a.platform}
+                {(a.handle || a.display_name) && (
+                  <span className="font-mono font-semibold text-slate-500 truncate max-w-[140px]">
+                    {a.handle || a.display_name}
+                  </span>
+                )}
+              </span>
+            ))}
+        </div>
+      ) : null}
 
       {!compact && !demoMode ? <WorkspaceOAuthGuideBanner /> : null}
 

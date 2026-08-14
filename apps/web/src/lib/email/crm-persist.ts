@@ -449,7 +449,6 @@ export async function fireEmailAutomations(
       subject,
       recipient_name: input.recipientName,
       recipient_email: email,
-      preview: body.slice(0, 160),
     });
 
     if (process.env.DATABASE_URL?.trim()) {

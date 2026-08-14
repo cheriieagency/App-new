@@ -118,6 +118,12 @@ export default function AdminSocialSettingsPage() {
     return () => window.clearTimeout(t);
   }, [isPending]);
 
+  useEffect(() => {
+    if ((!isPending || sessionTimedOut) && !session) {
+      router.replace('/account/signin');
+    }
+  }, [isPending, sessionTimedOut, session, router]);
+
   if (isPending && !sessionTimedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">
@@ -126,8 +132,11 @@ export default function AdminSocialSettingsPage() {
     );
   }
   if (!session) {
-    router.push('/account/signin');
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">
+        {t('common.loading')}
+      </div>
+    );
   }
 
   return (

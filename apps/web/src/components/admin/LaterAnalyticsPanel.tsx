@@ -302,9 +302,15 @@ export default function LaterAnalyticsPanel() {
     connectedAccounts,
     isLoading: socialsLoading,
   } = useConnectedSocials();
-  const { data: metaSync } = useMetaSync(hasInstagram);
+  const { data: metaSync, refetch: refetchMetaSync } = useMetaSync(
+    hasInstagram || hasConnectedSocials
+  );
   // Workspace-scoped analytics — aggregates every connected API for this brand.
-  const { data: analyticsApi } = useAnalytics(hasConnectedSocials);
+  const {
+    data: analyticsApi,
+    refetch: refetchAnalytics,
+    dataUpdatedAt: analyticsUpdatedAt,
+  } = useAnalytics(hasConnectedSocials || socialsLoading === false);
   const [sub, setSub] = useState<AnalyticsSubTab>(() => {
     if (typeof window === 'undefined') return 'analytics';
     return (
@@ -326,18 +332,58 @@ export default function LaterAnalyticsPanel() {
     const fromUrl = parseAnalyticsSub(params.get('sub'));
     if (fromUrl) setSub(fromUrl);
   }, []);
+
   // Prefetch live posts for Posts / Reels / Hashtags / overview fallbacks.
-  const { data: postsApi, isLoading: postsLoading } = useAnalyticsPosts(
+  const {
+    data: postsApi,
+    isLoading: postsLoading,
+    refetch: refetchPosts,
+  } = useAnalyticsPosts(
     hasConnectedSocials &&
       (sub === 'posts' ||
         sub === 'reels' ||
         sub === 'hashtags' ||
         sub === 'analytics' ||
-        sub === 'monthly')
+        sub === 'monthly' ||
+        sub === 'audience')
   );
-  const { data: storiesApi, isLoading: storiesLoading } = useAnalyticsStories(
-    hasConnectedSocials && sub === 'stories'
+  const {
+    data: storiesApi,
+    isLoading: storiesLoading,
+    refetch: refetchStories,
+  } = useAnalyticsStories(
+    hasConnectedSocials && (sub === 'stories' || sub === 'analytics')
   );
+
+  // Hard refresh when switching analytics sub-tabs so data is never stale.
+  useEffect(() => {
+    if (!hasConnectedSocials) return;
+    void refetchAnalytics();
+    void refetchMetaSync();
+    if (
+      sub === 'posts' ||
+      sub === 'reels' ||
+      sub === 'hashtags' ||
+      sub === 'analytics' ||
+      sub === 'monthly' ||
+      sub === 'audience'
+    ) {
+      void refetchPosts();
+    }
+    if (sub === 'stories' || sub === 'analytics') {
+      void refetchStories();
+    }
+  }, [
+    sub,
+    hasConnectedSocials,
+    activeWorkspace.id,
+    dateRange.from,
+    dateRange.to,
+    refetchAnalytics,
+    refetchMetaSync,
+    refetchPosts,
+    refetchStories,
+  ]);
 
   // Keep Revenue / Link-in-bio in sync with Bio Builder products + checkout sales.
   useEffect(() => {
@@ -351,6 +397,29 @@ export default function LaterAnalyticsPanel() {
   }, [
     activeWorkspace.id,
     activeWorkspace.bio.blocks.length,
+    dateRange.from,
+    dateRange.to,
+    refreshWorkspaces,
+    analyticsUpdatedAt,
+  ]);
+
+  // Poll bio/checkout stats while Revenue or Link-in-bio tabs are open.
+  useEffect(() => {
+    if (sub !== 'revenue' && sub !== 'linkinbio' && sub !== 'monthly') return;
+    if (!activeWorkspace.id) return;
+    const tick = () => {
+      syncWorkspaceBioAnalytics(activeWorkspace.id, {
+        from: dateRange.from,
+        to: dateRange.to,
+      });
+      refreshWorkspaces();
+      setBioTick((n) => n + 1);
+    };
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, [
+    sub,
+    activeWorkspace.id,
     dateRange.from,
     dateRange.to,
     refreshWorkspaces,
@@ -392,7 +461,21 @@ export default function LaterAnalyticsPanel() {
   const liveMedia = useMemo(() => {
     const fromApi = analyticsApi?.media;
     if (fromApi && fromApi.length > 0) return fromApi;
-    return metaSync?.snapshot?.media ?? [];
+    // Normalize IG snapshot rows so shares/views/platform always exist.
+    return (metaSync?.snapshot?.media ?? []).map((item) => ({
+      id: item.id,
+      platform: 'instagram' as const,
+      caption: item.caption ?? null,
+      media_type: item.media_type ?? null,
+      media_url: item.media_url ?? null,
+      thumbnail_url: item.thumbnail_url ?? item.media_url ?? null,
+      permalink: item.permalink ?? null,
+      like_count: item.like_count ?? 0,
+      comments_count: item.comments_count ?? 0,
+      shares_count: 0,
+      view_count: null as number | null,
+      timestamp: item.timestamp ?? null,
+    }));
   }, [analyticsApi?.media, metaSync?.snapshot?.media]);
 
   const platformSlices = useMemo(() => {
@@ -608,13 +691,13 @@ export default function LaterAnalyticsPanel() {
 
   const subTabs: { key: AnalyticsSubTab; label: string; icon: React.ElementType }[] = [
     { key: 'analytics', label: t('analyticsTab', locale), icon: Activity },
-    { key: 'revenue', label: t('analyticsOverview', locale), icon: BarChart3 },
     { key: 'audience', label: t('analyticsAudience', locale), icon: Users },
     { key: 'posts', label: t('analyticsPosts', locale), icon: BookOpen },
     { key: 'reels', label: t('analyticsReels', locale), icon: Film },
     { key: 'stories', label: t('analyticsStories', locale), icon: Eye },
     { key: 'hashtags', label: t('analyticsHashtags', locale), icon: Hash },
     { key: 'linkinbio', label: t('analyticsLinkinBio', locale), icon: Link2 },
+    { key: 'revenue', label: t('analyticsOverview', locale), icon: BarChart3 },
     { key: 'monthly', label: 'Monthly Reports', icon: CalendarDays },
   ];
 

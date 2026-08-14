@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Check, ChevronDown, Plus, Search } from 'lucide-react';
 import {
   Popover,
@@ -46,6 +46,27 @@ function BrandAvatar({
   );
 }
 
+function TriggerSkeleton({ compact }: { compact: boolean }) {
+  return (
+    <div
+      className={
+        compact
+          ? 'flex items-center gap-2.5 w-full h-11 min-h-[44px] rounded-2xl border border-slate-200/90 bg-white pl-1.5 pr-3'
+          : 'flex items-center gap-2 h-10 min-h-[40px] max-w-[220px] sm:max-w-[300px] rounded-xl border border-slate-200/90 bg-white pl-1.5 pr-2.5'
+      }
+      aria-hidden
+    >
+      <div
+        className={`bg-slate-100 flex-shrink-0 ${compact ? 'h-7 w-7 rounded-full' : 'h-[30px] w-[30px] rounded-xl'}`}
+      />
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="h-3 w-24 max-w-full rounded bg-slate-100" />
+        {!compact ? <div className="h-2.5 w-16 rounded bg-slate-50" /> : null}
+      </div>
+    </div>
+  );
+}
+
 export default function WorkspaceSelector({
   workspaces,
   activeId,
@@ -63,6 +84,11 @@ export default function WorkspaceSelector({
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  // Avoid SSR/client mismatch when workspaces hydrate from local storage after mount.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const accountWord = (n: number) =>
     t(n === 1 ? 'accountSingular' : 'accountPlural', locale);
@@ -79,6 +105,19 @@ export default function WorkspaceSelector({
         w.handle.toLowerCase().includes(q)
     );
   }, [workspaces, query]);
+
+  if (!mounted) {
+    const skeleton = <TriggerSkeleton compact={compact} />;
+    if (!compact) return skeleton;
+    return (
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-0.5">
+          {t('socialSpaces', locale)}
+        </p>
+        {skeleton}
+      </div>
+    );
+  }
 
   if (!active) {
     const emptyCreate = (

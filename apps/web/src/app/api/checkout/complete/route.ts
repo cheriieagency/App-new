@@ -108,8 +108,12 @@ export async function POST(request: Request) {
         : {};
 
     // Community / storefront purchases always credit community.workspace_id.
+    const metaCommunityId = metadata.communityId ?? metadata.community_id;
     const billing = await resolveCommunityBillingWorkspace({
-      communityId: metadata.communityId ?? metadata.community_id ?? null,
+      communityId:
+        typeof metaCommunityId === 'string' || typeof metaCommunityId === 'number'
+          ? metaCommunityId
+          : null,
       productId: body.productId != null ? String(body.productId) : null,
     });
     if (billing.workspaceId) {

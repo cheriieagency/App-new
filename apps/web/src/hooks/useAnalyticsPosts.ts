@@ -1,9 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { NC_WORKSPACE_STORAGE_KEY } from '@/lib/mock-workspace-profiles';
+import { LIVE_ANALYTICS_QUERY } from '@/lib/analytics/live-query';
 import type {
   PlatformAccountPill,
   UnifiedPostMetric,
@@ -30,20 +32,23 @@ function readStoredWorkspaceId(): string | null {
 /** Live Instagram / Facebook / TikTok posts for Analytics → Posts. */
 export function useAnalyticsPosts(enabled = true) {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const workspace = useWorkspaceOptional();
   const workspaceId =
     workspace?.activeWorkspace?.id || readStoredWorkspaceId() || '';
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['analytics-posts', workspaceId, pathname],
     enabled: Boolean(enabled && workspaceId),
-    staleTime: 60_000,
+    ...LIVE_ANALYTICS_QUERY,
     queryFn: async (): Promise<AnalyticsPostsResponse> => {
       const url = new URL('/api/analytics/posts', window.location.origin);
       url.searchParams.set('workspaceId', workspaceId);
       url.searchParams.set('sort', 'engagementRate');
+      url.searchParams.set('_', String(Date.now()));
       const res = await fetch(url.toString(), {
         credentials: 'include',
+        cache: 'no-store',
         headers: {
           'x-workspace-id': workspaceId,
           'x-active-workspace-id': workspaceId,
@@ -56,4 +61,11 @@ export function useAnalyticsPosts(enabled = true) {
       return data;
     },
   });
+
+  useEffect(() => {
+    if (!enabled || !workspaceId) return;
+    void queryClient.invalidateQueries({ queryKey: ['analytics-posts'] });
+  }, [workspaceId, enabled, queryClient]);
+
+  return query;
 }

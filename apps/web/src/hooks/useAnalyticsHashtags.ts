@@ -1,9 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { NC_WORKSPACE_STORAGE_KEY } from '@/lib/mock-workspace-profiles';
+import { LIVE_ANALYTICS_QUERY } from '@/lib/analytics/live-query';
 import type { HashtagKpis, HashtagStat } from '@/lib/analytics/hashtags';
 
 export type AnalyticsHashtagsResponse = {
@@ -25,19 +27,22 @@ function readStoredWorkspaceId(): string | null {
 /** Live hashtag stats for Analytics → Hashtags. */
 export function useAnalyticsHashtags(enabled = true) {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const workspace = useWorkspaceOptional();
   const workspaceId =
     workspace?.activeWorkspace?.id || readStoredWorkspaceId() || '';
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['analytics-hashtags', workspaceId, pathname],
     enabled: Boolean(enabled && workspaceId),
-    staleTime: 60_000,
+    ...LIVE_ANALYTICS_QUERY,
     queryFn: async (): Promise<AnalyticsHashtagsResponse> => {
       const url = new URL('/api/analytics/hashtags', window.location.origin);
       url.searchParams.set('workspaceId', workspaceId);
+      url.searchParams.set('_', String(Date.now()));
       const res = await fetch(url.toString(), {
         credentials: 'include',
+        cache: 'no-store',
         headers: {
           'x-workspace-id': workspaceId,
           'x-active-workspace-id': workspaceId,
@@ -54,4 +59,11 @@ export function useAnalyticsHashtags(enabled = true) {
       return data;
     },
   });
+
+  useEffect(() => {
+    if (!enabled || !workspaceId) return;
+    void queryClient.invalidateQueries({ queryKey: ['analytics-hashtags'] });
+  }, [workspaceId, enabled, queryClient]);
+
+  return query;
 }

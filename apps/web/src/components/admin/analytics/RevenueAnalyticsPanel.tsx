@@ -26,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { LIVE_ANALYTICS_QUERY } from '@/lib/analytics/live-query';
 import { useLanguage } from '@/lib/locale-context';
 import { localeTag } from '@/lib/i18n';
 
@@ -70,14 +71,18 @@ export default function RevenueAnalyticsPanel() {
     queryKey: ['analytics-revenue', activeWorkspace.id],
     queryFn: async () => {
       const res = await fetch(
-        `/api/analytics/revenue?workspaceId=${encodeURIComponent(activeWorkspace.id)}`,
-        { headers: { 'x-workspace-id': activeWorkspace.id } }
+        `/api/analytics/revenue?workspaceId=${encodeURIComponent(activeWorkspace.id)}&_=${Date.now()}`,
+        {
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'x-workspace-id': activeWorkspace.id },
+        }
       );
       if (!res.ok) throw new Error('Failed to load revenue');
       return res.json();
     },
     enabled: Boolean(activeWorkspace.id),
-    refetchInterval: 30_000,
+    ...LIVE_ANALYTICS_QUERY,
   });
 
   // After Stripe Connect onboarding, reopen the payout drawer + refresh wallet.

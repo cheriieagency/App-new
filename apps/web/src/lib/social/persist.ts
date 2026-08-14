@@ -10,7 +10,7 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
   readWorkspaceIdFromCookieHeader,
 } from '@/lib/social/oauth-workspace';
-import { userOwnsWorkspace, resolveWorkspaceForOAuthUser } from '@/lib/social/workspace-access';
+import { resolveWorkspaceForOAuthUser } from '@/lib/social/workspace-access';
 
 export { ACTIVE_WORKSPACE_COOKIE, ACTIVE_WORKSPACE_COOKIE_ALIAS };
 
@@ -336,6 +336,8 @@ function mapRow(raw: Record<string, unknown>): ConnectedSocialAccount {
  * Live rows for the authenticated user only.
  * Always filters user_id = session user; optional workspace_id narrows further.
  * Never returns another user's connected accounts.
+ * Row ownership is enforced via user_id — do not blank the list if the
+ * preferred workspace cookie is missing from public.workspaces.
  */
 export async function listLiveSocialAccountsForUser(input: {
   userId: string;
@@ -355,35 +357,49 @@ export async function listLiveSocialAccountsForUser(input: {
   try {
     const workspaceId = input.workspaceId?.trim() || null;
 
-    // When a workspace is specified, confirm it belongs to this user first.
-    // Never return rows for a workspace owned by someone else.
+    let rows: unknown = null;
     if (workspaceId) {
-      const owned = await userOwnsWorkspace(userId, workspaceId);
-      if (!owned) {
-        return SOCIAL_PLATFORMS.map(disconnectedStub);
-      }
-    }
-
-    const rows = workspaceId
-      ? await sql`
+      try {
+        rows = await sql`
+          SELECT *
+          FROM social_accounts
+          WHERE user_id::text = ${userId}
+            AND workspace_id::text = ${workspaceId}
+          ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
+        `;
+      } catch {
+        rows = await sql`
           SELECT *
           FROM social_accounts
           WHERE user_id = ${userId}
             AND workspace_id = ${workspaceId}
           ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
-        `
-      : await sql`
+        `;
+      }
+    } else {
+      try {
+        rows = await sql`
+          SELECT *
+          FROM social_accounts
+          WHERE user_id::text = ${userId}
+          ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
+        `;
+      } catch {
+        rows = await sql`
           SELECT *
           FROM social_accounts
           WHERE user_id = ${userId}
           ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
         `;
+      }
+    }
 
     const byPlatform = new Map<SocialPlatform, ConnectedSocialAccount>();
     if (Array.isArray(rows)) {
       for (const raw of rows as Array<Record<string, unknown>>) {
         const platform = raw.platform as SocialPlatform;
-        if (!platform || byPlatform.has(platform)) continue;
+        if (!platform || !SOCIAL_PLATFORMS.includes(platform)) continue;
+        if (byPlatform.has(platform)) continue;
         byPlatform.set(platform, mapRow(raw));
       }
     }

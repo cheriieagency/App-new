@@ -47,8 +47,15 @@ function clearRoleCookies(res: NextResponse) {
 /** Read current platform role for the signed-in user. */
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
+  // Logged-out is a valid state for landing/nav — return 200 so the client
+  // doesn't spam the console / Next.js Issues panel with 401s.
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({
+      role: null,
+      home: homeForRole('member'),
+      dual_access: false,
+      authenticated: false,
+    });
   }
 
   const parsed = parsePlatformRoleCookie(
@@ -63,6 +70,7 @@ export async function GET(request: NextRequest) {
     role,
     home: homeForRole(role),
     dual_access: dual,
+    authenticated: true,
   });
 
   // Heal cookie for existing sessions (dual email / legacy flag → encoded role cookie).

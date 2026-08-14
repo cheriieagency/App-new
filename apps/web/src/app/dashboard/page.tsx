@@ -52,6 +52,7 @@ import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { signOutAndRedirect } from '@/lib/sign-out-client';
+import AccountMenuButton from '@/components/account/AccountMenuButton';
 import {
   CommunitySearchAutocomplete,
   type SearchableCommunity,
@@ -902,6 +903,13 @@ function DashboardPageInner() {
     router.push(`/communities/${community.id}?from=dashboard`);
   };
 
+  // Redirect unauthenticated users in an effect — never during render (React 19).
+  useEffect(() => {
+    if (!isAuthPending && !session) {
+      router.replace('/account/signin');
+    }
+  }, [isAuthPending, session, router]);
+
   if (isAuthPending)
     return (
       <div className="min-h-screen flex items-center justify-center bg-white ">
@@ -909,8 +917,11 @@ function DashboardPageInner() {
       </div>
     );
   if (!session) {
-    router.push('/account/signin');
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white ">
+        <div className="text-slate-400">{t('authenticating', locale)}</div>
+      </div>
+    );
   }
 
   if (liveEvent)
@@ -993,6 +1004,62 @@ function DashboardPageInner() {
         `}</style>
       </div>
     );
+
+  /** Shared avatar menu — same pattern as Admin, member-relevant rows. */
+  const renderMemberAccountMenu = (size: 'sm' | 'md' = 'sm') => {
+    const activeCommunity =
+      (sidebarView === 'community' && selectedCommunity) || joinedCommunities[0] || null;
+    const communityValue = activeCommunity
+      ? `${activeCommunity.name}${
+          joinedCommunities.length > 1 ? ` · ${joinedCommunities.length}` : ''
+        }`
+      : '—';
+
+    return (
+      <AccountMenuButton
+        size={size}
+        user={{
+          name: session.user.name,
+          email: session.user.email,
+          image: session.user.image,
+        }}
+        title={t('accountMenuTitle', locale)}
+        rows={[
+          {
+            label: t('email', locale),
+            value: session.user.email || '—',
+          },
+          {
+            label: t('community', locale),
+            value: communityValue,
+          },
+          {
+            label: t('accountMenuRole', locale),
+            value: t('roleMember', locale),
+          },
+        ]}
+        actions={[
+          {
+            id: 'profile',
+            label: t('profileAndSettings', locale),
+            icon: 'user',
+            onClick: () => setSidebarView('profile'),
+          },
+          {
+            id: 'communities',
+            label: t('myCommunities', locale),
+            icon: 'settings',
+            onClick: () => {
+              setSidebarView('home');
+              setActiveTab('community');
+            },
+          },
+        ]}
+        signOutLabel={t('signOut', locale)}
+        onSignOut={handleSignOut}
+      />
+    );
+  };
 
   const MAIN_TABS = (
     [
@@ -1531,7 +1598,7 @@ function DashboardPageInner() {
                 </div>
               </div>
 
-              {/* Right: notifications + avatar */}
+              {/* Right: notifications + account menu */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
                   type="button"
@@ -1541,21 +1608,7 @@ function DashboardPageInner() {
                   <Bell size={16} />
                   <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[var(--nc-coral)]" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setSidebarView('profile')}
-                  className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border-2 border-white shadow-sm bg-[var(--nc-coral)] flex items-center justify-center text-white text-xs font-extrabold"
-                >
-                  {session.user.image ? (
-                    <img
-                      src={session.user.image}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    session.user.name?.[0]
-                  )}
-                </button>
+                {renderMemberAccountMenu('md')}
               </div>
             </div>
 
@@ -2298,6 +2351,29 @@ function DashboardPageInner() {
 
       {/* Main area */}
       <div className="relative z-10 flex-1 lg:pl-64 flex flex-col min-h-screen bg-[#F8FAFC]/60">
+        {/* Sticky account chrome — matches Admin avatar menu (member context) */}
+        {sidebarView !== 'community' ? (
+          <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                {t('accountMenuTitle', locale)}
+              </p>
+              <p className="text-sm font-extrabold text-slate-900 truncate">
+                {session.user.name || t('roleMember', locale)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+              <button
+                type="button"
+                className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-500 relative transition-colors"
+                aria-label="Notiser"
+              >
+                <Bell size={17} strokeWidth={1.75} />
+              </button>
+              {renderMemberAccountMenu('sm')}
+            </div>
+          </header>
+        ) : null}
         <main className="flex-1 relative z-10">
           {sidebarView === 'home' && renderPlatformHome()}
           {sidebarView === 'search' && renderSearch()}

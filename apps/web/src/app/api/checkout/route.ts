@@ -44,7 +44,11 @@ export async function POST(request: Request) {
 
     // Bind Stripe metadata to the community's workspace when applicable.
     const billing = await resolveCommunityBillingWorkspace({
-      communityId: body.communityId != null ? body.communityId : null,
+      communityId:
+        body.communityId != null &&
+        (typeof body.communityId === 'string' || typeof body.communityId === 'number')
+          ? body.communityId
+          : null,
       productId: body.productId != null ? String(body.productId) : null,
     });
     if (billing.workspaceId) {
