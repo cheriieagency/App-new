@@ -28,7 +28,7 @@ function readStoredWorkspaceId(): string | null {
   }
 }
 
-/** Live Instagram Stories for Analytics → Stories. */
+/** Live Instagram + Facebook Stories for Analytics → Stories. */
 export function useAnalyticsStories(enabled = true) {
   const pathname = usePathname();
   const queryClient = useQueryClient();

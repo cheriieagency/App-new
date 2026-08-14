@@ -198,6 +198,25 @@ export async function POST(request: Request) {
       });
     }
 
+    const provider =
+      body.provider === 'stripe' || body.provider === 'manual'
+        ? body.provider
+        : 'demo';
+    // Demo / simulated checkouts are UX-only — not ledgered into Revenue.
+    if (provider === 'demo') {
+      return Response.json({
+        ok: true,
+        recorded: false,
+        demo: true,
+        message: 'Demo checkout completed locally — not counted in Revenue.',
+        order: {
+          ...order,
+          google_meet_url: null,
+        },
+        googleMeetUrl: null,
+      });
+    }
+
     let googleMeetUrl: string | null = null;
     const isCoaching = looksLikeCoachingProduct({
       productTitle,

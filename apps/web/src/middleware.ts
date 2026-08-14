@@ -77,6 +77,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // --- Role split (admin vs member) on platform hosts ---
+  // Allow post-login to set the role cookie before /admin or /dashboard.
+  if (pathname.startsWith('/account/')) {
+    return NextResponse.next();
+  }
+
   const parsed = parsePlatformRoleCookie(
     request.cookies.get(PLATFORM_ROLE_COOKIE)?.value
   );

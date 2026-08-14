@@ -21,10 +21,13 @@ import {
   recordBioSale,
 } from '@/lib/bio-sales';
 import {
-  recordDemoClick,
+  bioBlockSlug,
   registerDemoDestination,
-  slugifyBioProduct,
 } from '@/lib/bio-utm';
+import {
+  registerBioLinkDestinations,
+  trackBioLinkClick,
+} from '@/lib/bio-clicks/client';
 
 type Category = 'links' | 'store';
 
@@ -110,12 +113,15 @@ function BlockRow({
   onCheckout,
   freeLabel,
   language,
+  trackedHref,
 }: {
   block: WorkspaceBioBlock;
   theme: BioTheme;
   onCheckout?: (block: WorkspaceBioBlock) => void;
   freeLabel: string;
   language: ReturnType<typeof useLanguage>['language'];
+  /** Prefer /r/{slug} so every outbound click is counted server-side. */
+  trackedHref?: string;
 }) {
   if (block.type === 'divider') {
     return <div className="h-px mx-1 bg-white/15" />;
@@ -125,7 +131,9 @@ function BlockRow({
     theme.bgType === 'mesh' ||
     theme.bgType === 'liquid';
   const pill = pricePill(block, freeLabel, language);
-  const href = block.destination_url || block.url || '#';
+  const rawHref = block.destination_url || block.url || '#';
+  // Route through /r/{slug} when available so Analytics gets real click events.
+  const href = trackedHref || rawHref;
   // Priced Bio Builder blocks + community unlocks sell through 1-tap checkout (Revenue).
   const hasPrice = typeof block.price === 'number' && block.price >= 0;
   const usesCheckout =
@@ -249,17 +257,61 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
   const avatarRadius = theme.avatarShape === 'squircle' ? '1.5rem' : '9999px';
   const fontFamily = getBioFontFamily(theme.fontId);
 
+  // Register /r/{slug} destinations once so outbound link clicks are countable.
+  useEffect(() => {
+    const links = bio.blocks
+      .filter((b) => b.visible !== false && b.type !== 'divider')
+      .map((b) => {
+        const destination = String(b.destination_url || b.url || '').trim();
+        if (!destination) return null;
+        const slug = bioBlockSlug(b);
+        return {
+          slug,
+          blockId: b.id,
+          title: b.title || 'Link',
+          destinationUrl: destination,
+        };
+      })
+      .filter(Boolean) as Array<{
+      slug: string;
+      blockId: string;
+      title: string;
+      destinationUrl: string;
+    }>;
+    if (links.length === 0) return;
+    registerBioLinkDestinations({
+      workspaceId: profile.id,
+      handle,
+      links,
+    });
+    for (const link of links) {
+      registerDemoDestination(link.slug, {
+        destination: link.destinationUrl,
+        handle,
+        title: link.title,
+      });
+    }
+  }, [profile.id, handle, bio.blocks]);
+
   const openCheckout = (block: WorkspaceBioBlock) => {
-    const slug =
-      block.utm_slug || slugifyBioProduct(block.title || 'product', block.id);
-    recordDemoClick(slug, 'bio-visitor');
-    if (block.destination_url || block.url) {
+    const slug = bioBlockSlug(block);
+    const destination = String(block.destination_url || block.url || '').trim();
+    if (destination) {
       registerDemoDestination(slug, {
-        destination: String(block.destination_url || block.url),
+        destination,
         handle,
         title: block.title || 'Product',
       });
     }
+    // Checkout taps count as Link-in-bio clicks (same product row in Analytics).
+    trackBioLinkClick({
+      workspaceId: profile.id,
+      handle,
+      slug,
+      blockId: block.id,
+      title: block.title || 'Product',
+      destinationUrl: destination || undefined,
+    });
     setCheckoutBlock(block);
     setCheckoutProduct(bioBlockAsCheckoutProduct(block));
   };
@@ -394,16 +446,21 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
               {tab === 'store' ? t('bio.noProductsYet') : t('bio.noLinksYet')}
             </p>
           ) : (
-            active.map((block) => (
-              <BlockRow
-                key={block.id}
-                block={block}
-                theme={theme}
-                freeLabel={t('bio.free')}
-                language={language}
-                onCheckout={openCheckout}
-              />
-            ))
+            active.map((block) => {
+              const slug = bioBlockSlug(block);
+              const hasOutbound = Boolean(block.destination_url || block.url);
+              return (
+                <BlockRow
+                  key={block.id}
+                  block={block}
+                  theme={theme}
+                  freeLabel={t('bio.free')}
+                  language={language}
+                  onCheckout={openCheckout}
+                  trackedHref={hasOutbound ? `/r/${slug}` : undefined}
+                />
+              );
+            })
           )}
         </div>
 

@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * Landing login portal — modal with Member vs Creator/Admin tabs.
- * Auth contract mirrors /account/signin: <form onSubmit> + preventDefault +
- * authClient.signIn.email + window.location.href redirect.
+ * Landing login portal — locked to Admin or Community from the header dropdown.
+ * Email sign-in sets platform role then redirects; social OAuth goes through
+ * /account/post-login?role=… so the role cookie is set before /admin|/dashboard.
  */
 
 import { type FormEvent, useEffect, useState } from 'react';
@@ -20,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import {
@@ -30,6 +29,7 @@ import {
   saveRememberedAuth,
 } from '@/lib/remember-auth';
 import { persistPlatformRole } from '@/lib/use-platform-role';
+import { homeForRole, type PlatformRole } from '@/lib/platform-role';
 import { EBBA_TEST_USER } from '@/lib/mock-communities';
 import { isDualAccessEmail } from '@/lib/platform-role';
 
@@ -38,11 +38,20 @@ type Role = 'member' | 'creator';
 type LoginModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Locked portal from header: Community (member) or Admin (creator). */
+  initialRole?: Role;
 };
 
-export function LoginModal({ open, onOpenChange }: LoginModalProps) {
+export function LoginModal({
+  open,
+  onOpenChange,
+  initialRole = 'member',
+}: LoginModalProps) {
   const { locale } = useLanguage();
-  const [role, setRole] = useState<Role>('member');
+  // Always follow the dropdown choice — no cross-portal tab switcher.
+  const role: Role = initialRole === 'creator' ? 'creator' : 'member';
+  const isAdmin = role === 'creator';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
@@ -51,21 +60,35 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
 
   useEffect(() => {
     if (!open) return;
+    setError(null);
+    setLoading(false);
     const saved = loadRememberedAuth();
-    if (!saved) return;
+    if (!saved) {
+      setEmail('');
+      setPassword('');
+      setRemember(false);
+      return;
+    }
     setEmail(saved.email);
     setPassword(saved.password);
     setRemember(true);
-  }, [open]);
+  }, [open, role]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) {
+      setError(t('signInFailed', locale));
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error: signInError } = await authClient.signIn.email({
-        email,
+        email: trimmedEmail,
         password,
       });
 
@@ -76,22 +99,30 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
       }
 
       if (remember) {
-        saveRememberedAuth(email, password);
+        saveRememberedAuth(trimmedEmail, password);
       } else if (hasRememberedAuth()) {
         clearRememberedAuth();
       }
 
-      // Persist Member vs Creator access before hard redirect
-      const home = await persistPlatformRole(role);
+      // Persist Admin vs Community before hard navigate (middleware reads this cookie).
+      const platformRole: PlatformRole = isAdmin ? 'creator' : 'member';
+      const home = await persistPlatformRole(platformRole);
 
       if (typeof window !== 'undefined') {
-        window.location.href = home;
+        window.location.href = home || homeForRole(platformRole);
       }
     } catch (err) {
       setError(formatAuthError(err, t('signInFailed', locale)));
       setLoading(false);
     }
   };
+
+  const title = isAdmin ? 'Admin Log in' : 'Community Log in';
+  const subtitle = isAdmin
+    ? 'Sign in to Creator Admin — analytics, planner, bio store, and inbox.'
+    : 'Sign in to your Community dashboard — courses, events, and member hub.';
+  const socialCallback = `/account/post-login?role=${encodeURIComponent(role)}`;
+  const signupHref = isAdmin ? '/onboarding' : '/onboarding';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,40 +131,26 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
           <div className="flex items-center gap-2.5 mb-3">
             <ClikdMark size={32} />
             <DialogTitle className="text-base font-black text-zinc-900">
-              {t('loginPortalTitle', locale)}
+              {title}
             </DialogTitle>
           </div>
           <DialogDescription className="text-sm text-zinc-500 font-medium">
-            {t('loginPortalSub', locale)}
+            {subtitle}
           </DialogDescription>
         </DialogHeader>
 
         <div className="px-6 pb-6">
-          <Tabs
-            value={role}
-            onValueChange={(v) => {
-              setRole(v as Role);
-              setError(null);
-            }}
-            className="gap-4"
+          {/* Locked portal badge — matches the header dropdown choice */}
+          <div
+            className={`min-h-11 rounded-xl px-3.5 inline-flex items-center gap-2.5 text-sm font-extrabold w-full ${
+              isAdmin
+                ? 'bg-[#2B2568] text-white'
+                : 'bg-[#F472B6]/15 text-[#9D174D] border border-[#F472B6]/30'
+            }`}
           >
-            <TabsList className="w-full h-auto p-1.5 rounded-full bg-[#eef2f7]">
-              <TabsTrigger
-                value="member"
-                className="flex-1 min-h-11 gap-2 rounded-xl text-xs font-black data-[state=active]:bg-[var(--nc-coral)] data-[state=active]:text-white"
-              >
-                <Users size={14} />
-                {t('loginAsMember', locale)}
-              </TabsTrigger>
-              <TabsTrigger
-                value="creator"
-                className="flex-1 min-h-11 gap-2 rounded-xl text-xs font-black data-[state=active]:bg-[var(--nc-coral)] data-[state=active]:text-white"
-              >
-                <Crown size={14} />
-                {t('loginAsCreatorAdmin', locale)}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+            {isAdmin ? <Crown size={16} aria-hidden /> : <Users size={16} aria-hidden />}
+            {isAdmin ? 'Creator / Admin' : 'Community member'}
+          </div>
 
           <form
             onSubmit={(e) => {
@@ -146,6 +163,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
               <input
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={EBBA_TEST_USER.email}
@@ -154,7 +172,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
             </label>
             {isDualAccessEmail(email) ? (
               <p className="text-[11px] font-medium text-zinc-400 -mt-1.5 leading-snug">
-                Same login works for both Community member and Creator / Admin.
+                This account can use both Admin and Community logins.
               </p>
             ) : null}
 
@@ -163,6 +181,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -191,15 +210,19 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
               disabled={loading}
               className="min-h-12 rounded-xl text-sm font-black text-white bg-[var(--nc-coral)] hover:opacity-90 transition-all active:scale-95 disabled:opacity-60"
             >
-              {loading ? t('signingIn', locale) : t('signIn', locale)}
+              {loading
+                ? t('signingIn', locale)
+                : isAdmin
+                  ? 'Sign in to Admin'
+                  : 'Sign in to Community'}
             </button>
 
-            <SocialSignInButtons callbackUrl={role === 'creator' ? '/admin' : '/dashboard'} />
+            <SocialSignInButtons callbackUrl={socialCallback} />
 
             <p className="text-center text-sm text-zinc-400">
               {t('noAccount', locale)}{' '}
               <Link
-                href={`/onboarding`}
+                href={signupHref}
                 className="font-black text-zinc-900 hover:underline transition-colors"
                 onClick={() => onOpenChange(false)}
               >

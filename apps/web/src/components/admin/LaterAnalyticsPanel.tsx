@@ -6,7 +6,6 @@ import {
   CalendarDays,
   ChevronDown,
   Download,
-  Plus,
   Users,
   Eye,
   Hash,
@@ -23,7 +22,6 @@ import {
 } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { AdminPageHeader, adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
-import { useAdminNav } from '@/components/admin/AdminNavContext';
 import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
 import {
   Popover,
@@ -63,6 +61,7 @@ import {
   buildBioUtmLinks,
   sumBioRevenueSek,
 } from '@/lib/bio-sales';
+import type { UtmClickStat } from '@/lib/bio-utm';
 import { syncWorkspaceBioAnalytics } from '@/lib/mock-workspace-profiles';
 import RevenueAnalyticsPanel from '@/components/admin/analytics/RevenueAnalyticsPanel';
 import MonthlyReportEngine from '@/components/admin/analytics/MonthlyReportEngine';
@@ -313,7 +312,6 @@ function PerformanceChart({
 export default function LaterAnalyticsPanel() {
   const { locale } = useLanguage();
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
-  const { setSection } = useAdminNav();
   const {
     hasConnectedSocials,
     hasInstagram,
@@ -344,6 +342,7 @@ export default function LaterAnalyticsPanel() {
   const [draftTo, setDraftTo] = useState(dateRange.to);
   const [exportOpen, setExportOpen] = useState(false);
   const [bioTick, setBioTick] = useState(0);
+  const [liveBioLinks, setLiveBioLinks] = useState<UtmClickStat[] | null>(null);
 
   // Honor ?sub=revenue (and Stripe Connect return/refresh deep-links).
   useEffect(() => {
@@ -445,11 +444,99 @@ export default function LaterAnalyticsPanel() {
     refreshWorkspaces,
   ]);
 
-  const bioUtmLinks = useMemo(
-    () => buildBioUtmLinks(activeWorkspace),
+  // Load durable Link-in-bio clicks for the selected range (real /bio + /r traffic).
+  useEffect(() => {
+    if (!activeWorkspace.id) {
+      setLiveBioLinks(null);
+      return;
+    }
+    const handle = (
+      activeWorkspace.bio.handle ||
+      activeWorkspace.handle ||
+      ''
+    ).replace(/^@/, '');
+    const ac = new AbortController();
+    const load = async () => {
+      try {
+        const qs = new URLSearchParams({
+          workspaceId: activeWorkspace.id,
+          from: dateRange.from,
+          to: dateRange.to,
+        });
+        if (handle) qs.set('handle', handle);
+        const res = await fetch(`/api/admin/bio/analytics?${qs.toString()}`, {
+          credentials: 'include',
+          headers: {
+            'x-workspace-id': activeWorkspace.id,
+            'x-active-workspace-id': activeWorkspace.id,
+          },
+          signal: ac.signal,
+        });
+        if (!res.ok) {
+          setLiveBioLinks(null);
+          return;
+        }
+        const data = (await res.json()) as {
+          links?: Array<{
+            slug: string;
+            title: string;
+            clicks: number;
+            unique: number;
+            destination_url?: string;
+            tracked_url?: string;
+          }>;
+        };
+        const links = Array.isArray(data.links) ? data.links : [];
+        setLiveBioLinks(
+          links.map((l) => ({
+            slug: l.slug,
+            title: l.title || 'Link',
+            clicks: Number(l.clicks) || 0,
+            unique: Number(l.unique) || 0,
+            destination_url: l.destination_url || '',
+            tracked_url: l.tracked_url || `/r/${l.slug}`,
+          }))
+        );
+      } catch (err) {
+        if ((err as { name?: string })?.name === 'AbortError') return;
+        setLiveBioLinks(null);
+      }
+    };
+    void load();
+    const id = window.setInterval(() => {
+      void load();
+    }, 30_000);
+    return () => {
+      ac.abort();
+      window.clearInterval(id);
+    };
+  }, [
+    activeWorkspace.id,
+    activeWorkspace.bio.handle,
+    activeWorkspace.handle,
+    dateRange.from,
+    dateRange.to,
+    bioTick,
+    sub,
+  ]);
+
+  const bioUtmLinks = useMemo(() => {
+    // Source of truth = Bio Builder Active blocks on this workspace (not DB orphans).
+    const clickStats =
+      liveBioLinks == null
+        ? undefined
+        : Object.fromEntries(
+            liveBioLinks.map((l) => [
+              l.slug,
+              { clicks: l.clicks, unique: l.unique },
+            ])
+          );
+    return buildBioUtmLinks(activeWorkspace, {
+      clickStats,
+      preferClickStats: liveBioLinks != null,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bioTick forces recompute after sales/sync
-    [activeWorkspace, bioTick]
-  );
+  }, [activeWorkspace, bioTick, liveBioLinks]);
   const bioTotalClicks = useMemo(
     () => bioUtmLinks.reduce((n, r) => n + r.clicks, 0),
     [bioUtmLinks]
@@ -462,14 +549,16 @@ export default function LaterAnalyticsPanel() {
       }),
     [activeWorkspace.id, dateRange.from, dateRange.to, bioTick]
   );
-  const bioProducts = useMemo(
-    () =>
-      buildBioProductPerformance(activeWorkspace, {
-        from: dateRange.from,
-        to: dateRange.to,
-      }),
-    [activeWorkspace, dateRange.from, dateRange.to, bioTick]
-  );
+  const bioProducts = useMemo(() => {
+    const clickStats = Object.fromEntries(
+      bioUtmLinks.map((l) => [l.slug, { clicks: l.clicks, unique: l.unique }])
+    );
+    return buildBioProductPerformance(activeWorkspace, {
+      from: dateRange.from,
+      to: dateRange.to,
+      clickStats,
+    });
+  }, [activeWorkspace, dateRange.from, dateRange.to, bioUtmLinks, bioTick]);
   const bioStoreCvr = useMemo(() => {
     const purchases = bioProducts.reduce((n, p) => n + p.purchases, 0);
     if (bioTotalClicks <= 0) return purchases > 0 ? 100 : 0;
@@ -1161,7 +1250,13 @@ export default function LaterAnalyticsPanel() {
         />
       )}
 
-      {sub === 'revenue' && <RevenueAnalyticsPanel />}
+      {sub === 'revenue' && (
+        <RevenueAnalyticsPanel
+          from={dateRange.from}
+          to={dateRange.to}
+          rangeLabel={formatRangeLabel(dateRange, locale)}
+        />
+      )}
 
       {sub === 'monthly' && <MonthlyReportEngine />}
 
@@ -1248,7 +1343,6 @@ export default function LaterAnalyticsPanel() {
           rangeLabel={formatRangeLabel(dateRange, locale)}
           totalClicks={bioTotalClicks}
           links={bioUtmLinks}
-          onOpenBio={() => setSection('biobuilder')}
         />
       )}
     </div>
@@ -1267,13 +1361,11 @@ function LinkInBioAnalyticsTab({
   rangeLabel,
   totalClicks,
   links,
-  onOpenBio,
 }: {
   locale: Locale;
   rangeLabel: string;
   totalClicks: number;
   links: { title: string; slug: string; clicks: number; unique: number }[];
-  onOpenBio: () => void;
 }) {
   const ranked = useMemo(
     () => [...links].sort((a, b) => b.clicks - a.clicks),
@@ -1317,7 +1409,11 @@ function LinkInBioAnalyticsTab({
           <p className="mt-2 font-clikd-wordmark font-extrabold text-2xl text-slate-900 tabular-nums tracking-tight">
             {uniqueRate}%
           </p>
-          <p className="mt-2 text-xs font-bold tabular-nums text-emerald-600">+2.1%</p>
+          <p className="mt-2 text-[11px] font-medium text-slate-400">
+            {totalClicks > 0
+              ? `${formatCompact(totalUnique, locale)} / ${formatCompact(totalClicks, locale)}`
+              : '—'}
+          </p>
         </div>
         <div className={adminKpiClass}>
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
@@ -1333,7 +1429,7 @@ function LinkInBioAnalyticsTab({
       </div>
 
       <div className={`${adminCardClass} overflow-hidden`}>
-        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100">
           <div>
             <h3 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
               <Link2 size={14} className="text-[#F472B6]" aria-hidden />
@@ -1343,13 +1439,6 @@ function LinkInBioAnalyticsTab({
               {tf('clicksTotalBioUtm', locale, { n: totalClicks })}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onOpenBio}
-            className="h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5 hover:bg-slate-50 transition-colors self-start"
-          >
-            <Plus size={14} /> {t('newProduct', locale)}
-          </button>
         </div>
 
         {ranked.length === 0 ? (

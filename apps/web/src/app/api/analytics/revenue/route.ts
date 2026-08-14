@@ -10,7 +10,18 @@ import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
 } from '@/lib/social/persist';
-import { ensureCommerceSchema } from '@/lib/commerce/orders';
+import { ensureCommerceSchema, purgeDemoOrdersAndRecalcWallet } from '@/lib/commerce/orders';
+
+function emptyDailySeries(days = 30): Array<{ date: string; revenue: number; orders: number }> {
+  const out: Array<{ date: string; revenue: number; orders: number }> = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date();
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() - i);
+    out.push({ date: d.toISOString().slice(0, 10), revenue: 0, orders: 0 });
+  }
+  return out;
+}
 
 function emptyPayload(workspaceId: string | null) {
   return {
@@ -27,7 +38,7 @@ function emptyPayload(workspaceId: string | null) {
       orderCount: number;
       revenue: number;
     }>,
-    dailyRevenueSeries: [] as Array<{ date: string; revenue: number; orders: number }>,
+    dailyRevenueSeries: emptyDailySeries(30),
     recentTransactions: [] as Array<{
       id: number | string;
       buyerEmail: string | null;
@@ -56,6 +67,10 @@ export async function GET(request: Request) {
       jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
       jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
       null;
+    const from = url.searchParams.get('from')?.trim() || null;
+    const to = url.searchParams.get('to')?.trim() || null;
+    const fromIso = from ? `${from.slice(0, 10)}T00:00:00.000Z` : null;
+    const toIso = to ? `${to.slice(0, 10)}T23:59:59.999Z` : null;
 
     if (!workspaceId) {
       return Response.json({
@@ -72,6 +87,8 @@ export async function GET(request: Request) {
     }
 
     await ensureCommerceSchema();
+    // Drop simulated checkouts so Revenue only reflects paid Stripe / manual orders.
+    await purgeDemoOrdersAndRecalcWallet(workspaceId);
 
     // Ensure workspace row exists for wallet / Connect fields.
     try {
@@ -86,28 +103,76 @@ export async function GET(request: Request) {
       /* soft-fail */
     }
 
-    const totals = await sql`
-      SELECT
-        COALESCE(SUM(amount_gross_sek), 0)::float AS gross,
-        COALESCE(SUM(amount_net_sek), 0)::float AS net,
-        COUNT(*)::int AS orders
-      FROM public.orders
-      WHERE workspace_id = ${workspaceId}
-        AND status = 'completed'
-    `;
+    const totals = fromIso && toIso
+      ? await sql`
+          SELECT
+            COALESCE(SUM(amount_gross_sek), 0)::float AS gross,
+            COALESCE(SUM(amount_net_sek), 0)::float AS net,
+            COUNT(*)::int AS orders
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+            AND created_at >= ${fromIso}::timestamptz
+            AND created_at <= ${toIso}::timestamptz
+        `
+      : await sql`
+          SELECT
+            COALESCE(SUM(amount_gross_sek), 0)::float AS gross,
+            COALESCE(SUM(amount_net_sek), 0)::float AS net,
+            COUNT(*)::int AS orders
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+        `;
 
-    const byProduct = await sql`
-      SELECT
-        product_title AS title,
-        COUNT(*)::int AS order_count,
-        COALESCE(SUM(amount_gross_sek), 0)::float AS revenue
-      FROM public.orders
-      WHERE workspace_id = ${workspaceId}
-        AND status = 'completed'
-      GROUP BY product_title
-      ORDER BY revenue DESC
-      LIMIT 20
-    `;
+    const byProduct = fromIso && toIso
+      ? await sql`
+          SELECT
+            product_title AS title,
+            COUNT(*)::int AS order_count,
+            COALESCE(SUM(amount_gross_sek), 0)::float AS revenue
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+            AND created_at >= ${fromIso}::timestamptz
+            AND created_at <= ${toIso}::timestamptz
+          GROUP BY product_title
+          ORDER BY revenue DESC
+          LIMIT 20
+        `
+      : await sql`
+          SELECT
+            product_title AS title,
+            COUNT(*)::int AS order_count,
+            COALESCE(SUM(amount_gross_sek), 0)::float AS revenue
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+          GROUP BY product_title
+          ORDER BY revenue DESC
+          LIMIT 20
+        `;
+
+    // Chart: prefer selected range span (capped), else last 30 days.
+    const rangeStart = fromIso
+      ? new Date(fromIso)
+      : (() => {
+          const d = new Date();
+          d.setUTCHours(0, 0, 0, 0);
+          d.setUTCDate(d.getUTCDate() - 29);
+          return d;
+        })();
+    const rangeEnd = toIso
+      ? new Date(toIso)
+      : (() => {
+          const d = new Date();
+          d.setUTCHours(23, 59, 59, 999);
+          return d;
+        })();
 
     const series = await sql`
       SELECT
@@ -117,21 +182,38 @@ export async function GET(request: Request) {
       FROM public.orders
       WHERE workspace_id = ${workspaceId}
         AND status = 'completed'
-        AND created_at >= (now() - interval '30 days')
+        AND provider IN ('stripe', 'manual')
+        AND created_at >= ${rangeStart.toISOString()}::timestamptz
+        AND created_at <= ${rangeEnd.toISOString()}::timestamptz
       GROUP BY 1
       ORDER BY 1 ASC
     `;
 
-    const recent = await sql`
-      SELECT
-        id, buyer_email, product_title, amount_gross_sek,
-        platform_fee_sek, amount_net_sek, created_at
-      FROM public.orders
-      WHERE workspace_id = ${workspaceId}
-        AND status = 'completed'
-      ORDER BY created_at DESC
-      LIMIT 10
-    `;
+    const recent = fromIso && toIso
+      ? await sql`
+          SELECT
+            id, buyer_email, product_title, amount_gross_sek,
+            platform_fee_sek, amount_net_sek, created_at
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+            AND created_at >= ${fromIso}::timestamptz
+            AND created_at <= ${toIso}::timestamptz
+          ORDER BY created_at DESC
+          LIMIT 10
+        `
+      : await sql`
+          SELECT
+            id, buyer_email, product_title, amount_gross_sek,
+            platform_fee_sek, amount_net_sek, created_at
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+          ORDER BY created_at DESC
+          LIMIT 10
+        `;
 
     let wallet = await sql`
       SELECT
@@ -176,7 +258,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Fill missing days in the last 30 for chart continuity.
+    // Fill missing days across the selected (or last-30) range for chart continuity.
     const byDay = new Map<string, { revenue: number; orders: number }>();
     for (const row of series || []) {
       byDay.set(String(row.day), {
@@ -189,17 +271,22 @@ export async function GET(request: Request) {
       revenue: number;
       orders: number;
     }> = [];
-    for (let i = 29; i >= 0; i -= 1) {
-      const d = new Date();
-      d.setUTCHours(0, 0, 0, 0);
-      d.setUTCDate(d.getUTCDate() - i);
-      const key = d.toISOString().slice(0, 10);
+    const cursor = new Date(rangeStart);
+    cursor.setUTCHours(0, 0, 0, 0);
+    const endDay = new Date(rangeEnd);
+    endDay.setUTCHours(0, 0, 0, 0);
+    // Cap to 366 points so a multi-year custom range stays chartable.
+    let guard = 0;
+    while (cursor.getTime() <= endDay.getTime() && guard < 366) {
+      const key = cursor.toISOString().slice(0, 10);
       const hit = byDay.get(key);
       dailyRevenueSeries.push({
         date: key,
         revenue: hit?.revenue ?? 0,
         orders: hit?.orders ?? 0,
       });
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+      guard += 1;
     }
 
     const t = totals?.[0] as Record<string, unknown> | undefined;
@@ -240,8 +327,13 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.warn('[analytics/revenue]', error);
+    const url = new URL(request.url);
+    const workspaceId =
+      url.searchParams.get('workspaceId')?.trim() ||
+      request.headers.get('x-workspace-id')?.trim() ||
+      null;
     return Response.json({
-      ...emptyPayload(null),
+      ...emptyPayload(workspaceId),
       ok: false,
       message:
         error instanceof Error ? error.message : 'Failed to load revenue analytics',

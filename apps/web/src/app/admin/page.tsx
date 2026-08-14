@@ -1787,84 +1787,9 @@ export default function AdminPage() {
   const [liveOrigin, setLiveOrigin] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
 
-  // Bio builder
+  // Bio builder — start empty; hydrate from the active workspace (no seeded demo products).
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
-  const [blocks, setBlocks] = useState<BioBlock[]>([
-    {
-      id: '1',
-      type: 'lead_magnet',
-      category: 'links',
-      title: 'Live Hook Checklist',
-      subtitle: 'Ladda ned gratis PDF-guide • 142 nedladdningar',
-      emoji: '📘',
-      color: '#3B82F6',
-      visible: true,
-      price: 0,
-    },
-    {
-      id: '2',
-      type: 'course',
-      category: 'links',
-      title: 'Kurs: Clikd Studio',
-      subtitle: 'Onlinekurs · 12 lektioner • Masterclass',
-      emoji: '🎓',
-      color: '#9b8afb',
-      visible: true,
-      price: 1499,
-    },
-    {
-      id: '3',
-      type: 'coaching',
-      category: 'links',
-      title: '1:1 Coaching',
-      subtitle: 'Boka ett samtal • 45 min Zoom',
-      emoji: '🤝',
-      color: '#10B981',
-      visible: true,
-      price: 599,
-      grants_community_access: true,
-      access_community_id: 101,
-    },
-    {
-      id: '4',
-      type: 'community',
-      category: 'links',
-      title: 'Join the Community',
-      subtitle: 'Free & open • Webbinarier & RSVP',
-      emoji: '🏠',
-      color: '#F59E0B',
-      visible: true,
-      price: 0,
-      grants_community_access: true,
-      access_community_id: 101,
-    },
-    {
-      id: 's1',
-      type: 'store',
-      category: 'store',
-      title: 'Creator Starter Pack',
-      subtitle: 'Extern butik',
-      emoji: '🛒',
-      color: '#9b8afb',
-      visible: true,
-      destination_url: 'https://example.com/starter-pack',
-      utm_slug: 'starter-pack-s1',
-      price: 1499,
-    },
-    {
-      id: 's2',
-      type: 'store',
-      category: 'store',
-      title: 'Live Studio Hook Pack',
-      subtitle: 'Digital produkt',
-      emoji: '📦',
-      color: '#0f766e',
-      visible: true,
-      destination_url: 'https://example.com/hook-pack',
-      utm_slug: 'hook-pack-s2',
-      price: 299,
-    },
-  ]);
+  const [blocks, setBlocks] = useState<BioBlock[]>([]);
   const [bioHandle, setBioHandle] = useState('');
   const [bioDisplayName, setBioDisplayName] = useState('');
   const [bioBioText, setBioBioText] = useState('');

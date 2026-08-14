@@ -5,6 +5,7 @@
 
 import {
   buildTrackedShortUrl,
+  bioBlockSlug,
   getDemoClickCount,
   getDemoUniqueCount,
   type UtmClickStat,
@@ -154,10 +155,7 @@ function blockUnitPrice(block: WorkspaceBioBlock): number {
 }
 
 function blockSlug(block: WorkspaceBioBlock): string {
-  return (
-    block.utm_slug ||
-    `bio-${block.id}`.toLowerCase().replace(/[^a-z0-9-]+/g, '-')
-  );
+  return bioBlockSlug(block);
 }
 
 /** Monetizable Bio Builder blocks (store + priced links). */
@@ -171,25 +169,61 @@ export function listBioCommerceBlocks(
   });
 }
 
-/** Build UTM rows from Bio Builder blocks + live click counters. */
+/** All clickable Link-in-bio rows (links + store) for analytics. */
+export function listBioTrackableBlocks(
+  blocks: WorkspaceBioBlock[]
+): WorkspaceBioBlock[] {
+  return blocks.filter((b) => {
+    if (b.visible === false) return false;
+    if (b.type === 'divider' || b.type === 'header' || b.type === 'text') {
+      return false;
+    }
+    return Boolean(b.title || b.destination_url || b.url || b.utm_slug);
+  });
+}
+
+export type BioClickOverride = {
+  clicks: number;
+  unique: number;
+};
+
+/** Build UTM rows from Bio Builder Active blocks + live click counters (or API overrides). */
 export function buildBioUtmLinks(
-  profile: Pick<WorkspaceProfile, 'bio' | 'handle'>
+  profile: Pick<WorkspaceProfile, 'bio' | 'handle'>,
+  opts?: {
+    clickStats?: Record<string, BioClickOverride> | Map<string, BioClickOverride>;
+    /** When true, missing clickStats entries are 0 (API loaded). When false, fall back to demo map. */
+    preferClickStats?: boolean;
+  }
 ): UtmClickStat[] {
   const handle = (profile.bio.handle || profile.handle || 'creator').replace(
     /^@/,
     ''
   );
-  const blocks = listBioCommerceBlocks(profile.bio.blocks);
+  // Active blocks only — never invent rows from click history / social links.
+  const blocks = listBioTrackableBlocks(profile.bio.blocks);
+  const stats =
+    opts?.clickStats instanceof Map
+      ? opts.clickStats
+      : opts?.clickStats
+        ? new Map(Object.entries(opts.clickStats))
+        : null;
+  const preferStats = Boolean(opts?.preferClickStats && stats);
+
   return blocks.map((b) => {
     const slug = blockSlug(b);
     const destination =
       b.destination_url || b.url || `https://clikd.app/bio/${handle}`;
-    const liveClicks = getDemoClickCount(slug);
-    const liveUnique = getDemoUniqueCount(slug);
-    // Prefer live counters; keep a zero baseline (no fake seed) so Revenue stays honest.
+    const override = stats?.get(slug);
+    const liveClicks = preferStats
+      ? (override?.clicks ?? 0)
+      : (override?.clicks ?? getDemoClickCount(slug));
+    const liveUnique = preferStats
+      ? (override?.unique ?? 0)
+      : (override?.unique ?? getDemoUniqueCount(slug));
     return {
       slug,
-      title: b.title || 'Product',
+      title: b.title || 'Link',
       clicks: liveClicks,
       unique: Math.max(liveUnique, liveClicks > 0 ? 1 : 0),
       destination_url: destination,
@@ -200,7 +234,11 @@ export function buildBioUtmLinks(
 
 export function buildBioProductPerformance(
   profile: WorkspaceProfile,
-  opts?: { from?: string; to?: string }
+  opts?: {
+    from?: string;
+    to?: string;
+    clickStats?: Record<string, BioClickOverride> | Map<string, BioClickOverride>;
+  }
 ): BioProductPerf[] {
   const sales = listBioSales(profile.id);
   const fromMs = opts?.from ? new Date(`${opts.from}T00:00:00`).getTime() : 0;
@@ -220,7 +258,7 @@ export function buildBioProductPerformance(
     byBlock.set(s.block_id, prev);
   }
 
-  const links = buildBioUtmLinks(profile);
+  const links = buildBioUtmLinks(profile, { clickStats: opts?.clickStats });
   const clicksBySlug = new Map(links.map((l) => [l.slug, l.clicks]));
 
   return listBioCommerceBlocks(profile.bio.blocks)

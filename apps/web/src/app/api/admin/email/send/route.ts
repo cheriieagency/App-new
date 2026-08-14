@@ -10,7 +10,7 @@ import {
   type SubscriberSource,
 } from '@/lib/mock-email-crm';
 import { resendEnv } from '@/lib/config/env';
-import { trackBroadcastMessages } from '@/lib/email/crm-persist';
+import { ensureEmailCrmSchema, trackBroadcastMessages } from '@/lib/email/crm-persist';
 import { resendMissingResponse, sendEmail } from '@/lib/email/send';
 import { buildUnsubscribeUrl } from '@/lib/email/unsubscribe';
 import { BroadcastEmail } from '@/lib/email/templates/BroadcastEmail';
@@ -80,6 +80,7 @@ async function loadWorkspaceSubscribers(
   }
 
   try {
+    await ensureEmailCrmSchema();
     const rows = communityId
       ? await sql`
           SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
@@ -215,7 +216,11 @@ export async function POST(request: Request) {
       unsubscribeEmail: recipient.email,
       tags: [
         { name: 'category', value: isTest ? 'crm_test' : 'crm_broadcast' },
-        { name: 'workspace', value: workspaceId.slice(0, 40) },
+        {
+          name: 'workspace',
+          // Resend tags: ASCII letters, numbers, underscores, dashes only.
+          value: workspaceId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 40) || 'default',
+        },
       ],
       react: React.createElement(BroadcastEmail, {
         subject,

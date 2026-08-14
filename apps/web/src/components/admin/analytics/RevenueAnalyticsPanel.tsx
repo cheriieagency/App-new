@@ -60,30 +60,56 @@ function formatSek(n: number, locale: string) {
   return `${Math.round(n).toLocaleString(locale)} SEK`;
 }
 
-export default function RevenueAnalyticsPanel() {
+export default function RevenueAnalyticsPanel({
+  from,
+  to,
+  rangeLabel,
+}: {
+  from?: string;
+  to?: string;
+  rangeLabel?: string;
+} = {}) {
   const { locale } = useLanguage();
   const tag = localeTag(locale);
   const { activeWorkspace } = useWorkspace();
   const qc = useQueryClient();
   const [payoutOpen, setPayoutOpen] = useState(false);
 
-  const { data, isLoading, isFetching } = useQuery<RevenuePayload>({
-    queryKey: ['analytics-revenue', activeWorkspace.id],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/analytics/revenue?workspaceId=${encodeURIComponent(activeWorkspace.id)}&_=${Date.now()}`,
-        {
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useQuery<RevenuePayload>({
+      queryKey: ['analytics-revenue', activeWorkspace.id, from || '', to || ''],
+      queryFn: async () => {
+        const qs = new URLSearchParams({
+          workspaceId: activeWorkspace.id,
+          _: String(Date.now()),
+        });
+        if (from) qs.set('from', from);
+        if (to) qs.set('to', to);
+        const res = await fetch(`/api/analytics/revenue?${qs.toString()}`, {
           credentials: 'include',
           cache: 'no-store',
-          headers: { 'x-workspace-id': activeWorkspace.id },
+          headers: {
+            'x-workspace-id': activeWorkspace.id,
+            'x-active-workspace-id': activeWorkspace.id,
+          },
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as {
+            message?: string;
+            error?: string;
+          };
+          throw new Error(body.message || body.error || 'Failed to load revenue');
         }
-      );
-      if (!res.ok) throw new Error('Failed to load revenue');
-      return res.json();
-    },
-    enabled: Boolean(activeWorkspace.id),
-    ...LIVE_ANALYTICS_QUERY,
-  });
+        return res.json();
+      },
+      enabled: Boolean(activeWorkspace.id),
+      ...LIVE_ANALYTICS_QUERY,
+    });
+
+  useEffect(() => {
+    if (!isError || !error) return;
+    toast.error(error instanceof Error ? error.message : 'Revenue failed to load');
+  }, [isError, error]);
 
   // After Stripe Connect onboarding, reopen the payout drawer + refresh wallet.
   useEffect(() => {
@@ -186,6 +212,10 @@ export default function RevenueAnalyticsPanel() {
   const orders = data?.totalOrders ?? 0;
   const wallet = data?.walletBalance ?? 0;
   const connectReady = Boolean(data?.stripeConnectEnabled);
+  const hasSales = orders > 0 || gross > 0;
+  const chartCaption = rangeLabel
+    ? `Daily gross sales · ${rangeLabel}`
+    : 'Daily gross sales for the selected range';
 
   const kpis = [
     {
@@ -245,60 +275,80 @@ export default function RevenueAnalyticsPanel() {
               Sales & revenue
             </h2>
             <p className="text-sm text-slate-500 mt-1">
-              Daily gross sales for the last 30 days
+              {chartCaption}
               {isFetching ? ' · refreshing…' : ''}
             </p>
           </div>
+          {isError ? (
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Retry
+            </button>
+          ) : null}
         </div>
-        <div className="h-[240px] w-full min-h-[200px]">
-          {chartData.length === 0 ? (
+        <div className="h-[240px] w-full min-h-[200px] relative">
+          {isLoading && chartData.length === 0 ? (
             <div className="h-full flex items-center justify-center text-sm text-slate-400">
-              No sales yet
+              Loading sales…
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-sm text-slate-400">
+              No sales data
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#F472B6" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#F472B6" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={48}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 12,
-                    border: '1px solid #E2E8F0',
-                    fontSize: 12,
-                  }}
-                  formatter={(value) => [
-                    formatSek(Number(value) || 0, tag),
-                    'Revenue',
-                  ]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#F472B6"
-                  strokeWidth={2}
-                  fill="url(#revFill)"
-                  animationDuration={700}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <>
+              {!hasSales ? (
+                <p className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none text-sm text-slate-400 font-medium">
+                  No sales yet
+                </p>
+              ) : null}
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F472B6" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#F472B6" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: '#94A3B8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#94A3B8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={48}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: '1px solid #E2E8F0',
+                      fontSize: 12,
+                    }}
+                    formatter={(value) => [
+                      formatSek(Number(value) || 0, tag),
+                      'Revenue',
+                    ]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#F472B6"
+                    strokeWidth={2}
+                    fill="url(#revFill)"
+                    animationDuration={700}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </>
           )}
         </div>
       </div>

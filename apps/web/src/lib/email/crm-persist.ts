@@ -25,39 +25,166 @@ import { getSiteUrl } from '@/lib/site';
 import * as React from 'react';
 
 let schemaReady: Promise<void> | null = null;
+/** Bump when new CRM tables/columns are added so hot servers re-heal. */
+const EMAIL_CRM_SCHEMA_VERSION = 2;
+let schemaVersionApplied = 0;
+
+async function safeAlter(label: string, run: () => Promise<unknown>) {
+  try {
+    await run();
+  } catch (error) {
+    console.warn(`[email/crm] schema heal skipped (${label})`, error);
+  }
+}
 
 export async function ensureEmailCrmSchema(): Promise<void> {
   if (!process.env.DATABASE_URL?.trim()) return;
-  if (schemaReady) return schemaReady;
+  if (schemaReady && schemaVersionApplied >= EMAIL_CRM_SCHEMA_VERSION) {
+    return schemaReady;
+  }
 
   schemaReady = (async () => {
+    // Subscribers first — GET /api/admin/email + sync/import depend on this table.
+    await sql`
+      CREATE TABLE IF NOT EXISTS email_subscribers (
+        id              serial PRIMARY KEY,
+        creator_id      text NOT NULL,
+        user_id         text,
+        name            text NOT NULL DEFAULT '',
+        email           text NOT NULL,
+        image           text,
+        source          text NOT NULL DEFAULT 'community_member',
+        tags            text[] NOT NULL DEFAULT '{}',
+        community_id    integer,
+        subscribed_at   timestamptz NOT NULL DEFAULT now(),
+        updated_at      timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (creator_id, email)
+      )
+    `;
+    await safeAlter('email_subscribers.creator_id', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS creator_id text`
+    );
+    await safeAlter('email_subscribers.user_id', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS user_id text`
+    );
+    await safeAlter('email_subscribers.name', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS name text DEFAULT ''`
+    );
+    await safeAlter('email_subscribers.email', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS email text`
+    );
+    await safeAlter('email_subscribers.image', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS image text`
+    );
+    await safeAlter('email_subscribers.source', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS source text DEFAULT 'community_member'`
+    );
+    await safeAlter('email_subscribers.tags', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}'`
+    );
+    await safeAlter('email_subscribers.community_id', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS community_id integer`
+    );
+    await safeAlter('email_subscribers.subscribed_at', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS subscribed_at timestamptz DEFAULT now()`
+    );
+    await safeAlter('email_subscribers.updated_at', () =>
+      sql`ALTER TABLE email_subscribers ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()`
+    );
+    // Required for ON CONFLICT (creator_id, email) in persist/sync paths.
+    await safeAlter('email_subscribers_creator_email_uidx', () => sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS email_subscribers_creator_email_uidx
+        ON email_subscribers (creator_id, email)
+    `);
+    await safeAlter('email_subscribers_creator_idx', () => sql`
+      CREATE INDEX IF NOT EXISTS email_subscribers_creator_idx
+        ON email_subscribers (creator_id, subscribed_at DESC)
+    `);
+
+    // Broadcasts before message_tracking (FK target).
+    await sql`
+      CREATE TABLE IF NOT EXISTS email_broadcasts (
+        id                serial PRIMARY KEY,
+        creator_id        text NOT NULL,
+        subject           text NOT NULL,
+        body              text NOT NULL DEFAULT '',
+        audience          text NOT NULL DEFAULT 'all',
+        audience_label    text NOT NULL DEFAULT 'All subscribers',
+        recipient_count   integer NOT NULL DEFAULT 0,
+        open_rate         numeric(6, 1) NOT NULL DEFAULT 0,
+        click_rate        numeric(6, 1) NOT NULL DEFAULT 0,
+        status            text NOT NULL DEFAULT 'sent',
+        image_url         text,
+        sent_at           timestamptz NOT NULL DEFAULT now(),
+        created_at        timestamptz NOT NULL DEFAULT now()
+      )
+    `;
+    await safeAlter('email_broadcasts.creator_id', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS creator_id text`
+    );
+    await safeAlter('email_broadcasts.subject', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS subject text`
+    );
+    await safeAlter('email_broadcasts.body', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS body text DEFAULT ''`
+    );
+    await safeAlter('email_broadcasts.audience', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS audience text DEFAULT 'all'`
+    );
+    await safeAlter('email_broadcasts.audience_label', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS audience_label text DEFAULT 'All subscribers'`
+    );
+    await safeAlter('email_broadcasts.recipient_count', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS recipient_count integer DEFAULT 0`
+    );
+    await safeAlter('email_broadcasts.open_rate', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS open_rate numeric(6, 1) DEFAULT 0`
+    );
+    await safeAlter('email_broadcasts.click_rate', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS click_rate numeric(6, 1) DEFAULT 0`
+    );
+    await safeAlter('email_broadcasts.status', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS status text DEFAULT 'sent'`
+    );
+    await safeAlter('email_broadcasts.image_url', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS image_url text`
+    );
+    await safeAlter('email_broadcasts.sent_at', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS sent_at timestamptz DEFAULT now()`
+    );
+    await safeAlter('email_broadcasts_creator_idx', () => sql`
+      CREATE INDEX IF NOT EXISTS email_broadcasts_creator_idx
+        ON email_broadcasts (creator_id, sent_at DESC)
+    `);
+
     await sql`
       CREATE TABLE IF NOT EXISTS email_automations (
         id            text PRIMARY KEY,
-        creator_id    text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-        community_id  integer REFERENCES communities(id) ON DELETE SET NULL,
+        creator_id    text NOT NULL,
+        community_id  integer,
         name          text NOT NULL,
         description   text NOT NULL DEFAULT '',
         trigger       text NOT NULL,
         subject       text NOT NULL,
         body          text NOT NULL,
-        status        text NOT NULL DEFAULT 'active'
-                        CHECK (status IN ('active', 'paused')),
+        status        text NOT NULL DEFAULT 'active',
         sent_count    integer NOT NULL DEFAULT 0,
         last_sent_at  timestamptz,
         created_at    timestamptz NOT NULL DEFAULT now(),
         updated_at    timestamptz NOT NULL DEFAULT now()
       )
     `;
-    await sql`
+    await safeAlter('email_automations_creator_idx', () => sql`
       CREATE INDEX IF NOT EXISTS email_automations_creator_idx
         ON email_automations (creator_id, status)
-    `;
+    `);
+
+    // No hard FK to email_broadcasts — heal even if older DBs diverge.
     await sql`
       CREATE TABLE IF NOT EXISTS email_message_tracking (
         resend_id     text PRIMARY KEY,
-        broadcast_id  integer REFERENCES email_broadcasts(id) ON DELETE CASCADE,
-        creator_id    text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+        broadcast_id  integer,
+        creator_id    text NOT NULL,
         email         text NOT NULL,
         opened        boolean NOT NULL DEFAULT false,
         clicked       boolean NOT NULL DEFAULT false,
@@ -66,15 +193,19 @@ export async function ensureEmailCrmSchema(): Promise<void> {
         clicked_at    timestamptz
       )
     `;
-    await sql`
+    await safeAlter('email_message_tracking.broadcast_id', () =>
+      sql`ALTER TABLE email_message_tracking ADD COLUMN IF NOT EXISTS broadcast_id integer`
+    );
+    await safeAlter('email_message_tracking_broadcast_idx', () => sql`
       CREATE INDEX IF NOT EXISTS email_message_tracking_broadcast_idx
         ON email_message_tracking (broadcast_id)
-    `;
+    `);
+
     await sql`
       CREATE TABLE IF NOT EXISTS email_automation_sends (
         id              serial PRIMARY KEY,
-        automation_id   text REFERENCES email_automations(id) ON DELETE SET NULL,
-        creator_id      text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+        automation_id   text,
+        creator_id      text NOT NULL,
         community_id    integer,
         community_name  text,
         kind            text NOT NULL DEFAULT 'member_auto',
@@ -85,8 +216,11 @@ export async function ensureEmailCrmSchema(): Promise<void> {
         sent_at         timestamptz NOT NULL DEFAULT now()
       )
     `;
+
+    schemaVersionApplied = EMAIL_CRM_SCHEMA_VERSION;
   })().catch((error) => {
     schemaReady = null;
+    schemaVersionApplied = 0;
     throw error;
   });
 
@@ -125,6 +259,8 @@ async function ensureDefaultAutomations(creatorId: string): Promise<void> {
 
   for (const opt of AUTOMATION_TRIGGER_OPTIONS) {
     const id = `auto-${creatorId.slice(0, 8)}-${opt.value}`;
+    // Keep description as a plain string — nested templates inside sql`` confuse Turbopack.
+    const description = `Automated email for ${opt.label.toLowerCase()}.`;
     await sql`
       INSERT INTO email_automations (
         id, creator_id, community_id, name, description, trigger, subject, body, status
@@ -134,7 +270,7 @@ async function ensureDefaultAutomations(creatorId: string): Promise<void> {
         ${creatorId},
         ${null},
         ${opt.defaultName},
-        ${`Automated email for ${opt.label.toLowerCase()}.`},
+        ${description},
         ${opt.value},
         ${opt.defaultSubject},
         ${opt.defaultBody},
@@ -296,9 +432,9 @@ export async function persistSubscriber(input: {
   source: SubscriberSource;
   communityId?: number | null;
   tags?: string[];
-}): Promise<void> {
+}): Promise<boolean> {
   const email = input.email.trim().toLowerCase();
-  if (!email) return;
+  if (!email) return false;
 
   syncSubscriber({
     email,
@@ -310,7 +446,7 @@ export async function persistSubscriber(input: {
     extra_tags: input.tags,
   });
 
-  if (!process.env.DATABASE_URL?.trim()) return;
+  if (!process.env.DATABASE_URL?.trim()) return true;
   try {
     await ensureEmailCrmSchema();
     const tags = input.tags?.length ? input.tags : [];
@@ -339,8 +475,10 @@ export async function persistSubscriber(input: {
         community_id = COALESCE(EXCLUDED.community_id, email_subscribers.community_id),
         updated_at = now()
     `;
+    return true;
   } catch (error) {
     console.warn('[email/crm] persistSubscriber failed', error);
+    return false;
   }
 }
 

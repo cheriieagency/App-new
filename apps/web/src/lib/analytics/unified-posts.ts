@@ -307,16 +307,18 @@ export async function fetchLiveUnifiedPosts(input: {
   return { posts, accounts, sort };
 }
 
-/** Active Instagram Stories for Analytics → Stories (≈24h window from Meta). */
+/** Active Instagram + Facebook Stories for Analytics → Stories. */
 export async function fetchLiveStories(input: {
   userId: string;
   workspaceId: string;
 }): Promise<LivePostsAnalytics> {
   const rows = await loadWorkspaceAccounts(input.userId, input.workspaceId);
   const ig = rows.find((r) => r.platform === 'instagram' && r.access_token);
+  const fb = rows.find((r) => r.platform === 'facebook' && r.access_token);
   const accounts: PlatformAccountPill[] = [];
   const posts: UnifiedPostMetric[] = [];
 
+  // --- Instagram Stories (GET /{ig-user-id}/stories, ~24h window) ---
   if (!ig?.access_token || !ig.platform_user_id) {
     accounts.push({
       platform: 'instagram',
@@ -328,66 +330,154 @@ export async function fetchLiveStories(input: {
       status: 'disconnected',
       message: 'Connect Instagram to load Stories analytics',
     });
-    return { posts, accounts, sort: 'publishedAt' };
-  }
-
-  const handle = ig.handle || null;
-  try {
-    const { fetchInstagramStories } = await import('@/lib/meta/graph-api');
-    const stories = await fetchInstagramStories(
-      ig.platform_user_id,
-      ig.access_token,
-      25
-    );
-    for (const story of stories) {
-      const impressions = Math.max(
-        Number(story.impressions) || 0,
-        Number(story.reach) || 0,
-        1
+  } else {
+    const handle = ig.handle || null;
+    try {
+      const { fetchInstagramStories } = await import('@/lib/meta/graph-api');
+      const stories = await fetchInstagramStories(
+        ig.platform_user_id,
+        ig.access_token,
+        25
       );
-      const replies = Number(story.replies) || 0;
-      posts.push({
-        id: `instagram-story:${story.id}`,
+      for (const story of stories) {
+        const impressions = Math.max(
+          Number(story.impressions) || 0,
+          Number(story.reach) || 0,
+          1
+        );
+        const replies = Number(story.replies) || 0;
+        posts.push({
+          id: `instagram-story:${story.id}`,
+          platform: 'instagram',
+          title: `Story ${story.media_type || 'STORY'}`,
+          mediaUrl: story.thumbnail_url || story.media_url || undefined,
+          permalink: story.permalink || undefined,
+          publishedAt: story.timestamp || new Date().toISOString(),
+          impressions,
+          likes: 0,
+          comments: replies,
+          shares: Number(story.taps_forward) || 0,
+          engagementRate: roundEr(0, replies, 0, impressions),
+          mediaType: story.media_type || 'STORY',
+        });
+      }
+      const igCount = posts.filter((p) => p.platform === 'instagram').length;
+      accounts.push({
         platform: 'instagram',
-        title: `Story ${story.media_type || 'STORY'}`,
-        mediaUrl: story.thumbnail_url || story.media_url || undefined,
-        permalink: story.permalink || undefined,
-        publishedAt: story.timestamp || new Date().toISOString(),
-        impressions,
-        likes: 0,
-        comments: replies,
-        shares: Number(story.taps_forward) || 0,
-        engagementRate: roundEr(0, replies, 0, impressions),
-        mediaType: story.media_type || 'STORY',
+        connected: true,
+        handle,
+        display_name: ig.display_name || handle,
+        avatar_url: ig.avatar_url,
+        post_count: igCount,
+        status: igCount > 0 ? 'ok' : 'empty',
+        message:
+          igCount > 0
+            ? null
+            : 'No active Instagram Stories right now (Meta only returns the ~24h window)',
+      });
+    } catch (error) {
+      console.warn('[unified-posts] IG stories failed', error);
+      accounts.push({
+        platform: 'instagram',
+        connected: true,
+        handle,
+        display_name: ig.display_name || handle,
+        avatar_url: ig.avatar_url,
+        post_count: 0,
+        status: 'error',
+        message:
+          error instanceof Error ? error.message : 'Failed to load Instagram Stories',
       });
     }
-    accounts.push({
-      platform: 'instagram',
-      connected: true,
-      handle,
-      display_name: ig.display_name || handle,
-      avatar_url: ig.avatar_url,
-      post_count: posts.length,
-      status: posts.length > 0 ? 'ok' : 'empty',
-      message:
-        posts.length > 0
-          ? null
-          : 'No active Stories right now (Meta only returns the ~24h window)',
-    });
-  } catch (error) {
-    console.warn('[unified-posts] stories failed', error);
-    accounts.push({
-      platform: 'instagram',
-      connected: true,
-      handle,
-      display_name: ig.display_name || handle,
-      avatar_url: ig.avatar_url,
-      post_count: 0,
-      status: 'error',
-      message:
-        error instanceof Error ? error.message : 'Failed to load Stories',
-    });
   }
+
+  // --- Facebook Page Stories (GET /{page-id}/stories — Page Stories API) ---
+  const fbPageId = fb?.page_id || fb?.platform_user_id || null;
+  if (!fb?.access_token || !fbPageId) {
+    accounts.push({
+      platform: 'facebook',
+      connected: false,
+      handle: null,
+      display_name: null,
+      avatar_url: null,
+      post_count: 0,
+      status: 'disconnected',
+      message: 'Connect Facebook to load Page Stories analytics',
+    });
+  } else {
+    const handle = fb.handle || fb.page_name || null;
+    try {
+      const { fetchFacebookPageStories } = await import('@/lib/meta/graph-api');
+      const stories = await fetchFacebookPageStories(
+        fbPageId,
+        fb.access_token,
+        25
+      );
+      for (const story of stories) {
+        const impressions = Math.max(
+          Number(story.impressions) || 0,
+          Number(story.reach) || 0,
+          1
+        );
+        const created =
+          typeof story.creation_time === 'number'
+            ? new Date(story.creation_time * 1000).toISOString()
+            : typeof story.creation_time === 'string' &&
+                /^\d+$/.test(story.creation_time)
+              ? new Date(Number(story.creation_time) * 1000).toISOString()
+              : story.creation_time
+                ? new Date(String(story.creation_time)).toISOString()
+                : new Date().toISOString();
+        posts.push({
+          id: `facebook-story:${story.post_id}`,
+          platform: 'facebook',
+          title: `Story ${story.media_type || 'STORY'}`,
+          mediaUrl: story.media_url || undefined,
+          permalink: story.url || undefined,
+          publishedAt: created,
+          impressions,
+          likes: 0,
+          comments: Number(story.replies) || 0,
+          shares: 0,
+          engagementRate: roundEr(0, Number(story.replies) || 0, 0, impressions),
+          mediaType: story.media_type || 'STORY',
+        });
+      }
+      const fbCount = posts.filter((p) => p.platform === 'facebook').length;
+      accounts.push({
+        platform: 'facebook',
+        connected: true,
+        handle,
+        display_name: fb.display_name || fb.page_name || handle,
+        avatar_url: fb.avatar_url,
+        post_count: fbCount,
+        status: fbCount > 0 ? 'ok' : 'empty',
+        message:
+          fbCount > 0
+            ? null
+            : 'No published Facebook Page Stories right now',
+      });
+    } catch (error) {
+      console.warn('[unified-posts] FB stories failed', error);
+      accounts.push({
+        platform: 'facebook',
+        connected: true,
+        handle,
+        display_name: fb.display_name || fb.page_name || handle,
+        avatar_url: fb.avatar_url,
+        post_count: 0,
+        status: 'error',
+        message:
+          error instanceof Error ? error.message : 'Failed to load Facebook Stories',
+      });
+    }
+  }
+
+  // Stable Instagram → Facebook order for the Stories tab.
+  accounts.sort((a, b) => {
+    const order = ['instagram', 'facebook'];
+    return order.indexOf(a.platform) - order.indexOf(b.platform);
+  });
 
   return { posts, accounts, sort: 'publishedAt' };
 }

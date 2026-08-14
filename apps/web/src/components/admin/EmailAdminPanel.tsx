@@ -166,7 +166,10 @@ export default function EmailAdminPanel() {
     upgradeTarget,
   } = useSubscription();
   const canBroadcast = hasFeature('emailBroadcasts');
-  const workspaceCommunityId = activeWorkspace.community.community_id;
+  // Only scope to a real community id — mock/0 ids would hide all creator-level contacts.
+  const rawCommunityId = Number(activeWorkspace.community?.community_id);
+  const workspaceCommunityId =
+    Number.isFinite(rawCommunityId) && rawCommunityId > 0 ? rawCommunityId : null;
   const [tag, setTag] = useState('all');
   const [q, setQ] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
@@ -195,14 +198,16 @@ export default function EmailAdminPanel() {
   const [autoBody, setAutoBody] = useState('');
   const [autoStatus, setAutoStatus] = useState<'active' | 'paused'>('active');
 
-  // Subscribers filtered to the active brand / team-yta storefront & webinars.
+  // Workspace CRM list — optional community scope when a real community is linked.
   const { data, isLoading } = useQuery<EmailResponse>({
     queryKey: ['admin-email', tag, q, workspaceCommunityId],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (tag && tag !== 'all') params.set('tag', tag);
       if (q.trim()) params.set('q', q.trim());
-      params.set('community_id', String(workspaceCommunityId));
+      if (workspaceCommunityId) {
+        params.set('community_id', String(workspaceCommunityId));
+      }
       const r = await fetch(`/api/admin/email?${params.toString()}`);
       if (!r.ok) throw new Error('Failed');
       return r.json();
@@ -324,11 +329,15 @@ export default function EmailAdminPanel() {
   // Community-scoped automations + sent emails (fallback if API omits them).
   const automations = useMemo(() => {
     if (data?.automations) return data.automations;
-    return listEmailAutomations({ community_id: workspaceCommunityId });
+    return listEmailAutomations(
+      workspaceCommunityId ? { community_id: workspaceCommunityId } : undefined
+    );
   }, [data?.automations, workspaceCommunityId]);
   const communityEmails = useMemo(() => {
     if (data?.community_emails) return data.community_emails;
-    return listCommunityAutomationEmails({ community_id: workspaceCommunityId });
+    return listCommunityAutomationEmails(
+      workspaceCommunityId ? { community_id: workspaceCommunityId } : undefined
+    );
   }, [data?.community_emails, workspaceCommunityId]);
   const tags = data?.tags ?? ['all'];
   const analytics = analyticsBroadcast

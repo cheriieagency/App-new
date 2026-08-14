@@ -644,6 +644,154 @@ export async function fetchInstagramStories(
   return withInsights;
 }
 
+export type FacebookPageStoryItem = {
+  post_id: string;
+  status?: string;
+  creation_time?: string | number;
+  media_type?: string;
+  media_id?: string;
+  url?: string;
+  /** Best-effort thumbnail / media preview when resolvable. */
+  media_url?: string | null;
+  impressions?: number;
+  reach?: number;
+  replies?: number;
+};
+
+/**
+ * Facebook Page Stories via Page Stories API.
+ * GET /{page-id}/stories — published + archived; we keep PUBLISHED for the live tab.
+ * Docs: https://developers.facebook.com/docs/page-stories-api/
+ */
+export async function fetchFacebookPageStories(
+  pageId: string,
+  pageAccessToken: string,
+  limit = 25
+): Promise<FacebookPageStoryItem[]> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(pageId)}/stories`);
+  url.searchParams.set('limit', String(Math.min(Math.max(limit, 1), 50)));
+  url.searchParams.set('access_token', pageAccessToken);
+  // Prefer currently live / published stories when the API accepts the filter.
+  url.searchParams.set('status', 'PUBLISHED');
+
+  let stories: FacebookPageStoryItem[] = [];
+  try {
+    const data = await graphJson<{ data?: FacebookPageStoryItem[] }>(url.toString());
+    stories = (data.data ?? []).filter((s) => Boolean(s?.post_id));
+  } catch (error) {
+    // Some tokens reject `status` — retry without it, then filter client-side.
+    console.warn('[graph] FB stories list failed (with status)', error);
+    try {
+      const fallback = new URL(
+        `${GRAPH_BASE}/${encodeURIComponent(pageId)}/stories`
+      );
+      fallback.searchParams.set('limit', String(Math.min(Math.max(limit, 1), 50)));
+      fallback.searchParams.set('access_token', pageAccessToken);
+      const data = await graphJson<{ data?: FacebookPageStoryItem[] }>(
+        fallback.toString()
+      );
+      stories = (data.data ?? [])
+        .filter((s) => Boolean(s?.post_id))
+        .filter(
+          (s) =>
+            !s.status ||
+            String(s.status).toUpperCase() === 'PUBLISHED' ||
+            String(s.status).toUpperCase() === 'PUBLISHING'
+        );
+    } catch (retryError) {
+      console.warn('[graph] FB stories list failed', retryError);
+      return [];
+    }
+  }
+
+  const withInsights = await Promise.all(
+    stories.slice(0, limit).map(async (story) => {
+      let impressions = 0;
+      let reach = 0;
+      let replies = 0;
+      let mediaUrl: string | null = null;
+
+      // Story insights — try current + legacy metric names (Meta is migrating June 2026).
+      const metricSets = [
+        'PAGE_STORY_TOTAL_MEDIA_VIEW_UNIQUE,PAGE_STORY_IMPRESSIONS_BY_STORY_ID,PAGE_STORY_IMPRESSIONS_BY_STORY_ID_UNIQUE',
+        'story_total_media_view_unique,story_media_view',
+        'PAGE_STORY_IMPRESSIONS_BY_STORY_ID,PAGE_STORY_IMPRESSIONS_BY_STORY_ID_UNIQUE',
+      ];
+      for (const metric of metricSets) {
+        try {
+          const insightUrl = new URL(
+            `${GRAPH_BASE}/${encodeURIComponent(story.post_id)}/insights`
+          );
+          insightUrl.searchParams.set('metric', metric);
+          insightUrl.searchParams.set('access_token', pageAccessToken);
+          const insightData = await graphJson<{
+            data?: Array<{ name?: string; values?: Array<{ value?: number }> }>;
+          }>(insightUrl.toString());
+          const flat: Record<string, number> = {};
+          for (const row of insightData.data ?? []) {
+            if (row.name) {
+              flat[row.name] = Number(row.values?.[0]?.value) || 0;
+            }
+          }
+          impressions = Math.max(
+            impressions,
+            flat.PAGE_STORY_IMPRESSIONS_BY_STORY_ID || 0,
+            flat.story_media_view || 0,
+            flat.PAGE_STORY_IMPRESSIONS_BY_STORY_ID_UNIQUE || 0
+          );
+          reach = Math.max(
+            reach,
+            flat.PAGE_STORY_TOTAL_MEDIA_VIEW_UNIQUE || 0,
+            flat.PAGE_STORY_IMPRESSIONS_BY_STORY_ID_UNIQUE || 0,
+            flat.story_total_media_view_unique || 0
+          );
+          if (impressions > 0 || reach > 0) break;
+        } catch {
+          /* try next metric set */
+        }
+      }
+
+      // Best-effort media preview from photo/video id.
+      if (story.media_id) {
+        try {
+          const mediaUrlReq = new URL(
+            `${GRAPH_BASE}/${encodeURIComponent(story.media_id)}`
+          );
+          mediaUrlReq.searchParams.set(
+            'fields',
+            'picture,source,images,thumbnails'
+          );
+          mediaUrlReq.searchParams.set('access_token', pageAccessToken);
+          const media = await graphJson<{
+            picture?: string;
+            source?: string;
+            images?: Array<{ source?: string }>;
+            thumbnails?: { data?: Array<{ uri?: string }> };
+          }>(mediaUrlReq.toString());
+          mediaUrl =
+            media.picture ||
+            media.images?.[0]?.source ||
+            media.thumbnails?.data?.[0]?.uri ||
+            media.source ||
+            null;
+        } catch {
+          /* ignore preview failures */
+        }
+      }
+
+      return {
+        ...story,
+        media_url: mediaUrl,
+        impressions,
+        reach,
+        replies,
+      } satisfies FacebookPageStoryItem;
+    })
+  );
+
+  return withInsights;
+}
+
 export type FacebookPagePostItem = {
   id: string;
   message?: string;

@@ -1,6 +1,6 @@
 /**
  * GET /api/analytics/stories?workspaceId=…
- * Live Instagram Stories (active ~24h window) for Analytics → Stories.
+ * Live Instagram Stories (~24h) + Facebook Page Stories (Page Stories API).
  */
 
 import { cookies, headers } from 'next/headers';

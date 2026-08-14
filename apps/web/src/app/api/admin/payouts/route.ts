@@ -39,32 +39,42 @@ export async function GET(request: Request) {
     return Response.json({ ok: true, payouts: [] });
   }
 
-  await ensureCommerceSchema();
-  const rows = await sql`
-    SELECT id, amount_sek, status, stripe_transfer_id, created_at, completed_at
-    FROM public.payouts
-    WHERE workspace_id = ${workspaceId}
-    ORDER BY created_at DESC
-    LIMIT 20
-  `;
+  try {
+    await ensureCommerceSchema();
+    const rows = await sql`
+      SELECT id, amount_sek, status, stripe_transfer_id, created_at, completed_at
+      FROM public.payouts
+      WHERE workspace_id = ${workspaceId}
+      ORDER BY created_at DESC
+      LIMIT 20
+    `;
 
-  return Response.json({
-    ok: true,
-    payouts: (rows || []).map((row) => ({
-      id: row.id,
-      amountSek: Number(row.amount_sek) || 0,
-      status: String(row.status),
-      stripeTransferId: row.stripe_transfer_id
-        ? String(row.stripe_transfer_id)
-        : null,
-      createdAt: row.created_at
-        ? new Date(String(row.created_at)).toISOString()
-        : null,
-      completedAt: row.completed_at
-        ? new Date(String(row.completed_at)).toISOString()
-        : null,
-    })),
-  });
+    return Response.json({
+      ok: true,
+      payouts: (rows || []).map((row) => ({
+        id: row.id,
+        amountSek: Number(row.amount_sek) || 0,
+        status: String(row.status),
+        stripeTransferId: row.stripe_transfer_id
+          ? String(row.stripe_transfer_id)
+          : null,
+        createdAt: row.created_at
+          ? new Date(String(row.created_at)).toISOString()
+          : null,
+        completedAt: row.completed_at
+          ? new Date(String(row.completed_at)).toISOString()
+          : null,
+      })),
+    });
+  } catch (error) {
+    console.warn('[admin/payouts GET]', error);
+    return Response.json({
+      ok: false,
+      payouts: [],
+      message:
+        error instanceof Error ? error.message : 'Failed to load payouts',
+    });
+  }
 }
 
 export async function POST(request: Request) {

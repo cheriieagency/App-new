@@ -95,6 +95,18 @@ export function seedDemoUtmStats(
   });
 }
 
+/** Stable slug for a bio block — prefer explicit utm_slug, else title+id. */
+export function bioBlockSlug(block: {
+  id?: string | number | null;
+  title?: string | null;
+  utm_slug?: string | null;
+}): string {
+  const explicit = String(block.utm_slug || '').trim();
+  if (explicit) return explicit;
+  const id = block.id != null ? String(block.id) : 'item';
+  return slugifyBioProduct(block.title || 'product', id);
+}
+
 /** Resolve destination for a tracked slug (demo registry). */
 const demoDestinations = new Map<
   string,

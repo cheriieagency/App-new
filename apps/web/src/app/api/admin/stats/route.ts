@@ -1,7 +1,8 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { seedDemoUtmStats, registerDemoDestination } from '@/lib/bio-utm';
+import { aggregateBioLinkClicks } from '@/lib/bio-clicks/persist';
+import { bioBlockSlug, buildTrackedShortUrl } from '@/lib/bio-utm';
 
 type BioStoreBlock = {
   id?: string;
@@ -20,7 +21,14 @@ const ZERO_STATS = {
   products: 0,
   revenue: 0,
   emails: [] as unknown[],
-  utm_links: [] as ReturnType<typeof seedDemoUtmStats>,
+  utm_links: [] as Array<{
+    slug: string;
+    title: string;
+    clicks: number;
+    unique: number;
+    destination_url: string;
+    tracked_url: string;
+  }>,
   utm_total_clicks: 0,
   views: 0,
   reach: 0,
@@ -137,31 +145,40 @@ export async function GET() {
       blocks = bio.blocks;
     }
 
-    const storeProducts = blocks
-      .filter(
-        (b) =>
-          b?.visible !== false &&
-          (b?.category === 'store' || b?.type === 'store') &&
-          (b?.destination_url || b?.url)
-      )
-      .map((b) => {
-        const slug = b?.utm_slug || `store-${b?.id || 'item'}`;
-        const destination = String(b?.destination_url || b?.url || '');
-        registerDemoDestination(slug, {
-          destination,
-          handle,
-          title: b?.title || 'Store product',
-        });
-        return {
-          slug,
-          title: b?.title || 'Store product',
-          destination_url: destination,
-          handle,
-        };
-      });
+    const trackable = blocks.filter(
+      (b) =>
+        b?.visible !== false &&
+        b?.type !== 'divider' &&
+        b?.type !== 'header' &&
+        b?.type !== 'text' &&
+        (b?.title || b?.destination_url || b?.url || b?.utm_slug)
+    );
 
-    const utm_links =
-      storeProducts.length > 0 ? seedDemoUtmStats(storeProducts) : [];
+    const workspaceId = `user:${session.user.id}`;
+    let clickAggs: Awaited<ReturnType<typeof aggregateBioLinkClicks>> = [];
+    try {
+      clickAggs = await aggregateBioLinkClicks({
+        workspaceId,
+        handle: String(handle || '').replace(/^@/, '').toLowerCase(),
+      });
+    } catch (err) {
+      console.warn('[admin/stats] bio click aggregate failed', err);
+    }
+    const bySlug = new Map(clickAggs.map((a) => [a.slug, a]));
+
+    const utm_links = trackable.map((b) => {
+      const slug = bioBlockSlug(b);
+      const destination = String(b?.destination_url || b?.url || '');
+      const live = bySlug.get(slug);
+      return {
+        slug,
+        title: b?.title || live?.title || 'Link',
+        clicks: live?.clicks ?? 0,
+        unique: live?.unique ?? 0,
+        destination_url: destination,
+        tracked_url: buildTrackedShortUrl(slug),
+      };
+    });
     const emails = Array.isArray(emailList) ? emailList : [];
 
     return Response.json({

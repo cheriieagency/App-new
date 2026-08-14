@@ -3,8 +3,10 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { resendEnv } from '@/lib/config/env';
 import {
+  ensureEmailCrmSchema,
   listPersistedAutomations,
   listPersistedCommunityEmails,
+  persistSubscriber,
   setPersistedAutomationStatus,
   upsertPersistedAutomation,
 } from '@/lib/email/crm-persist';
@@ -54,7 +56,10 @@ export async function GET(request: Request) {
   const tag = searchParams.get('tag') ?? undefined;
   const q = searchParams.get('q') ?? undefined;
   const communityId = searchParams.get('community_id');
-  const cid = communityId ? Number(communityId) : undefined;
+  const parsedCid = communityId != null && communityId !== '' ? Number(communityId) : NaN;
+  // Ignore mock/0/invalid ids so the CRM still returns creator-level contacts.
+  const cid =
+    Number.isFinite(parsedCid) && parsedCid > 0 ? parsedCid : undefined;
   const providerReady = Boolean(resendEnv.apiKey());
 
   if (!process.env.DATABASE_URL?.trim()) {
@@ -65,13 +70,15 @@ export async function GET(request: Request) {
   }
 
   try {
+    await ensureEmailCrmSchema();
+
     // Scope by creator; when a community is selected, prefer that brand's contacts.
     const rows = cid
       ? await sql`
           SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
           FROM email_subscribers
           WHERE creator_id = ${session.user.id}
-            AND community_id = ${cid}
+            AND (community_id = ${cid} OR community_id IS NULL)
           ORDER BY subscribed_at DESC
           LIMIT 500
         `
@@ -167,6 +174,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const action = String(body.action ?? 'send');
 
+    if (process.env.DATABASE_URL?.trim()) {
+      await ensureEmailCrmSchema();
+    }
+
     if (action === 'toggle_automation') {
       const id = String(body.id ?? '');
       const status = body.status === 'paused' ? 'paused' : 'active';
@@ -240,7 +251,14 @@ export async function POST(request: Request) {
 
       const owned = await sql`
         SELECT id FROM communities
-        WHERE id = ${communityId} AND creator_id = ${session.user.id}
+        WHERE id = ${communityId}
+          AND (
+            creator_id::text = ${session.user.id}
+            OR workspace_id = ${session.user.id}
+            OR workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id::text = ${session.user.id}
+            )
+          )
         LIMIT 1
       `;
       if (!Array.isArray(owned) || owned.length === 0) {
@@ -265,40 +283,18 @@ export async function POST(request: Request) {
         const name = String(row.name ?? email.split('@')[0] ?? 'Member');
         const userId = (row.user_id as string) ?? null;
         const image = (row.image as string) ?? null;
-        syncSubscriber({
-          email,
-          name,
-          user_id: userId,
-          image,
-          source: 'community_member',
-          community_id: communityId,
-          extra_tags: ['Community Member'],
-        });
         try {
-          await sql`
-            INSERT INTO email_subscribers (
-              creator_id, user_id, name, email, image, source, tags, community_id
-            )
-            VALUES (
-              ${session.user.id},
-              ${userId},
-              ${name},
-              ${email},
-              ${image},
-              'community_member',
-              ${['Community Member']},
-              ${communityId}
-            )
-            ON CONFLICT (creator_id, email) DO UPDATE SET
-              name = EXCLUDED.name,
-              user_id = COALESCE(EXCLUDED.user_id, email_subscribers.user_id),
-              tags = (
-                SELECT ARRAY(SELECT DISTINCT unnest(email_subscribers.tags || EXCLUDED.tags))
-              ),
-              community_id = COALESCE(EXCLUDED.community_id, email_subscribers.community_id),
-              updated_at = now()
-          `;
-          imported += 1;
+          const ok = await persistSubscriber({
+            creatorId: session.user.id,
+            email,
+            name,
+            userId,
+            image,
+            source: 'community_member',
+            communityId,
+            tags: ['Community Member'],
+          });
+          if (ok) imported += 1;
         } catch (e) {
           console.error('[email sync_community_members]', e);
         }
@@ -329,45 +325,37 @@ export async function POST(request: Request) {
         }
       }
 
-      const subscriber = syncSubscriber({
-        email: String(body.email || session.user.email),
-        name: String(body.name || session.user.name || 'Medlem'),
-        user_id: body.user_id ?? session.user.id,
-        image: body.image ?? session.user.image ?? null,
+      const email = String(body.email || session.user.email || '')
+        .toLowerCase()
+        .trim();
+      const name = String(body.name || session.user.name || 'Medlem');
+      const userId = (body.user_id as string | undefined) ?? session.user.id;
+      const image =
+        (body.image as string | null | undefined) ?? session.user.image ?? null;
+      const tags = Array.isArray(body.tags)
+        ? (body.tags as string[])
+        : undefined;
+
+      await persistSubscriber({
+        creatorId,
+        email,
+        name,
+        userId,
+        image,
         source,
-        community_id: communityId,
-        extra_tags: Array.isArray(body.tags) ? body.tags : undefined,
+        communityId,
+        tags,
       });
 
-      if (process.env.DATABASE_URL?.trim()) {
-        try {
-          await sql`
-            INSERT INTO email_subscribers (
-              creator_id, user_id, name, email, image, source, tags, community_id
-            )
-            VALUES (
-              ${creatorId},
-              ${subscriber.user_id},
-              ${subscriber.name},
-              ${subscriber.email},
-              ${subscriber.image},
-              ${subscriber.source},
-              ${subscriber.tags},
-              ${subscriber.community_id}
-            )
-            ON CONFLICT (creator_id, email) DO UPDATE SET
-              name = EXCLUDED.name,
-              tags = (
-                SELECT ARRAY(SELECT DISTINCT unnest(email_subscribers.tags || EXCLUDED.tags))
-              ),
-              source = EXCLUDED.source,
-              community_id = COALESCE(EXCLUDED.community_id, email_subscribers.community_id),
-              updated_at = now()
-          `;
-        } catch (e) {
-          console.error(e);
-        }
-      }
+      const subscriber = syncSubscriber({
+        email,
+        name,
+        user_id: userId,
+        image,
+        source,
+        community_id: communityId,
+        extra_tags: tags,
+      });
 
       return Response.json({ success: true, subscriber, demo: !process.env.DATABASE_URL?.trim() });
     }

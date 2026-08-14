@@ -1,3 +1,7 @@
+import { bioBlockSlug } from '@/lib/bio-utm';
+import {
+  registerBioBlocksAsDestinations,
+} from '@/lib/bio-clicks/persist';
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
@@ -54,9 +58,45 @@ export async function POST(request: Request) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
+    const body = await request.json();
     const { blocks, handle, display_name, bio_text, avatar_url, social_links, theme } =
-      await request.json();
-    const normalizedTheme = normalizeBioTheme(theme);
+      body as Record<string, unknown>;
+    const normalizedTheme = normalizeBioTheme(
+      theme as Parameters<typeof normalizeBioTheme>[0]
+    );
+    const workspaceId = String(
+      body.workspaceId ||
+        body.workspace_id ||
+        request.headers.get('x-workspace-id') ||
+        `user:${session.user.id}`
+    ).trim();
+    const blockList = Array.isArray(blocks)
+      ? (blocks as Array<Record<string, unknown>>)
+      : [];
+
+    const cleanHandle = String(handle ?? '')
+      .replace(/^@/, '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]/g, '') || 'creator';
+
+    // Ensure every published link has a durable /r/{slug} destination for click tracking.
+    const ensureDestinations = async () => {
+      try {
+        const withSlugs = blockList.map((b) => ({
+          ...b,
+          utm_slug: String(b.utm_slug || bioBlockSlug(b as { id?: string; title?: string; utm_slug?: string })),
+        }));
+        await registerBioBlocksAsDestinations({
+          workspaceId,
+          userId: session.user.id,
+          handle: cleanHandle,
+          blocks: withSlugs,
+        });
+      } catch (err) {
+        console.warn('[admin/bio] destination register failed', err);
+      }
+    };
 
     try {
       const existing = await sql`SELECT id FROM bio_blocks WHERE user_id = ${session.user.id}`;
@@ -72,11 +112,7 @@ export async function POST(request: Request) {
               updated_at = NOW()
           WHERE user_id = ${session.user.id}
         `;
-        const cleanHandle = String(handle ?? '')
-          .replace(/^@/, '')
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9._-]/g, '') || 'creator';
+        await ensureDestinations();
         return Response.json({
           success: true,
           first_publish: false,
@@ -90,11 +126,7 @@ export async function POST(request: Request) {
                   ${display_name ?? null}, ${bio_text ?? null}, ${avatar_url ?? null},
                   ${JSON.stringify(social_links ?? [])}, ${JSON.stringify(normalizedTheme)})
         `;
-        const cleanHandle = String(handle ?? '')
-          .replace(/^@/, '')
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9._-]/g, '') || 'creator';
+        await ensureDestinations();
         return Response.json({
           success: true,
           first_publish: true,
@@ -105,11 +137,7 @@ export async function POST(request: Request) {
     } catch (dbError) {
       // Demo mode without DB — accept save so the UI can continue.
       console.error(dbError);
-      const cleanHandle = String(handle ?? '')
-        .replace(/^@/, '')
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9._-]/g, '') || 'creator';
+      await ensureDestinations();
       return Response.json({
         success: true,
         first_publish: false,
