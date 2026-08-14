@@ -47,14 +47,19 @@ async function loadWorkspaceTokens(
   if (!process.env.DATABASE_URL?.trim()) return [];
   try {
     const rows = await sql`
-      SELECT platform, platform_user_id, access_token, page_id
+      SELECT platform, platform_user_id, access_token, page_id, user_id
       FROM social_accounts
-      WHERE user_id = ${userId}
-        AND workspace_id = ${workspaceId}
+      WHERE workspace_id = ${workspaceId}
         AND access_token IS NOT NULL
         AND TRIM(access_token) <> ''
+      ORDER BY CASE WHEN user_id = ${userId} THEN 0 ELSE 1 END
     `;
-    return (rows as TokenRow[]) ?? [];
+    // Deduplicate by platform — prefer the signed-in user's row.
+    const byPlatform = new Map<string, TokenRow>();
+    for (const row of (rows as TokenRow[]) ?? []) {
+      if (!byPlatform.has(row.platform)) byPlatform.set(row.platform, row);
+    }
+    return [...byPlatform.values()];
   } catch (error) {
     console.warn('[analytics/media] token load failed', error);
     return [];

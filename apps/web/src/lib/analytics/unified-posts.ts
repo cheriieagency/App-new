@@ -69,13 +69,21 @@ async function loadWorkspaceAccounts(
 ): Promise<TokenRow[]> {
   if (!process.env.DATABASE_URL?.trim()) return [];
   try {
+    // Prefer the signed-in user's tokens, but fall back to any workspace token
+    // so shared brand workspaces still load Analytics for every connected API.
     const rows = await sql`
       SELECT platform, platform_user_id, access_token, page_id,
-             handle, display_name, avatar_url, page_name
+             handle, display_name, avatar_url, page_name, user_id
       FROM social_accounts
-      WHERE user_id = ${userId}
-        AND workspace_id = ${workspaceId}
+      WHERE workspace_id = ${workspaceId}
         AND platform IN ('instagram', 'facebook', 'tiktok')
+        AND access_token IS NOT NULL
+        AND access_token <> ''
+      ORDER BY
+        CASE WHEN user_id = ${userId} THEN 0 ELSE 1 END,
+        CASE WHEN platform = 'instagram' THEN 0
+             WHEN platform = 'facebook' THEN 1
+             ELSE 2 END
     `;
     return (rows as TokenRow[]) ?? [];
   } catch (error) {
@@ -88,7 +96,7 @@ async function fetchInstagramPosts(
   igUserId: string,
   token: string
 ): Promise<UnifiedPostMetric[]> {
-  const media = await fetchInstagramMedia(igUserId, token, 25);
+  const media = await fetchInstagramMedia(igUserId, token, 50);
   return media.map((item) => {
     const likes = Number(item.like_count) || 0;
     const comments = Number(item.comments_count) || 0;
@@ -123,7 +131,7 @@ async function fetchFacebookPosts(
   pageId: string,
   token: string
 ): Promise<UnifiedPostMetric[]> {
-  const posts = await fetchFacebookPagePosts(pageId, token, 25);
+  const posts = await fetchFacebookPagePosts(pageId, token, 50);
   return posts.map((item) => {
     const likes = Number(item.likes?.summary?.total_count) || 0;
     const comments = Number(item.comments?.summary?.total_count) || 0;
@@ -307,4 +315,89 @@ export async function fetchLiveUnifiedPosts(input: {
   );
 
   return { posts, accounts, sort };
+}
+
+/** Active Instagram Stories for Analytics → Stories (≈24h window from Meta). */
+export async function fetchLiveStories(input: {
+  userId: string;
+  workspaceId: string;
+}): Promise<LivePostsAnalytics> {
+  const rows = await loadWorkspaceAccounts(input.userId, input.workspaceId);
+  const ig = rows.find((r) => r.platform === 'instagram' && r.access_token);
+  const accounts: PlatformAccountPill[] = [];
+  const posts: UnifiedPostMetric[] = [];
+
+  if (!ig?.access_token || !ig.platform_user_id) {
+    accounts.push({
+      platform: 'instagram',
+      connected: false,
+      handle: null,
+      display_name: null,
+      avatar_url: null,
+      post_count: 0,
+      status: 'disconnected',
+      message: 'Connect Instagram to load Stories analytics',
+    });
+    return { posts, accounts, sort: 'publishedAt' };
+  }
+
+  const handle = ig.handle || null;
+  try {
+    const { fetchInstagramStories } = await import('@/lib/meta/graph-api');
+    const stories = await fetchInstagramStories(
+      ig.platform_user_id,
+      ig.access_token,
+      25
+    );
+    for (const story of stories) {
+      const impressions = Math.max(
+        Number(story.impressions) || 0,
+        Number(story.reach) || 0,
+        1
+      );
+      const replies = Number(story.replies) || 0;
+      posts.push({
+        id: `instagram-story:${story.id}`,
+        platform: 'instagram',
+        title: `Story ${story.media_type || 'STORY'}`,
+        mediaUrl: story.thumbnail_url || story.media_url || undefined,
+        permalink: story.permalink || undefined,
+        publishedAt: story.timestamp || new Date().toISOString(),
+        impressions,
+        likes: 0,
+        comments: replies,
+        shares: Number(story.taps_forward) || 0,
+        engagementRate: roundEr(0, replies, 0, impressions),
+        mediaType: story.media_type || 'STORY',
+      });
+    }
+    accounts.push({
+      platform: 'instagram',
+      connected: true,
+      handle,
+      display_name: ig.display_name || handle,
+      avatar_url: ig.avatar_url,
+      post_count: posts.length,
+      status: posts.length > 0 ? 'ok' : 'empty',
+      message:
+        posts.length > 0
+          ? null
+          : 'No active Stories right now (Meta only returns the ~24h window)',
+    });
+  } catch (error) {
+    console.warn('[unified-posts] stories failed', error);
+    accounts.push({
+      platform: 'instagram',
+      connected: true,
+      handle,
+      display_name: ig.display_name || handle,
+      avatar_url: ig.avatar_url,
+      post_count: 0,
+      status: 'error',
+      message:
+        error instanceof Error ? error.message : 'Failed to load Stories',
+    });
+  }
+
+  return { posts, accounts, sort: 'publishedAt' };
 }

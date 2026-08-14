@@ -519,8 +519,13 @@ function flattenIgInsights(item: InstagramMediaItem): InstagramMediaItem {
   let reach = 0;
   for (const metric of item.insights?.data ?? []) {
     const value = Number(metric.values?.[0]?.value) || 0;
-    if (metric.name === 'impressions') impressions = value;
+    if (metric.name === 'impressions' || metric.name === 'plays') {
+      impressions = Math.max(impressions, value);
+    }
     if (metric.name === 'reach') reach = value;
+    if (metric.name === 'total_interactions' && impressions <= 0) {
+      /* keep for ER soft-fallback via likes/comments */
+    }
   }
   return { ...item, impressions, reach };
 }
@@ -529,17 +534,17 @@ function flattenIgInsights(item: InstagramMediaItem): InstagramMediaItem {
 export async function fetchInstagramMedia(
   igUserId: string,
   accessToken: string,
-  limit = 25
+  limit = 50
 ): Promise<InstagramMediaItem[]> {
   const withInsights =
-    'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,insights.metric(impressions,reach)';
+    'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,insights.metric(impressions,reach,plays,total_interactions)';
   const basic =
     'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count';
 
   async function load(fields: string) {
     const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(igUserId)}/media`);
     url.searchParams.set('fields', fields);
-    url.searchParams.set('limit', String(limit));
+    url.searchParams.set('limit', String(Math.min(Math.max(limit, 1), 100)));
     url.searchParams.set('access_token', accessToken);
     const data = await graphJson<{ data?: InstagramMediaItem[] }>(url.toString());
     return (data.data ?? []).map(flattenIgInsights);
@@ -549,8 +554,94 @@ export async function fetchInstagramMedia(
     return await load(withInsights);
   } catch (error) {
     console.warn('[graph] IG media+insights failed, retrying without insights', error);
-    return load(basic);
+    try {
+      // Retry with classic impressions/reach only (plays may be unsupported).
+      return await load(
+        'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,insights.metric(impressions,reach)'
+      );
+    } catch {
+      return load(basic);
+    }
   }
+}
+
+export type InstagramStoryItem = {
+  id: string;
+  media_type?: string;
+  media_url?: string;
+  thumbnail_url?: string;
+  permalink?: string;
+  timestamp?: string;
+  impressions?: number;
+  reach?: number;
+  replies?: number;
+  exits?: number;
+  taps_forward?: number;
+  taps_back?: number;
+};
+
+/**
+ * Active Instagram Stories (≈24h window) + per-story insights when available.
+ * GET /{ig-user-id}/stories
+ */
+export async function fetchInstagramStories(
+  igUserId: string,
+  accessToken: string,
+  limit = 25
+): Promise<InstagramStoryItem[]> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(igUserId)}/stories`);
+  url.searchParams.set(
+    'fields',
+    'id,media_type,media_url,thumbnail_url,permalink,timestamp'
+  );
+  url.searchParams.set('limit', String(Math.min(Math.max(limit, 1), 50)));
+  url.searchParams.set('access_token', accessToken);
+
+  let stories: InstagramStoryItem[] = [];
+  try {
+    const data = await graphJson<{ data?: InstagramStoryItem[] }>(url.toString());
+    stories = data.data ?? [];
+  } catch (error) {
+    console.warn('[graph] IG stories list failed', error);
+    return [];
+  }
+
+  const withInsights = await Promise.all(
+    stories.map(async (story) => {
+      try {
+        const insightUrl = new URL(
+          `${GRAPH_BASE}/${encodeURIComponent(story.id)}/insights`
+        );
+        insightUrl.searchParams.set(
+          'metric',
+          'impressions,reach,replies,exits,taps_forward,taps_back'
+        );
+        insightUrl.searchParams.set('access_token', accessToken);
+        const insightData = await graphJson<{
+          data?: Array<{ name?: string; values?: Array<{ value?: number }> }>;
+        }>(insightUrl.toString());
+        const flat: Record<string, number> = {};
+        for (const metric of insightData.data ?? []) {
+          if (metric.name) {
+            flat[metric.name] = Number(metric.values?.[0]?.value) || 0;
+          }
+        }
+        return {
+          ...story,
+          impressions: flat.impressions || 0,
+          reach: flat.reach || 0,
+          replies: flat.replies || 0,
+          exits: flat.exits || 0,
+          taps_forward: flat.taps_forward || 0,
+          taps_back: flat.taps_back || 0,
+        } satisfies InstagramStoryItem;
+      } catch {
+        return { ...story, impressions: 0, reach: 0, replies: 0 };
+      }
+    })
+  );
+
+  return withInsights;
 }
 
 export type FacebookPagePostItem = {

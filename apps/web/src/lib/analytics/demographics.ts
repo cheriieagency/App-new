@@ -96,14 +96,18 @@ async function loadWorkspaceTokens(
   try {
     const rows = await sql`
       SELECT platform, platform_user_id, access_token, refresh_token,
-             handle, page_id, followers_count
+             handle, page_id, followers_count, user_id
       FROM social_accounts
-      WHERE user_id = ${userId}
-        AND workspace_id = ${workspaceId}
+      WHERE workspace_id = ${workspaceId}
         AND access_token IS NOT NULL
         AND TRIM(access_token) <> ''
+      ORDER BY CASE WHEN user_id = ${userId} THEN 0 ELSE 1 END
     `;
-    return (rows as TokenRow[]) ?? [];
+    const byPlatform = new Map<string, TokenRow>();
+    for (const row of (rows as TokenRow[]) ?? []) {
+      if (!byPlatform.has(row.platform)) byPlatform.set(row.platform, row);
+    }
+    return [...byPlatform.values()];
   } catch (error) {
     console.warn('[demographics] token load failed', error);
     return [];

@@ -41,6 +41,7 @@ import {
   type AnalyticsPlatformSlice,
 } from '@/hooks/useAnalytics';
 import { useAnalyticsPosts } from '@/hooks/useAnalyticsPosts';
+import { useAnalyticsStories } from '@/hooks/useAnalyticsStories';
 import { useAnalyticsHashtags } from '@/hooks/useAnalyticsHashtags';
 import type {
   PlatformAccountPill,
@@ -325,9 +326,17 @@ export default function LaterAnalyticsPanel() {
     const fromUrl = parseAnalyticsSub(params.get('sub'));
     if (fromUrl) setSub(fromUrl);
   }, []);
-  // Live IG / FB / TikTok published posts for Posts + Reels tabs.
+  // Prefetch live posts for Posts / Reels / Hashtags / overview fallbacks.
   const { data: postsApi, isLoading: postsLoading } = useAnalyticsPosts(
-    hasConnectedSocials && (sub === 'posts' || sub === 'reels')
+    hasConnectedSocials &&
+      (sub === 'posts' ||
+        sub === 'reels' ||
+        sub === 'hashtags' ||
+        sub === 'analytics' ||
+        sub === 'monthly')
+  );
+  const { data: storiesApi, isLoading: storiesLoading } = useAnalyticsStories(
+    hasConnectedSocials && sub === 'stories'
   );
 
   // Keep Revenue / Link-in-bio in sync with Bio Builder products + checkout sales.
@@ -469,82 +478,95 @@ export default function LaterAnalyticsPanel() {
   ]);
 
   /** Prefer dedicated /api/analytics/posts; fall back to aggregated media. */
-  const { feedPosts, reelPosts, postAccounts } = useMemo(() => {
-    const platformLabel = (raw?: string | null) => {
-      const key = (raw || 'instagram').toLowerCase();
-      return PLATFORM_LABEL[key] || key.charAt(0).toUpperCase() + key.slice(1);
-    };
-
-    const fromUnified = (item: UnifiedPostMetric): PostPerfRow => ({
-      id: item.id,
-      title: item.title,
-      platform: platformLabel(item.platform),
-      platformKey: item.platform,
-      image: item.mediaUrl || '',
-      er: item.engagementRate,
-      impressions: item.impressions,
-      likes: item.likes,
-      comments: item.comments,
-      shares: item.shares ?? 0,
-    });
-
-    const livePosts = postsApi?.posts ?? [];
-    if (livePosts.length > 0 || (postsApi?.accounts?.length ?? 0) > 0) {
-      const isVideo = (m: UnifiedPostMetric) => {
-        const type = (m.mediaType || '').toUpperCase();
-        return type === 'VIDEO' || type === 'REELS' || m.platform === 'tiktok';
+  const { feedPosts, reelPosts, postAccounts, storyPosts, storyAccounts } =
+    useMemo(() => {
+      const platformLabel = (raw?: string | null) => {
+        const key = (raw || 'instagram').toLowerCase();
+        return PLATFORM_LABEL[key] || key.charAt(0).toUpperCase() + key.slice(1);
       };
-      return {
-        feedPosts: livePosts.filter((m) => !isVideo(m)).map(fromUnified),
-        reelPosts: livePosts.filter((m) => isVideo(m)).map(fromUnified),
-        postAccounts: postsApi?.accounts ?? [],
-      };
-    }
 
-    // Fallback: older /api/analytics media payload.
-    const media = liveMedia;
-    const toRow = (item: (typeof media)[number]): PostPerfRow => {
-      const likes = item.like_count ?? 0;
-      const comments = item.comments_count ?? 0;
-      const shares = item.shares_count ?? 0;
-      const views = item.view_count ?? 0;
-      const impressions = Math.max(
-        views,
-        likes + comments + shares,
-        likes * 8,
-        1
-      );
-      const er =
-        impressions > 0
-          ? Math.round(((likes + comments + shares) / impressions) * 1000) / 10
-          : 0;
-      const plat = (item.platform || 'instagram').toLowerCase();
-      return {
+      const fromUnified = (item: UnifiedPostMetric): PostPerfRow => ({
         id: item.id,
-        title:
-          item.caption?.split('\n')[0]?.slice(0, 48) ||
-          `${platformLabel(plat)} ${item.media_type || 'post'}`,
-        platform: platformLabel(plat),
-        platformKey: plat,
-        image: item.thumbnail_url || item.media_url || '',
-        er,
-        impressions,
-        likes,
-        comments,
-        shares,
+        title: item.title,
+        platform: platformLabel(item.platform),
+        platformKey: item.platform,
+        image: item.mediaUrl || '',
+        er: item.engagementRate,
+        impressions: item.impressions,
+        likes: item.likes,
+        comments: item.comments,
+        shares: item.shares ?? 0,
+      });
+
+      const livePosts = postsApi?.posts ?? [];
+      const storyRows = (storiesApi?.posts ?? []).map(fromUnified);
+
+      if (livePosts.length > 0 || (postsApi?.accounts?.length ?? 0) > 0) {
+        const isVideo = (m: UnifiedPostMetric) => {
+          const type = (m.mediaType || '').toUpperCase();
+          return type === 'VIDEO' || type === 'REELS' || m.platform === 'tiktok';
+        };
+        return {
+          feedPosts: livePosts.filter((m) => !isVideo(m)).map(fromUnified),
+          reelPosts: livePosts.filter((m) => isVideo(m)).map(fromUnified),
+          postAccounts: postsApi?.accounts ?? [],
+          storyPosts: storyRows,
+          storyAccounts: storiesApi?.accounts ?? [],
+        };
+      }
+
+      // Fallback: older /api/analytics media payload.
+      const media = liveMedia;
+      const toRow = (item: (typeof media)[number]): PostPerfRow => {
+        const likes = item.like_count ?? 0;
+        const comments = item.comments_count ?? 0;
+        const shares = item.shares_count ?? 0;
+        const views = item.view_count ?? 0;
+        const impressions = Math.max(
+          views,
+          likes + comments + shares,
+          likes * 8,
+          1
+        );
+        const er =
+          impressions > 0
+            ? Math.round(((likes + comments + shares) / impressions) * 1000) / 10
+            : 0;
+        const plat = (item.platform || 'instagram').toLowerCase();
+        return {
+          id: item.id,
+          title:
+            item.caption?.split('\n')[0]?.slice(0, 48) ||
+            `${platformLabel(plat)} ${item.media_type || 'post'}`,
+          platform: platformLabel(plat),
+          platformKey: plat,
+          image: item.thumbnail_url || item.media_url || '',
+          er,
+          impressions,
+          likes,
+          comments,
+          shares,
+        };
       };
-    };
-    const isVideo = (m: (typeof media)[number]) => {
-      const type = (m.media_type || '').toUpperCase();
-      const plat = (m.platform || '').toLowerCase();
-      return type === 'VIDEO' || type === 'REELS' || plat === 'tiktok';
-    };
-    return {
-      feedPosts: media.filter((m) => !isVideo(m)).map(toRow),
-      reelPosts: media.filter((m) => isVideo(m)).map(toRow),
-      postAccounts: [] as PlatformAccountPill[],
-    };
-  }, [postsApi?.posts, postsApi?.accounts, liveMedia]);
+      const isVideo = (m: (typeof media)[number]) => {
+        const type = (m.media_type || '').toUpperCase();
+        const plat = (m.platform || '').toLowerCase();
+        return type === 'VIDEO' || type === 'REELS' || plat === 'tiktok';
+      };
+      return {
+        feedPosts: media.filter((m) => !isVideo(m)).map(toRow),
+        reelPosts: media.filter((m) => isVideo(m)).map(toRow),
+        postAccounts: [] as PlatformAccountPill[],
+        storyPosts: storyRows,
+        storyAccounts: storiesApi?.accounts ?? [],
+      };
+    }, [
+      postsApi?.posts,
+      postsApi?.accounts,
+      storiesApi?.posts,
+      storiesApi?.accounts,
+      liveMedia,
+    ]);
 
   // Social engagement chart (Analytics tab) from Meta media; Revenue tab uses bio checkout series.
   const socialActivity = useMemo(() => {
@@ -994,9 +1016,9 @@ export default function LaterAnalyticsPanel() {
           rangeLabel={formatRangeLabel(dateRange, locale)}
           compareKey="storiesPerformanceCompare"
           reachLabelKey="metricImpressions"
-          rows={[]}
-          accounts={[]}
-          loading={false}
+          rows={storyPosts}
+          accounts={storyAccounts}
+          loading={storiesLoading}
         />
       )}
       {sub === 'hashtags' && (
