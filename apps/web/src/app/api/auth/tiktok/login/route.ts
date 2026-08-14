@@ -1,6 +1,7 @@
 /**
  * GET /api/auth/tiktok/login?workspaceId=…
  * Starts TikTok OAuth 2.0 bound to the active workspace.
+ * Always forces account selection + consent (disable_auto_login + prompt=consent).
  */
 
 import { NextResponse } from 'next/server';
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
 
   let loginUrl: string;
   try {
+    // Includes disable_auto_login=true & prompt=consent via buildTikTokLoginUrl.
     loginUrl = buildTikTokLoginUrl(state, origin);
   } catch (error) {
     console.error('[tiktok/login]', error);

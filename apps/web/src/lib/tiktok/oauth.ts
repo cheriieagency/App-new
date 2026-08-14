@@ -26,13 +26,16 @@ export function buildTikTokLoginUrl(
   const clientKey = tiktokEnv.clientKey();
   if (!clientKey) throw new Error('TIKTOK_CLIENT_KEY is not configured');
 
-  const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
-  url.searchParams.set('client_key', clientKey);
-  url.searchParams.set('scope', TIKTOK_OAUTH_SCOPES.join(','));
-  url.searchParams.set('response_type', 'code');
-  url.searchParams.set('redirect_uri', getTikTokCallbackUrl(requestOrigin));
-  url.searchParams.set('state', state);
-  return url.toString();
+  // Force account switcher + explicit consent on every connect attempt.
+  const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
+  authUrl.searchParams.set('client_key', clientKey);
+  authUrl.searchParams.set('scope', TIKTOK_OAUTH_SCOPES.join(','));
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('redirect_uri', getTikTokCallbackUrl(requestOrigin));
+  authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('disable_auto_login', 'true');
+  authUrl.searchParams.set('prompt', 'consent');
+  return authUrl.toString();
 }
 
 export type TikTokTokenResponse = {

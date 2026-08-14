@@ -6,15 +6,20 @@
  *   accountId | platform + platformUserId | platform + workspaceId
  *
  * Always scopes DELETE with user_id = session.user.id.
+ * For TikTok, prefers exact (user_id, platform=tiktok, workspace_id) deletion.
  */
 
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import {
   deleteSocialAccountRow,
   type PersistablePlatform,
 } from '@/lib/social/persist';
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
+} from '@/lib/social/oauth-workspace';
 
 const ALLOWED: PersistablePlatform[] = [
   'youtube',
@@ -71,6 +76,18 @@ function readParams(
   };
 }
 
+async function resolveActiveWorkspaceId(
+  preferred: string | null
+): Promise<string | null> {
+  if (preferred?.trim()) return preferred.trim();
+  const jar = await cookies();
+  return (
+    jar.get(ACTIVE_WORKSPACE_COOKIE)?.value?.trim() ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value?.trim() ||
+    null
+  );
+}
+
 async function handleDisconnect(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   const sessionUser = session?.user;
@@ -122,6 +139,8 @@ async function handleDisconnect(request: Request) {
   }
 
   const p = (platform as PersistablePlatform | null) ?? null;
+  // TikTok (and others): bind disconnect to active workspace cookie when omitted.
+  const workspaceId = await resolveActiveWorkspaceId(params.workspaceId);
 
   try {
     const result = await deleteSocialAccountRow({
@@ -129,7 +148,9 @@ async function handleDisconnect(request: Request) {
       accountId: params.accountId,
       platform: p,
       platformUserId: params.platformUserId,
-      workspaceId: params.workspaceId,
+      workspaceId,
+      // TikTok: prefer exact workspace-scoped row delete before broader fallbacks.
+      preferWorkspaceScoped: p === 'tiktok',
     });
 
     if (!result.deleted) {
@@ -140,7 +161,7 @@ async function handleDisconnect(request: Request) {
           deleted: false,
           platform: p,
           accountId: params.accountId,
-          workspaceId: params.workspaceId,
+          workspaceId,
         },
         { status: 404 }
       );
@@ -155,7 +176,7 @@ async function handleDisconnect(request: Request) {
       platform: p,
       platformUserId: params.platformUserId,
       accountId: params.accountId,
-      workspaceId: params.workspaceId,
+      workspaceId,
     });
   } catch (error) {
     console.error('[auth/disconnect]', error);

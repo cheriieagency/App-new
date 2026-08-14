@@ -404,6 +404,11 @@ export async function deleteSocialAccountRow(input: {
   workspaceId?: string | null;
   /** Prefer UUID row id when the UI has it. */
   accountId?: string | null;
+  /**
+   * When true (TikTok disconnect), try platform + workspace_id before
+   * platform_user_id matching so the active workspace row is always cleared.
+   */
+  preferWorkspaceScoped?: boolean;
 }): Promise<{ deleted: boolean; deletedIds: string[] }> {
   if (!process.env.DATABASE_URL?.trim()) {
     return { deleted: false, deletedIds: [] };
@@ -435,6 +440,19 @@ export async function deleteSocialAccountRow(input: {
       DELETE FROM social_accounts
       WHERE id::text = ${accountId}
         AND user_id::text = ${userId}
+      RETURNING id
+    `;
+    const ids = collect(rows);
+    if (ids.length > 0) return { deleted: true, deletedIds: ids };
+  }
+
+  // TikTok / workspace-first: delete exact (user, platform, workspace) row.
+  if (input.preferWorkspaceScoped && platform && workspaceId) {
+    const rows = await sql`
+      DELETE FROM social_accounts
+      WHERE user_id::text = ${userId}
+        AND platform = ${platform}
+        AND workspace_id = ${workspaceId}
       RETURNING id
     `;
     const ids = collect(rows);
