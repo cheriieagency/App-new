@@ -13,7 +13,7 @@ import {
 } from '@/lib/google/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
-import { ensureWorkspaceOwnedByUser } from '@/lib/social/workspace-access';
+import { resolveWorkspaceForOAuthUser } from '@/lib/social/workspace-access';
 import { ensureSocialAccountsSchema } from '@/lib/social/persist';
 
 function clearState(res: NextResponse) {
@@ -62,7 +62,11 @@ export async function GET(request: Request) {
   }
 
   const userId = session.user.id;
-  const workspaceAccess = await ensureWorkspaceOwnedByUser(userId, workspaceId);
+  const workspaceAccess = await resolveWorkspaceForOAuthUser({
+    userId,
+    preferredWorkspaceId: workspaceId,
+    email: session.user.email ?? null,
+  });
   if (!workspaceAccess.ok) return fail(workspaceAccess.error);
 
   try {

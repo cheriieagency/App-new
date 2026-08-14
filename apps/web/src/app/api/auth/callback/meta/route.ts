@@ -1,14 +1,14 @@
 /**
  * GET /api/auth/callback/meta
  *
- * A) Exchange code → long-lived user token
- * B) /me/accounts (Pages + IG)
- * C) Business Portfolio fallback via /me?fields=…accounts…
- * D) Persist Instagram Business account → social_accounts
- * E) Persist Facebook Pages → social_accounts
- * F) Redirect /admin/settings/socials?success=meta_connected
+ * A) Authenticated session (better-auth cookies)
+ * B) Resolve owned workspace (preferred → primary → auto-create)
+ * C) Exchange code → long-lived user token
+ * D) /me/accounts (Pages + IG) + Business Portfolio fallback
+ * E) Persist Instagram / Facebook → social_accounts (user_id + workspace_id)
+ * F) Redirect /admin/settings/socials?success=…
  *
- * Errors never hard-500 — soft redirect with ?error=meta_fetch_failed&detail=…
+ * Errors never hard-500 — soft redirect with ?error=…&detail=…
  */
 
 import { NextResponse } from 'next/server';
@@ -24,10 +24,13 @@ import {
 } from '@/lib/meta/oauth';
 import { upsertMetaSocialAccounts } from '@/lib/meta/social-accounts';
 import {
+  ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
   baseOAuthState,
   resolveOAuthWorkspaceId,
+  setActiveWorkspaceCookies,
 } from '@/lib/social/oauth-workspace';
-import { ensureWorkspaceOwnedByUser } from '@/lib/social/workspace-access';
+import { resolveWorkspaceForOAuthUser } from '@/lib/social/workspace-access';
 
 function clearOAuthState(res: NextResponse) {
   res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
@@ -93,41 +96,44 @@ export async function GET(request: Request) {
 
   const decoded = decodeMetaOAuthState(baseOAuthState(state));
   const target: MetaOAuthTarget = decoded?.target ?? 'both';
-  const workspaceId = resolveOAuthWorkspaceId({
+
+  // Preferred workspace: OAuth state → active_workspace_id / nc_active_workspace_id cookies.
+  const preferredWorkspaceId = resolveOAuthWorkspaceId({
     state,
     jarGet: (name) => jar.get(name)?.value,
   });
 
-  if (!workspaceId) {
-    return failRedirect(
-      origin,
-      'meta_fetch_failed',
-      'missing_workspace_id'
-    );
-  }
-
+  // 1) Authenticated session from better-auth cookies (app auth — not Supabase Auth).
   let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
   try {
     session = await auth.api.getSession({ headers: await headers() });
   } catch (error) {
     console.warn('[meta/callback] session read failed', error);
   }
-  if (!session?.user) {
-    const signIn = new URL('/account/signin', origin);
-    signIn.searchParams.set('callbackUrl', '/admin/settings/socials');
-    return NextResponse.redirect(signIn);
+
+  const sessionUser = session?.user;
+  const userId = sessionUser?.id?.trim();
+  if (!sessionUser || !userId) {
+    return failRedirect(origin, 'unauthorized', 'missing_session');
   }
 
-  const userId = session.user.id;
-  if (!userId) {
-    return failRedirect(origin, 'meta_fetch_failed', 'missing_user_id');
-  }
+  // 2) Robust workspace resolution — never false-positive workspace_forbidden.
+  //    preferred (if owned/claimable) → user's primary workspace → auto-create.
+  const workspaceAccess = await resolveWorkspaceForOAuthUser({
+    userId,
+    preferredWorkspaceId:
+      preferredWorkspaceId ||
+      jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+      jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+      null,
+    email: sessionUser.email ?? null,
+  });
 
-  // Strict isolation — never bind Meta accounts to another user's workspace.
-  const workspaceAccess = await ensureWorkspaceOwnedByUser(userId, workspaceId);
   if (!workspaceAccess.ok) {
     return failRedirect(origin, 'meta_fetch_failed', workspaceAccess.error);
   }
+
+  const workspaceId = workspaceAccess.workspaceId;
 
   try {
     // Step A — code → short-lived → long-lived user access token
@@ -179,7 +185,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Step D + E — persist Instagram / Facebook into public.social_accounts
+    // Step D + E — persist with guaranteed user_id + workspace_id binding.
     try {
       await upsertMetaSocialAccounts({
         userId,
@@ -187,7 +193,7 @@ export async function GET(request: Request) {
         userAccessToken: longLived.access_token,
         expiresIn: longLived.expires_in,
         target,
-        workspaceId: workspaceAccess.workspaceId,
+        workspaceId,
         instagram: resolved.instagram,
         instagramPage: resolved.instagramPage,
       });
@@ -201,7 +207,6 @@ export async function GET(request: Request) {
     }
 
     // Step E2 — Page-only subscribed_apps (feed,messages,messaging_postbacks).
-    // Never POST /{instagram_id}/subscribed_apps — Page covers linked IG.
     try {
       const { subscribePagesAndInstagramAfterOAuth } = await import(
         '@/lib/meta/subscribe-webhooks'
@@ -235,7 +240,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Step F — soft success redirect (never 500)
+    // Step F — soft success redirect; sync active workspace cookie to the bound id.
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', successLabel(target));
     if (target === 'both' && hasFb && !hasIg) {
@@ -244,8 +249,12 @@ export async function GET(request: Request) {
     if (resolved.source !== 'me_accounts') {
       dest.searchParams.set('source', resolved.source);
     }
+    if (preferredWorkspaceId && preferredWorkspaceId !== workspaceId) {
+      dest.searchParams.set('workspace_fallback', workspaceId);
+    }
     const res = NextResponse.redirect(dest);
     clearOAuthState(res);
+    setActiveWorkspaceCookies(res, workspaceId);
     return res;
   } catch (error) {
     console.error('[meta/callback]', error);
