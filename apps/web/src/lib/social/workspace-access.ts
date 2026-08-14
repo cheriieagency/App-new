@@ -1,10 +1,7 @@
 /**
  * Strict workspace ownership for social / OAuth / inbox APIs.
- * Guarantees workspace_id belongs to session.user.id before reads or writes.
- *
- * OAuth paths use resolveWorkspaceForOAuthUser — never hard-fail with
- * workspace_forbidden when the cookie/state id is missing or owned by someone else;
- * fall back to the user's primary workspace or auto-create one.
+ * OAuth paths must never fail with workspace_forbidden on a bad cookie —
+ * fall back to primary workspace or auto-create a per-user workspace.
  */
 
 import sql from '@/app/api/utils/sql';
@@ -13,16 +10,27 @@ export type WorkspaceAccessResult =
   | { ok: true; workspaceId: string }
   | { ok: false; status: 400 | 403 | 503; error: string };
 
+function decodeWorkspaceId(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  try {
+    return decodeURIComponent(trimmed).trim();
+  } catch {
+    return trimmed;
+  }
+}
+
 /**
  * True when public.workspaces has a row owned by this user.
- * Used in SQL filters: workspace_id IN (SELECT id FROM workspaces WHERE user_id = …).
+ * Compares as text so uuid / text column types both work.
  */
 export async function userOwnsWorkspace(
   userId: string,
   workspaceId: string
 ): Promise<boolean> {
   const uid = userId?.trim();
-  const wid = workspaceId?.trim();
+  const wid = decodeWorkspaceId(workspaceId);
   if (!uid || !wid) return false;
   if (!process.env.DATABASE_URL?.trim()) return false;
 
@@ -30,14 +38,26 @@ export async function userOwnsWorkspace(
     const rows = await sql`
       SELECT id
       FROM public.workspaces
-      WHERE id = ${wid}
-        AND user_id = ${uid}
+      WHERE id::text = ${wid}
+        AND user_id::text = ${uid}
       LIMIT 1
     `;
     return Array.isArray(rows) && Boolean(rows[0]?.id);
   } catch (error) {
-    console.warn('[workspace-access] ownership check failed', error);
-    return false;
+    // Fallback without casts if the driver/schema rejects ::text.
+    try {
+      const rows = await sql`
+        SELECT id
+        FROM public.workspaces
+        WHERE id = ${wid}
+          AND user_id = ${uid}
+        LIMIT 1
+      `;
+      return Array.isArray(rows) && Boolean(rows[0]?.id);
+    } catch (inner) {
+      console.warn('[workspace-access] ownership check failed', inner || error);
+      return false;
+    }
   }
 }
 
@@ -46,57 +66,101 @@ async function findPrimaryWorkspaceId(userId: string): Promise<string | null> {
     const rows = await sql`
       SELECT id
       FROM public.workspaces
-      WHERE user_id = ${userId}
+      WHERE user_id::text = ${userId}
       ORDER BY created_at ASC NULLS LAST, id ASC
       LIMIT 1
     `;
     if (Array.isArray(rows) && rows[0]?.id) return String(rows[0].id);
-  } catch (error) {
-    console.warn('[workspace-access] primary lookup failed', error);
+  } catch {
+    try {
+      const rows = await sql`
+        SELECT id
+        FROM public.workspaces
+        WHERE user_id = ${userId}
+        ORDER BY created_at ASC NULLS LAST, id ASC
+        LIMIT 1
+      `;
+      if (Array.isArray(rows) && rows[0]?.id) return String(rows[0].id);
+    } catch (error) {
+      console.warn('[workspace-access] primary lookup failed', error);
+    }
   }
   return null;
 }
 
-async function createDefaultWorkspaceForUser(input: {
+/**
+ * Always create a workspace this user owns.
+ * Uses a unique id when the stable id is already taken by someone else.
+ */
+export async function createDefaultWorkspaceForUser(input: {
   userId: string;
   email?: string | null;
 }): Promise<string | null> {
   const uid = input.userId.trim();
+  if (!uid) return null;
+
   const handle = (input.email || '')
     .split('@')[0]
     ?.replace(/[^a-zA-Z0-9._-]/g, '')
     .slice(0, 24);
   const name = handle ? `${handle}'s Workspace` : 'My Workspace';
-  const slug = `ws-${uid.substring(0, 8)}`;
-  // Per-user id — never reuse shared "default-my-workspace" (causes ownership fights).
-  const id = `ws-${uid.substring(0, 12)}`;
+  const slugBase = `ws-${uid.substring(0, 8)}`;
 
+  // Prefer stable per-user id; on conflict with another owner, mint a unique one.
+  const candidates = [
+    `ws-${uid.substring(0, 12)}`,
+    `ws-${uid.substring(0, 8)}-${Date.now().toString(36)}`,
+    `ws-${uid.substring(0, 8)}-${Math.random().toString(36).slice(2, 8)}`,
+  ];
+
+  for (const id of candidates) {
+    const slug = id === candidates[0] ? slugBase : `${slugBase}-${id.slice(-6)}`;
+    try {
+      await sql`
+        INSERT INTO public.workspaces (id, user_id, name, slug)
+        VALUES (${id}, ${uid}, ${name}, ${slug})
+        ON CONFLICT (id) DO NOTHING
+      `;
+    } catch {
+      try {
+        await sql`
+          INSERT INTO public.workspaces (id, user_id)
+          VALUES (${id}, ${uid})
+          ON CONFLICT (id) DO NOTHING
+        `;
+      } catch (error) {
+        console.warn('[workspace-access] insert attempt failed', id, error);
+        continue;
+      }
+    }
+
+    if (await userOwnsWorkspace(uid, id)) return id;
+
+    // Row exists but not ours — try next candidate.
+  }
+
+  // Last resort: force-upsert a unique id that cannot conflict.
+  const forced = `ws-${uid.substring(0, 8)}-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 6)}`;
   try {
     await sql`
       INSERT INTO public.workspaces (id, user_id, name, slug)
-      VALUES (${id}, ${uid}, ${name}, ${slug})
-      ON CONFLICT (id) DO UPDATE SET
-        user_id = COALESCE(workspaces.user_id, EXCLUDED.user_id),
-        name = COALESCE(workspaces.name, EXCLUDED.name),
-        slug = COALESCE(workspaces.slug, EXCLUDED.slug),
-        updated_at = now()
+      VALUES (${forced}, ${uid}, ${name}, ${forced})
     `;
   } catch {
     try {
       await sql`
         INSERT INTO public.workspaces (id, user_id)
-        VALUES (${id}, ${uid})
-        ON CONFLICT (id) DO UPDATE SET
-          user_id = COALESCE(workspaces.user_id, EXCLUDED.user_id)
+        VALUES (${forced}, ${uid})
       `;
     } catch (error) {
-      console.warn('[workspace-access] create default workspace failed', error);
+      console.warn('[workspace-access] forced create failed', error);
       return null;
     }
   }
 
-  const owned = await userOwnsWorkspace(uid, id);
-  return owned ? id : null;
+  return (await userOwnsWorkspace(uid, forced)) ? forced : null;
 }
 
 /**
@@ -107,23 +171,22 @@ async function tryClaimPreferredWorkspace(
   workspaceId: string
 ): Promise<string | null> {
   const uid = userId.trim();
-  const wid = workspaceId.trim();
+  const wid = decodeWorkspaceId(workspaceId);
   if (!wid) return null;
 
   try {
     const existing = await sql`
       SELECT id, user_id
       FROM public.workspaces
-      WHERE id = ${wid}
+      WHERE id::text = ${wid}
       LIMIT 1
     `;
 
     if (Array.isArray(existing) && existing[0]) {
       const owner =
         existing[0].user_id != null ? String(existing[0].user_id).trim() : '';
-      if (owner === uid) return wid;
+      if (owner === uid) return String(existing[0].id);
       if (owner && owner !== uid) {
-        // Owned by someone else — do not steal; caller will fall back.
         return null;
       }
       // Unowned row — claim for this user.
@@ -131,7 +194,7 @@ async function tryClaimPreferredWorkspace(
         await sql`
           UPDATE public.workspaces
           SET user_id = ${uid}, updated_at = now()
-          WHERE id = ${wid}
+          WHERE id::text = ${wid}
             AND (user_id IS NULL OR user_id::text = '')
         `;
       } catch {
@@ -171,8 +234,8 @@ async function tryClaimPreferredWorkspace(
 
 /**
  * OAuth / connect flows: resolve a workspace the user definitely owns.
- * Preferred id from state/cookie → claim if possible → else primary → else create.
- * Never returns workspace_forbidden for a "wrong cookie" — falls back instead.
+ * Preferred id → claim if possible → primary → auto-create.
+ * Never returns workspace_forbidden for a wrong cookie.
  */
 export async function resolveWorkspaceForOAuthUser(input: {
   userId: string;
@@ -187,10 +250,7 @@ export async function resolveWorkspaceForOAuthUser(input: {
     return { ok: false, status: 503, error: 'DATABASE_URL required' };
   }
 
-  const preferred =
-    typeof input.preferredWorkspaceId === 'string'
-      ? input.preferredWorkspaceId.trim()
-      : '';
+  const preferred = decodeWorkspaceId(input.preferredWorkspaceId);
 
   if (preferred) {
     const claimed = await tryClaimPreferredWorkspace(uid, preferred);
@@ -216,22 +276,19 @@ export async function resolveWorkspaceForOAuthUser(input: {
     return { ok: true, workspaceId: created };
   }
 
-  return { ok: false, status: 403, error: 'workspace_create_failed' };
+  return { ok: false, status: 503, error: 'workspace_create_failed' };
 }
 
 /**
- * Claim or verify workspace ownership before binding social accounts / rules.
- * - Missing row → insert owned by this user
- * - Row with null user_id → claim for this user
- * - Row owned by another user → forbidden (use resolveWorkspaceForOAuthUser for OAuth)
+ * Claim or verify a specific workspace id (no fallback).
+ * Prefer resolveWorkspaceForOAuthUser for OAuth callbacks.
  */
 export async function ensureWorkspaceOwnedByUser(
   userId: string,
   workspaceId: string | null | undefined
 ): Promise<WorkspaceAccessResult> {
   const uid = userId?.trim();
-  const wid =
-    typeof workspaceId === 'string' ? workspaceId.trim() : '';
+  const wid = decodeWorkspaceId(workspaceId);
 
   if (!uid) {
     return { ok: false, status: 403, error: 'Unauthorized' };
@@ -248,29 +305,12 @@ export async function ensureWorkspaceOwnedByUser(
     return { ok: true, workspaceId: claimed };
   }
 
-  // Preferred id belongs to someone else — OAuth callers should use
-  // resolveWorkspaceForOAuthUser; API reads still get a clear 403.
   return { ok: false, status: 403, error: 'workspace_forbidden' };
 }
 
-/**
- * Read-path guard with soft-claim for unowned rows.
- * Prefer resolveWorkspaceForOAuthUser for OAuth / first-bind flows.
- */
 export async function requireOwnedWorkspace(
   userId: string,
   workspaceId: string | null | undefined
 ): Promise<WorkspaceAccessResult> {
-  const uid = userId?.trim();
-  const wid =
-    typeof workspaceId === 'string' ? workspaceId.trim() : '';
-
-  if (!uid) {
-    return { ok: false, status: 403, error: 'Unauthorized' };
-  }
-  if (!wid) {
-    return { ok: false, status: 400, error: 'workspace_id required' };
-  }
-
-  return ensureWorkspaceOwnedByUser(uid, wid);
+  return ensureWorkspaceOwnedByUser(userId, workspaceId);
 }

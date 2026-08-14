@@ -13,7 +13,8 @@ import {
 } from '@/lib/pinterest/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
-import { resolveWorkspaceForOAuthUser } from '@/lib/social/workspace-access';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
+import { userOwnsWorkspace } from '@/lib/social/workspace-access';
 
 function clearState(res: NextResponse) {
   res.cookies.set(PINTEREST_OAUTH_STATE_COOKIE, '', {
@@ -61,12 +62,15 @@ export async function GET(request: Request) {
   }
 
   const userId = session.user.id;
-  const workspaceAccess = await resolveWorkspaceForOAuthUser({
+  const workspaceAccess = await resolveStrictUserWorkspace({
     userId,
     preferredWorkspaceId: workspaceId,
     email: session.user.email ?? null,
   });
   if (!workspaceAccess.ok) return fail(workspaceAccess.error);
+  if (!(await userOwnsWorkspace(userId, workspaceAccess.workspaceId))) {
+    return fail('workspace_forbidden');
+  }
 
   try {
     const tokens = await exchangePinterestCode(code, origin);

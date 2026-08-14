@@ -10,7 +10,7 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
   readWorkspaceIdFromCookieHeader,
 } from '@/lib/social/oauth-workspace';
-import { ensureWorkspaceOwnedByUser } from '@/lib/social/workspace-access';
+import { userOwnsWorkspace, resolveWorkspaceForOAuthUser } from '@/lib/social/workspace-access';
 
 export { ACTIVE_WORKSPACE_COOKIE, ACTIVE_WORKSPACE_COOKIE_ALIAS };
 
@@ -181,18 +181,23 @@ export async function upsertSocialAccountRow(
     throw new Error('workspace_id is required to bind social accounts');
   }
 
-  // Never attach tokens to a workspace owned by another user.
-  const access = await ensureWorkspaceOwnedByUser(userId, workspaceId);
+  // Bind only to a workspace this user owns (claim preferred or fall back / create).
+  // Never throw workspace_forbidden — resolveWorkspaceForOAuthUser always falls back.
+  const access = await resolveWorkspaceForOAuthUser({
+    userId,
+    preferredWorkspaceId: workspaceId,
+  });
   if (!access.ok) {
-    throw new Error(access.error || 'workspace_forbidden');
+    throw new Error(access.error || 'workspace_create_failed');
   }
+  const boundWorkspaceId = access.workspaceId;
 
   // Workspace-scoped replace — always scoped to this user_id.
   await sql`
     DELETE FROM social_accounts
     WHERE user_id = ${userId}
       AND platform = ${input.platform}
-      AND workspace_id = ${workspaceId}
+      AND workspace_id = ${boundWorkspaceId}
   `;
 
   await sql`
@@ -227,7 +232,7 @@ export async function upsertSocialAccountRow(
       ${input.accessToken},
       ${input.refreshToken ?? null},
       ${expiresAt},
-      ${workspaceId},
+      ${boundWorkspaceId},
       ${input.pageId ?? null},
       ${input.pageName ?? null},
       ${input.followersCount ?? null},
@@ -342,9 +347,10 @@ export async function listLiveSocialAccountsForUser(input: {
     const workspaceId = input.workspaceId?.trim() || null;
 
     // When a workspace is specified, confirm it belongs to this user first.
+    // Never return rows for a workspace owned by someone else.
     if (workspaceId) {
-      const access = await ensureWorkspaceOwnedByUser(userId, workspaceId);
-      if (!access.ok) {
+      const owned = await userOwnsWorkspace(userId, workspaceId);
+      if (!owned) {
         return SOCIAL_PLATFORMS.map(disconnectedStub);
       }
     }

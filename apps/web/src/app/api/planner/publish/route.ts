@@ -11,7 +11,7 @@ import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
 } from '@/lib/social/persist';
-import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 import {
   publishFacebookPagePost,
   publishInstagramPost,
@@ -119,7 +119,11 @@ export async function POST(request: Request) {
       return Response.json({ error: 'workspaceId required' }, { status: 400 });
     }
 
-    const access = await requireOwnedWorkspace(userId, workspaceId);
+    const access = await resolveStrictUserWorkspace({
+      userId,
+      preferredWorkspaceId: workspaceId,
+      email: session?.user?.email ?? null,
+    });
     if (!access.ok) {
       return Response.json(
         { error: access.error },

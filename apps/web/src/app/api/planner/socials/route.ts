@@ -7,10 +7,11 @@ import {
 } from '@/lib/mock-content-planner';
 import {
   ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
   listLiveSocialAccountsForUser,
   SOCIAL_PLATFORMS,
 } from '@/lib/social/persist';
-import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 
 function disconnectedStub(platform: SocialPlatform): ConnectedSocialAccount {
   return {
@@ -35,34 +36,38 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const jar = await cookies();
-  const workspaceId =
+  const preferredWorkspaceId =
     url.searchParams.get('workspaceId')?.trim() ||
     request.headers.get('x-workspace-id')?.trim() ||
     jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
     null;
 
-  if (workspaceId) {
-    const access = await requireOwnedWorkspace(userId, workspaceId);
-    if (!access.ok) {
-      return Response.json(
-        {
-          error: access.error,
-          accounts: SOCIAL_PLATFORMS.map(disconnectedStub),
-          demo: false,
-          meta_connected: false,
-          needs_ig_business: false,
-          workspace_id: workspaceId,
-          source: 'social_accounts',
-        },
-        { status: access.status === 400 ? 400 : 403 }
-      );
-    }
+  const access = await resolveStrictUserWorkspace({
+    userId,
+    preferredWorkspaceId,
+    email: session?.user?.email ?? null,
+  });
+
+  if (!access.ok) {
+    return Response.json(
+      {
+        error: access.error,
+        accounts: SOCIAL_PLATFORMS.map(disconnectedStub),
+        demo: false,
+        meta_connected: false,
+        needs_ig_business: false,
+        workspace_id: preferredWorkspaceId,
+        source: 'social_accounts',
+      },
+      { status: access.status === 400 ? 400 : 403 }
+    );
   }
 
-  // Authenticated: always read live social_accounts for this user only.
+  // Authenticated: live social_accounts for this user + owned workspace only.
   const accounts = await listLiveSocialAccountsForUser({
     userId,
-    workspaceId,
+    workspaceId: access.workspaceId,
   });
   const connected = accounts.filter((a) => a.connected);
   const hasIg = connected.some((a) => a.platform === 'instagram');
@@ -73,7 +78,7 @@ export async function GET(request: Request) {
     demo: false,
     meta_connected: hasIg || hasFb,
     needs_ig_business: hasFb && !hasIg,
-    workspace_id: workspaceId,
+    workspace_id: access.workspaceId,
     source: 'social_accounts',
   });
 }

@@ -16,7 +16,7 @@ import {
   getDmAutomationCtaColumns,
 } from '@/lib/dm-automations/schema';
 import { cleanTriggerKeywords } from '@/lib/dm-automations/keywords';
-import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 
 function parseKeywords(input: unknown): string[] {
   return cleanTriggerKeywords(input);
@@ -113,18 +113,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const workspaceId = await resolveWorkspaceId(request);
-    if (!workspaceId) {
+    const preferredWorkspaceId = await resolveWorkspaceId(request);
+    if (!preferredWorkspaceId) {
       return emptyAutomationsResponse({ message: 'Select a workspace' });
     }
 
-    const access = await requireOwnedWorkspace(userId, workspaceId);
+    const access = await resolveStrictUserWorkspace({
+      userId,
+      preferredWorkspaceId,
+      email: session?.user?.email ?? null,
+    });
     if (!access.ok) {
       return NextResponse.json(
         { error: access.error, automations: [] },
         { status: access.status === 400 ? 400 : 403 }
       );
     }
+    const workspaceId = access.workspaceId;
 
     if (!process.env.DATABASE_URL?.trim()) {
       return emptyAutomationsResponse({ demo: true, workspaceId });
@@ -247,24 +252,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const workspaceId = await resolveWorkspaceId(
+    const preferredWorkspaceId = await resolveWorkspaceId(
       request,
       body.workspaceId ?? body.workspace_id
     );
-    if (!workspaceId) {
+    if (!preferredWorkspaceId) {
       return NextResponse.json(
         { error: 'workspaceId required' },
         { status: 400 }
       );
     }
 
-    const access = await requireOwnedWorkspace(userId, workspaceId);
+    const access = await resolveStrictUserWorkspace({
+      userId,
+      preferredWorkspaceId,
+      email: session?.user?.email ?? null,
+    });
     if (!access.ok) {
       return NextResponse.json(
         { error: access.error },
         { status: access.status }
       );
     }
+    const workspaceId = access.workspaceId;
 
     if (!process.env.DATABASE_URL?.trim()) {
       return NextResponse.json(
@@ -341,7 +351,8 @@ export async function POST(request: Request) {
         ? String(idRaw).trim()
         : null;
 
-    // Serialize keywords for pg text[] via JSON → array cast (safe for Pool.query).
+    // Always persist cleaned keywords: strip #, trim, lowercase.
+    // Example stored value: ['mer', 'kurs', 'masterclass']
     const keywordsJson = JSON.stringify(keywords);
     let ctaCols = { hasLabel: true, hasTitle: true };
     try {
@@ -609,7 +620,6 @@ async function updateAutomationRow(input: {
             is_active = ${isActive},
             updated_at = now()
           WHERE id = ${id}
-            AND workspace_id = ${workspaceId}
             AND workspace_id IN (
               SELECT id FROM public.workspaces WHERE user_id = ${userId}
             )
@@ -636,7 +646,6 @@ async function updateAutomationRow(input: {
             is_active = ${isActive},
             updated_at = now()
           WHERE id = ${id}
-            AND workspace_id = ${workspaceId}
             AND workspace_id IN (
               SELECT id FROM public.workspaces WHERE user_id = ${userId}
             )
@@ -663,7 +672,6 @@ async function updateAutomationRow(input: {
             is_active = ${isActive},
             updated_at = now()
           WHERE id = ${id}
-            AND workspace_id = ${workspaceId}
             AND workspace_id IN (
               SELECT id FROM public.workspaces WHERE user_id = ${userId}
             )
@@ -688,7 +696,6 @@ async function updateAutomationRow(input: {
           is_active = ${isActive},
           updated_at = now()
         WHERE id = ${id}
-          AND workspace_id = ${workspaceId}
           AND workspace_id IN (
             SELECT id FROM public.workspaces WHERE user_id = ${userId}
           )
@@ -732,18 +739,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const workspaceId = await resolveWorkspaceId(
+    const preferredWorkspaceId = await resolveWorkspaceId(
       request,
       body.workspaceId ?? body.workspace_id
     );
-    if (!workspaceId) {
+    if (!preferredWorkspaceId) {
       return NextResponse.json(
         { error: 'workspaceId required' },
         { status: 400 }
       );
     }
 
-    const access = await requireOwnedWorkspace(userId, workspaceId);
+    const access = await resolveStrictUserWorkspace({
+      userId,
+      preferredWorkspaceId,
+      email: session?.user?.email ?? null,
+    });
     if (!access.ok) {
       return NextResponse.json(
         { error: access.error },
@@ -806,7 +817,6 @@ export async function PATCH(request: Request) {
           ),
           updated_at = now()
         WHERE id = ${id}
-          AND workspace_id = ${access.workspaceId}
           AND workspace_id IN (
             SELECT id FROM public.workspaces WHERE user_id = ${userId}
           )
@@ -826,7 +836,6 @@ export async function PATCH(request: Request) {
       UPDATE public.dm_automations
       SET is_active = ${isActive}, updated_at = now()
       WHERE id = ${id}
-        AND workspace_id = ${access.workspaceId}
         AND workspace_id IN (
           SELECT id FROM public.workspaces WHERE user_id = ${userId}
         )
@@ -919,7 +928,11 @@ export async function DELETE(request: Request) {
     }
 
     if (workspaceId) {
-      const access = await requireOwnedWorkspace(userId, workspaceId);
+      const access = await resolveStrictUserWorkspace({
+        userId,
+        preferredWorkspaceId: workspaceId,
+        email: session?.user?.email ?? null,
+      });
       if (!access.ok) {
         return NextResponse.json(
           { error: access.error },

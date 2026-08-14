@@ -11,7 +11,7 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
   ensureSocialAccountsSchema,
 } from '@/lib/social/persist';
-import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 
 export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -22,14 +22,14 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const jar = await cookies();
-  const workspaceId =
+  const preferredWorkspaceId =
     url.searchParams.get('workspaceId')?.trim() ||
     request.headers.get('x-workspace-id')?.trim() ||
     jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
     jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
     null;
 
-  if (!workspaceId || !process.env.DATABASE_URL?.trim()) {
+  if (!preferredWorkspaceId || !process.env.DATABASE_URL?.trim()) {
     return Response.json({
       connected: false,
       email: null,
@@ -37,7 +37,11 @@ export async function GET(request: Request) {
     });
   }
 
-  const access = await requireOwnedWorkspace(userId, workspaceId);
+  const access = await resolveStrictUserWorkspace({
+    userId,
+    preferredWorkspaceId,
+    email: session?.user?.email ?? null,
+  });
   if (!access.ok) {
     return Response.json(
       {
@@ -45,12 +49,13 @@ export async function GET(request: Request) {
         email: null,
         platformUserId: null,
         error: access.error,
-        workspaceId,
+        workspaceId: preferredWorkspaceId,
       },
       { status: access.status === 400 ? 400 : 403 }
     );
   }
 
+  const workspaceId = access.workspaceId;
   await ensureSocialAccountsSchema();
 
   try {
@@ -58,7 +63,7 @@ export async function GET(request: Request) {
       SELECT platform_user_id, platform_user_name, handle, avatar_url, connected_at, meta
       FROM public.social_accounts
       WHERE user_id = ${userId}
-        AND workspace_id = ${access.workspaceId}
+        AND workspace_id = ${workspaceId}
         AND platform = 'google'
       LIMIT 1
     `;

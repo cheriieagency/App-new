@@ -1,14 +1,13 @@
 /**
  * GET /api/auth/callback/meta
  *
- * A) Authenticated session (better-auth cookies)
- * B) Resolve owned workspace (preferred → primary → auto-create)
- * C) Exchange code → long-lived user token
- * D) /me/accounts (Pages + IG) + Business Portfolio fallback
- * E) Persist Instagram / Facebook → social_accounts (user_id + workspace_id)
- * F) Redirect /admin/settings/socials?success=…
+ * 1) Authenticated session
+ * 2) Resolve owned workspace (state/cookie → primary → auto-create)
+ * 3) Exchange Meta code → long-lived token → Pages/IG
+ * 4) Persist social_accounts with user_id + owned workspace_id
+ * 5) Redirect /admin/settings/socials?success=…
  *
- * Errors never hard-500 — soft redirect with ?error=…&detail=…
+ * Never redirects with workspace_forbidden — falls back / creates instead.
  */
 
 import { NextResponse } from 'next/server';
@@ -30,7 +29,11 @@ import {
   resolveOAuthWorkspaceId,
   setActiveWorkspaceCookies,
 } from '@/lib/social/oauth-workspace';
-import { resolveWorkspaceForOAuthUser } from '@/lib/social/workspace-access';
+import {
+  createDefaultWorkspaceForUser,
+  resolveWorkspaceForOAuthUser,
+  userOwnsWorkspace,
+} from '@/lib/social/workspace-access';
 
 function clearOAuthState(res: NextResponse) {
   res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
@@ -63,6 +66,34 @@ function failRedirect(
   return res;
 }
 
+async function resolveOwnedWorkspaceForMeta(input: {
+  userId: string;
+  email?: string | null;
+  preferredWorkspaceId?: string | null;
+}): Promise<string | null> {
+  // Preferred (state/cookie) → primary → auto-create. Never "forbidden".
+  const access = await resolveWorkspaceForOAuthUser({
+    userId: input.userId,
+    preferredWorkspaceId: input.preferredWorkspaceId,
+    email: input.email,
+  });
+
+  if (access.ok && (await userOwnsWorkspace(input.userId, access.workspaceId))) {
+    return access.workspaceId;
+  }
+
+  // Extra safety: mint a fresh per-user workspace if ownership check lagged.
+  const created = await createDefaultWorkspaceForUser({
+    userId: input.userId,
+    email: input.email,
+  });
+  if (created && (await userOwnsWorkspace(input.userId, created))) {
+    return created;
+  }
+
+  return null;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -84,7 +115,6 @@ export async function GET(request: Request) {
 
   const jar = await cookies();
   const expectedState = jar.get(META_OAUTH_STATE_COOKIE)?.value;
-  // Cookie may store full state (with ~ws~) while provider echoes the same value.
   if (
     !state ||
     !expectedState ||
@@ -97,13 +127,16 @@ export async function GET(request: Request) {
   const decoded = decodeMetaOAuthState(baseOAuthState(state));
   const target: MetaOAuthTarget = decoded?.target ?? 'both';
 
-  // Preferred workspace: OAuth state → active_workspace_id / nc_active_workspace_id cookies.
-  const preferredWorkspaceId = resolveOAuthWorkspaceId({
-    state,
-    jarGet: (name) => jar.get(name)?.value,
-  });
+  const preferredWorkspaceId =
+    resolveOAuthWorkspaceId({
+      state,
+      jarGet: (name) => jar.get(name)?.value,
+    }) ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+    null;
 
-  // 1) Authenticated session from better-auth cookies (app auth — not Supabase Auth).
+  // 1) Authenticated session
   let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
   try {
     session = await auth.api.getSession({ headers: await headers() });
@@ -117,26 +150,23 @@ export async function GET(request: Request) {
     return failRedirect(origin, 'unauthorized', 'missing_session');
   }
 
-  // 2) Robust workspace resolution — never false-positive workspace_forbidden.
-  //    preferred (if owned/claimable) → user's primary workspace → auto-create.
-  const workspaceAccess = await resolveWorkspaceForOAuthUser({
+  // 2) Robust workspace resolution — never workspace_forbidden
+  const workspaceId = await resolveOwnedWorkspaceForMeta({
     userId,
-    preferredWorkspaceId:
-      preferredWorkspaceId ||
-      jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
-      jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
-      null,
     email: sessionUser.email ?? null,
+    preferredWorkspaceId,
   });
 
-  if (!workspaceAccess.ok) {
-    return failRedirect(origin, 'meta_fetch_failed', workspaceAccess.error);
+  if (!workspaceId) {
+    return failRedirect(
+      origin,
+      'meta_fetch_failed',
+      'workspace_create_failed'
+    );
   }
 
-  const workspaceId = workspaceAccess.workspaceId;
-
   try {
-    // Step A — code → short-lived → long-lived user access token
+    // 3) Token exchange
     let longLived: { access_token: string; expires_in?: number };
     try {
       const shortLived = await exchangeCodeForShortLivedToken(code, origin);
@@ -150,7 +180,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Step B + C — /me/accounts, then Business Portfolio fallback
+    // Pages + Instagram
     let resolved: Awaited<ReturnType<typeof resolveMetaPagesAndInstagram>>;
     try {
       resolved = await resolveMetaPagesAndInstagram(longLived.access_token);
@@ -185,7 +215,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Step D + E — persist with guaranteed user_id + workspace_id binding.
+    // 4) Persist with guaranteed user_id + owned workspace_id
     try {
       await upsertMetaSocialAccounts({
         userId,
@@ -199,14 +229,14 @@ export async function GET(request: Request) {
       });
     } catch (error) {
       console.error('[meta/callback] persist failed', error);
-      return failRedirect(
-        origin,
-        'meta_fetch_failed',
-        error instanceof Error ? error.message : 'persist_failed'
-      );
+      const msg = error instanceof Error ? error.message : 'persist_failed';
+      // Never surface workspace_forbidden to the user — treat as soft persist error.
+      const safe =
+        /workspace_forbidden/i.test(msg) ? 'workspace_bind_retry' : msg;
+      return failRedirect(origin, 'meta_fetch_failed', safe);
     }
 
-    // Step E2 — Page-only subscribed_apps (feed,messages,messaging_postbacks).
+    // Page-only subscribed_apps
     try {
       const { subscribePagesAndInstagramAfterOAuth } = await import(
         '@/lib/meta/subscribe-webhooks'
@@ -219,7 +249,6 @@ export async function GET(request: Request) {
         pages: realPages,
         fallbackPageAccessToken: primaryPageToken,
       });
-
       console.log(
         '[meta/callback] subscribed_apps',
         subscribeResults.map(
@@ -240,7 +269,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Step F — soft success redirect; sync active workspace cookie to the bound id.
+    // 5) Success — bind active workspace cookie to the owned id used for save
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', successLabel(target));
     if (target === 'both' && hasFb && !hasIg) {

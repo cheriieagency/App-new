@@ -18,7 +18,7 @@ import {
   cleanTriggerKeywords,
   findMatchingKeyword,
 } from '@/lib/dm-automations/keywords';
-import { requireOwnedWorkspace } from '@/lib/social/workspace-access';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 async function resolveWorkspaceId(
   request: Request,
   bodyWorkspaceId?: unknown
@@ -83,8 +83,11 @@ export async function POST(request: Request) {
       body = {};
     }
 
-    const workspaceId = await resolveWorkspaceId(request, body.workspaceId);
-    if (!workspaceId) {
+    const preferredWorkspaceId = await resolveWorkspaceId(
+      request,
+      body.workspaceId
+    );
+    if (!preferredWorkspaceId) {
       return NextResponse.json(
         dryRunPayload({
           ok: false,
@@ -95,18 +98,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const access = await requireOwnedWorkspace(userId, workspaceId);
+    const access = await resolveStrictUserWorkspace({
+      userId,
+      preferredWorkspaceId,
+      email: session?.user?.email ?? null,
+    });
     if (!access.ok) {
       return NextResponse.json(
         dryRunPayload({
           ok: false,
-          workspaceId,
+          workspaceId: preferredWorkspaceId,
           blockers: [access.error],
           nextSteps: ['Select a workspace you own and retry.'],
         }),
         { status: access.status }
       );
     }
+    const workspaceId = access.workspaceId;
 
     const action = String(body.action || 'test').trim();
     const commentText = String(
