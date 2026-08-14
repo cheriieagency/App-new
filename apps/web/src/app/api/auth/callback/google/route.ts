@@ -13,8 +13,7 @@ import {
 } from '@/lib/google/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
-import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
-import { userOwnsWorkspace } from '@/lib/social/workspace-access';
+import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
 import { ensureSocialAccountsSchema } from '@/lib/social/persist';
 
 function clearState(res: NextResponse) {
@@ -63,15 +62,12 @@ export async function GET(request: Request) {
   }
 
   const userId = session.user.id;
-  const workspaceAccess = await resolveStrictUserWorkspace({
+  const ownedWorkspaceId = await resolveOwnedWorkspaceForOAuth({
     userId,
     preferredWorkspaceId: workspaceId,
     email: session.user.email ?? null,
   });
-  if (!workspaceAccess.ok) return fail(workspaceAccess.error);
-  if (!(await userOwnsWorkspace(userId, workspaceAccess.workspaceId))) {
-    return fail('workspace_forbidden');
-  }
+  if (!ownedWorkspaceId) return fail('workspace_create_failed');
 
   try {
     await ensureSocialAccountsSchema();
@@ -88,7 +84,7 @@ export async function GET(request: Request) {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? null,
       expiresIn: tokens.expires_in ?? null,
-      workspaceId: workspaceAccess.workspaceId,
+      workspaceId: ownedWorkspaceId,
     });
 
     const dest = new URL('/admin/settings/integrations', origin);

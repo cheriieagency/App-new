@@ -40,6 +40,8 @@ export type StoreProduct = {
   image_url: string | null;
   community_id: number | null;
   workspace_id?: string | null;
+  /** Session user that created this product (isolation). */
+  creator_id?: string | null;
   is_published: boolean;
   created_at: string;
   collect_fields: CollectField[];
@@ -141,12 +143,15 @@ function allDemoProducts(): StoreProduct[] {
 
 export function listDemoStoreProducts(
   communityId?: number,
-  opts?: { includeDrafts?: boolean }
+  opts?: { includeDrafts?: boolean; creatorId?: string }
 ) {
   let list = allDemoProducts();
   // clikd: (id 1) sees the full platform catalog — same as Classroom.
   if (communityId != null && communityId !== 1) {
     list = list.filter((p) => p.community_id === communityId);
+  }
+  if (opts?.creatorId) {
+    list = list.filter((p) => p.creator_id === opts.creatorId);
   }
   if (!opts?.includeDrafts) {
     list = list.filter((p) => p.is_published);
@@ -170,6 +175,7 @@ export function demoCreateStoreProduct(input: {
   image_url?: string | null;
   community_id?: number | null;
   workspace_id?: string | null;
+  creator_id?: string | null;
   is_published?: boolean;
   currency?: string;
   collect_fields?: CollectField[];
@@ -189,6 +195,7 @@ export function demoCreateStoreProduct(input: {
     image_url: input.image_url ?? null,
     community_id: input.community_id ?? null,
     workspace_id: input.workspace_id ?? null,
+    creator_id: input.creator_id ?? null,
     is_published: input.is_published ?? true,
     created_at: new Date().toISOString(),
     collect_fields: input.collect_fields ?? MEMBER_ONE_CLICK_COLLECT_FIELDS,

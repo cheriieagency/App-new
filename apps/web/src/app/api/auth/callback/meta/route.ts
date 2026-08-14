@@ -29,11 +29,7 @@ import {
   resolveOAuthWorkspaceId,
   setActiveWorkspaceCookies,
 } from '@/lib/social/oauth-workspace';
-import {
-  createDefaultWorkspaceForUser,
-  resolveWorkspaceForOAuthUser,
-  userOwnsWorkspace,
-} from '@/lib/social/workspace-access';
+import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
 
 function clearOAuthState(res: NextResponse) {
   res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
@@ -64,34 +60,6 @@ function failRedirect(
   const res = NextResponse.redirect(dest);
   clearOAuthState(res);
   return res;
-}
-
-async function resolveOwnedWorkspaceForMeta(input: {
-  userId: string;
-  email?: string | null;
-  preferredWorkspaceId?: string | null;
-}): Promise<string | null> {
-  // Preferred (state/cookie) → primary → auto-create. Never "forbidden".
-  const access = await resolveWorkspaceForOAuthUser({
-    userId: input.userId,
-    preferredWorkspaceId: input.preferredWorkspaceId,
-    email: input.email,
-  });
-
-  if (access.ok && (await userOwnsWorkspace(input.userId, access.workspaceId))) {
-    return access.workspaceId;
-  }
-
-  // Extra safety: mint a fresh per-user workspace if ownership check lagged.
-  const created = await createDefaultWorkspaceForUser({
-    userId: input.userId,
-    email: input.email,
-  });
-  if (created && (await userOwnsWorkspace(input.userId, created))) {
-    return created;
-  }
-
-  return null;
 }
 
 export async function GET(request: Request) {
@@ -151,7 +119,7 @@ export async function GET(request: Request) {
   }
 
   // 2) Robust workspace resolution — never workspace_forbidden
-  const workspaceId = await resolveOwnedWorkspaceForMeta({
+  const workspaceId = await resolveOwnedWorkspaceForOAuth({
     userId,
     email: sessionUser.email ?? null,
     preferredWorkspaceId,

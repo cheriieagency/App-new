@@ -1,7 +1,6 @@
 /**
  * GET /api/socials/accounts
  * Live social_accounts for the authenticated user only.
- * Always responds quickly with JSON — never hangs the settings UI.
  */
 
 import { cookies, headers } from 'next/headers';
@@ -56,10 +55,10 @@ export async function GET(request: Request) {
 
     const userId = session?.user?.id?.trim();
     if (!userId) {
-      // Soft empty — settings page must not hang on Unauthorized retries.
-      return Response.json(okPayload(emptyAccounts(), null, { error: 'Unauthorized' }), {
-        status: 200,
-      });
+      return Response.json(
+        okPayload(emptyAccounts(), null, { error: 'Unauthorized' }),
+        { status: 401 }
+      );
     }
 
     const url = new URL(request.url);
@@ -82,8 +81,10 @@ export async function GET(request: Request) {
       if (access.ok) {
         workspaceId = access.workspaceId;
       } else {
-        // Fall through with preferred id — list still filters by user_id.
-        console.warn('[socials/accounts] workspace resolve soft-fail', access.error);
+        console.warn(
+          '[socials/accounts] workspace resolve soft-fail',
+          access.error
+        );
       }
     } catch (error) {
       console.warn('[socials/accounts] workspace resolve threw', error);
@@ -103,8 +104,9 @@ export async function GET(request: Request) {
     return Response.json(okPayload(accounts, workspaceId));
   } catch (error) {
     console.error('[socials/accounts]', error);
-    return Response.json(okPayload(emptyAccounts(), null, { error: 'failed' }), {
-      status: 200,
-    });
+    return Response.json(
+      okPayload(emptyAccounts(), null, { error: 'failed' }),
+      { status: 500 }
+    );
   }
 }

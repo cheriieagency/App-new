@@ -1,3 +1,9 @@
+/**
+ * GET/POST /api/planner — content planner posts (session-scoped).
+ * Prefer /api/planner/posts for the same handlers.
+ */
+
+import { requireApiSession } from '@/lib/auth/require-api-session';
 import {
   addPlannerComment,
   deletePlannerPost,
@@ -15,56 +21,88 @@ import {
 } from '@/lib/mock-content-planner';
 
 export async function GET(request: Request) {
+  const session = await requireApiSession();
+  if (!session.ok) return session.response;
+
   const { searchParams } = new URL(request.url);
   const project = searchParams.get('project') || undefined;
-  return Response.json({ posts: listPlannerPosts(project), demo: true });
+  return Response.json({
+    posts: listPlannerPosts(project, session.user.id),
+    demo: true,
+    owner_user_id: session.user.id,
+  });
 }
 
 export async function POST(request: Request) {
+  const session = await requireApiSession();
+  if (!session.ok) return session.response;
+
+  const userId = session.user.id;
+  const actor = session.user.name?.trim() || 'Creator';
+
   try {
     const body = await request.json();
     const action = String(body.action ?? 'upsert');
-    const actor = typeof body.actor === 'string' ? body.actor : 'Ebba';
 
     if (action === 'delete') {
-      const ok = deletePlannerPost(String(body.id ?? ''));
-      return Response.json({ ok, posts: listPlannerPosts() });
+      const ok = deletePlannerPost(String(body.id ?? ''), userId);
+      return Response.json({ ok, posts: listPlannerPosts(undefined, userId) });
     }
 
     if (action === 'move') {
       const post = movePlannerPost(
         String(body.id ?? ''),
         body.workflow as WorkflowStatus,
-        actor
+        actor,
+        userId
       );
       if (!post) return Response.json({ error: 'Not found' }, { status: 404 });
-      return Response.json({ post, posts: listPlannerPosts() });
+      return Response.json({
+        post,
+        posts: listPlannerPosts(undefined, userId),
+      });
     }
 
     if (action === 'reschedule') {
-      const scheduledAt = typeof body.scheduled_at === 'string' ? body.scheduled_at : '';
+      const scheduledAt =
+        typeof body.scheduled_at === 'string' ? body.scheduled_at : '';
       if (!scheduledAt) {
-        return Response.json({ error: 'scheduled_at required' }, { status: 400 });
+        return Response.json(
+          { error: 'scheduled_at required' },
+          { status: 400 }
+        );
       }
-      const post = reschedulePlannerPost(String(body.id ?? ''), scheduledAt, actor);
+      const post = reschedulePlannerPost(
+        String(body.id ?? ''),
+        scheduledAt,
+        actor,
+        userId
+      );
       if (!post) return Response.json({ error: 'Not found' }, { status: 404 });
-      return Response.json({ post, posts: listPlannerPosts() });
+      return Response.json({
+        post,
+        posts: listPlannerPosts(undefined, userId),
+      });
     }
 
     if (action === 'comment') {
-      const comment = addPlannerComment(String(body.id ?? ''), {
-        text: String(body.text ?? ''),
-        author_name: body.author_name,
-        author_id: body.author_id,
-        author_avatar: body.author_avatar,
-        image_url: body.image_url ?? null,
-        visibility: body.visibility === 'public' ? 'public' : 'private',
-      });
+      const comment = addPlannerComment(
+        String(body.id ?? ''),
+        {
+          text: String(body.text ?? ''),
+          author_name: body.author_name ?? actor,
+          author_id: body.author_id ?? userId,
+          author_avatar: body.author_avatar,
+          image_url: body.image_url ?? null,
+          visibility: body.visibility === 'public' ? 'public' : 'private',
+        },
+        userId
+      );
       if (!comment) return Response.json({ error: 'Failed' }, { status: 400 });
       return Response.json({
         comment,
-        post: listPlannerPosts().find((p) => p.id === body.id),
-        posts: listPlannerPosts(),
+        post: listPlannerPosts(undefined, userId).find((p) => p.id === body.id),
+        posts: listPlannerPosts(undefined, userId),
       });
     }
 
@@ -116,7 +154,8 @@ export async function POST(request: Request) {
         media_type: body.media_type ?? undefined,
         media_items,
         youtube,
-        idea_title: typeof body.idea_title === 'string' ? body.idea_title : undefined,
+        idea_title:
+          typeof body.idea_title === 'string' ? body.idea_title : undefined,
         project: typeof body.project === 'string' ? body.project : undefined,
         campaigns: Array.isArray(body.campaigns)
           ? (body.campaigns as string[]).filter((x) => typeof x === 'string')
@@ -130,10 +169,18 @@ export async function POST(request: Request) {
         auto_post:
           body.auto_post !== undefined ? Boolean(body.auto_post) : undefined,
       },
-      actor
+      actor,
+      userId
     );
 
-    return Response.json({ post, posts: listPlannerPosts() });
+    if (!post) {
+      return Response.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    return Response.json({
+      post,
+      posts: listPlannerPosts(undefined, userId),
+    });
   } catch (error) {
     console.error(error);
     return Response.json({ error: 'Failed' }, { status: 500 });

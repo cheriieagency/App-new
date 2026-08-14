@@ -102,6 +102,8 @@ export type PlannerPost = {
   comments: PlannerComment[];
   created_at: string;
   created_by: string;
+  /** Session user that owns this planner post (isolation). */
+  owner_user_id?: string;
 };
 
 /** Campaign / project label used to group scheduled content by initiative. */
@@ -111,6 +113,8 @@ export type CampaignLabel = {
   color: string;
   description: string;
   created_at: string;
+  /** Session user that owns this campaign label (isolation). */
+  owner_user_id?: string;
 };
 
 export type ConnectedSocialAccount = {
@@ -471,20 +475,32 @@ function act(
 let campaignSeq = 0;
 const campaigns: CampaignLabel[] = [];
 
-export function listCampaignLabels(): CampaignLabel[] {
-  return [...campaigns].sort(
+export function listCampaignLabels(ownerUserId?: string): CampaignLabel[] {
+  const scoped = ownerUserId
+    ? campaigns.filter((c) => c.owner_user_id === ownerUserId)
+    : campaigns;
+  return [...scoped].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 }
 
-export function getCampaignLabel(id: string): CampaignLabel | null {
-  return campaigns.find((c) => c.id === id) ?? null;
+export function getCampaignLabel(
+  id: string,
+  ownerUserId?: string
+): CampaignLabel | null {
+  const c = campaigns.find((x) => x.id === id) ?? null;
+  if (!c) return null;
+  if (ownerUserId && c.owner_user_id && c.owner_user_id !== ownerUserId) {
+    return null;
+  }
+  return c;
 }
 
 export function createCampaignLabel(input: {
   name: string;
   color?: string;
   description?: string;
+  ownerUserId?: string;
 }): CampaignLabel {
   const label: CampaignLabel = {
     id: `camp-${++campaignSeq}`,
@@ -492,6 +508,7 @@ export function createCampaignLabel(input: {
     color: input.color || '#9089F0',
     description: (input.description ?? '').trim(),
     created_at: new Date().toISOString(),
+    owner_user_id: input.ownerUserId,
   };
   campaigns.unshift(label);
   return label;
@@ -499,22 +516,37 @@ export function createCampaignLabel(input: {
 
 export function updateCampaignLabel(
   id: string,
-  patch: Partial<Pick<CampaignLabel, 'name' | 'color' | 'description'>>
+  patch: Partial<Pick<CampaignLabel, 'name' | 'color' | 'description'>>,
+  ownerUserId?: string
 ): CampaignLabel | null {
   const c = campaigns.find((x) => x.id === id);
   if (!c) return null;
+  if (ownerUserId && c.owner_user_id && c.owner_user_id !== ownerUserId) {
+    return null;
+  }
   if (patch.name !== undefined) c.name = patch.name.trim() || c.name;
   if (patch.color !== undefined) c.color = patch.color;
   if (patch.description !== undefined) c.description = patch.description.trim();
   return c;
 }
 
-export function deleteCampaignLabel(id: string): boolean {
+export function deleteCampaignLabel(id: string, ownerUserId?: string): boolean {
   const idx = campaigns.findIndex((c) => c.id === id);
   if (idx < 0) return false;
+  const target = campaigns[idx];
+  if (
+    ownerUserId &&
+    target.owner_user_id &&
+    target.owner_user_id !== ownerUserId
+  ) {
+    return false;
+  }
   campaigns.splice(idx, 1);
-  // Detach label from all posts
+  // Detach label from all posts owned by the same user (or all if unscoped).
   for (const p of posts) {
+    if (ownerUserId && p.owner_user_id && p.owner_user_id !== ownerUserId) {
+      continue;
+    }
     p.campaigns = (p.campaigns ?? []).filter((cid) => cid !== id);
   }
   return true;
@@ -523,9 +555,10 @@ export function deleteCampaignLabel(id: string): boolean {
 /** Posts tagged with a campaign label (optionally scoped to a brand workspace). */
 export function listPostsForCampaign(
   campaignId: string,
-  workspaceName?: string
+  workspaceName?: string,
+  ownerUserId?: string
 ): PlannerPost[] {
-  return listPlannerPosts(workspaceName).filter((p) =>
+  return listPlannerPosts(workspaceName, ownerUserId).filter((p) =>
     (p.campaigns ?? []).includes(campaignId)
   );
 }
@@ -619,10 +652,17 @@ export function checklistProgress(subtasks: PlannerSubtask[]): string {
   return `${done}/${subtasks.length}`;
 }
 
-export function listPlannerPosts(project?: string): PlannerPost[] {
-  const filtered = project
-    ? posts.filter((p) => p.project === project)
-    : posts;
+export function listPlannerPosts(
+  project?: string,
+  ownerUserId?: string
+): PlannerPost[] {
+  let filtered = posts;
+  if (ownerUserId) {
+    filtered = filtered.filter((p) => p.owner_user_id === ownerUserId);
+  }
+  if (project) {
+    filtered = filtered.filter((p) => p.project === project);
+  }
   return [...filtered].sort((a, b) => {
     const aTime = a.scheduled_at || a.created_at;
     const bTime = b.scheduled_at || b.created_at;
@@ -630,16 +670,39 @@ export function listPlannerPosts(project?: string): PlannerPost[] {
   });
 }
 
-export function getPlannerPost(id: string): PlannerPost | null {
-  return posts.find((p) => p.id === id) ?? null;
+export function getPlannerPost(
+  id: string,
+  ownerUserId?: string
+): PlannerPost | null {
+  const post = posts.find((p) => p.id === id) ?? null;
+  if (!post) return null;
+  if (ownerUserId && post.owner_user_id && post.owner_user_id !== ownerUserId) {
+    return null;
+  }
+  return post;
+}
+
+function assertPostOwner(
+  post: PlannerPost | undefined | null,
+  ownerUserId?: string
+): PlannerPost | null {
+  if (!post) return null;
+  if (ownerUserId && post.owner_user_id && post.owner_user_id !== ownerUserId) {
+    return null;
+  }
+  return post;
 }
 
 export function movePlannerPost(
   id: string,
   workflow: WorkflowStatus,
-  actor = 'Ebba'
+  actor = 'Ebba',
+  ownerUserId?: string
 ): PlannerPost | null {
-  const post = posts.find((p) => p.id === id);
+  const post = assertPostOwner(
+    posts.find((p) => p.id === id),
+    ownerUserId
+  );
   if (!post) return null;
   if (post.workflow === workflow) return post;
   post.workflow = workflow;
@@ -662,9 +725,13 @@ export function movePlannerPost(
 export function reschedulePlannerPost(
   id: string,
   scheduledAt: string,
-  actor = 'Ebba'
+  actor = 'Ebba',
+  ownerUserId?: string
 ): PlannerPost | null {
-  const post = posts.find((p) => p.id === id);
+  const post = assertPostOwner(
+    posts.find((p) => p.id === id),
+    ownerUserId
+  );
   if (!post) return null;
   const prev = post.scheduled_at;
   post.scheduled_at = scheduledAt;
@@ -695,10 +762,15 @@ export function reschedulePlannerPost(
 
 export function upsertPlannerPost(
   input: Partial<PlannerPost> & { caption?: string; platforms: SocialPlatform[] },
-  actor = 'Ebba'
-): PlannerPost {
+  actor = 'Ebba',
+  ownerUserId?: string
+): PlannerPost | null {
   const media = normalizeMedia(input.media_items, input.media_url, input.media_type);
-  const existing = input.id ? posts.find((p) => p.id === input.id) : null;
+  const existingRaw = input.id ? posts.find((p) => p.id === input.id) : null;
+  const existing = assertPostOwner(existingRaw, ownerUserId);
+  if (input.id && existingRaw && !existing) {
+    return null;
+  }
 
   let workflow: WorkflowStatus =
     input.workflow ??
@@ -731,6 +803,7 @@ export function upsertPlannerPost(
       assignees: input.assignees ?? existing.assignees,
       subtasks: input.subtasks ?? existing.subtasks,
       auto_post: input.auto_post ?? existing.auto_post,
+      owner_user_id: existing.owner_user_id || ownerUserId,
     });
     const wsName = existing.project;
     if (prevWorkflow !== workflow) {
@@ -782,6 +855,7 @@ export function upsertPlannerPost(
     comments: [],
     created_at: new Date().toISOString(),
     created_by: actor,
+    owner_user_id: ownerUserId,
   };
   posts.push(post);
   return post;
@@ -796,9 +870,13 @@ export function addPlannerComment(
     author_avatar?: string;
     image_url?: string | null;
     visibility?: 'public' | 'private';
-  }
+  },
+  ownerUserId?: string
 ): PlannerComment | null {
-  const post = posts.find((p) => p.id === postId);
+  const post = assertPostOwner(
+    posts.find((p) => p.id === postId),
+    ownerUserId
+  );
   if (!post) return null;
   const author =
     PLANNER_TEAM.find((t) => t.id === input.author_id) || PLANNER_TEAM[0];
@@ -821,9 +899,17 @@ export function addPlannerComment(
   return comment;
 }
 
-export function deletePlannerPost(id: string): boolean {
+export function deletePlannerPost(id: string, ownerUserId?: string): boolean {
   const idx = posts.findIndex((p) => p.id === id);
   if (idx < 0) return false;
+  const target = posts[idx];
+  if (
+    ownerUserId &&
+    target.owner_user_id &&
+    target.owner_user_id !== ownerUserId
+  ) {
+    return false;
+  }
   posts.splice(idx, 1);
   return true;
 }

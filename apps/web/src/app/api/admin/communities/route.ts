@@ -3,8 +3,7 @@
  * POST /api/admin/communities — create community bound to active workspace.
  */
 
-import { cookies, headers } from 'next/headers';
-import { auth } from '@/lib/auth';
+import { cookies } from 'next/headers';
 import sql from '@/app/api/utils/sql';
 import { ensureCommunitiesSchema } from '@/lib/communities/schema';
 import {
@@ -20,7 +19,8 @@ import {
   managedToSearchable,
   publishCommunityToPublicCatalog,
 } from '@/lib/public-communities-store';
-import { resolvePrimaryWorkspaceForUser } from '@/lib/communities/workspace';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
+import { requireApiSession } from '@/lib/auth/require-api-session';
 
 const CATEGORIES = [
   'Marketing',
@@ -102,23 +102,46 @@ function mapRow(row: Record<string, unknown>): ManagedCommunity & {
 }
 
 export async function GET(request: Request) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return Response.json({ error: 'Unauthorized', communities: [] }, { status: 401 });
+  const session = await requireApiSession();
+  if (!session.ok) {
+    return Response.json(
+      { error: 'Unauthorized', communities: [] },
+      { status: 401 }
+    );
   }
 
+  const userId = session.user.id;
   const url = new URL(request.url);
   const jar = await cookies();
-  let workspaceId = resolveWorkspaceId(null, url, jar, request.headers);
-  if (!workspaceId) {
-    workspaceId = await resolvePrimaryWorkspaceForUser(session.user.id);
+  const preferred = resolveWorkspaceId(null, url, jar, request.headers);
+
+  const access = await resolveStrictUserWorkspace({
+    userId,
+    preferredWorkspaceId: preferred,
+    email: session.user.email,
+  });
+  if (!access.ok) {
+    return Response.json(
+      {
+        error: access.error,
+        communities: [],
+        community: null,
+        workspace_id: preferred,
+      },
+      { status: access.status === 400 ? 400 : 403 }
+    );
   }
+  const workspaceId = access.workspaceId;
 
   await ensureCommunitiesSchema();
 
   if (!process.env.DATABASE_URL?.trim()) {
     const all = listManagedCommunities();
-    const scoped = all.filter((c) => c.workspace_id === workspaceId);
+    const scoped = all.filter(
+      (c) =>
+        c.workspace_id === workspaceId ||
+        (c as ManagedCommunity & { creator_id?: string }).creator_id === userId
+    );
     return Response.json({
       communities: scoped,
       community: scoped[0] ?? null,
@@ -128,11 +151,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Strict: only communities bound to this active workspace_id.
+    // Only communities in workspaces this user owns (or created by them).
     const rows = await sql`
       SELECT *
       FROM communities
-      WHERE workspace_id = ${workspaceId}
+      WHERE (
+          workspace_id IN (
+            SELECT id FROM public.workspaces WHERE user_id::text = ${userId}
+          )
+          OR creator_id::text = ${userId}
+        )
+        AND workspace_id = ${workspaceId}
       ORDER BY created_at DESC NULLS LAST, name ASC
     `;
 
@@ -159,11 +188,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
+  const session = await requireApiSession();
+  if (!session.ok) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userId = session.user.id;
   const url = new URL(request.url);
   const jar = await cookies();
   let body: Record<string, unknown> = {};
@@ -173,7 +203,7 @@ export async function POST(request: Request) {
     body = {};
   }
 
-  let workspaceId = resolveWorkspaceId(
+  const preferred = resolveWorkspaceId(
     typeof body.workspaceId === 'string'
       ? body.workspaceId
       : typeof body.workspace_id === 'string'
@@ -185,16 +215,19 @@ export async function POST(request: Request) {
     jar,
     request.headers
   );
-  if (!workspaceId) {
-    workspaceId = await resolvePrimaryWorkspaceForUser(session.user.id);
-  }
 
-  if (!workspaceId) {
+  const access = await resolveStrictUserWorkspace({
+    userId,
+    preferredWorkspaceId: preferred,
+    email: session.user.email,
+  });
+  if (!access.ok) {
     return Response.json(
-      { error: 'missing_workspace_id', message: 'Active workspace is required.' },
-      { status: 400 }
+      { error: access.error || 'workspace_forbidden' },
+      { status: access.status === 400 ? 400 : 403 }
     );
   }
+  const workspaceId = access.workspaceId;
 
   const name = String(body.name ?? '').trim();
   if (!name) {
@@ -232,7 +265,7 @@ export async function POST(request: Request) {
 
   await ensureCommunitiesSchema();
 
-  // Demo / no DB — still bind to workspace + public catalog.
+  // Demo / no DB — still bind to owned workspace + public catalog.
   if (!process.env.DATABASE_URL?.trim()) {
     const community = createManagedCommunity({
       name,
@@ -245,8 +278,10 @@ export async function POST(request: Request) {
       is_free?: boolean;
       monthly_price_sek?: number;
       cover_url?: string | null;
+      creator_id?: string;
     };
     community.workspace_id = workspaceId;
+    community.creator_id = userId;
     community.is_free = isFree;
     community.monthly_price_sek = monthlyPrice;
     community.avatar_url = avatarUrl || community.avatar_url;
@@ -286,7 +321,7 @@ export async function POST(request: Request) {
           ${slug},
           ${description || 'Your creator community.'},
           ${category},
-          ${session.user.id},
+          ${userId},
           ${session.user.name || 'Creator'},
           ${session.user.image ?? null},
           ${avatarUrl},
@@ -344,7 +379,7 @@ export async function POST(request: Request) {
     try {
       await sql`
         INSERT INTO community_memberships (user_id, community_id, role)
-        VALUES (${session.user.id}, ${Number(row.id)}, 'owner')
+        VALUES (${userId}, ${Number(row.id)}, 'owner')
         ON CONFLICT (user_id, community_id) DO UPDATE SET role = 'owner'
       `;
     } catch (membershipError) {

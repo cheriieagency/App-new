@@ -314,3 +314,36 @@ export async function requireOwnedWorkspace(
 ): Promise<WorkspaceAccessResult> {
   return ensureWorkspaceOwnedByUser(userId, workspaceId);
 }
+
+/**
+ * OAuth callbacks: always return a workspace this user owns.
+ * Preferred cookie/state → primary → auto-create. Never workspace_forbidden.
+ */
+export async function resolveOwnedWorkspaceForOAuth(input: {
+  userId: string;
+  email?: string | null;
+  preferredWorkspaceId?: string | null;
+}): Promise<string | null> {
+  const uid = input.userId?.trim();
+  if (!uid) return null;
+
+  const access = await resolveWorkspaceForOAuthUser({
+    userId: uid,
+    preferredWorkspaceId: input.preferredWorkspaceId,
+    email: input.email,
+  });
+
+  if (access.ok && (await userOwnsWorkspace(uid, access.workspaceId))) {
+    return access.workspaceId;
+  }
+
+  const created = await createDefaultWorkspaceForUser({
+    userId: uid,
+    email: input.email,
+  });
+  if (created && (await userOwnsWorkspace(uid, created))) {
+    return created;
+  }
+
+  return null;
+}
