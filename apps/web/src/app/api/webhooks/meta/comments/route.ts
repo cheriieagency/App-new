@@ -80,7 +80,7 @@ function buildDmText(rule: AutomationRow): string {
   return text;
 }
 
-/** platform_user_id === entryId first, then page_id fallback. */
+/** Resolve social account by entryId (IG id OR Facebook Page id). */
 async function lookupSocialAccount(
   entryId: string
 ): Promise<SocialAccountRow | null> {
@@ -98,39 +98,64 @@ async function lookupSocialAccount(
   };
 
   try {
-    const byPlatformUser = await sql`
-      SELECT workspace_id, platform, platform_user_id, page_id, access_token
-      FROM public.social_accounts
-      WHERE platform IN ('instagram', 'facebook')
-        AND access_token IS NOT NULL
-        AND access_token <> ''
-        AND platform_user_id = ${entryId}
-      ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
-      LIMIT 1
-    `;
-    const hit = mapRow(
-      Array.isArray(byPlatformUser)
-        ? (byPlatformUser[0] as Record<string, unknown>)
-        : null
-    );
-    if (hit) return hit;
-
-    const byPage = await sql`
+    // Match IG scoped id, Page id on page_id, or Page id stored as platform_user_id.
+    const matched = await sql`
       SELECT workspace_id, platform, platform_user_id, page_id, access_token
       FROM public.social_accounts
       WHERE platform IN ('instagram', 'facebook')
         AND access_token IS NOT NULL
         AND access_token <> ''
         AND (
-          page_id = ${entryId}
+          platform_user_id = ${entryId}
+          OR page_id = ${entryId}
           OR COALESCE(meta->>'ig_user_id', '') = ${entryId}
+          OR COALESCE(meta->>'page_id', '') = ${entryId}
         )
       ORDER BY CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END
-      LIMIT 1
+      LIMIT 5
     `;
-    return mapRow(
-      Array.isArray(byPage) ? (byPage[0] as Record<string, unknown>) : null
-    );
+    const list = Array.isArray(matched)
+      ? (matched as Record<string, unknown>[])
+      : [];
+    const primary = mapRow(list[0]);
+    if (!primary) return null;
+
+    // If webhook arrived on Facebook Page id, prefer the IG sibling in same workspace
+    // (same Page Access Token, better /{ig-user-id}/messages endpoint).
+    if (primary.platform === 'facebook' || primary.page_id === entryId) {
+      const workspaceId = primary.workspace_id;
+      const igSibling = list.find((r) => r.platform === 'instagram');
+      if (igSibling) {
+        const ig = mapRow(igSibling);
+        if (ig) return ig;
+      }
+      try {
+        const igRows = await sql`
+          SELECT workspace_id, platform, platform_user_id, page_id, access_token
+          FROM public.social_accounts
+          WHERE workspace_id = ${workspaceId}
+            AND platform = 'instagram'
+            AND access_token IS NOT NULL
+            AND access_token <> ''
+            AND (
+              page_id = ${entryId}
+              OR page_id = ${primary.page_id}
+              OR page_id = ${primary.platform_user_id}
+            )
+          LIMIT 1
+        `;
+        const ig = mapRow(
+          Array.isArray(igRows)
+            ? (igRows[0] as Record<string, unknown>)
+            : null
+        );
+        if (ig) return ig;
+      } catch {
+        /* fall through to primary */
+      }
+    }
+
+    return primary;
   } catch (error) {
     console.warn('[Meta Webhook] social_accounts lookup failed', error);
     return null;

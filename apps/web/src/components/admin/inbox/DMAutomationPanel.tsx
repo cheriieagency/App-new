@@ -373,12 +373,19 @@ export default function DMAutomationPanel() {
           platform: string;
           targetId: string;
           ok: boolean;
+          warning?: boolean;
           error?: string;
         }>;
+        warnings?: string[];
         ready?: boolean;
         blockers?: string[];
         nextSteps?: string[];
-        subscribeResults?: Array<{ targetId: string; ok: boolean; error?: string }>;
+        subscribeResults?: Array<{
+          targetId: string;
+          ok: boolean;
+          warning?: boolean;
+          error?: string;
+        }>;
       }>;
     },
     onSuccess: (json) => {
@@ -387,20 +394,22 @@ export default function DMAutomationPanel() {
         json.details?.filter((r) => r.ok).length ??
         json.subscribeResults?.filter((r) => r.ok).length ??
         0;
+      const warnings =
+        json.warnings?.length
+          ? json.warnings
+          : (json.details || json.subscribeResults || [])
+              .filter((r) => r.warning && r.error)
+              .map((r) => String(r.error));
+
       if (json.success || json.ready || okCount > 0) {
         toast.success(
-          `Re-synced Meta webhooks (${okCount} account${okCount === 1 ? '' : 's'}).`
+          `Meta webhooks subscribed${okCount ? ` (${okCount})` : ''}.`
         );
-        const detailErrors =
-          json.details
-            ?.filter((d) => !d.ok && d.error)
-            .map((d) => d.error)
-            .join(' · ') || '';
         setTestResult(
           [
             json.nextSteps?.join(' ') ||
-              `Subscribed ${okCount} Page/IG account(s) to feed/comments/messages/mentions.`,
-            detailErrors ? `Partial errors: ${detailErrors}` : '',
+              'Facebook Page webhooks active (covers linked Instagram).',
+            warnings.length ? `Note: ${warnings[0]}` : '',
           ]
             .filter(Boolean)
             .join(' ')
@@ -408,7 +417,7 @@ export default function DMAutomationPanel() {
       } else {
         const blockers = json.blockers?.length
           ? json.blockers.join(' ')
-          : json.details?.find((d) => d.error)?.error ||
+          : json.details?.find((d) => d.error && !d.warning)?.error ||
             'Could not re-subscribe Meta webhooks.';
         toast.error(blockers.slice(0, 180));
         setTestResult(blockers);
