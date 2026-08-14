@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  CheckCircle2,
   Loader2,
   MessageSquarePlus,
   MousePointerClick,
@@ -14,7 +15,9 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
+  XCircle,
   Zap,
   X,
 } from 'lucide-react';
@@ -54,6 +57,59 @@ type AutomationsPayload = {
   message?: string;
 };
 
+type DiagnosticStep = {
+  step: string;
+  label: string;
+  success: boolean;
+  message: string;
+  fix?: string;
+  metaError?: string | null;
+  details?: Record<string, unknown>;
+};
+
+type LiveDiagnosticResult = {
+  ok?: boolean;
+  workspaceId?: string;
+  error?: string;
+  note?: string;
+  suggestions?: string[];
+  tokenScopes?: string[] | null;
+  steps: DiagnosticStep[];
+  checklist: {
+    instagramTokenValid: boolean;
+    metaWebhooksSubscribed: boolean;
+    activeRulesFound: boolean;
+    privateReplyPayloadOk: boolean;
+  };
+};
+
+const CHECKLIST_ROWS: Array<{
+  key: keyof LiveDiagnosticResult['checklist'];
+  label: string;
+  stepIds: string[];
+}> = [
+  {
+    key: 'instagramTokenValid',
+    label: 'Instagram Token Valid',
+    stepIds: ['TOKEN_CHECK', 'TOKEN_VALIDITY'],
+  },
+  {
+    key: 'metaWebhooksSubscribed',
+    label: 'Meta Webhooks Subscribed (comments, messages)',
+    stepIds: ['WEBHOOK_SUBSCRIPTION'],
+  },
+  {
+    key: 'activeRulesFound',
+    label: 'Active Automation Rules Found in Database',
+    stepIds: ['AUTOMATION_RULES'],
+  },
+  {
+    key: 'privateReplyPayloadOk',
+    label: 'Private Reply Graph API Payload Formatted Correctly',
+    stepIds: ['PRIVATE_REPLY_PAYLOAD'],
+  },
+];
+
 type FormState = {
   id?: string;
   title: string;
@@ -86,6 +142,8 @@ export default function DMAutomationPanel() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [liveDiagnostic, setLiveDiagnostic] =
+    useState<LiveDiagnosticResult | null>(null);
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -513,6 +571,54 @@ export default function DMAutomationPanel() {
     },
   });
 
+  const liveDiagnosticMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/admin/inbox/automations/test-live', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspace.id,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ workspaceId: activeWorkspace.id }),
+      });
+      const json = (await res.json().catch(() => ({}))) as LiveDiagnosticResult & {
+        error?: string;
+      };
+      if (!res.ok && !json.steps?.length) {
+        throw new Error(json.error || `Live diagnostic failed (${res.status})`);
+      }
+      return {
+        ...json,
+        steps: Array.isArray(json.steps) ? json.steps : [],
+        checklist: json.checklist ?? {
+          instagramTokenValid: false,
+          metaWebhooksSubscribed: false,
+          activeRulesFound: false,
+          privateReplyPayloadOk: false,
+        },
+      } satisfies LiveDiagnosticResult;
+    },
+    onSuccess: (json) => {
+      setLiveDiagnostic(json);
+      if (json.workspaceId && json.workspaceId !== activeWorkspace.id) {
+        setActiveWorkspaceId(json.workspaceId);
+      }
+      if (json.ok) {
+        toast.success('Live diagnostic passed — Comment-to-DM stack looks ready.');
+      } else {
+        toast.error(
+          json.suggestions?.[0] ||
+            json.steps?.find((s) => !s.success)?.message ||
+            'Live diagnostic found issues.'
+        );
+      }
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : 'Live diagnostic failed');
+    },
+  });
+
   const openCreate = () => {
     setForm({
       ...EMPTY_FORM,
@@ -606,6 +712,19 @@ export default function DMAutomationPanel() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={() => liveDiagnosticMutation.mutate()}
+              disabled={liveDiagnosticMutation.isPending}
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-[#2B2568]/25 bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-[#1a1848] disabled:opacity-50"
+            >
+              {liveDiagnosticMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Search size={16} />
+              )}
+              🔍 Kör Live Felsökning i Webbläsaren
+            </button>
+            <button
+              type="button"
               onClick={() => resyncWebhooksMutation.mutate()}
               disabled={resyncWebhooksMutation.isPending}
               className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
@@ -640,6 +759,141 @@ export default function DMAutomationPanel() {
             </button>
           </div>
         </div>
+
+        {liveDiagnostic ? (
+          <div className="mx-5 sm:mx-7 mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                  Live Comment-to-DM Diagnostic
+                </p>
+                <p className="text-sm font-bold text-slate-900 mt-1">
+                  {liveDiagnostic.ok
+                    ? 'All checks passed'
+                    : 'Issues found — see checklist + Meta errors below'}
+                </p>
+                {liveDiagnostic.note ? (
+                  <p className="text-xs text-slate-500 mt-1">{liveDiagnostic.note}</p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setLiveDiagnostic(null)}
+                className="h-9 min-h-[36px] px-3 rounded-lg text-xs font-bold text-slate-600 hover:bg-white border border-transparent hover:border-slate-200 inline-flex items-center gap-1 self-start"
+              >
+                <X size={14} />
+                Dismiss
+              </button>
+            </div>
+
+            <ul className="space-y-2">
+              {CHECKLIST_ROWS.map((row) => {
+                const ok = Boolean(liveDiagnostic.checklist?.[row.key]);
+                const relatedSteps =
+                  liveDiagnostic.steps?.filter((s) =>
+                    row.stepIds.includes(s.step)
+                  ) ?? [];
+                const failed =
+                  relatedSteps.find((s) => !s.success) || relatedSteps[0];
+                return (
+                  <li
+                    key={row.key}
+                    className={`rounded-xl border px-3.5 py-3 flex gap-3 items-start ${
+                      ok
+                        ? 'border-emerald-200/80 bg-emerald-50/70'
+                        : 'border-rose-200/80 bg-rose-50/70'
+                    }`}
+                  >
+                    {ok ? (
+                      <CheckCircle2
+                        size={18}
+                        className="text-emerald-600 flex-shrink-0 mt-0.5"
+                        aria-hidden
+                      />
+                    ) : (
+                      <XCircle
+                        size={18}
+                        className="text-rose-600 flex-shrink-0 mt-0.5"
+                        aria-hidden
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-extrabold text-slate-900">
+                        {ok ? '✓' : '✗'} {row.label}
+                      </p>
+                      {failed?.message ? (
+                        <p className="text-xs text-slate-600 mt-1 font-medium">
+                          {failed.message}
+                        </p>
+                      ) : null}
+                      {failed?.metaError ? (
+                        <p className="text-xs text-rose-700 mt-1 font-mono break-words">
+                          Meta: {failed.metaError}
+                        </p>
+                      ) : null}
+                      {!ok && failed?.fix ? (
+                        <p className="text-xs text-[#2B2568] mt-1.5 font-semibold">
+                          Fix: {failed.fix}
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {liveDiagnostic.steps?.length ? (
+              <details className="rounded-xl border border-slate-200 bg-white px-3.5 py-3">
+                <summary className="text-xs font-extrabold text-slate-800 cursor-pointer min-h-[44px] flex items-center">
+                  Full diagnostic log ({liveDiagnostic.steps.length} steps)
+                </summary>
+                <ol className="mt-3 space-y-3 list-decimal pl-4">
+                  {liveDiagnostic.steps.map((s) => (
+                    <li key={s.step} className="text-xs text-slate-700">
+                      <span
+                        className={`font-extrabold ${
+                          s.success ? 'text-emerald-700' : 'text-rose-700'
+                        }`}
+                      >
+                        {s.success ? '✓' : '✗'} {s.step}
+                      </span>
+                      <span className="font-semibold"> — {s.label}</span>
+                      <p className="mt-0.5 text-slate-600">{s.message}</p>
+                      {s.metaError ? (
+                        <p className="mt-0.5 font-mono text-rose-700 break-words">
+                          {s.metaError}
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+                {liveDiagnostic.tokenScopes?.length ? (
+                  <p className="mt-3 text-[11px] font-mono text-slate-500 break-words">
+                    Token scopes: {liveDiagnostic.tokenScopes.join(', ')}
+                  </p>
+                ) : null}
+              </details>
+            ) : null}
+
+            {liveDiagnostic.suggestions?.length ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-800/80">
+                  Suggested fixes
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {liveDiagnostic.suggestions.map((tip) => (
+                    <li
+                      key={tip}
+                      className="text-xs font-semibold text-amber-950"
+                    >
+                      • {tip}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {testResult ? (
           <div className="mx-5 sm:mx-7 mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-700">
