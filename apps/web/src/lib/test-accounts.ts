@@ -10,11 +10,19 @@ export const CLIKD_QA_ACCOUNT = {
   name: 'Clikd QA',
 } as const;
 
+/** VIP: dual admin + community login, Pro unlocked (no payment). */
+export const EMMA_MOULINE_ACCOUNT = {
+  email: 'emma@moulinestudios.com',
+  password: 'Ostrander123',
+  name: 'Emma',
+} as const;
+
 /** Same credentials work for Community (member) and Creator/Admin studio. */
 export const DUAL_ACCESS_EMAILS = [
   'ebbabrobeck@gmail.com',
   'ebbabrobeck@test.se',
   CLIKD_QA_ACCOUNT.email,
+  EMMA_MOULINE_ACCOUNT.email,
 ] as const;
 
 /** Always treated as Pro — FeatureGate / plan-guard never block upgrades. */
@@ -22,6 +30,7 @@ export const PRO_UNLOCK_EMAILS = [
   'ebbabrobeck@gmail.com',
   'ebbabrobeck@test.se',
   CLIKD_QA_ACCOUNT.email,
+  EMMA_MOULINE_ACCOUNT.email,
 ] as const;
 
 function normalizeEmail(email: string | null | undefined): string {

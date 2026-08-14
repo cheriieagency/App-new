@@ -9,7 +9,10 @@
 import { NextResponse } from 'next/server';
 import sql from '@/app/api/utils/sql';
 import { ensureDmAutomationsSchema } from '@/lib/dm-automations/schema';
-import { findMatchingKeyword } from '@/lib/dm-automations/engine';
+import {
+  cleanTriggerKeywords,
+  findMatchingKeyword,
+} from '@/lib/dm-automations/keywords';
 
 type WebhookBody = {
   object?: string;
@@ -63,17 +66,6 @@ function cleanCommentText(raw: string): string {
     .replace(/[^\p{L}\p{N}\s_]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-function parseKeywords(raw: unknown): string[] {
-  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
-  if (typeof raw === 'string') {
-    return raw
-      .split(/[,;\n]+/)
-      .map((k) => k.trim())
-      .filter(Boolean);
-  }
-  return [];
 }
 
 function buildDmText(rule: AutomationRow): string {
@@ -456,7 +448,8 @@ export async function POST(request: Request) {
     let matchedKeyword: string | null = null;
 
     for (const rule of rules) {
-      const keywords = parseKeywords(rule.trigger_keywords);
+      // Always clean stored keywords (strip #, lowercase) before matching.
+      const keywords = cleanTriggerKeywords(rule.trigger_keywords);
       const kw =
         findMatchingKeyword(commentText, keywords) ||
         findMatchingKeyword(cleaned, keywords);
@@ -468,7 +461,11 @@ export async function POST(request: Request) {
     }
 
     if (!matchedRule || !matchedKeyword) {
-      console.log('[Meta Webhook] No keyword match for comment:', commentText);
+      console.log('[Meta Webhook] No keyword match for comment:', {
+        commentText,
+        cleaned,
+        ruleCount: rules.length,
+      });
       return ok();
     }
 

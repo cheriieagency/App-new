@@ -137,7 +137,7 @@ export default function DMAutomationPanel() {
           ctaButtonUrl: payload.ctaButtonUrl || storefrontDefault,
           replyToCommentPublicly: payload.replyToCommentPublicly,
           publicCommentText: payload.publicCommentText,
-          isActive: payload.isActive,
+          isActive: payload.isActive ?? true,
         }),
       });
       if (!res.ok) {
@@ -172,21 +172,18 @@ export default function DMAutomationPanel() {
 
   const toggleMutation = useMutation({
     mutationFn: async (rule: AutomationRule) => {
+      const nextActive = !rule.isActive;
       const res = await fetch('/api/admin/inbox/automations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspace.id,
+        },
+        credentials: 'include',
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
-          id: rule.id,
-          title: rule.title,
-          triggerKeywords: rule.triggerKeywords,
-          dmMessageText: rule.dmMessageText,
-          ctaButtonTitle: rule.ctaButtonLabel,
-          ctaButtonLabel: rule.ctaButtonLabel,
-          ctaButtonUrl: rule.ctaButtonUrl,
-          replyToCommentPublicly: rule.replyToCommentPublicly,
-          publicCommentText: rule.publicCommentText,
-          isActive: !rule.isActive,
+          id: String(rule.id),
+          isActive: nextActive,
         }),
       });
       if (!res.ok) {
@@ -199,13 +196,63 @@ export default function DMAutomationPanel() {
         }
         throw new Error(message);
       }
-      return res.json().catch(() => ({}));
+      return res.json() as Promise<{
+        success?: boolean;
+        automation?: AutomationRule;
+      }>;
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['dm-automations', activeWorkspace.id] });
+    onMutate: async (rule) => {
+      const key = ['dm-automations', activeWorkspace.id] as const;
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<AutomationsPayload>(key);
+      const nextActive = !rule.isActive;
+      if (previous?.automations) {
+        qc.setQueryData<AutomationsPayload>(key, {
+          ...previous,
+          automations: previous.automations.map((r) =>
+            String(r.id) === String(rule.id)
+              ? { ...r, isActive: nextActive }
+              : r
+          ),
+          kpis: {
+            ...previous.kpis,
+            activeTriggers: previous.automations.reduce((n, r) => {
+              const active =
+                String(r.id) === String(rule.id) ? nextActive : r.isActive;
+              return n + (active ? 1 : 0);
+            }, 0),
+          },
+        });
+      }
+      return { previous };
     },
-    onError: (err) => {
+    onError: (err, _rule, ctx) => {
+      if (ctx?.previous) {
+        qc.setQueryData(
+          ['dm-automations', activeWorkspace.id],
+          ctx.previous
+        );
+      }
       toast.error(err instanceof Error ? err.message : 'Toggle failed');
+    },
+    onSuccess: (json) => {
+      if (json?.automation) {
+        const key = ['dm-automations', activeWorkspace.id] as const;
+        const current = qc.getQueryData<AutomationsPayload>(key);
+        if (current?.automations) {
+          qc.setQueryData<AutomationsPayload>(key, {
+            ...current,
+            automations: current.automations.map((r) =>
+              String(r.id) === String(json.automation!.id)
+                ? { ...r, ...json.automation }
+                : r
+            ),
+          });
+        }
+      }
+      void qc.invalidateQueries({
+        queryKey: ['dm-automations', activeWorkspace.id],
+      });
     },
   });
 
@@ -621,8 +668,9 @@ export default function DMAutomationPanel() {
                     type="button"
                     role="switch"
                     aria-checked={rule.isActive}
+                    disabled={toggleMutation.isPending}
                     onClick={() => toggleMutation.mutate(rule)}
-                    className={`relative h-11 min-h-[44px] w-[52px] rounded-full transition-colors ${
+                    className={`relative h-11 min-h-[44px] w-[52px] rounded-full transition-colors disabled:opacity-60 ${
                       rule.isActive ? 'bg-emerald-500' : 'bg-slate-200'
                     }`}
                   >

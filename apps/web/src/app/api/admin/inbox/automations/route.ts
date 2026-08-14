@@ -15,20 +15,10 @@ import {
   ensureDmAutomationsSchema,
   getDmAutomationCtaColumns,
 } from '@/lib/dm-automations/schema';
+import { cleanTriggerKeywords } from '@/lib/dm-automations/keywords';
 
 function parseKeywords(input: unknown): string[] {
-  if (Array.isArray(input)) {
-    return input
-      .map((k) => String(k).trim().replace(/^#+/, ''))
-      .filter(Boolean);
-  }
-  if (typeof input === 'string') {
-    return input
-      .split(/[,;\n]+/)
-      .map((k) => k.trim().replace(/^#+/, ''))
-      .filter(Boolean);
-  }
-  return [];
+  return cleanTriggerKeywords(input);
 }
 
 async function resolveWorkspaceId(
@@ -78,11 +68,7 @@ function mapRule(row: Record<string, unknown>) {
 
   let triggerKeywords: string[] = [];
   try {
-    if (Array.isArray(row.trigger_keywords)) {
-      triggerKeywords = (row.trigger_keywords as unknown[]).map(String);
-    } else if (typeof row.trigger_keywords === 'string') {
-      triggerKeywords = parseKeywords(row.trigger_keywords);
-    }
+    triggerKeywords = parseKeywords(row.trigger_keywords);
   } catch {
     triggerKeywords = [];
   }
@@ -273,6 +259,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Persist cleaned lowercase keywords, e.g. ['mer', 'kurs', 'masterclass'].
+    console.log('[automations] cleaned trigger_keywords', {
+      workspaceId,
+      keywords,
+    });
+
     const title =
       String(body.title ?? '').trim() || 'New DM Automation';
     const dmMessageText = String(
@@ -304,6 +296,7 @@ export async function POST(request: Request) {
     const publicCommentText = String(
       body.publicCommentText ?? body.public_comment_text ?? ''
     ).trim();
+    // Default active when omitted (create + toggle-safe).
     const isActive =
       body.isActive === undefined && body.is_active === undefined
         ? true
@@ -672,6 +665,133 @@ async function updateAutomationRow(input: {
   throw lastError instanceof Error
     ? lastError
     : new Error('Failed to update automation');
+}
+
+/**
+ * PATCH — toggle is_active (and optional lightweight field updates).
+ * Body: { id, workspaceId, isActive } — keywords optional when only toggling.
+ */
+export async function PATCH(request: Request) {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    let body: Record<string, unknown> = {};
+    try {
+      const raw = await request.text();
+      body = raw.trim() ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    const workspaceId = await resolveWorkspaceId(
+      request,
+      body.workspaceId ?? body.workspace_id
+    );
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: 'workspaceId required' },
+        { status: 400 }
+      );
+    }
+
+    const idRaw = body.id ?? body.automationId;
+    const id =
+      idRaw != null &&
+      String(idRaw).trim() !== '' &&
+      String(idRaw).trim() !== 'NaN'
+        ? String(idRaw).trim()
+        : null;
+    if (!id) {
+      return NextResponse.json({ error: 'id required' }, { status: 400 });
+    }
+
+    if (!process.env.DATABASE_URL?.trim()) {
+      return NextResponse.json(
+        { error: 'DATABASE_URL required' },
+        { status: 503 }
+      );
+    }
+
+    try {
+      await ensureDmAutomationsSchema();
+    } catch {
+      /* best-effort */
+    }
+
+    const hasIsActive =
+      body.isActive !== undefined || body.is_active !== undefined;
+    if (!hasIsActive) {
+      return NextResponse.json(
+        { error: 'isActive required for PATCH' },
+        { status: 400 }
+      );
+    }
+    const isActive = Boolean(body.isActive ?? body.is_active);
+
+    // Optional keyword re-clean when provided with PATCH.
+    const maybeKeywords = body.triggerKeywords ?? body.trigger_keywords;
+    if (maybeKeywords !== undefined) {
+      const keywords = parseKeywords(maybeKeywords);
+      if (keywords.length === 0) {
+        return NextResponse.json(
+          { error: 'At least one trigger keyword is required' },
+          { status: 400 }
+        );
+      }
+      const keywordsJson = JSON.stringify(keywords);
+      const rows = await sql`
+        UPDATE public.dm_automations
+        SET
+          is_active = ${isActive},
+          trigger_keywords = (
+            SELECT COALESCE(array_agg(value), '{}'::text[])
+            FROM jsonb_array_elements_text(${keywordsJson}::jsonb) AS value
+          ),
+          updated_at = now()
+        WHERE id = ${id}
+          AND workspace_id = ${workspaceId}
+        RETURNING *
+      `;
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (!row) {
+        return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      }
+      return NextResponse.json({
+        success: true,
+        automation: mapRule(row as Record<string, unknown>),
+      });
+    }
+
+    const rows = await sql`
+      UPDATE public.dm_automations
+      SET is_active = ${isActive}, updated_at = now()
+      WHERE id = ${id}
+        AND workspace_id = ${workspaceId}
+      RETURNING *
+    `;
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row) {
+      return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      automation: mapRule(row as Record<string, unknown>),
+    });
+  } catch (err) {
+    console.error('[PATCH /api/admin/inbox/automations]', err);
+    const message =
+      err instanceof Error ? err.message : 'Failed to update automation';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/** PUT — full create/update (same as POST). */
+export async function PUT(request: Request) {
+  return POST(request);
 }
 
 export async function DELETE(request: Request) {

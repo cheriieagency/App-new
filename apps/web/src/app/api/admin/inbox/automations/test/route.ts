@@ -13,10 +13,11 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
 } from '@/lib/social/persist';
 import { ensureDmAutomationsSchema } from '@/lib/dm-automations/schema';
+import { extractCommentEventsFromWebhook } from '@/lib/dm-automations/engine';
 import {
-  extractCommentEventsFromWebhook,
+  cleanTriggerKeywords,
   findMatchingKeyword,
-} from '@/lib/dm-automations/engine';
+} from '@/lib/dm-automations/keywords';
 async function resolveWorkspaceId(
   request: Request,
   bodyWorkspaceId?: unknown
@@ -394,14 +395,7 @@ export async function POST(request: Request) {
     } | null = null;
 
     for (const rule of activeRules) {
-      const keywords = Array.isArray(rule.trigger_keywords)
-        ? (rule.trigger_keywords as string[]).map(String)
-        : typeof rule.trigger_keywords === 'string'
-          ? String(rule.trigger_keywords)
-              .split(/[,;\n]+/)
-              .map((k) => k.trim())
-              .filter(Boolean)
-          : [];
+      const keywords = cleanTriggerKeywords(rule.trigger_keywords);
       const kw = findMatchingKeyword(commentText, keywords);
       if (kw) {
         const url = String(rule.cta_button_url || '').trim();

@@ -4,12 +4,24 @@
 
 import sql from '@/app/api/utils/sql';
 import { ensureDmAutomationsSchema } from '@/lib/dm-automations/schema';
+import {
+  cleanTriggerKeywords,
+  findMatchingKeyword,
+} from '@/lib/dm-automations/keywords';
 import { ensureSocialAccountsSchema } from '@/lib/social/persist';
 import {
   replyToInstagramComment,
   sendInstagramDmToUser,
   sendInstagramPrivateReply,
 } from '@/lib/meta/graph-api';
+
+// Re-export keyword helpers for existing imports of this module.
+export {
+  cleanTriggerKeywords,
+  commentMatchesKeyword,
+  commentWordTokens,
+  findMatchingKeyword,
+} from '@/lib/dm-automations/keywords';
 
 export type IncomingCommentEvent = {
   commentId: string;
@@ -36,34 +48,6 @@ export type DmAutomationRow = {
   total_dms_sent: number;
   storefront_clicks: number;
 };
-
-function normalizeKeyword(raw: string): string {
-  return raw.trim().replace(/^#+/, '').toLowerCase();
-}
-
-/** True when comment text contains the keyword as a whole token / hashtag. */
-export function commentMatchesKeyword(
-  commentText: string,
-  keyword: string
-): boolean {
-  const kw = normalizeKeyword(keyword);
-  if (!kw) return false;
-  const hay = commentText.toLowerCase();
-  if (hay.includes(`#${kw}`)) return true;
-  // Word-boundary-ish match (letters/digits/_).
-  const re = new RegExp(`(^|[^a-z0-9_])${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9_]|$)`, 'i');
-  return re.test(hay);
-}
-
-export function findMatchingKeyword(
-  commentText: string,
-  keywords: string[]
-): string | null {
-  for (const kw of keywords) {
-    if (commentMatchesKeyword(commentText, kw)) return kw;
-  }
-  return null;
-}
 
 function buildDmBody(rule: DmAutomationRow): string {
   const text = String(rule.dm_message_text || '').trim();
@@ -172,9 +156,7 @@ async function loadActiveRules(workspaceId: string): Promise<DmAutomationRow[]> 
     id: String(r.id),
     workspace_id: String(r.workspace_id),
     title: String(r.title || 'Rule'),
-    trigger_keywords: Array.isArray(r.trigger_keywords)
-      ? (r.trigger_keywords as string[]).map(String)
-      : [],
+    trigger_keywords: cleanTriggerKeywords(r.trigger_keywords) || [],
     dm_message_text: String(r.dm_message_text || ''),
     cta_button_label:
       r.cta_button_title != null
