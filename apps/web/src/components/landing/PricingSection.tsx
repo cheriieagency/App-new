@@ -194,6 +194,7 @@ export function PricingSection() {
                   { key: 'planC3' as const, bold: false, check: 'pink' as const },
                   { key: 'planC4' as const, bold: false, check: 'pink' as const },
                   { key: 'planC5' as const, bold: false, check: 'pink' as const },
+                  { key: 'planC8' as const, bold: false, check: 'pink' as const },
                   { key: 'planC6' as const, bold: false, check: 'pink' as const },
                   { key: 'planC7' as const, bold: false, check: 'pink' as const },
                 ] as const
@@ -264,6 +265,7 @@ export function PricingSection() {
                   { key: 'planP3' as const, highlight: false },
                   { key: 'planP4' as const, highlight: false },
                   { key: 'planP5' as const, highlight: false },
+                  { key: 'planP7' as const, highlight: false },
                   { key: 'planP6' as const, highlight: false },
                 ] as const
               ).map((f) => (

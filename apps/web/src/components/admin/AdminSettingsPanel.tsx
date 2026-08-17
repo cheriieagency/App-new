@@ -87,6 +87,12 @@ const TIERS = [
     socialSets: 1,
     profiles: 8,
     price: 'Free',
+    highlights: [
+      '8% sales fee',
+      'Bio link & 1 community',
+      'Email CRM (no broadcasts)',
+      'Social Inbox & DMs locked',
+    ],
   },
   {
     id: 'creator' as const,
@@ -94,6 +100,12 @@ const TIERS = [
     socialSets: 2,
     profiles: 16,
     price: '199 SEK/mo',
+    highlights: [
+      '2.5% sales fee',
+      'Classroom & broadcasts',
+      'Social Inbox & Instagram DMs',
+      '2 teammate seats',
+    ],
   },
   {
     id: 'pro' as const,
@@ -101,6 +113,12 @@ const TIERS = [
     socialSets: 6,
     profiles: 48,
     price: '699 SEK/mo',
+    highlights: [
+      '0% platform fee',
+      'Custom domain & AI Copilot',
+      'Social Inbox & Instagram DMs',
+      '5 teammate seats',
+    ],
   },
 ];
 
@@ -829,6 +847,16 @@ export default function AdminSettingsPanel() {
                           {tier.socialSets} Social Set{tier.socialSets > 1 ? 's' : ''} /{' '}
                           {tier.profiles} Profiles
                         </p>
+                        <ul className="mt-2.5 space-y-1">
+                          {tier.highlights.map((line) => (
+                            <li
+                              key={line}
+                              className="text-[11px] font-medium text-slate-500 leading-snug"
+                            >
+                              · {line}
+                            </li>
+                          ))}
+                        </ul>
                         <p className="text-[11px] font-mono font-bold text-slate-400 mt-2 uppercase tracking-wide">
                           {tier.price}
                         </p>

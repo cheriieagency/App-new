@@ -15,6 +15,7 @@ export type PlanFeatureKey =
   | 'emailCRM'
   | 'emailBroadcasts'
   | 'coursesAndVideoHosting'
+  | 'directMessages'
   | 'customDomain'
   | 'aiCopilotSuite'
   | 'prioritySupport';
@@ -56,6 +57,7 @@ export const PLAN_LIMITS: Record<WorkspacePlan, PlanLimits> = {
       emailCRM: true,
       emailBroadcasts: false,
       coursesAndVideoHosting: false,
+      directMessages: false,
       customDomain: false,
       aiCopilotSuite: false,
       prioritySupport: false,
@@ -76,6 +78,7 @@ export const PLAN_LIMITS: Record<WorkspacePlan, PlanLimits> = {
       emailCRM: true,
       emailBroadcasts: true,
       coursesAndVideoHosting: true,
+      directMessages: true,
       customDomain: false,
       aiCopilotSuite: false,
       prioritySupport: false,
@@ -96,6 +99,7 @@ export const PLAN_LIMITS: Record<WorkspacePlan, PlanLimits> = {
       emailCRM: true,
       emailBroadcasts: true,
       coursesAndVideoHosting: true,
+      directMessages: true,
       customDomain: true,
       aiCopilotSuite: true,
       prioritySupport: true,

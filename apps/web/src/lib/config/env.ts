@@ -75,7 +75,10 @@ export const metaEnv = {
 // 3. TikTok Developer API
 // ---------------------------------------------------------------------------
 export const tiktokEnv = {
-  clientKey: () => readEnv('TIKTOK_CLIENT_KEY'),
+  /** process.env.TIKTOK_CLIENT_KEY — Login Kit / Display API client key */
+  clientKey: () =>
+    readEnv('TIKTOK_CLIENT_KEY') || readEnv('TIKTOK_CLIENT_ID'),
+  /** process.env.TIKTOK_CLIENT_SECRET — Login Kit client secret */
   clientSecret: () => readEnv('TIKTOK_CLIENT_SECRET'),
   requiredKeys: ['TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET'] as const,
 };
@@ -132,10 +135,14 @@ export const pinterestEnv = {
 
 /**
  * Public app origin for OAuth redirect_uri builders.
- * Prefers NEXT_PUBLIC_APP_URL, then the request origin, then production clikd:.
+ * Prefers NEXTAUTH_URL (Auth.js) → BETTER_AUTH_URL → NEXT_PUBLIC_APP_URL,
+ * then the request origin, then production clikd:.
  */
 export function appBaseUrl(requestOrigin?: string | null): string {
-  const fromEnv = readEnv('NEXT_PUBLIC_APP_URL');
+  const fromEnv =
+    readEnv('NEXTAUTH_URL') ||
+    readEnv('BETTER_AUTH_URL') ||
+    readEnv('NEXT_PUBLIC_APP_URL');
   const candidate =
     fromEnv || requestOrigin?.trim() || 'https://clikd.app';
   try {

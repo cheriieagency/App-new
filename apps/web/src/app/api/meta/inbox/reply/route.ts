@@ -21,12 +21,16 @@ import {
   getMetaSyncSnapshot,
   setMetaSyncSnapshot,
 } from '@/lib/meta/sync';
+import { requireFeature } from '@/lib/plan-guard';
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const dmGate = await requireFeature('directMessages', await headers());
+  if (dmGate) return dmGate;
 
   let body: {
     commentId?: string;

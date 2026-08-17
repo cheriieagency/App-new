@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   Inbox,
   Link2,
+  Lock,
   Mail,
   Megaphone,
   Pencil,
@@ -37,6 +38,7 @@ import {
 } from '@/lib/mock-media-library';
 import {
   PLAN_DISPLAY_NAME,
+  hasFeature,
   normalizeWorkspacePlan,
   type WorkspacePlan,
 } from '@/lib/config/plans';
@@ -813,6 +815,13 @@ export default function AdminSidebar() {
                   <span className="text-[13px] truncate text-left flex-1 tracking-tight">
                     {t(labelKey)}
                   </span>
+                  {key === 'inbox' && !hasFeature(plan, 'directMessages') ? (
+                    <Lock
+                      size={12}
+                      className={`flex-shrink-0 ${active ? 'opacity-80' : 'opacity-45'}`}
+                      aria-label="Requires Creator"
+                    />
+                  ) : null}
                   {badge && (
                     <span
                       className={`text-[11px] font-semibold min-w-[22px] h-[22px] px-1.5 rounded-full inline-flex items-center justify-center tabular-nums ${

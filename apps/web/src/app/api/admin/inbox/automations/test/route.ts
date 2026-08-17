@@ -19,6 +19,8 @@ import {
   findMatchingKeyword,
 } from '@/lib/dm-automations/keywords';
 import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
+import { requireFeature } from '@/lib/plan-guard';
+
 async function resolveWorkspaceId(
   request: Request,
   bodyWorkspaceId?: unknown
@@ -70,6 +72,8 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const planGate = await requireFeature('directMessages', await headers());
+    if (planGate) return planGate;
 
     let body: {
       workspaceId?: unknown;

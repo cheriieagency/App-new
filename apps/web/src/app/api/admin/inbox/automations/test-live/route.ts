@@ -22,6 +22,7 @@ import {
   FACEBOOK_PAGE_SUBSCRIBED_FIELDS,
   isInstagramAccountId,
 } from '@/lib/meta/subscribe-webhooks';
+import { requireFeature } from '@/lib/plan-guard';
 
 const GRAPH_V = 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_V}`;
@@ -1529,6 +1530,8 @@ function buildChecklist(steps: DiagnosticStep[]): Record<ChecklistKey, boolean> 
 
 export async function GET(request: Request) {
   try {
+    const planGate = await requireFeature('directMessages', await headers());
+    if (planGate) return planGate;
     const action = new URL(request.url).searchParams.get('action')?.trim();
     if (action === 'fetch_comments') {
       return await handleFetchComments(request);
@@ -1557,6 +1560,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const planGate = await requireFeature('directMessages', await headers());
+    if (planGate) return planGate;
     return await runLiveDiagnostic(request);
   } catch (error) {
     console.error('[POST /api/admin/inbox/automations/test-live]', error);

@@ -295,6 +295,7 @@ export type ExtraKey =
   | 'planC5'
   | 'planC6'
   | 'planC7'
+  | 'planC8'
   | 'planC0'
   | 'planP1'
   | 'planP2'
@@ -302,6 +303,7 @@ export type ExtraKey =
   | 'planP4'
   | 'planP5'
   | 'planP6'
+  | 'planP7'
   | 'planP0'
   | 'discoverExplore'
   | 'findNordicCommunity'
@@ -1506,6 +1508,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   planC5: 'Email CRM & Broadcasts (2,500 contacts)',
   planC6: 'Reduced 2.5% Platform Fee',
   planC7: '2 seats in your workspace for teammates',
+  planC8: 'Social Inbox & Instagram DMs',
   planP0: 'Everything in Creator, plus…',
   planP1: '0% Platform Fee (Keep 100% revenue)',
   planP2: 'Multiple Communities & 3 Workspaces',
@@ -1513,6 +1516,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   planP4: 'Custom Domain Linking (yourname.se)',
   planP5: 'AI Content & Member Copilot Suite',
   planP6: 'Priority 1:1 Onboarding & Support',
+  planP7: 'Social Inbox & Instagram DMs included',
   discoverExplore: 'Discover & Explore',
   findNordicCommunity: 'Find your next',
   findNordicCommunityAccent: 'Nordic community',
@@ -2725,6 +2729,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   planC5: 'Email CRM & Broadcasts (2,500 kontakter)',
   planC6: 'Reducerad 2,5% plattformsavgift',
   planC7: '2 platser i ditt workspace för teammedlemmar',
+  planC8: 'Social Inbox & Instagram-DM:ar',
   planP0: 'Allt i Creator, plus…',
   planP1: '0% plattformsavgift (behåll 100% av intäkterna)',
   planP2: 'Flera communities & 3 workspaces',
@@ -2732,6 +2737,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   planP4: 'Egen domän (dittnamn.se)',
   planP5: 'AI Content & Member Copilot Suite',
   planP6: 'Prioriterad 1:1 onboarding & support',
+  planP7: 'Social Inbox & Instagram-DM:ar ingår',
   discoverExplore: 'Upptäck & utforska',
   findNordicCommunity: 'Hitta din nästa',
   findNordicCommunityAccent: 'nordiska community',

@@ -2,6 +2,10 @@
  * TikTok OAuth 2.0 helpers (Display API + Content Posting scopes).
  * Docs: https://developers.tiktok.com/doc/oauth-user-access-token-management
  * PKCE (S256) required for authorize → token exchange.
+ *
+ * Note: TikTok Login Kit is a custom OAuth flow (not a NextAuth/Auth.js
+ * provider). Callback must match exactly:
+ *   `${NEXTAUTH_URL|BETTER_AUTH_URL|NEXT_PUBLIC_APP_URL}/api/auth/callback/tiktok`
  */
 
 import { createHash, randomBytes } from 'crypto';
@@ -10,6 +14,8 @@ import { appBaseUrl, tiktokEnv } from '@/lib/config/env';
 export const TIKTOK_OAUTH_STATE_COOKIE = 'clikd_tiktok_oauth_state';
 /** HTTP-only cookie holding the PKCE code_verifier until callback. */
 export const TIKTOK_CODE_VERIFIER_COOKIE = 'tiktok_code_verifier';
+/** Optional post-OAuth landing: `settings` | `inbox`. */
+export const TIKTOK_RETURN_TO_COOKIE = 'clikd_tiktok_return_to';
 
 /** Display + Content Posting scopes requested at authorize time. */
 export const TIKTOK_OAUTH_SCOPES = [
@@ -19,8 +25,57 @@ export const TIKTOK_OAUTH_SCOPES = [
   'video.upload',
 ] as const;
 
+/**
+ * Public origin for TikTok redirect_uri.
+ * Prefer NEXTAUTH_URL (Auth.js convention) → BETTER_AUTH_URL → NEXT_PUBLIC_APP_URL
+ * so authorize + token exchange always share the same registered callback.
+ */
+export function getTikTokOAuthBaseUrl(requestOrigin?: string | null): string {
+  const fromNextAuth = process.env.NEXTAUTH_URL?.trim();
+  const fromBetterAuth = process.env.BETTER_AUTH_URL?.trim();
+  const fromPublic = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const candidate =
+    fromNextAuth ||
+    fromBetterAuth ||
+    fromPublic ||
+    requestOrigin?.trim() ||
+    '';
+  if (candidate) {
+    try {
+      return new URL(candidate).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  return appBaseUrl(requestOrigin);
+}
+
+/**
+ * Explicit TikTok OAuth callback URL registered in the TikTok Developer Portal.
+ * Always: `${configuredBase}/api/auth/callback/tiktok`
+ */
 export function getTikTokCallbackUrl(requestOrigin?: string | null): string {
-  return `${appBaseUrl(requestOrigin)}/api/auth/callback/tiktok`;
+  return `${getTikTokOAuthBaseUrl(requestOrigin)}/api/auth/callback/tiktok`;
+}
+
+/** Resolve where to send the user after a successful TikTok connect. */
+export function getTikTokSuccessRedirectPath(
+  returnTo?: string | null
+): string {
+  const target = (returnTo || '').trim().toLowerCase();
+  if (target === 'inbox' || target === '/inbox' || target === 'admin?tab=inbox') {
+    return '/admin?tab=inbox';
+  }
+  // Default: settings / socials (where Connect TikTok lives).
+  if (
+    target === 'settings' ||
+    target === '/settings' ||
+    target === 'socials' ||
+    target === '/admin/settings/socials'
+  ) {
+    return '/admin/settings/socials';
+  }
+  return '/admin/settings/socials';
 }
 
 /**
@@ -43,6 +98,7 @@ export function buildTikTokLoginUrl(
   requestOrigin?: string | null,
   options?: { forceSelectAccount?: boolean; codeChallenge?: string }
 ): string {
+  // Maps to process.env.TIKTOK_CLIENT_KEY via tiktokEnv.
   const clientKey = tiktokEnv.clientKey();
   if (!clientKey) throw new Error('TIKTOK_CLIENT_KEY is not configured');
 
@@ -51,6 +107,8 @@ export function buildTikTokLoginUrl(
     throw new Error('TikTok PKCE code_challenge is required');
   }
 
+  const redirectUri = getTikTokCallbackUrl(requestOrigin);
+
   // Official Login Kit params only — unsupported keys (prompt, disable_auto_login)
   // can break authorize in the browser.
   // https://developers.tiktok.com/doc/login-kit-web
@@ -58,7 +116,7 @@ export function buildTikTokLoginUrl(
   authUrl.searchParams.set('client_key', clientKey);
   authUrl.searchParams.set('scope', TIKTOK_OAUTH_SCOPES.join(','));
   authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('redirect_uri', getTikTokCallbackUrl(requestOrigin));
+  authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('code_challenge', codeChallenge);
   authUrl.searchParams.set('code_challenge_method', 'S256');
@@ -79,16 +137,39 @@ export type TikTokTokenResponse = {
   token_type?: string;
 };
 
-/** Exchange authorization code for access + refresh tokens (requires PKCE verifier). */
+/** Normalize TikTok error payloads (string or nested object). */
+function tikTokErrorMessage(data: Record<string, unknown>): string | null {
+  if (typeof data.error_description === 'string' && data.error_description) {
+    return data.error_description;
+  }
+  if (typeof data.message === 'string' && data.message) return data.message;
+  if (typeof data.error === 'string' && data.error) return data.error;
+  const nested = data.error;
+  if (nested && typeof nested === 'object') {
+    const obj = nested as Record<string, unknown>;
+    if (typeof obj.message === 'string' && obj.message) return obj.message;
+    if (typeof obj.code === 'string' && obj.code) return obj.code;
+  }
+  return null;
+}
+
+/**
+ * Exchange authorization code for access + refresh tokens (requires PKCE verifier).
+ * POST https://open.tiktokapis.com/v2/oauth/token/
+ * Uses TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET and the same redirect_uri as authorize.
+ */
 export async function exchangeTikTokCode(
   code: string,
   requestOrigin?: string | null,
   codeVerifier?: string | null
 ): Promise<TikTokTokenResponse> {
+  // Maps to process.env.TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET.
   const clientKey = tiktokEnv.clientKey();
   const clientSecret = tiktokEnv.clientSecret();
   if (!clientKey || !clientSecret) {
-    throw new Error('TikTok OAuth credentials missing');
+    throw new Error(
+      'TikTok OAuth credentials missing (TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET)'
+    );
   }
 
   const verifier = codeVerifier?.trim();
@@ -96,12 +177,20 @@ export async function exchangeTikTokCode(
     throw new Error('TikTok PKCE code_verifier is missing');
   }
 
+  // TikTok may return a URL-encoded code; URLSearchParams.get already decodes once.
+  // Strip accidental wrapping whitespace only — do not re-encode.
+  const authCode = code.trim();
+  if (!authCode) throw new Error('TikTok authorization code is empty');
+
+  // Must match the redirect_uri used in buildTikTokLoginUrl / Developer Portal.
+  const redirectUri = getTikTokCallbackUrl(requestOrigin);
+
   const params = new URLSearchParams({
     client_key: clientKey,
     client_secret: clientSecret,
-    code,
+    code: authCode,
     grant_type: 'authorization_code',
-    redirect_uri: getTikTokCallbackUrl(requestOrigin),
+    redirect_uri: redirectUri,
     code_verifier: verifier,
   });
 
@@ -111,18 +200,11 @@ export async function exchangeTikTokCode(
     body: params.toString(),
   });
 
-  const data = (await res.json()) as TikTokTokenResponse & {
-    error?: string;
-    error_description?: string;
-    message?: string;
-  };
+  const data = (await res.json()) as TikTokTokenResponse & Record<string, unknown>;
 
   if (!res.ok || !data.access_token) {
     throw new Error(
-      data.error_description ||
-        data.message ||
-        data.error ||
-        'TikTok token exchange failed'
+      tikTokErrorMessage(data) || `TikTok token exchange failed (${res.status})`
     );
   }
   return data;

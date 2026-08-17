@@ -84,6 +84,7 @@ import BioPublishSuccessDialog from '@/components/admin/BioPublishSuccessDialog'
 import { bioPublicDisplay, bioPublicUrl } from '@/lib/site';
 import { useSubscription } from '@/components/common/useSubscription';
 import UpgradeModal from '@/components/common/UpgradeModal';
+import { FeatureGate } from '@/components/common/FeatureGate';
 import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import {
@@ -2622,7 +2623,13 @@ export default function AdminPage() {
             className={section === 'inbox' ? undefined : 'hidden'}
             aria-hidden={section !== 'inbox'}
           >
-            <SocialInboxPanel />
+            <FeatureGate
+              feature="directMessages"
+              title="Social Inbox & DMs"
+              description="Reply to Instagram DMs and run Comment-to-DM automations on Creator and Pro/Agency."
+            >
+              <SocialInboxPanel />
+            </FeatureGate>
           </div>
         )}
 

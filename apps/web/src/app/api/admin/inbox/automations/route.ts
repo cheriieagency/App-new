@@ -17,9 +17,14 @@ import {
 } from '@/lib/dm-automations/schema';
 import { cleanTriggerKeywords } from '@/lib/dm-automations/keywords';
 import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
+import { requireFeature } from '@/lib/plan-guard';
 
 function parseKeywords(input: unknown): string[] {
   return cleanTriggerKeywords(input);
+}
+
+async function requireDmPlan(): Promise<Response | null> {
+  return requireFeature('directMessages', await headers());
 }
 
 async function resolveWorkspaceId(
@@ -112,6 +117,8 @@ export async function GET(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const planGate = await requireDmPlan();
+    if (planGate) return planGate;
 
     const preferredWorkspaceId = await resolveWorkspaceId(request);
     if (!preferredWorkspaceId) {
@@ -238,6 +245,8 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const planGate = await requireDmPlan();
+    if (planGate) return planGate;
 
     // Safely parse JSON body — never throw on empty/invalid payloads.
     let body: Record<string, unknown> = {};
@@ -731,6 +740,8 @@ export async function PATCH(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const planGate = await requireDmPlan();
+    if (planGate) return planGate;
 
     let body: Record<string, unknown> = {};
     try {
@@ -871,6 +882,8 @@ export async function DELETE(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const planGate = await requireDmPlan();
+    if (planGate) return planGate;
 
     const { searchParams } = new URL(request.url);
     let id = searchParams.get('id');
