@@ -141,6 +141,7 @@ export type NestedDict = {
     mediaLibrary: string;
     socialInbox: string;
     analytics: string;
+    ads: string;
     bioBuilder: string;
     community: string;
     emailCrm: string;
@@ -177,6 +178,7 @@ export type NestedDict = {
     catGeneral: string;
     stickyEmpty: string;
     kanbanEmpty: string;
+    taskDeadline: string;
   };
   socials: {
     title: string;
@@ -358,6 +360,7 @@ export const DICT_EN: NestedDict = {
     mediaLibrary: 'Media Library',
     socialInbox: 'Social Inbox',
     analytics: 'Analytics',
+    ads: 'Ads',
     bioBuilder: 'Bio Builder',
     community: 'Community',
     emailCrm: 'Email CRM',
@@ -395,6 +398,7 @@ export const DICT_EN: NestedDict = {
     catGeneral: 'General',
     stickyEmpty: 'No focus items yet — add your first sticky note.',
     kanbanEmpty: 'No tasks yet',
+    taskDeadline: 'Deadline',
   },
   socials: {
     title: 'Connected Social Accounts',
@@ -579,6 +583,7 @@ export const DICT_SV: NestedDict = {
     mediaLibrary: 'Mediabibliotek',
     socialInbox: 'Social Inbox',
     analytics: 'Analys',
+    ads: 'Annonser',
     bioBuilder: 'Bio Builder',
     community: 'Community',
     emailCrm: 'E-post CRM',
@@ -616,6 +621,7 @@ export const DICT_SV: NestedDict = {
     catGeneral: 'Allmänt',
     stickyEmpty: 'Inga fokuspunkter ännu — lägg till din första lapp.',
     kanbanEmpty: 'Inga uppgifter ännu',
+    taskDeadline: 'Deadline',
   },
   socials: {
     title: 'Anslutna sociala konton',
@@ -1020,6 +1026,7 @@ export const DICT_FI: NestedDict = {
     mediaLibrary: 'Mediakirjasto',
     socialInbox: 'Social Inbox',
     analytics: 'Analytiikka',
+    ads: 'Mainokset',
     bioBuilder: 'Bio Builder',
     community: 'Yhteisö',
     emailCrm: 'Sähköposti-CRM',
@@ -1057,6 +1064,7 @@ export const DICT_FI: NestedDict = {
     catGeneral: 'Yleinen',
     stickyEmpty: 'Ei fokuskohtia vielä — lisää ensimmäinen muistilappu.',
     kanbanEmpty: 'Ei tehtäviä vielä',
+    taskDeadline: 'Määräaika',
   },
   socials: {
     title: 'Yhdistetyt some-tilit',

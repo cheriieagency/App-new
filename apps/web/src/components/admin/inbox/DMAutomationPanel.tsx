@@ -26,7 +26,7 @@ import { adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useLanguage } from '@/lib/locale-context';
-import { localeTag } from '@/lib/i18n';
+import { localeTag, t, tf } from '@/lib/i18n';
 
 type AutomationRule = {
   /** UUID string from public.dm_automations — never coerce with Number(). */
@@ -295,13 +295,19 @@ export default function DMAutomationPanel() {
       }
     },
     onSuccess: () => {
-      toast.success(form.id ? 'Rule updated' : 'Comment-to-DM rule created');
+      toast.success(
+        form.id
+          ? t('toastRuleUpdated', locale)
+          : t('toastCommentToDmCreated', locale)
+      );
       setModalOpen(false);
       setForm(EMPTY_FORM);
       void qc.invalidateQueries({ queryKey: ['dm-automations', activeWorkspace.id] });
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Save failed');
+      toast.error(
+        err instanceof Error ? err.message : t('toastSaveFailed', locale)
+      );
     },
   });
 
@@ -324,7 +330,7 @@ export default function DMAutomationPanel() {
         }),
       });
       if (!res.ok) {
-        let message = `Toggle failed (${res.status})`;
+        let message = t('toastToggleFailed', locale);
         try {
           const errJson = (await res.json()) as { error?: string };
           if (errJson?.error) message = errJson.error;
@@ -375,7 +381,9 @@ export default function DMAutomationPanel() {
           ctx.previous
         );
       }
-      toast.error(err instanceof Error ? err.message : 'Toggle failed');
+      toast.error(
+        err instanceof Error ? err.message : t('toastToggleFailed', locale)
+      );
     },
     onSuccess: (result) => {
       const key = ['dm-automations', activeWorkspace.id] as const;
@@ -421,7 +429,7 @@ export default function DMAutomationPanel() {
         { method: 'DELETE', credentials: 'include' }
       );
       if (!res.ok) {
-        let message = `Failed to delete automation (${res.status})`;
+        let message = t('toastDeleteAutomationFailed', locale);
         try {
           const errJson = (await res.json()) as { error?: string };
           if (errJson?.error) message = errJson.error;
@@ -465,7 +473,7 @@ export default function DMAutomationPanel() {
       return { previous };
     },
     onSuccess: () => {
-      toast.success('Automation rule deleted successfully');
+      toast.success(t('toastAutomationDeleted', locale));
       void qc.invalidateQueries({
         queryKey: ['dm-automations', activeWorkspace.id],
       });
@@ -477,7 +485,11 @@ export default function DMAutomationPanel() {
           ctx.previous
         );
       }
-      toast.error(err instanceof Error ? err.message : 'Failed to delete automation');
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t('toastDeleteAutomationFailed', locale)
+      );
     },
   });
 
@@ -696,7 +708,7 @@ export default function DMAutomationPanel() {
         return;
       }
       if (json.ok) {
-        toast.success('Live diagnostic passed — Comment-to-DM stack looks ready.');
+        toast.success(t('toastLiveDiagnosticPassed', locale));
       } else {
         toast.error(
           json.suggestions?.[0] ||
@@ -726,19 +738,19 @@ export default function DMAutomationPanel() {
         error?: string;
       };
       if (!res.ok || json.success === false) {
-        throw new Error(
-          json.error || `Kunde inte hämta kommentarer (${res.status})`
-        );
+        throw new Error(json.error || t('toastFetchCommentsFailed', locale));
       }
       return Array.isArray(json.comments) ? json.comments : [];
     },
     onSuccess: (comments) => {
       setRecentComments(comments);
       if (comments.length === 0) {
-        toast.message('Inga senaste kommentarer hittades på Instagram.');
+        toast.message(t('toastNoRecentIgComments', locale));
         return;
       }
-      toast.success(`Hämtade ${comments.length} kommentar(er) från Instagram.`);
+      toast.success(
+        tf('toastFetchedIgComments', locale, { count: comments.length })
+      );
       // Auto-select the newest comment for one-click live test.
       const first = comments[0];
       if (first?.id) {
@@ -748,7 +760,9 @@ export default function DMAutomationPanel() {
     },
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : 'Kunde inte hämta kommentarer'
+        err instanceof Error
+          ? err.message
+          : t('toastFetchCommentsFailed', locale)
       );
     },
   });

@@ -90,7 +90,7 @@ export default function CreateWorkspaceModal({
         });
         const brand = profileAsBrandWorkspace(created);
         onCreated(brand);
-        toast.success(`“${created.name}” activated`);
+        toast.success(t('toastWorkspaceActivated', { name: created.name }));
         resetForm();
         onOpenChange(false);
         return;
@@ -111,11 +111,13 @@ export default function CreateWorkspaceModal({
         throw new Error(data.error || 'Failed');
       }
       onCreated(data.workspace);
-      toast.success(`“${data.workspace?.name || name}” activated`);
+      toast.success(
+        t('toastWorkspaceActivated', { name: data.workspace?.name || name })
+      );
       resetForm();
       onOpenChange(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Kunde inte skapa');
+      setError(e instanceof Error ? e.message : t('toastWorkspaceCreateFailed'));
     } finally {
       setSaving(false);
     }
@@ -132,40 +134,40 @@ export default function CreateWorkspaceModal({
       <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader className="text-left">
           <DialogTitle className="font-black text-[#2c3340]">
-            Create new Team Workspace / Brand
+            {t('createBrandWorkspaceTitle')}
           </DialogTitle>
           <DialogDescription className="text-xs text-zinc-500 font-medium">
-            Create a workspace for a brand or team with its own channels and content.
+            {t('createBrandWorkspaceSub')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 pt-1">
           <div>
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-              Brand / Team Workspace Name
+              {t('brandWorkspaceNameLabel')}
             </label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder='e.g. "Acme Brand Scandinavia"'
+              placeholder={t('brandWorkspaceNamePlaceholder')}
               className="h-11 rounded-xl border-zinc-200 font-extrabold"
               autoFocus
             />
           </div>
           <div>
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
-              Social Media Handle
+              {t('socialHandleLabel')}
             </label>
             <Input
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
-              placeholder='e.g. "@acme_official"'
+              placeholder={t('socialHandlePlaceholder')}
               className="h-11 rounded-xl border-zinc-200 font-mono text-sm"
             />
           </div>
           <div>
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
-              Connected Channels
+              {t('connectedChannelsLabel')}
             </p>
             <div className="grid grid-cols-2 gap-2">
               {CHANNELS.map(({ key, label }) => {

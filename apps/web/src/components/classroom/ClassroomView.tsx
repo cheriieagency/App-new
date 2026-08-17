@@ -159,7 +159,7 @@ export default function ClassroomView({
               return next;
             });
             const err = (await r.json().catch(() => ({}))) as { message?: string };
-            toast.error(err.message || 'Could not save lesson progress');
+            toast.error(err.message || t('toastLessonProgressFailed', locale));
             return;
           }
           const data = (await r.json()) as { lesson_ids?: number[] };
@@ -173,11 +173,11 @@ export default function ClassroomView({
             else next.delete(lessonId);
             return next;
           });
-          toast.error('Could not save lesson progress');
+          toast.error(t('toastLessonProgressFailed', locale));
         }
       })();
     },
-    [activeCourse?.id, communityId, completedLessons]
+    [activeCourse?.id, communityId, completedLessons, locale]
   );
 
   if (isLoading) {

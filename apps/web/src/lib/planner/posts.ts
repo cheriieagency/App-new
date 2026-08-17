@@ -18,7 +18,7 @@ import type {
 } from '@/lib/mock-content-planner';
 
 let schemaReady: Promise<void> | null = null;
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -78,6 +78,19 @@ export async function ensurePlannerPostsSchema(): Promise<void> {
     await safeAlter('planner_posts_project_idx', () => sql`
       CREATE INDEX IF NOT EXISTS planner_posts_project_idx
         ON public.planner_posts (user_id, project)
+    `);
+    await safeAlter('planner_posts_share_token', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS share_token text
+    `);
+    await safeAlter('planner_posts_share_enabled', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS share_enabled boolean NOT NULL DEFAULT false
+    `);
+    await safeAlter('planner_posts_share_token_uidx', () => sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS planner_posts_share_token_uidx
+        ON public.planner_posts (share_token)
+        WHERE share_token IS NOT NULL AND share_token <> ''
     `);
 
     schemaVersionApplied = SCHEMA_VERSION;

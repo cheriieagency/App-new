@@ -103,60 +103,6 @@ export async function GET(request: Request) {
       /* soft-fail */
     }
 
-    const totals = fromIso && toIso
-      ? await sql`
-          SELECT
-            COALESCE(SUM(amount_gross_sek), 0)::float AS gross,
-            COALESCE(SUM(amount_net_sek), 0)::float AS net,
-            COUNT(*)::int AS orders
-          FROM public.orders
-          WHERE workspace_id = ${workspaceId}
-            AND status = 'completed'
-            AND provider IN ('stripe', 'manual')
-            AND created_at >= ${fromIso}::timestamptz
-            AND created_at <= ${toIso}::timestamptz
-        `
-      : await sql`
-          SELECT
-            COALESCE(SUM(amount_gross_sek), 0)::float AS gross,
-            COALESCE(SUM(amount_net_sek), 0)::float AS net,
-            COUNT(*)::int AS orders
-          FROM public.orders
-          WHERE workspace_id = ${workspaceId}
-            AND status = 'completed'
-            AND provider IN ('stripe', 'manual')
-        `;
-
-    const byProduct = fromIso && toIso
-      ? await sql`
-          SELECT
-            product_title AS title,
-            COUNT(*)::int AS order_count,
-            COALESCE(SUM(amount_gross_sek), 0)::float AS revenue
-          FROM public.orders
-          WHERE workspace_id = ${workspaceId}
-            AND status = 'completed'
-            AND provider IN ('stripe', 'manual')
-            AND created_at >= ${fromIso}::timestamptz
-            AND created_at <= ${toIso}::timestamptz
-          GROUP BY product_title
-          ORDER BY revenue DESC
-          LIMIT 20
-        `
-      : await sql`
-          SELECT
-            product_title AS title,
-            COUNT(*)::int AS order_count,
-            COALESCE(SUM(amount_gross_sek), 0)::float AS revenue
-          FROM public.orders
-          WHERE workspace_id = ${workspaceId}
-            AND status = 'completed'
-            AND provider IN ('stripe', 'manual')
-          GROUP BY product_title
-          ORDER BY revenue DESC
-          LIMIT 20
-        `;
-
     // Chart: prefer selected range span (capped), else last 30 days.
     const rangeStart = fromIso
       ? new Date(fromIso)
@@ -174,7 +120,62 @@ export async function GET(request: Request) {
           return d;
         })();
 
-    const series = await sql`
+    // Run independent order / wallet queries concurrently (no waterfall).
+    const totalsQuery = fromIso && toIso
+      ? sql`
+          SELECT
+            COALESCE(SUM(amount_gross_sek), 0)::float AS gross,
+            COALESCE(SUM(amount_net_sek), 0)::float AS net,
+            COUNT(*)::int AS orders
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+            AND created_at >= ${fromIso}::timestamptz
+            AND created_at <= ${toIso}::timestamptz
+        `
+      : sql`
+          SELECT
+            COALESCE(SUM(amount_gross_sek), 0)::float AS gross,
+            COALESCE(SUM(amount_net_sek), 0)::float AS net,
+            COUNT(*)::int AS orders
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+        `;
+
+    const byProductQuery = fromIso && toIso
+      ? sql`
+          SELECT
+            product_title AS title,
+            COUNT(*)::int AS order_count,
+            COALESCE(SUM(amount_gross_sek), 0)::float AS revenue
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+            AND created_at >= ${fromIso}::timestamptz
+            AND created_at <= ${toIso}::timestamptz
+          GROUP BY product_title
+          ORDER BY revenue DESC
+          LIMIT 20
+        `
+      : sql`
+          SELECT
+            product_title AS title,
+            COUNT(*)::int AS order_count,
+            COALESCE(SUM(amount_gross_sek), 0)::float AS revenue
+          FROM public.orders
+          WHERE workspace_id = ${workspaceId}
+            AND status = 'completed'
+            AND provider IN ('stripe', 'manual')
+          GROUP BY product_title
+          ORDER BY revenue DESC
+          LIMIT 20
+        `;
+
+    const seriesQuery = sql`
       SELECT
         to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
         COALESCE(SUM(amount_gross_sek), 0)::float AS revenue,
@@ -189,8 +190,8 @@ export async function GET(request: Request) {
       ORDER BY 1 ASC
     `;
 
-    const recent = fromIso && toIso
-      ? await sql`
+    const recentQuery = fromIso && toIso
+      ? sql`
           SELECT
             id, buyer_email, product_title, amount_gross_sek,
             platform_fee_sek, amount_net_sek, created_at
@@ -203,7 +204,7 @@ export async function GET(request: Request) {
           ORDER BY created_at DESC
           LIMIT 10
         `
-      : await sql`
+      : sql`
           SELECT
             id, buyer_email, product_title, amount_gross_sek,
             platform_fee_sek, amount_net_sek, created_at
@@ -215,7 +216,7 @@ export async function GET(request: Request) {
           LIMIT 10
         `;
 
-    let wallet = await sql`
+    const walletQuery = sql`
       SELECT
         COALESCE(wallet_balance_sek, 0)::float AS wallet_balance_sek,
         stripe_connect_account_id,
@@ -224,6 +225,15 @@ export async function GET(request: Request) {
       WHERE id = ${workspaceId}
       LIMIT 1
     `;
+
+    const [totals, byProduct, series, recent, walletRows] = await Promise.all([
+      totalsQuery,
+      byProductQuery,
+      seriesQuery,
+      recentQuery,
+      walletQuery,
+    ]);
+    let wallet = walletRows;
 
     // Soft-refresh Connect status when returning from Stripe onboarding.
     const accountId = wallet?.[0]?.stripe_connect_account_id

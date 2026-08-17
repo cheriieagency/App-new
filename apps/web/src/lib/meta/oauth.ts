@@ -32,6 +32,9 @@ export const META_OAUTH_SCOPES = [
   'instagram_manage_comments',
   'instagram_manage_messages',
   'business_management',
+  // Meta Ads Management (/me/adaccounts + campaign status/budget).
+  'ads_read',
+  'ads_management',
 ] as const;
 
 /** Scopes required for Social Inbox DMs (Page conversations + send). */

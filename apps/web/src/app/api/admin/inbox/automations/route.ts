@@ -143,17 +143,49 @@ export async function GET(request: Request) {
     }
 
     let rows: unknown[] = [];
+    let dmsSentThisMonth = 0;
+    let storefrontClicks = 0;
     try {
-      // Strict: workspace must be owned by session user.
-      rows = await sql`
-        SELECT *
-        FROM public.dm_automations
-        WHERE workspace_id = ${workspaceId}
-          AND workspace_id IN (
-            SELECT id FROM public.workspaces WHERE user_id = ${userId}
-          )
-        ORDER BY id DESC
-      `;
+      // Automations + monthly DM counts are independent — fetch in parallel.
+      const [automationRows, monthStats] = await Promise.all([
+        sql`
+          SELECT *
+          FROM public.dm_automations
+          WHERE workspace_id = ${workspaceId}
+            AND workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id = ${userId}
+            )
+          ORDER BY id DESC
+        `,
+        sql`
+          SELECT COUNT(*)::int AS dms
+          FROM public.dm_logs
+          WHERE workspace_id = ${workspaceId}
+            AND workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id = ${userId}
+            )
+            AND status IN ('sent', 'delivered')
+            AND COALESCE(created_at, sent_at, to_timestamp(0)) >= date_trunc('month', now())
+        `.catch(async () => {
+          try {
+            return await sql`
+              SELECT COUNT(*)::int AS dms
+              FROM public.dm_logs
+              WHERE workspace_id = ${workspaceId}
+                AND workspace_id IN (
+                  SELECT id FROM public.workspaces WHERE user_id = ${userId}
+                )
+                AND status IN ('sent', 'delivered')
+            `;
+          } catch {
+            return [] as unknown[];
+          }
+        }),
+      ]);
+      rows = automationRows as unknown[];
+      dmsSentThisMonth = Number(
+        (monthStats as Array<{ dms?: number }> | null)?.[0]?.dms
+      ) || 0;
     } catch (queryErr) {
       console.warn('[GET automations] query failed', queryErr);
       return emptyAutomationsResponse({ workspaceId });
@@ -166,37 +198,6 @@ export async function GET(request: Request) {
     const automations = rows.map((r) =>
       mapRule(r as Record<string, unknown>)
     );
-
-    let dmsSentThisMonth = 0;
-    let storefrontClicks = 0;
-    try {
-      const monthStats = await sql`
-        SELECT COUNT(*)::int AS dms
-        FROM public.dm_logs
-        WHERE workspace_id = ${workspaceId}
-          AND workspace_id IN (
-            SELECT id FROM public.workspaces WHERE user_id = ${userId}
-          )
-          AND status IN ('sent', 'delivered')
-          AND COALESCE(created_at, sent_at, to_timestamp(0)) >= date_trunc('month', now())
-      `;
-      dmsSentThisMonth = Number(monthStats?.[0]?.dms) || 0;
-    } catch {
-      try {
-        const fallback = await sql`
-          SELECT COUNT(*)::int AS dms
-          FROM public.dm_logs
-          WHERE workspace_id = ${workspaceId}
-            AND workspace_id IN (
-              SELECT id FROM public.workspaces WHERE user_id = ${userId}
-            )
-            AND status IN ('sent', 'delivered')
-        `;
-        dmsSentThisMonth = Number(fallback?.[0]?.dms) || 0;
-      } catch {
-        dmsSentThisMonth = 0;
-      }
-    }
     try {
       storefrontClicks = automations.reduce(
         (sum, a) => sum + (Number(a.storefrontClicks) || 0),

@@ -15,6 +15,7 @@ import {
   Inbox,
   Link2,
   Mail,
+  Megaphone,
   Pencil,
   Plus,
   Settings,
@@ -67,6 +68,7 @@ const NAV: NavItem[] = [
   { key: 'projects', labelKey: 'admin.projects', icon: FolderKanban, href: '/admin?tab=projects' },
   { key: 'inbox', labelKey: 'admin.socialInbox', icon: Inbox, href: '/admin?tab=inbox' },
   { key: 'analytics', labelKey: 'admin.analytics', icon: BarChart3, href: '/admin?tab=analytics' },
+  { key: 'ads', labelKey: 'admin.ads', icon: Megaphone, href: '/ads' },
   { key: 'biobuilder', labelKey: 'admin.bioBuilder', icon: Link2, href: '/admin?tab=biobuilder' },
   { key: 'community', labelKey: 'admin.community', icon: Users, href: '/admin?tab=community' },
   { key: 'email', labelKey: 'admin.emailCrm', icon: Mail, href: '/admin?tab=email' },
@@ -81,6 +83,7 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const onPlanner = pathname.startsWith('/planner');
+  const onAds = pathname.startsWith('/ads');
   const {
     section,
     setSection,
@@ -167,9 +170,9 @@ export default function AdminSidebar() {
       queryClient.invalidateQueries({ queryKey: ['media-folders'] });
       queryClient.invalidateQueries({ queryKey: ['media-folder', vars.id] });
       setRenamingFolderId(null);
-      toast.success('Folder renamed');
+      toast.success(t('toastFolderRenamed'));
     },
-    onError: () => toast.error('Could not rename folder'),
+    onError: () => toast.error(t('toastFolderRenameFailed')),
   });
 
   const reorderProjectsMutation = useMutation({
@@ -188,7 +191,7 @@ export default function AdminSidebar() {
     },
     onError: () => {
       queryClient.invalidateQueries({ queryKey: ['planner-campaigns'] });
-      toast.error('Could not reorder projects');
+      toast.error(t('toastReorderProjectsFailed'));
     },
   });
 
@@ -219,7 +222,7 @@ export default function AdminSidebar() {
     },
     onError: () => {
       queryClient.invalidateQueries({ queryKey: ['media-folders'] });
-      toast.error('Could not reorder folders');
+      toast.error(t('toastReorderFoldersFailed'));
     },
   });
 
@@ -323,7 +326,9 @@ export default function AdminSidebar() {
               const active =
                 key === 'calendar'
                   ? onPlanner || section === 'calendar'
-                  : !onPlanner && section === key;
+                  : key === 'ads'
+                    ? onAds || section === 'ads'
+                    : !onPlanner && !onAds && section === key;
               const className = [
                 'w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 transition-all duration-200',
                 active
@@ -777,11 +782,23 @@ export default function AdminSidebar() {
                 <Link
                   key={key}
                   href={href}
-                  onClick={() => {
+                  onClick={(e) => {
                     setProjectsOpen(false);
                     setMediaOpen(false);
-                    // Planner lives on /planner — don't rewrite the admin URL to ?tab=calendar.
-                    if (key !== 'calendar') setSection(key);
+                    // Dedicated studio routes — navigate hard so we never stick on /admin?tab=….
+                    if (key === 'calendar') {
+                      e.preventDefault();
+                      setSection('calendar');
+                      router.push('/planner');
+                      return;
+                    }
+                    if (key === 'ads') {
+                      e.preventDefault();
+                      setSection('ads');
+                      router.push('/ads');
+                      return;
+                    }
+                    setSection(key);
                   }}
                   prefetch={true}
                   className={className}

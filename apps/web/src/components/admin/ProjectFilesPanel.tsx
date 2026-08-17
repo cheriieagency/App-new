@@ -11,6 +11,8 @@ import {
   Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 import { adminCardClass } from '@/components/admin/AdminUi';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import type { CampaignLabel } from '@/lib/mock-content-planner';
@@ -65,6 +67,7 @@ export default function ProjectFilesPanel({
   campaign,
   headerExtra,
 }: ProjectFilesPanelProps) {
+  const { locale } = useLanguage();
   const { activeWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -129,9 +132,9 @@ export default function ProjectFilesPanel({
       setCreatingFolder(false);
       setFolderName('');
       setActiveFolderId(res.folder.id);
-      toast.success('Folder created');
+      toast.success(t('toastFolderCreated', locale));
     },
-    onError: () => toast.error('Could not create folder'),
+    onError: () => toast.error(t('toastFolderCreateFailed', locale)),
   });
 
   const deleteFolderMutation = useMutation({
@@ -155,15 +158,17 @@ export default function ProjectFilesPanel({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-files', campaign.id] });
       setActiveFolderId(null);
-      toast.success('Folder deleted');
+      toast.success(t('toastFolderDeleted', locale));
     },
-    onError: () => toast.error('Could not delete folder'),
+    onError: () => toast.error(t('toastFolderDeleteFailed', locale)),
   });
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const result = await upload({ file });
-      if (!result.url) throw new Error(result.error || 'Upload failed');
+      if (!result.url) {
+        throw new Error(result.error || t('toastUploadFailed', locale));
+      }
       const r = await fetch('/api/planner/project-files', {
         method: 'POST',
         headers: {
@@ -186,10 +191,12 @@ export default function ProjectFilesPanel({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-files', campaign.id] });
-      toast.success('File uploaded');
+      toast.success(t('toastFileUploaded', locale));
     },
     onError: (err) =>
-      toast.error(err instanceof Error ? err.message : 'Upload failed'),
+      toast.error(
+        err instanceof Error ? err.message : t('toastUploadFailed', locale)
+      ),
   });
 
   const deleteFileMutation = useMutation({
@@ -213,9 +220,9 @@ export default function ProjectFilesPanel({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-files', campaign.id] });
-      toast.success('File deleted');
+      toast.success(t('toastFileDeleted', locale));
     },
-    onError: () => toast.error('Could not delete file'),
+    onError: () => toast.error(t('toastFileDeleteFailed', locale)),
   });
 
   const onFiles = (list: FileList | null) => {

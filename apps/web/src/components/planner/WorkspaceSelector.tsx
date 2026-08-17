@@ -14,6 +14,7 @@ import {
 } from '@/lib/mock-content-planner';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 function BrandAvatar({
   workspace,
@@ -24,22 +25,24 @@ function BrandAvatar({
   size?: number;
   round?: boolean;
 }) {
-  const dim = `${size}px`;
   const radius = round ? 'rounded-full' : 'rounded-xl';
   if (workspace.avatar_url) {
     return (
-      <img
+      <OptimizedImage
         src={workspace.avatar_url}
         alt=""
+        width={size}
+        height={size}
+        sizes={`${size}px`}
         className={`${radius} object-cover flex-shrink-0`}
-        style={{ width: dim, height: dim, background: workspace.color }}
+        style={{ background: workspace.color }}
       />
     );
   }
   return (
     <div
       className={`${radius} flex items-center justify-center text-white font-black flex-shrink-0`}
-      style={{ width: dim, height: dim, background: workspace.color, fontSize: size * 0.38 }}
+      style={{ width: size, height: size, background: workspace.color, fontSize: size * 0.38 }}
     >
       {workspace.name?.[0] ?? 'B'}
     </div>

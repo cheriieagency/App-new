@@ -15,6 +15,7 @@ import {
   PLAN_LIMITS,
   type WorkspacePlan,
 } from '@/lib/config/plans';
+import { useLanguage } from '@/lib/i18n';
 import { planLabel } from '@/components/admin/AdminPlanModal';
 
 const UPGRADE_CARDS: {
@@ -59,6 +60,7 @@ export default function UpgradeModal({
   onOpenChange,
   minPlan = 'creator',
 }: UpgradeModalProps) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const cards = UPGRADE_CARDS.filter((c) =>
     minPlan === 'pro' ? c.id === 'pro' : true
@@ -77,10 +79,10 @@ export default function UpgradeModal({
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-workspace-plan'] });
       queryClient.invalidateQueries({ queryKey: ['planner-team'] });
-      toast.success(`Switched to ${planLabel(data.plan)}`);
+      toast.success(t('toastPlanSwitched', { plan: planLabel(data.plan) }));
       onOpenChange(false);
     },
-    onError: () => toast.error('Could not update plan'),
+    onError: () => toast.error(t('toastUpdatePlanFailed')),
   });
 
   return (

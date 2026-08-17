@@ -15,6 +15,7 @@ import {
   saveTimezone,
 } from '@/lib/settings-prefs';
 import { t, type Locale } from '@/lib/i18n';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 type ProfileTabProps = {
   locale: Locale;
@@ -70,7 +71,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
 
   const persistAvatar = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      toast.error('Please choose an image file');
+      toast.error(t('toastChooseImageFile', locale));
       return;
     }
     const formData = new FormData();
@@ -84,21 +85,21 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
         // Fallback through useUpload without bucket if dedicated bucket fails.
         const fallback = await upload({ file });
         if (fallback.error || !fallback.url) {
-          toast.error(data.error || fallback.error || 'Upload failed');
+          toast.error(data.error || fallback.error || t('toastUploadFailed', locale));
           return;
         }
         setAvatarUrl(fallback.url);
         await authClient.updateUser({ image: fallback.url });
         flash(t('flashDisplayNameSaved', locale));
-        toast.success('Profile photo updated');
+        toast.success(t('toastProfilePhotoUpdated', locale));
         return;
       }
       setAvatarUrl(data.url);
       await authClient.updateUser({ image: data.url });
       flash(t('flashDisplayNameSaved', locale));
-      toast.success('Profile photo updated');
+      toast.success(t('toastProfilePhotoUpdated', locale));
     } catch {
-      toast.error('Could not upload profile photo');
+      toast.error(t('toastProfilePhotoUploadFailed', locale));
     }
   };
 
@@ -143,13 +144,13 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
         body: JSON.stringify({ confirm: 'DELETE' }),
       });
       if (!res.ok) {
-        toast.error('Could not delete account — contact support');
+        toast.error(t('toastDeleteAccountFailed', locale));
         setDeleting(false);
         return;
       }
       await signOutAndRedirect('/');
     } catch {
-      toast.error('Could not delete account');
+      toast.error(t('toastDeleteAccountFailed', locale));
       setDeleting(false);
     }
   };
@@ -162,7 +163,9 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
       >
         <div className="space-y-5">
           <div>
-            <p className="text-sm font-semibold text-slate-800 mb-2">Profile photo</p>
+            <p className="text-sm font-semibold text-slate-800 mb-2">
+              {t('profilePhotoLabel', locale)}
+            </p>
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -183,8 +186,13 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                 className="relative h-20 w-20 min-h-[80px] min-w-[80px] rounded-full overflow-hidden border-2 border-white shadow-sm bg-[#2B2568] text-white font-extrabold text-2xl flex items-center justify-center"
               >
                 {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                  <OptimizedImage
+                    src={avatarUrl}
+                    alt=""
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
                 ) : (
                   initial
                 )}
@@ -206,7 +214,9 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                   disabled={uploading}
                   className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
-                  {uploading ? 'Uploading…' : 'Upload photo'}
+                  {uploading
+                    ? t('uploadingEllipsis', locale)
+                    : t('uploadPhoto', locale)}
                 </button>
                 <p className="text-[11px] text-slate-400 font-medium mt-1.5">
                   Drag & drop or click · PNG/JPG · saved to avatars storage
@@ -246,8 +256,8 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
           </FieldRow>
 
           <FieldRow
-            label="Timezone"
-            hint="Used for calendars, reports, and scheduled posts."
+            label={t('timezoneLabel', locale)}
+            hint={t('timezoneHint', locale)}
           >
             <select
               value={timezone}
@@ -261,7 +271,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                   credentials: 'include',
                   body: JSON.stringify({ timezone: next }),
                 }).then(async (r) => {
-                  if (!r.ok) toast.error('Could not save timezone');
+                  if (!r.ok) toast.error(t('toastTimezoneSaveFailed', locale));
                 });
               }}
               className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:outline-none"
@@ -401,6 +411,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
         onClose={() => setDeleteOpen(false)}
         onConfirm={confirmDelete}
         busy={deleting}
+        locale={locale}
       />
     </>
   );

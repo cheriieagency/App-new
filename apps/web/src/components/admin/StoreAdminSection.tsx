@@ -237,13 +237,15 @@ export default function StoreAdminSection({
       }
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Could not save offer');
+      toast.error(
+        err instanceof Error ? err.message : t('toastCouldNotSaveOffer', locale)
+      );
     },
   });
 
   const handleImage = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      toast.error('Please choose an image file');
+      toast.error(t('toastChooseImageFile', locale));
       return;
     }
     const result = await upload({ file });
@@ -300,19 +302,19 @@ export default function StoreAdminSection({
 
   const submit = () => {
     if (!hasName) {
-      toast.error('Add an offer title');
+      toast.error(t('toastOfferAddTitle', locale));
       nameRef.current?.focus();
       nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (!hasPrice) {
-      toast.error('Enter a price in SEK (use 0 for free)');
+      toast.error(t('toastOfferEnterPriceSek', locale));
       priceRef.current?.focus();
       priceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (!communityId) {
-      toast.error('Create a community before adding store offers');
+      toast.error(t('toastOfferNeedCommunity', locale));
       return;
     }
     const mapped = productFieldsFromOfferPill(form.offerPill);

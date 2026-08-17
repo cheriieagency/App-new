@@ -18,6 +18,7 @@ export type AdminSection =
   | 'projects'
   | 'inbox'
   | 'analytics'
+  | 'ads'
   | 'biobuilder'
   | 'community'
   | 'email'
@@ -49,6 +50,7 @@ const VALID: AdminSection[] = [
   'projects',
   'inbox',
   'analytics',
+  'ads',
   'biobuilder',
   'community',
   'email',
@@ -61,6 +63,7 @@ function normalizeTabParam(raw: string | null): AdminSection | null {
   if (raw === 'content' || raw === 'event' || raw === 'broadcast') return 'community';
   if (raw === 'planner') return 'calendar';
   if (raw === 'dashboard' || raw === 'command') return 'home';
+  if (raw === 'meta-ads' || raw === 'metaads') return 'ads';
   if (VALID.includes(raw as AdminSection)) return raw as AdminSection;
   return null;
 }
@@ -94,8 +97,17 @@ function writeUrl(
   }
 ) {
   try {
-    // Only rewrite query when already on /admin — never pollute /planner URLs.
+    // Only rewrite query when already on /admin — never pollute /planner or /ads URLs.
     if (!window.location.pathname.startsWith('/admin')) return;
+    // Dedicated routes — never leave the user on /admin?tab=ads|calendar (empty shell).
+    if (tab === 'ads') {
+      window.location.assign('/ads');
+      return;
+    }
+    if (tab === 'calendar') {
+      window.location.assign('/planner');
+      return;
+    }
 
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
@@ -131,6 +143,16 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const path = window.location.pathname;
+    // Dedicated studio routes set the active rail item without ?tab=.
+    if (path.startsWith('/ads')) {
+      setSectionState('ads');
+      return;
+    }
+    if (path.startsWith('/planner')) {
+      setSectionState('calendar');
+      return;
+    }
     const next = normalizeTabParam(params.get('tab'));
     if (next) setSectionState(next);
     const campaign = params.get('campaign');

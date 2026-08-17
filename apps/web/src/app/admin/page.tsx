@@ -1709,10 +1709,38 @@ export default function AdminPage() {
   const { section, setSection } = useAdminNav();
   const { hasConnectedSocials, isLoading: socialsLoading } = useConnectedSocials();
 
+  // Keep heavy admin panels mounted after first visit so tab switches stay instant
+  // (React Query cache + no remount refetch for Analytics / Projects / Bio / etc.).
+  const [mountedTabs, setMountedTabs] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    const keepAlive = [
+      'analytics',
+      'media',
+      'projects',
+      'inbox',
+      'email',
+      'biobuilder',
+    ];
+    if (!keepAlive.includes(section)) return;
+    setMountedTabs((prev) => {
+      if (prev.has(section)) return prev;
+      const next = new Set(prev);
+      next.add(section);
+      return next;
+    });
+  }, [section]);
+
   // Planner is its own route — never show the admin interstitial for ?tab=calendar.
   useEffect(() => {
     if (section === 'calendar') {
       router.replace('/planner');
+    }
+  }, [section, router]);
+
+  // Ads Management lives on /ads — ?tab=ads would leave Admin with an empty main.
+  useEffect(() => {
+    if (section === 'ads') {
+      router.replace('/ads');
     }
   }, [section, router]);
 
@@ -1990,7 +2018,7 @@ export default function AdminPage() {
   });
   const { data: bioData } = useQuery({
     queryKey: ['bio'],
-    enabled: !!session && section === 'biobuilder',
+    enabled: !!session && (section === 'biobuilder' || mountedTabs.has('biobuilder')),
     queryFn: async () => {
       const r = await fetch('/api/admin/bio');
       if (!r.ok) throw new Error('Failed');
@@ -2565,10 +2593,38 @@ export default function AdminPage() {
           <ConnectSocialsEmpty />
         ) : (
           <>
-        {section === 'analytics' && <LaterAnalyticsPanel />}
-        {section === 'media' && <MediaLibraryPanel />}
-        {section === 'projects' && <ProjectsPanel />}
-        {section === 'inbox' && <SocialInboxPanel />}
+        {mountedTabs.has('analytics') && (
+          <div
+            className={section === 'analytics' ? undefined : 'hidden'}
+            aria-hidden={section !== 'analytics'}
+          >
+            <LaterAnalyticsPanel />
+          </div>
+        )}
+        {mountedTabs.has('media') && (
+          <div
+            className={section === 'media' ? undefined : 'hidden'}
+            aria-hidden={section !== 'media'}
+          >
+            <MediaLibraryPanel />
+          </div>
+        )}
+        {mountedTabs.has('projects') && (
+          <div
+            className={section === 'projects' ? undefined : 'hidden'}
+            aria-hidden={section !== 'projects'}
+          >
+            <ProjectsPanel />
+          </div>
+        )}
+        {mountedTabs.has('inbox') && (
+          <div
+            className={section === 'inbox' ? undefined : 'hidden'}
+            aria-hidden={section !== 'inbox'}
+          >
+            <SocialInboxPanel />
+          </div>
+        )}
 
         {/* ── COMMUNITY (includes Event + Sänd Live) ── */}
         {section === 'community' && (
@@ -3182,11 +3238,22 @@ export default function AdminPage() {
         )}
 
         {/* ── EMAIL CRM ── */}
-        {section === 'email' && <EmailAdminPanel />}
+        {mountedTabs.has('email') && (
+          <div
+            className={section === 'email' ? undefined : 'hidden'}
+            aria-hidden={section !== 'email'}
+          >
+            <EmailAdminPanel />
+          </div>
+        )}
 
 
         {/* ── BIO BUILDER — Link in Bio Studio ── */}
-        {section === 'biobuilder' && (
+        {mountedTabs.has('biobuilder') && (
+          <div
+            className={section === 'biobuilder' ? undefined : 'hidden'}
+            aria-hidden={section !== 'biobuilder'}
+          >
           <div className="-mx-4 sm:-mx-6 -mt-6 mb-5">
             {/* Sub-header & CTAs */}
             <div className="bg-white border-b border-slate-200/80 px-4 sm:px-8 py-6">
@@ -3277,9 +3344,7 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-        )}
 
-        {section === 'biobuilder' && (
           <div className="space-y-5">
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -3624,6 +3689,7 @@ export default function AdminPage() {
                 )}
               </div>
             </div>
+          </div>
           </div>
         )}
           </>

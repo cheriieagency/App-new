@@ -135,50 +135,69 @@ export async function fetchMultiPlatformMedia(input: {
   });
   const byPlatform = new Map(tokens.map((row) => [row.platform, row]));
 
-  const out: AnalyticsMediaItem[] = [];
+  // Fire Instagram / Facebook / TikTok media fetches concurrently.
+  const tasks: Array<Promise<AnalyticsMediaItem[]>> = [];
 
   const ig = byPlatform.get('instagram');
   if (ig?.access_token && ig.platform_user_id) {
-    try {
-      const media =
-        input.instagramMedia && input.instagramMedia.length > 0
-          ? input.instagramMedia
-          : await fetchInstagramMedia(ig.platform_user_id, ig.access_token, 25);
-      out.push(...media.map(fromInstagram));
-    } catch (error) {
-      console.warn('[analytics/media] Instagram failed', error);
-    }
+    tasks.push(
+      (async () => {
+        try {
+          const media =
+            input.instagramMedia && input.instagramMedia.length > 0
+              ? input.instagramMedia
+              : await fetchInstagramMedia(ig.platform_user_id!, ig.access_token!, 25);
+          return media.map(fromInstagram);
+        } catch (error) {
+          console.warn('[analytics/media] Instagram failed', error);
+          return [];
+        }
+      })()
+    );
   }
 
   const fb = byPlatform.get('facebook');
   if (fb?.access_token) {
     const pageId = fb.page_id || fb.platform_user_id;
     if (pageId) {
-      try {
-        const posts = await fetchFacebookPagePosts(pageId, fb.access_token, 25);
-        out.push(...posts.map(fromFacebook));
-      } catch (error) {
-        console.warn('[analytics/media] Facebook failed', error);
-      }
+      tasks.push(
+        (async () => {
+          try {
+            const posts = await fetchFacebookPagePosts(pageId, fb.access_token!, 25);
+            return posts.map(fromFacebook);
+          } catch (error) {
+            console.warn('[analytics/media] Facebook failed', error);
+            return [];
+          }
+        })()
+      );
     }
   }
 
   const tt = byPlatform.get('tiktok');
   if (tt?.access_token) {
-    try {
-      const token = await ensureFreshTikTokAccessToken({
-        userId: input.userId,
-        workspaceId: input.workspaceId,
-        accessToken: tt.access_token,
-        refreshToken: tt.refresh_token,
-        expiresAt: tt.expires_at,
-      });
-      const videos = await fetchTikTokVideos(token, 20);
-      out.push(...videos.map(fromTikTok));
-    } catch (error) {
-      console.warn('[analytics/media] TikTok failed', error);
-    }
+    tasks.push(
+      (async () => {
+        try {
+          const token = await ensureFreshTikTokAccessToken({
+            userId: input.userId,
+            workspaceId: input.workspaceId,
+            accessToken: tt.access_token!,
+            refreshToken: tt.refresh_token,
+            expiresAt: tt.expires_at,
+          });
+          const videos = await fetchTikTokVideos(token, 20);
+          return videos.map(fromTikTok);
+        } catch (error) {
+          console.warn('[analytics/media] TikTok failed', error);
+          return [];
+        }
+      })()
+    );
   }
+
+  const batches = await Promise.all(tasks);
+  const out = batches.flat();
 
   // Newest first for stable ranking input.
   return out.sort((a, b) => {

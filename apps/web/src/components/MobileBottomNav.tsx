@@ -58,7 +58,10 @@ const CREATOR_TABS: {
 }[] = [
   {
     href: '/admin',
-    match: (path) => path.startsWith('/admin') || path.startsWith('/planner'),
+    match: (path) =>
+      path.startsWith('/admin') ||
+      path.startsWith('/planner') ||
+      path.startsWith('/ads'),
     key: 'adminShort',
     icon: UserRound,
   },
@@ -77,6 +80,7 @@ export function shouldShowMobileBottomNav(pathname: string) {
     pathname.startsWith('/classroom') ||
     pathname.startsWith('/communities') ||
     pathname.startsWith('/planner') ||
+    pathname.startsWith('/ads') ||
     pathname.startsWith('/live')
   );
 }
@@ -93,7 +97,9 @@ export function MobileBottomNav() {
 
   // Dual-access accounts: chrome follows the surface you're on.
   const onCreatorSurface =
-    pathname.startsWith('/admin') || pathname.startsWith('/planner');
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/planner') ||
+    pathname.startsWith('/ads');
   const showCreatorNav = dualAccess ? onCreatorSurface : isCreator;
   const tabs = showCreatorNav ? CREATOR_TABS : MEMBER_TABS;
 

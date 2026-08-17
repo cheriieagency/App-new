@@ -8,6 +8,7 @@ import { LoginModal } from '@/components/landing/LoginModal';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { usePlatformRole } from '@/lib/use-platform-role';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import {
   Popover,
   PopoverContent,
@@ -150,10 +151,12 @@ export function LandingHeader({ isLoggedIn, user = null }: LandingHeaderProps) {
                 }
               >
                 {user?.image ? (
-                  // Auth provider avatar URL — plain img avoids remote domain config.
-                  <img
+                  <OptimizedImage
                     src={user.image}
                     alt=""
+                    width={32}
+                    height={32}
+                    sizes="32px"
                     className="w-8 h-8 rounded-lg object-cover flex-shrink-0 ring-1 ring-white/20"
                   />
                 ) : (

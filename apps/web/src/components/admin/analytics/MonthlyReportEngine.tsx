@@ -19,6 +19,8 @@ import {
   Wand2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLocale } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 import { adminCardClass } from '@/components/admin/AdminUi';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { getSiteUrl } from '@/lib/site';
@@ -99,6 +101,7 @@ function num(v: unknown) {
 }
 
 export default function MonthlyReportEngine() {
+  const { locale } = useLocale();
   const { activeWorkspace } = useWorkspace();
   const qc = useQueryClient();
   const [tab, setTab] = useState<EngineTab>('directory');
@@ -224,18 +227,20 @@ export default function MonthlyReportEngine() {
         }),
       });
       const json = await r.json();
-      if (!r.ok) throw new Error(json.error || 'Build failed');
+      if (!r.ok) throw new Error(json.error || t('toastBuildFailed', locale));
       return json as { report: ReportRow };
     },
     onSuccess: (json) => {
-      toast.success('Frozen report created');
+      toast.success(t('toastFrozenReportCreated', locale));
       setSelectedReport(json.report);
       setPreviewToken(json.report.public_share_token);
       void qc.invalidateQueries({ queryKey: ['monthly-reports'] });
       setTab('preview');
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Build failed');
+      toast.error(
+        err instanceof Error ? err.message : t('toastBuildFailed', locale)
+      );
     },
   });
 
@@ -270,15 +275,17 @@ export default function MonthlyReportEngine() {
         }),
       });
       const json = await r.json();
-      if (!r.ok) throw new Error(json.error || 'Save failed');
+      if (!r.ok) throw new Error(json.error || t('toastSaveFailed', locale));
       return json;
     },
     onSuccess: () => {
-      toast.success('Automation settings saved');
+      toast.success(t('toastAutomationSaved', locale));
       void qc.invalidateQueries({ queryKey: ['report-automation'] });
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Save failed');
+      toast.error(
+        err instanceof Error ? err.message : t('toastSaveFailed', locale)
+      );
     },
   });
 
@@ -327,17 +334,19 @@ export default function MonthlyReportEngine() {
         }
       );
       const json = await r.json();
-      if (!r.ok) throw new Error(json.error || 'Delete failed');
+      if (!r.ok) throw new Error(json.error || t('toastDeleteFailed', locale));
       return json;
     },
     onSuccess: () => {
-      toast.success('Report deleted');
+      toast.success(t('toastReportDeleted', locale));
       setSelectedReport(null);
       setPreviewToken(null);
       void qc.invalidateQueries({ queryKey: ['monthly-reports', activeWorkspace.id] });
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Delete failed');
+      toast.error(
+        err instanceof Error ? err.message : t('toastDeleteFailed', locale)
+      );
     },
   });
 
@@ -460,7 +469,7 @@ export default function MonthlyReportEngine() {
                         void navigator.clipboard.writeText(
                           shareUrl(r.public_share_token)
                         );
-                        toast.success('Share link copied');
+                        toast.success(t('toastShareLinkCopied', locale));
                       }}
                       className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
                     >
@@ -810,7 +819,7 @@ export default function MonthlyReportEngine() {
                       void navigator.clipboard.writeText(
                         shareUrl(previewReport.public_share_token)
                       );
-                      toast.success('Share link copied');
+                      toast.success(t('toastShareLinkCopied', locale));
                     }}
                     className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
                   >

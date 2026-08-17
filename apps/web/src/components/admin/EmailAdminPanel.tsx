@@ -34,7 +34,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useLocale } from '@/lib/locale-context';
-import { t } from '@/lib/i18n';
+import { t, tf } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import useUpload from '@/utils/useUpload';
@@ -402,7 +402,7 @@ export default function EmailAdminPanel() {
       }))
       .filter((row) => row.email);
     if (!contacts.length) {
-      toast.error('Add at least one email address');
+      toast.error(t('toastAddEmailAddress', locale));
       return;
     }
     importListMutation.mutate(contacts);
@@ -410,7 +410,7 @@ export default function EmailAdminPanel() {
 
   const submitCsvImport = () => {
     if (!csvPreview.length) {
-      toast.error('Upload a CSV with at least one valid email first');
+      toast.error(t('toastUploadCsvFirst', locale));
       return;
     }
     importListMutation.mutate(csvPreview);
@@ -419,7 +419,7 @@ export default function EmailAdminPanel() {
   const onCsvFile = (file: File | null) => {
     if (!file) return;
     if (!/\.csv$/i.test(file.name) && file.type !== 'text/csv') {
-      toast.error('Please upload a .csv file');
+      toast.error(t('toastUploadCsvOnly', locale));
       return;
     }
     const reader = new FileReader();
@@ -430,15 +430,17 @@ export default function EmailAdminPanel() {
         setCsvFileName(file.name);
         setCsvPreview(parsed);
         if (!parsed.length) {
-          toast.error('No valid emails found in that CSV');
+          toast.error(t('toastNoValidEmailsCsv', locale));
         } else {
-          toast.success(`Found ${parsed.length} contact${parsed.length === 1 ? '' : 's'}`);
+          toast.success(
+            tf('toastCsvContactsFound', locale, { count: parsed.length })
+          );
         }
       } catch {
-        toast.error('Could not read that CSV');
+        toast.error(t('toastCsvReadFailed', locale));
       }
     };
-    reader.onerror = () => toast.error('Could not read that CSV');
+    reader.onerror = () => toast.error(t('toastCsvReadFailed', locale));
     reader.readAsText(file);
   };
 

@@ -39,8 +39,8 @@ export default function AiUsageTab({ locale }: AiUsageTabProps) {
       <>
         <FeatureGate
           feature="aiCopilotSuite"
-          title="AI Content & Member Copilot"
-          description="Generate course outlines, posts, and sales emails. Available on Pro."
+          title={t('aiUsageGateTitle', locale)}
+          description={t('aiUsageGateBody', locale)}
         />
         <UpgradeModal
           open={upgradeOpen}
@@ -55,13 +55,13 @@ export default function AiUsageTab({ locale }: AiUsageTabProps) {
     <>
       <SectionBlock
         title={t('settingsNavAi', locale)}
-        subtitle="Track monthly AI word usage across Copilot and automations."
+        subtitle={t('aiUsageGateBody', locale)}
       >
         <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
-                This month
+                {t('aiUsageThisMonth', locale)}
               </p>
               <p className="mt-1 font-mono font-extrabold text-2xl text-slate-900 tabular-nums tracking-tight">
                 {usage.used.toLocaleString()}
@@ -71,7 +71,7 @@ export default function AiUsageTab({ locale }: AiUsageTabProps) {
                 </span>
               </p>
               <p className="text-xs font-medium text-slate-500 mt-0.5">
-                words used
+                {t('aiUsageWordsUsed', locale)}
               </p>
             </div>
             <span

@@ -17,6 +17,8 @@ import {
   Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLocale } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
 import { useSession } from '@/lib/auth-client';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
@@ -66,6 +68,7 @@ export default function CommunityPostsTab({
 }: {
   communityId: number;
 }) {
+  const { locale } = useLocale();
   const { data: session } = useSession();
   const workspaceCtx = useWorkspaceOptional();
   const queryClient = useQueryClient();
@@ -143,11 +146,13 @@ export default function CommunityPostsTab({
       setCategory('announcement');
       setIsPinned(false);
       setMediaUrls([]);
-      toast.success('Posted to community');
+      toast.success(t('toastPostedToCommunity', locale));
       invalidate();
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Could not post');
+      toast.error(
+        err instanceof Error ? err.message : t('toastCouldNotPost', locale)
+      );
     },
   });
 
@@ -204,7 +209,7 @@ export default function CommunityPostsTab({
       setReplyDrafts((d) => ({ ...d, [postId]: '' }));
       invalidate();
     },
-    onError: () => toast.error('Could not add comment'),
+    onError: () => toast.error(t('toastCommentFailed', locale)),
   });
 
   const pinPost = useMutation({
@@ -270,7 +275,7 @@ export default function CommunityPostsTab({
         };
       });
       setMenuOpenId(null);
-      toast.success('Post deleted');
+      toast.success(t('toastPostDeleted', locale));
       invalidate();
     },
   });
@@ -310,14 +315,14 @@ export default function CommunityPostsTab({
       }
       setEditingId(null);
       setMenuOpenId(null);
-      toast.success('Post updated');
+      toast.success(t('toastPostUpdated', locale));
       invalidate();
     },
   });
 
   const handleMedia = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      toast.error('Please choose an image');
+      toast.error(t('toastChooseImage', locale));
       return;
     }
     const local = URL.createObjectURL(file);

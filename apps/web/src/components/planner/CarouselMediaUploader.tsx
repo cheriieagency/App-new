@@ -21,6 +21,8 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLocale } from '@/lib/locale-context';
+import { t, tf } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
 import {
   mediaTypeBadge,
@@ -50,10 +52,14 @@ function isVideoAsset(input: {
 export default function CarouselMediaUploader({
   items,
   onChange,
+  compact = false,
 }: {
   items: PlannerMediaItem[];
   onChange: (items: PlannerMediaItem[]) => void;
+  /** Tighter dropzone + inline source actions for the redesigned Post Studio. */
+  compact?: boolean;
 }) {
+  const { locale } = useLocale();
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -89,10 +95,12 @@ export default function CarouselMediaUploader({
       const next = [...items, ...incoming].slice(0, MAX_ITEMS);
       onChange(next);
       if (items.length + incoming.length > MAX_ITEMS) {
-        toast.message(`Only ${MAX_ITEMS} files per post — extra files skipped`);
+        toast.message(
+          tf('toastExtraFilesSkipped', locale, { count: MAX_ITEMS })
+        );
       }
     },
-    [items, onChange]
+    [items, onChange, locale]
   );
 
   const addFiles = useCallback(
@@ -118,7 +126,7 @@ export default function CarouselMediaUploader({
 
   const addFromLibrary = () => {
     if (!selectedIds.size) {
-      toast.message('Select at least one file');
+      toast.message(t('toastSelectFileFirst', locale));
       return;
     }
     const picked = libraryAssets.filter((a) => selectedIds.has(a.id));
@@ -147,24 +155,39 @@ export default function CarouselMediaUploader({
   };
 
   const badge = mediaTypeBadge(items);
-  const sourceBtn =
-    'inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 bg-white text-[11px] font-extrabold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:pointer-events-none';
+  const sourceBtn = compact
+    ? 'inline-flex items-center justify-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:pointer-events-none'
+    : 'inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 bg-white text-[11px] font-extrabold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:pointer-events-none';
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-          Media
-        </label>
-        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-600">
-          {items.length === 1 && items[0].type === 'video' ? (
-            <Film size={10} />
-          ) : (
-            <ImageIcon size={10} />
-          )}
-          {badge}
-        </span>
-      </div>
+    <div className={compact ? 'space-y-3' : 'space-y-3'}>
+      {!compact ? (
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+            Media
+          </label>
+          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-600">
+            {items.length === 1 && items[0].type === 'video' ? (
+              <Film size={10} />
+            ) : (
+              <ImageIcon size={10} />
+            )}
+            {badge}
+          </span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium text-slate-500">Media</p>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
+            {items.length === 1 && items[0].type === 'video' ? (
+              <Film size={12} />
+            ) : (
+              <ImageIcon size={12} />
+            )}
+            {badge}
+          </span>
+        </div>
+      )}
 
       <input
         ref={fileRef}
@@ -189,35 +212,37 @@ export default function CarouselMediaUploader({
           setDragOver(false);
           void addFiles(e.dataTransfer.files);
         }}
-        className={`relative rounded-2xl border-2 border-dashed min-h-[120px] flex flex-col items-center justify-center gap-2 transition-colors px-3 py-4 ${
+        className={`relative rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 transition-colors px-3 ${
+          compact ? 'min-h-[100px] py-3' : 'min-h-[120px] py-4 border-2'
+        } ${
           atCap
-            ? 'border-zinc-100 bg-zinc-50 opacity-60'
+            ? 'border-slate-100 bg-slate-50/80 opacity-60'
             : dragOver
-              ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)]'
-              : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300'
+              ? 'border-[#F472B6] bg-[#FDF2F8]'
+              : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
         }`}
       >
         {uploading ? (
           <Loader2
-            size={22}
-            className="text-zinc-400"
+            size={compact ? 18 : 22}
+            className="text-slate-400"
             style={{ animation: 'spin 1s linear infinite' }}
           />
         ) : (
           <>
-            <Upload size={22} className="text-zinc-300" />
-            <p className="text-sm font-bold text-zinc-600 text-center">
-              Single Image, Video eller Karusell
+            <Upload size={compact ? 18 : 22} className="text-slate-300" />
+            <p className={`font-semibold text-slate-600 text-center ${compact ? 'text-xs' : 'text-sm'}`}>
+              Single image, video, or carousel
             </p>
-            <p className="text-[11px] text-zinc-400 font-medium text-center px-2">
-              Dra och släpp filer här — eller välj källa nedan (max {MAX_ITEMS})
+            <p className="text-[11px] text-slate-400 font-medium text-center px-2">
+              Drag & drop — or choose a source below (max {MAX_ITEMS})
             </p>
           </>
         )}
       </div>
 
       {/* Source options: device / Media Library / Google Drive */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+      <div className={`flex flex-wrap gap-2 ${compact ? '' : 'flex-col sm:flex-row'}`}>
         <button
           type="button"
           disabled={atCap || uploading}
@@ -225,7 +250,7 @@ export default function CarouselMediaUploader({
           className={sourceBtn}
         >
           <HardDrive size={14} />
-          Från enhet
+          Device
         </button>
         <button
           type="button"
@@ -244,11 +269,13 @@ export default function CarouselMediaUploader({
           className={sourceBtn}
           onImported={(file) => {
             if (!file.fileUrl) {
-              toast.error('Drive import returned no file');
+              toast.error(t('toastDriveImportNoFile', locale));
               return;
             }
             if (atCap) {
-              toast.message(`Max ${MAX_ITEMS} files per post`);
+              toast.message(
+                tf('toastMaxFilesPerPost', locale, { count: MAX_ITEMS })
+              );
               return;
             }
             appendItems([

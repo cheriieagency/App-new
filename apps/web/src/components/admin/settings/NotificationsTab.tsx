@@ -70,7 +70,7 @@ export default function NotificationsTab({
         credentials: 'include',
         body: JSON.stringify({ notification_prefs: next }),
       }).then(async (r) => {
-        if (!r.ok) toast.error('Could not save notification preferences');
+        if (!r.ok) toast.error(t('toastNotifPrefsSaveFailed', locale));
       });
       return next;
     });
@@ -106,13 +106,13 @@ export default function NotificationsTab({
   return (
     <>
       <SectionBlock
-        title="In-App Notifications (Bell)"
+        title={t('notifInAppTitle', locale)}
         subtitle={t('notifInAppHint', locale)}
       >
         <div className="flex items-center gap-2 mb-3 text-slate-500">
           <Bell size={14} />
           <p className="text-[11px] font-bold uppercase tracking-wide">
-            Bell alerts in Creator Admin
+            {t('notifInAppBellHint', locale)}
           </p>
         </div>
         <div className="space-y-3">
@@ -123,7 +123,7 @@ export default function NotificationsTab({
       </SectionBlock>
 
       <SectionBlock
-        title="Email Notifications"
+        title={t('notifEmailTitle', locale)}
         subtitle={t('notifWeeklyDigestHint', locale)}
       >
         <div className="flex items-center gap-2 mb-3 text-slate-500">

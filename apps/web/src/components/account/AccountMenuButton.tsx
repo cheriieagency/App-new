@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { LogOut, Mail, Settings, User } from 'lucide-react';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 export type AccountMenuRow = {
   label: string;
@@ -77,14 +78,19 @@ export default function AccountMenuButton({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`${btnSize} rounded-full overflow-hidden border border-slate-200 shadow-sm bg-slate-900 flex items-center justify-center text-white text-xs font-bold`}
+        className={`${btnSize} relative rounded-full overflow-hidden border border-slate-200 shadow-sm bg-slate-900 flex items-center justify-center text-white text-xs font-bold`}
         title={displayName}
         aria-expanded={open}
         aria-haspopup="menu"
       >
         {user.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.image} alt="" className="w-full h-full object-cover" />
+          <OptimizedImage
+            src={user.image}
+            alt=""
+            fill
+            sizes="44px"
+            className="object-cover"
+          />
         ) : (
           initial
         )}
@@ -103,13 +109,14 @@ export default function AccountMenuButton({
             className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-50 overflow-hidden"
           >
             <div className="px-4 py-4 border-b border-slate-100 flex items-center gap-3">
-              <div className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+              <div className="relative h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                 {user.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <OptimizedImage
                     src={user.image}
                     alt=""
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="44px"
+                    className="object-cover"
                   />
                 ) : (
                   initial

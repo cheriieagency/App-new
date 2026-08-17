@@ -929,6 +929,262 @@ export type ExtraKey =
   | 'instagramDmReplyPlaceholder'
   | 'instagramDmSend'
   | 'instagramNotConnected'
+  // Settings / profile / branding (2026-08 audit)
+  | 'toastChooseImage'
+  | 'toastChooseImageFile'
+  | 'toastUploadFailed'
+  | 'toastLogoUpdated'
+  | 'toastFaviconUpdated'
+  | 'toastBrandingSaveFailed'
+  | 'toastProfilePhotoUpdated'
+  | 'toastProfilePhotoUploadFailed'
+  | 'toastTimezoneSaveFailed'
+  | 'toastNotifPrefsSaveFailed'
+  | 'toastDeleteAccountFailed'
+  | 'orgBrandingTitle'
+  | 'orgBrandingSub'
+  | 'orgNameLabel'
+  | 'orgLogoLabel'
+  | 'orgLogoHint'
+  | 'orgFaviconLabel'
+  | 'uploadLogo'
+  | 'uploadFavicon'
+  | 'profilePhotoLabel'
+  | 'uploadingEllipsis'
+  | 'timezoneLabel'
+  | 'timezoneHint'
+  | 'notifInAppTitle'
+  | 'notifInAppBellHint'
+  | 'notifEmailTitle'
+  | 'deleteAccountTitle'
+  | 'deleteAccountBody'
+  | 'deleteAccountConfirmPlaceholder'
+  | 'deleteAccountConfirm'
+  | 'closeAria'
+  | 'aiUsageThisMonth'
+  | 'aiUsageWordsUsed'
+  | 'aiUsageGateTitle'
+  | 'aiUsageGateBody'
+  // Social accounts
+  | 'toastSelectWorkspaceBeforeConnect'
+  | 'toastSocialConnected'
+  | 'toastPopupBlocked'
+  | 'toastConnectionFailed'
+  | 'toastCouldNotConnect'
+  | 'toastAccountDisconnected'
+  | 'toastDisconnectNetworkError'
+  | 'toastTikTokSessionExpired'
+  | 'toastTikTokSwitchFailed'
+  | 'connectMetaAccountsTitle'
+  | 'connectMetaAccountsSub'
+  | 'resyncMetaWebhooks'
+  | 'connectTikTokTitle'
+  | 'connectTikTokSub'
+  | 'demoModeSimulatedTitle'
+  | 'demoModeSimulatedSub'
+  // Planner / workspace create
+  | 'toastPickScheduleFirst'
+  | 'toastConnectIgFbSettings'
+  | 'toastPostedSuccess'
+  | 'toastSavedScheduled'
+  | 'studioActions'
+  | 'studioPublish'
+  | 'studioSaveOptions'
+  | 'createBrandWorkspaceTitle'
+  | 'createBrandWorkspaceSub'
+  | 'brandWorkspaceNameLabel'
+  | 'brandWorkspaceNamePlaceholder'
+  | 'socialHandleLabel'
+  | 'socialHandlePlaceholder'
+  | 'connectedChannelsLabel'
+  | 'toastWorkspaceActivated'
+  | 'toastWorkspaceCreateFailed'
+  | 'toastWorkspaceSaveFailed'
+  | 'toastWorkspaceDeleteFailed'
+  | 'toastBioSaveFailed'
+  // Classroom
+  | 'toastLessonProgressFailed'
+  | 'pickLessonHint'
+  | 'toastCourseSaved'
+  | 'toastCommunityRequired'
+  | 'classroomEmptyAdminTitle'
+  | 'classroomEmptyAdminBody'
+  // Store / email / sidebar
+  | 'toastOfferTitleRequired'
+  | 'toastOfferPriceRequired'
+  | 'toastOfferCommunityRequired'
+  | 'toastCsvImportSuccess'
+  | 'toastCsvImportFailed'
+  | 'toastFolderRenamed'
+  | 'toastFolderRenameFailed'
+  | 'toastFolderCreated'
+  | 'toastFolderCreateFailed'
+  | 'toastFolderDeleted'
+  | 'toastFolderDeleteFailed'
+  | 'toastReorderProjectsFailed'
+  | 'toastReorderFoldersFailed'
+  | 'toastSelectWorkspaceBeforeConnectShort'
+  | 'toastAllowPopupsConnect'
+  | 'toastCreateProjectFailed'
+  | 'toastHashtagsAdded'
+  | 'toastAddHashtagsFirst'
+  | 'toastSavedToFavourites'
+  | 'toastUpdatePlanFailed'
+  | 'toastPostedToCommunity'
+  | 'toastCommentFailed'
+  | 'toastPostDeleted'
+  | 'toastPostUpdated'
+  | 'toastOfferAddTitle'
+  | 'toastOfferEnterPriceSek'
+  | 'toastOfferNeedCommunity'
+  | 'toastAddEmailAddress'
+  | 'toastUploadCsvFirst'
+  | 'toastUploadCsvOnly'
+  | 'toastNoValidEmailsCsv'
+  | 'toastCsvReadFailed'
+  | 'toastCommunityUnlocked'
+  | 'toastCourseNeedCommunity'
+  | 'toastFileUploaded'
+  | 'toastFileDeleted'
+  | 'toastFileDeleteFailed'
+  | 'toastGoogleDisconnected'
+  | 'toastGoogleDisconnectFailed'
+  | 'toastSelectWorkspaceFirst'
+  | 'toastProjectUpdated'
+  | 'toastProjectUpdateFailed'
+  | 'toastProjectGoalSaved'
+  | 'toastProjectGoalSaveFailed'
+  | 'toastStripeConnectUpdated'
+  | 'toastStripeFinishOnboarding'
+  | 'toastBankAlreadyConnected'
+  | 'toastFrozenReportCreated'
+  | 'toastAutomationSaved'
+  | 'toastReportDeleted'
+  | 'toastShareLinkCopied'
+  | 'toastSelectFileFirst'
+  | 'toastDriveImportNoFile'
+  | 'toastAutomationDeleted'
+  | 'toastLiveDiagnosticPassed'
+  | 'toastSaveFailed'
+  | 'toastPublishFailed'
+  | 'toastPlanSwitched'
+  | 'toastCouldNotPost'
+  | 'toastCouldNotSaveOffer'
+  | 'toastCsvContactsFound'
+  | 'toastCouldNotSaveCourse'
+  | 'toastLinkMediaFolderFailed'
+  | 'toastCreateMediaFolderFailed'
+  | 'toastLinkedMediaFolder'
+  | 'toastCreatedLinkedFolder'
+  | 'toastRevenueLoadFailed'
+  | 'toastStripeConnectStartFailed'
+  | 'toastConnectFailed'
+  | 'toastBuildFailed'
+  | 'toastDeleteFailed'
+  | 'toastMaxFilesPerPost'
+  | 'toastExtraFilesSkipped'
+  | 'toastRuleUpdated'
+  | 'toastCommentToDmCreated'
+  | 'toastToggleFailed'
+  | 'toastDeleteAutomationFailed'
+  | 'toastNoRecentIgComments'
+  | 'toastFetchedIgComments'
+  | 'toastFetchCommentsFailed'
+  | 'toastUpdateProjectLinkFailed'
+  | 'toastUploadedFromDevice'
+  | 'toastMovedToFolder'
+  | 'toastMoveFileFailed'
+  | 'toastDeletedFromLibrary'
+  | 'toastUploadedToFolder'
+  | 'toastImportedFile'
+  | 'toastInviteResent'
+  | 'toastConnectionFailedDetail'
+  // Meta Ads Manager
+  | 'adsEyebrow'
+  | 'adsManagerTitle'
+  | 'adsManagerSub'
+  | 'adsCreateCampaign'
+  | 'adsSyncMeta'
+  | 'adsDemoData'
+  | 'adsPerformance'
+  | 'adsPerformanceSub'
+  | 'adsLast7Days'
+  | 'adsLast30Days'
+  | 'adsSpend'
+  | 'adsConversions'
+  | 'adsRoas'
+  | 'adsCpc'
+  | 'adsTrend'
+  | 'adsNoInsightData'
+  | 'adsCampaigns'
+  | 'adsAdSets'
+  | 'adsAds'
+  | 'adsClearFilter'
+  | 'adsStatus'
+  | 'adsCampaign'
+  | 'adsAdSet'
+  | 'adsAd'
+  | 'adsDailyBudget'
+  | 'adsImpressions'
+  | 'adsClicks'
+  | 'adsActive'
+  | 'adsPaused'
+  | 'adsNoCampaigns'
+  | 'adsNoAdSets'
+  | 'adsNoAds'
+  | 'adsLoading'
+  | 'adsSave'
+  | 'adsDelivery'
+  | 'adsDeliveryActiveHint'
+  | 'adsDeliveryPausedHint'
+  | 'adsPerformanceSection'
+  | 'adsSettings'
+  | 'adsObjective'
+  | 'adsTargeting'
+  | 'adsHeadline'
+  | 'adsCreative'
+  | 'adsNoCreative'
+  | 'adsParentCampaign'
+  | 'adsParentAdSet'
+  | 'adsAdAccount'
+  | 'adsViewAdSets'
+  | 'adsViewAds'
+  | 'adsSaveBudget'
+  | 'adsDetailsCampaign'
+  | 'adsDetailsAdSet'
+  | 'adsDetailsAd'
+  | 'adsMetaSyncNote'
+  | 'adsToastActive'
+  | 'adsToastPaused'
+  | 'adsToastBudget'
+  | 'adsBudgetHint'
+  | 'adsFromDate'
+  | 'adsCreateTitle'
+  | 'adsStepObjective'
+  | 'adsStepAudience'
+  | 'adsStepCreative'
+  | 'adsCampaignName'
+  | 'adsDailyBudgetLabel'
+  | 'adsContinue'
+  | 'adsCancel'
+  | 'adsBack'
+  | 'adsCreateSubmit'
+  | 'adsAiCopywriter'
+  | 'adsCreativeSources'
+  | 'adsFromDevice'
+  | 'adsMediaLibrary'
+  | 'adsDropCreative'
+  | 'adsOrChooseSource'
+  | 'adsRemove'
+  | 'adsSelected'
+  | 'adsObjSales'
+  | 'adsObjLeads'
+  | 'adsObjTraffic'
+  | 'adsObjEngagement'
+  | 'adsObjSalesBlurb'
+  | 'adsObjLeadsBlurb'
+  | 'adsObjTrafficBlurb'
+  | 'adsObjEngagementBlurb'
 
 export type ExtraDict = Record<ExtraKey, string>;
 
@@ -1893,6 +2149,261 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   aiHashtagSetFor: 'For {topic}',
   hashtagColTag: 'Hashtag',
   hashtagColPosts: 'Posts',
+  toastChooseImage: 'Please choose an image',
+  toastChooseImageFile: 'Please choose an image file',
+  toastUploadFailed: 'Upload failed',
+  toastLogoUpdated: 'Logo updated',
+  toastFaviconUpdated: 'Favicon updated',
+  toastBrandingSaveFailed: 'Could not save branding to database',
+  toastProfilePhotoUpdated: 'Profile photo updated',
+  toastProfilePhotoUploadFailed: 'Could not upload profile photo',
+  toastTimezoneSaveFailed: 'Could not save timezone',
+  toastNotifPrefsSaveFailed: 'Could not save notification preferences',
+  toastDeleteAccountFailed: 'Could not delete account — contact support',
+  orgBrandingTitle: 'Organization branding',
+  orgBrandingSub: 'Name and assets shown across your creator brand.',
+  orgNameLabel: 'Organization name',
+  orgLogoLabel: 'Organization logo',
+  orgLogoHint: 'Square PNG/JPG recommended.',
+  orgFaviconLabel: 'Favicon',
+  uploadLogo: 'Upload logo',
+  uploadFavicon: 'Upload favicon',
+  profilePhotoLabel: 'Profile photo',
+  uploadingEllipsis: 'Uploading…',
+  timezoneLabel: 'Timezone',
+  timezoneHint: 'Used for calendars, reports, and scheduled posts.',
+  notifInAppTitle: 'In-App Notifications (Bell)',
+  notifInAppBellHint: 'Bell alerts in Creator Admin',
+  notifEmailTitle: 'Email Notifications',
+  deleteAccountTitle: 'Delete account?',
+  deleteAccountBody:
+    'This permanently deletes your account and workspace data. Type DELETE to confirm.',
+  deleteAccountConfirmPlaceholder: 'Type DELETE',
+  deleteAccountConfirm: 'Delete account',
+  closeAria: 'Close',
+  aiUsageThisMonth: 'This month',
+  aiUsageWordsUsed: 'words used',
+  aiUsageGateTitle: 'AI usage',
+  aiUsageGateBody: 'Track your monthly AI word allowance for this workspace.',
+  toastSelectWorkspaceBeforeConnect: 'Select a workspace before connecting an account',
+  toastSocialConnected: '{platform} connected successfully!',
+  toastPopupBlocked: 'Popup blocked — allow popups for this site and try again',
+  toastConnectionFailed: 'Connection failed',
+  toastCouldNotConnect: 'Could not connect {platform}',
+  toastAccountDisconnected: 'Account disconnected successfully',
+  toastDisconnectNetworkError: 'Network error while disconnecting account',
+  toastTikTokSessionExpired: 'TikTok session expired — reconnect your account',
+  toastTikTokSwitchFailed: 'Could not switch TikTok account',
+  connectMetaAccountsTitle: 'Connect Meta accounts',
+  connectMetaAccountsSub:
+    'Connect Instagram and Facebook separately, or link both in one Meta Suite login.',
+  resyncMetaWebhooks: 'Re-sync Meta Webhooks',
+  connectTikTokTitle: 'Connect TikTok Account',
+  connectTikTokSub: 'Link TikTok for Display API analytics and Content Posting.',
+  demoModeSimulatedTitle: 'Demo Mode — simulated OAuth',
+  demoModeSimulatedSub:
+    'Turn Demo Mode off to use live Instagram, Facebook, TikTok, YouTube, LinkedIn, and Pinterest connections.',
+  toastPickScheduleFirst: 'Pick a schedule date & time first',
+  toastConnectIgFbSettings: 'Connect Instagram or Facebook under Settings → Socials first',
+  toastPostedSuccess: 'Posted',
+  toastSavedScheduled: 'Saved & scheduled',
+  studioActions: 'Actions',
+  studioPublish: 'Publish',
+  studioSaveOptions: 'Save options',
+  createBrandWorkspaceTitle: 'Create new Team Workspace / Brand',
+  createBrandWorkspaceSub:
+    'Create a workspace for a brand or team with its own channels and content.',
+  brandWorkspaceNameLabel: 'Brand / Team Workspace Name',
+  brandWorkspaceNamePlaceholder: 'e.g. "Acme Brand Scandinavia"',
+  socialHandleLabel: 'Social Media Handle',
+  socialHandlePlaceholder: 'e.g. "@acme_official"',
+  connectedChannelsLabel: 'Connected Channels',
+  toastWorkspaceActivated: '“{name}” activated',
+  toastWorkspaceCreateFailed: 'Could not create workspace',
+  toastWorkspaceSaveFailed: 'Could not save workspace to database',
+  toastWorkspaceDeleteFailed: 'Could not delete workspace in database',
+  toastBioSaveFailed: 'Could not save bio to database',
+  toastLessonProgressFailed: 'Could not save lesson progress',
+  pickLessonHint: 'Pick a lesson on the left',
+  toastCourseSaved: 'Course saved',
+  toastCommunityRequired: 'Select a community first',
+  classroomEmptyAdminTitle: 'No courses yet',
+  classroomEmptyAdminBody: 'Create your first course for this community.',
+  toastOfferTitleRequired: 'Offer title is required',
+  toastOfferPriceRequired: 'Enter a valid price',
+  toastOfferCommunityRequired: 'Community is required',
+  toastCsvImportSuccess: 'Imported {count} subscribers',
+  toastCsvImportFailed: 'CSV import failed',
+  toastFolderRenamed: 'Folder renamed',
+  toastFolderRenameFailed: 'Could not rename folder',
+  toastFolderCreated: 'Folder created',
+  toastFolderCreateFailed: 'Could not create folder',
+  toastFolderDeleted: 'Folder deleted',
+  toastFolderDeleteFailed: 'Could not delete folder',
+  toastReorderProjectsFailed: 'Could not reorder projects',
+  toastReorderFoldersFailed: 'Could not reorder folders',
+  toastSelectWorkspaceBeforeConnectShort: 'Select a workspace before connecting',
+  toastAllowPopupsConnect: 'Allow popups to connect social accounts',
+  toastCreateProjectFailed: 'Could not create project',
+  toastHashtagsAdded: 'Hashtags added',
+  toastAddHashtagsFirst: 'Add hashtags first',
+  toastSavedToFavourites: 'Saved to favourites',
+  toastUpdatePlanFailed: 'Could not update plan',
+  toastPostedToCommunity: 'Posted to community',
+  toastCommentFailed: 'Could not add comment',
+  toastPostDeleted: 'Post deleted',
+  toastPostUpdated: 'Post updated',
+  toastOfferAddTitle: 'Add an offer title',
+  toastOfferEnterPriceSek: 'Enter a price in SEK (use 0 for free)',
+  toastOfferNeedCommunity: 'Create a community before adding store offers',
+  toastAddEmailAddress: 'Add at least one email address',
+  toastUploadCsvFirst: 'Upload a CSV with at least one valid email first',
+  toastUploadCsvOnly: 'Please upload a .csv file',
+  toastNoValidEmailsCsv: 'No valid emails found in that CSV',
+  toastCsvReadFailed: 'Could not read that CSV',
+  toastCommunityUnlocked: 'Community dashboard unlocked for this workspace',
+  toastCourseNeedCommunity: 'Select a community before saving a course',
+  toastFileUploaded: 'File uploaded',
+  toastFileDeleted: 'File deleted',
+  toastFileDeleteFailed: 'Could not delete file',
+  toastGoogleDisconnected: 'Google account disconnected',
+  toastGoogleDisconnectFailed: 'Could not disconnect Google',
+  toastSelectWorkspaceFirst: 'Select a workspace first',
+  toastProjectUpdated: 'Project updated',
+  toastProjectUpdateFailed: 'Could not update project',
+  toastProjectGoalSaved: 'Project goal saved',
+  toastProjectGoalSaveFailed: 'Could not save project goal',
+  toastStripeConnectUpdated: 'Stripe Connect updated — you can request a payout when ready',
+  toastStripeFinishOnboarding: 'Finish Stripe Connect onboarding to enable payouts',
+  toastBankAlreadyConnected: 'Bank account already connected',
+  toastFrozenReportCreated: 'Frozen report created',
+  toastAutomationSaved: 'Automation settings saved',
+  toastReportDeleted: 'Report deleted',
+  toastShareLinkCopied: 'Share link copied',
+  toastSelectFileFirst: 'Select at least one file',
+  toastDriveImportNoFile: 'Drive import returned no file',
+  toastAutomationDeleted: 'Automation rule deleted successfully',
+  toastLiveDiagnosticPassed: 'Live diagnostic passed — Comment-to-DM stack looks ready.',
+  toastSaveFailed: 'Save failed',
+  toastPublishFailed: 'Publish failed',
+  toastPlanSwitched: 'Switched to {plan}',
+  toastCouldNotPost: 'Could not post',
+  toastCouldNotSaveOffer: 'Could not save offer',
+  toastCsvContactsFound: 'Found {count} contact(s)',
+  toastCouldNotSaveCourse: 'Could not save course',
+  toastLinkMediaFolderFailed: 'Could not link media folder',
+  toastCreateMediaFolderFailed: 'Could not create media folder',
+  toastLinkedMediaFolder: 'Linked “{name}” to this project',
+  toastCreatedLinkedFolder: 'Created and linked “{name}”',
+  toastRevenueLoadFailed: 'Revenue failed to load',
+  toastStripeConnectStartFailed: 'Could not start Stripe Connect',
+  toastConnectFailed: 'Connect failed',
+  toastBuildFailed: 'Build failed',
+  toastDeleteFailed: 'Delete failed',
+  toastMaxFilesPerPost: 'Max {count} files per post',
+  toastExtraFilesSkipped: 'Only {count} files per post — extra files skipped',
+  toastRuleUpdated: 'Rule updated',
+  toastCommentToDmCreated: 'Comment-to-DM rule created',
+  toastToggleFailed: 'Toggle failed',
+  toastDeleteAutomationFailed: 'Failed to delete automation',
+  toastNoRecentIgComments: 'No recent Instagram comments found.',
+  toastFetchedIgComments: 'Fetched {count} comment(s) from Instagram.',
+  toastFetchCommentsFailed: 'Could not fetch comments',
+  toastUpdateProjectLinkFailed: 'Could not update project link',
+  toastUploadedFromDevice: 'Uploaded from your device',
+  toastMovedToFolder: 'Moved to {dest}',
+  toastMoveFileFailed: 'Could not move file',
+  toastDeletedFromLibrary: 'Deleted from media library',
+  toastUploadedToFolder: 'Uploaded to folder',
+  toastImportedFile: 'Imported {name}',
+  toastInviteResent: 'Invite resent to {email}',
+  toastConnectionFailedDetail: 'Connection failed: {error}',
+  adsEyebrow: 'Meta · Ads',
+  adsManagerTitle: 'Ads Manager',
+  adsManagerSub: 'Campaigns, ad sets & creatives',
+  adsCreateCampaign: 'Create campaign',
+  adsSyncMeta: 'Sync Meta',
+  adsDemoData: 'Demo data',
+  adsPerformance: 'Performance',
+  adsPerformanceSub: 'Spend, conversions, ROAS & CPC for the selected range.',
+  adsLast7Days: 'Last 7 days',
+  adsLast30Days: 'Last 30 days',
+  adsSpend: 'Spend',
+  adsConversions: 'Conversions',
+  adsRoas: 'ROAS',
+  adsCpc: 'CPC',
+  adsTrend: '{metric} trend',
+  adsNoInsightData: 'No insight data for this range yet.',
+  adsCampaigns: 'Campaigns',
+  adsAdSets: 'Ad Sets',
+  adsAds: 'Ads',
+  adsClearFilter: 'Clear filter',
+  adsStatus: 'Status',
+  adsCampaign: 'Campaign',
+  adsAdSet: 'Ad set',
+  adsAd: 'Ad',
+  adsDailyBudget: 'Daily budget',
+  adsImpressions: 'Impressions',
+  adsClicks: 'Clicks',
+  adsActive: 'Active',
+  adsPaused: 'Paused',
+  adsNoCampaigns: 'No campaigns yet — create one or sync from Meta.',
+  adsNoAdSets: 'No ad sets for this filter.',
+  adsNoAds: 'No ads for this filter.',
+  adsLoading: 'Loading Ads Manager…',
+  adsSave: 'Save',
+  adsDelivery: 'Delivery',
+  adsDeliveryActiveHint: 'Currently delivering on Meta',
+  adsDeliveryPausedHint: 'Paused — not spending',
+  adsPerformanceSection: 'Performance',
+  adsSettings: 'Settings',
+  adsObjective: 'Objective',
+  adsTargeting: 'Targeting',
+  adsHeadline: 'Headline',
+  adsCreative: 'Creative',
+  adsNoCreative: 'No creative preview',
+  adsParentCampaign: 'Campaign',
+  adsParentAdSet: 'Ad set',
+  adsAdAccount: 'Ad account',
+  adsViewAdSets: 'View ad sets',
+  adsViewAds: 'View ads',
+  adsSaveBudget: 'Save budget',
+  adsDetailsCampaign: 'Campaign details',
+  adsDetailsAdSet: 'Ad set details',
+  adsDetailsAd: 'Ad details',
+  adsMetaSyncNote:
+    'Changes sync to Meta when Facebook is connected with ads permissions; demo rows update locally.',
+  adsToastActive: 'Set to Active',
+  adsToastPaused: 'Paused',
+  adsToastBudget: 'Daily budget updated',
+  adsBudgetHint: 'Amount Meta can spend per day for this {kind}.',
+  adsFromDate: 'From',
+  adsCreateTitle: 'Create campaign',
+  adsStepObjective: 'Objective',
+  adsStepAudience: 'Audience & retargeting',
+  adsStepCreative: 'Creative',
+  adsCampaignName: 'Campaign name',
+  adsDailyBudgetLabel: 'Daily budget ({currency})',
+  adsContinue: 'Continue',
+  adsCancel: 'Cancel',
+  adsBack: 'Back',
+  adsCreateSubmit: 'Create campaign',
+  adsAiCopywriter: 'AI Copywriter',
+  adsCreativeSources: 'Add from your device, Media Library, or Google Drive.',
+  adsFromDevice: 'From device',
+  adsMediaLibrary: 'Media Library',
+  adsDropCreative: 'Drop an image or video here',
+  adsOrChooseSource: 'Or choose a source below',
+  adsRemove: 'Remove',
+  adsSelected: '{kind} selected',
+  adsObjSales: 'Sales',
+  adsObjLeads: 'Leads',
+  adsObjTraffic: 'Traffic',
+  adsObjEngagement: 'Engagement',
+  adsObjSalesBlurb: 'Drive purchases & checkout completions.',
+  adsObjLeadsBlurb: 'Collect emails, waitlists & form fills.',
+  adsObjTrafficBlurb: 'Send people to your store or bio link.',
+  adsObjEngagementBlurb: 'Boost post & Reel interactions.',
 };
 
 export const EXTRA_SV: ExtraDict = {
@@ -2857,6 +3368,261 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   aiHashtagSetFor: 'För {topic}',
   hashtagColTag: 'Hashtag',
   hashtagColPosts: 'Inlägg',
+  toastChooseImage: 'Välj en bild',
+  toastChooseImageFile: 'Välj en bildfil',
+  toastUploadFailed: 'Uppladdningen misslyckades',
+  toastLogoUpdated: 'Logotyp uppdaterad',
+  toastFaviconUpdated: 'Favicon uppdaterad',
+  toastBrandingSaveFailed: 'Kunde inte spara branding till databasen',
+  toastProfilePhotoUpdated: 'Profilbild uppdaterad',
+  toastProfilePhotoUploadFailed: 'Kunde inte ladda upp profilbild',
+  toastTimezoneSaveFailed: 'Kunde inte spara tidszon',
+  toastNotifPrefsSaveFailed: 'Kunde inte spara aviseringsinställningar',
+  toastDeleteAccountFailed: 'Kunde inte ta bort kontot — kontakta support',
+  orgBrandingTitle: 'Organisationsbranding',
+  orgBrandingSub: 'Namn och tillgångar som visas för ditt skaparvarumärke.',
+  orgNameLabel: 'Organisationsnamn',
+  orgLogoLabel: 'Organisationslogotyp',
+  orgLogoHint: 'Kvadratisk PNG/JPG rekommenderas.',
+  orgFaviconLabel: 'Favicon',
+  uploadLogo: 'Ladda upp logotyp',
+  uploadFavicon: 'Ladda upp favicon',
+  profilePhotoLabel: 'Profilbild',
+  uploadingEllipsis: 'Laddar upp…',
+  timezoneLabel: 'Tidszon',
+  timezoneHint: 'Används för kalendrar, rapporter och schemalagda inlägg.',
+  notifInAppTitle: 'Aviseringar i appen (klockan)',
+  notifInAppBellHint: 'Klockaviseringar i Creator Admin',
+  notifEmailTitle: 'E-postaviseringar',
+  deleteAccountTitle: 'Ta bort konto?',
+  deleteAccountBody:
+    'Detta raderar permanent ditt konto och workspace-data. Skriv DELETE för att bekräfta.',
+  deleteAccountConfirmPlaceholder: 'Skriv DELETE',
+  deleteAccountConfirm: 'Ta bort konto',
+  closeAria: 'Stäng',
+  aiUsageThisMonth: 'Denna månad',
+  aiUsageWordsUsed: 'ord använda',
+  aiUsageGateTitle: 'AI-användning',
+  aiUsageGateBody: 'Följ din månatliga AI-ordkvot för detta workspace.',
+  toastSelectWorkspaceBeforeConnect: 'Välj ett workspace innan du kopplar ett konto',
+  toastSocialConnected: '{platform} kopplat!',
+  toastPopupBlocked: 'Popup blockerad — tillåt popups för den här sidan och försök igen',
+  toastConnectionFailed: 'Kopplingen misslyckades',
+  toastCouldNotConnect: 'Kunde inte koppla {platform}',
+  toastAccountDisconnected: 'Kontot frånkopplat',
+  toastDisconnectNetworkError: 'Nätverksfel vid frånkoppling',
+  toastTikTokSessionExpired: 'TikTok-sessionen har gått ut — koppla om kontot',
+  toastTikTokSwitchFailed: 'Kunde inte byta TikTok-konto',
+  connectMetaAccountsTitle: 'Koppla Meta-konton',
+  connectMetaAccountsSub:
+    'Koppla Instagram och Facebook separat, eller båda via en Meta Suite-inloggning.',
+  resyncMetaWebhooks: 'Synka om Meta-webhooks',
+  connectTikTokTitle: 'Koppla TikTok-konto',
+  connectTikTokSub: 'Länka TikTok för Display API-analys och Content Posting.',
+  demoModeSimulatedTitle: 'Demoläge — simulerad OAuth',
+  demoModeSimulatedSub:
+    'Stäng demoläge för att använda live Instagram, Facebook, TikTok, YouTube, LinkedIn och Pinterest.',
+  toastPickScheduleFirst: 'Välj datum och tid först',
+  toastConnectIgFbSettings: 'Koppla Instagram eller Facebook under Inställningar → Socials först',
+  toastPostedSuccess: 'Publicerat',
+  toastSavedScheduled: 'Sparat & schemalagt',
+  studioActions: 'Åtgärder',
+  studioPublish: 'Publicera',
+  studioSaveOptions: 'Sparalternativ',
+  createBrandWorkspaceTitle: 'Skapa nytt Team Workspace / varumärke',
+  createBrandWorkspaceSub:
+    'Skapa ett workspace för ett varumärke eller team med egna kanaler och innehåll.',
+  brandWorkspaceNameLabel: 'Varumärke / Team Workspace-namn',
+  brandWorkspaceNamePlaceholder: 't.ex. "Acme Brand Scandinavia"',
+  socialHandleLabel: 'Social handle',
+  socialHandlePlaceholder: 't.ex. "@acme_official"',
+  connectedChannelsLabel: 'Anslutna kanaler',
+  toastWorkspaceActivated: '“{name}” aktiverat',
+  toastWorkspaceCreateFailed: 'Kunde inte skapa workspace',
+  toastWorkspaceSaveFailed: 'Kunde inte spara workspace till databasen',
+  toastWorkspaceDeleteFailed: 'Kunde inte ta bort workspace i databasen',
+  toastBioSaveFailed: 'Kunde inte spara bio till databasen',
+  toastLessonProgressFailed: 'Kunde inte spara lektionsprogress',
+  pickLessonHint: 'Välj en lektion till vänster',
+  toastCourseSaved: 'Kurs sparad',
+  toastCommunityRequired: 'Välj en community först',
+  classroomEmptyAdminTitle: 'Inga kurser ännu',
+  classroomEmptyAdminBody: 'Skapa din första kurs för den här communityn.',
+  toastOfferTitleRequired: 'Erbjudandetiteln krävs',
+  toastOfferPriceRequired: 'Ange ett giltigt pris',
+  toastOfferCommunityRequired: 'Community krävs',
+  toastCsvImportSuccess: 'Importerade {count} prenumeranter',
+  toastCsvImportFailed: 'CSV-import misslyckades',
+  toastFolderRenamed: 'Mappen bytte namn',
+  toastFolderRenameFailed: 'Kunde inte byta namn på mappen',
+  toastFolderCreated: 'Mapp skapad',
+  toastFolderCreateFailed: 'Kunde inte skapa mapp',
+  toastFolderDeleted: 'Mapp borttagen',
+  toastFolderDeleteFailed: 'Kunde inte ta bort mapp',
+  toastReorderProjectsFailed: 'Kunde inte ändra ordning på projekt',
+  toastReorderFoldersFailed: 'Kunde inte ändra ordning på mappar',
+  toastSelectWorkspaceBeforeConnectShort: 'Välj ett workspace innan du kopplar',
+  toastAllowPopupsConnect: 'Tillåt popups för att koppla sociala konton',
+  toastCreateProjectFailed: 'Kunde inte skapa projekt',
+  toastHashtagsAdded: 'Hashtags tillagda',
+  toastAddHashtagsFirst: 'Lägg till hashtags först',
+  toastSavedToFavourites: 'Sparat i favoriter',
+  toastUpdatePlanFailed: 'Kunde inte uppdatera planen',
+  toastPostedToCommunity: 'Publicerat i community',
+  toastCommentFailed: 'Kunde inte lägga till kommentar',
+  toastPostDeleted: 'Inlägg borttaget',
+  toastPostUpdated: 'Inlägg uppdaterat',
+  toastOfferAddTitle: 'Lägg till en erbjudandetitel',
+  toastOfferEnterPriceSek: 'Ange pris i SEK (0 för gratis)',
+  toastOfferNeedCommunity: 'Skapa en community innan du lägger till erbjudanden',
+  toastAddEmailAddress: 'Lägg till minst en e-postadress',
+  toastUploadCsvFirst: 'Ladda upp en CSV med minst en giltig e-post först',
+  toastUploadCsvOnly: 'Ladda upp en .csv-fil',
+  toastNoValidEmailsCsv: 'Inga giltiga e-postadresser hittades i CSV:n',
+  toastCsvReadFailed: 'Kunde inte läsa CSV:n',
+  toastCommunityUnlocked: 'Community-dashboard upplåst för detta workspace',
+  toastCourseNeedCommunity: 'Välj en community innan du sparar en kurs',
+  toastFileUploaded: 'Fil uppladdad',
+  toastFileDeleted: 'Fil borttagen',
+  toastFileDeleteFailed: 'Kunde inte ta bort fil',
+  toastGoogleDisconnected: 'Google-konto frånkopplat',
+  toastGoogleDisconnectFailed: 'Kunde inte frånkoppla Google',
+  toastSelectWorkspaceFirst: 'Välj ett workspace först',
+  toastProjectUpdated: 'Projekt uppdaterat',
+  toastProjectUpdateFailed: 'Kunde inte uppdatera projekt',
+  toastProjectGoalSaved: 'Projektmål sparat',
+  toastProjectGoalSaveFailed: 'Kunde inte spara projektmål',
+  toastStripeConnectUpdated: 'Stripe Connect uppdaterat — du kan begära utbetalning när du är redo',
+  toastStripeFinishOnboarding: 'Slutför Stripe Connect-onboarding för utbetalningar',
+  toastBankAlreadyConnected: 'Bankkonto redan kopplat',
+  toastFrozenReportCreated: 'Fryst rapport skapad',
+  toastAutomationSaved: 'Automationsinställningar sparade',
+  toastReportDeleted: 'Rapport borttagen',
+  toastShareLinkCopied: 'Delningslänk kopierad',
+  toastSelectFileFirst: 'Välj minst en fil',
+  toastDriveImportNoFile: 'Drive-import returnerade ingen fil',
+  toastAutomationDeleted: 'Automationsregel borttagen',
+  toastLiveDiagnosticPassed: 'Live-diagnostik OK — Comment-to-DM-stacken ser redo ut.',
+  toastSaveFailed: 'Sparningen misslyckades',
+  toastPublishFailed: 'Publiceringen misslyckades',
+  toastPlanSwitched: 'Bytte till {plan}',
+  toastCouldNotPost: 'Kunde inte publicera',
+  toastCouldNotSaveOffer: 'Kunde inte spara erbjudandet',
+  toastCsvContactsFound: 'Hittade {count} kontakt(er)',
+  toastCouldNotSaveCourse: 'Kunde inte spara kursen',
+  toastLinkMediaFolderFailed: 'Kunde inte länka mediamapp',
+  toastCreateMediaFolderFailed: 'Kunde inte skapa mediamapp',
+  toastLinkedMediaFolder: 'Länkade “{name}” till projektet',
+  toastCreatedLinkedFolder: 'Skapade och länkade “{name}”',
+  toastRevenueLoadFailed: 'Kunde inte ladda intäkter',
+  toastStripeConnectStartFailed: 'Kunde inte starta Stripe Connect',
+  toastConnectFailed: 'Kopplingen misslyckades',
+  toastBuildFailed: 'Bygget misslyckades',
+  toastDeleteFailed: 'Borttagningen misslyckades',
+  toastMaxFilesPerPost: 'Max {count} filer per inlägg',
+  toastExtraFilesSkipped: 'Endast {count} filer per inlägg — övriga hoppades över',
+  toastRuleUpdated: 'Regel uppdaterad',
+  toastCommentToDmCreated: 'Comment-to-DM-regel skapad',
+  toastToggleFailed: 'Växlingen misslyckades',
+  toastDeleteAutomationFailed: 'Kunde inte ta bort automation',
+  toastNoRecentIgComments: 'Inga senaste kommentarer hittades på Instagram.',
+  toastFetchedIgComments: 'Hämtade {count} kommentar(er) från Instagram.',
+  toastFetchCommentsFailed: 'Kunde inte hämta kommentarer',
+  toastUpdateProjectLinkFailed: 'Kunde inte uppdatera projektlänk',
+  toastUploadedFromDevice: 'Uppladdat från din enhet',
+  toastMovedToFolder: 'Flyttad till {dest}',
+  toastMoveFileFailed: 'Kunde inte flytta fil',
+  toastDeletedFromLibrary: 'Borttagen från mediabiblioteket',
+  toastUploadedToFolder: 'Uppladdad till mapp',
+  toastImportedFile: 'Importerade {name}',
+  toastInviteResent: 'Inbjudan skickades igen till {email}',
+  toastConnectionFailedDetail: 'Kopplingen misslyckades: {error}',
+  adsEyebrow: 'Meta · Annonser',
+  adsManagerTitle: 'Annonshantering',
+  adsManagerSub: 'Kampanjer, annonsgrupper & annonser',
+  adsCreateCampaign: 'Skapa kampanj',
+  adsSyncMeta: 'Synka Meta',
+  adsDemoData: 'Demodata',
+  adsPerformance: 'Prestanda',
+  adsPerformanceSub: 'Spend, konverteringar, ROAS & CPC för valt intervall.',
+  adsLast7Days: 'Senaste 7 dagarna',
+  adsLast30Days: 'Senaste 30 dagarna',
+  adsSpend: 'Spend',
+  adsConversions: 'Konverteringar',
+  adsRoas: 'ROAS',
+  adsCpc: 'CPC',
+  adsTrend: '{metric}-trend',
+  adsNoInsightData: 'Ingen insiktsdata för detta intervall ännu.',
+  adsCampaigns: 'Kampanjer',
+  adsAdSets: 'Annonsgrupper',
+  adsAds: 'Annonser',
+  adsClearFilter: 'Rensa filter',
+  adsStatus: 'Status',
+  adsCampaign: 'Kampanj',
+  adsAdSet: 'Annonsgrupp',
+  adsAd: 'Annons',
+  adsDailyBudget: 'Daglig budget',
+  adsImpressions: 'Visningar',
+  adsClicks: 'Klick',
+  adsActive: 'Aktiv',
+  adsPaused: 'Pausad',
+  adsNoCampaigns: 'Inga kampanjer ännu — skapa en eller synka från Meta.',
+  adsNoAdSets: 'Inga annonsgrupper för detta filter.',
+  adsNoAds: 'Inga annonser för detta filter.',
+  adsLoading: 'Laddar Annonshantering…',
+  adsSave: 'Spara',
+  adsDelivery: 'Leverans',
+  adsDeliveryActiveHint: 'Levereras just nu på Meta',
+  adsDeliveryPausedHint: 'Pausad — ingen spend',
+  adsPerformanceSection: 'Prestanda',
+  adsSettings: 'Inställningar',
+  adsObjective: 'Mål',
+  adsTargeting: 'Målgrupp',
+  adsHeadline: 'Rubrik',
+  adsCreative: 'Creative',
+  adsNoCreative: 'Ingen creative-förhandsvisning',
+  adsParentCampaign: 'Kampanj',
+  adsParentAdSet: 'Annonsgrupp',
+  adsAdAccount: 'Annonskonto',
+  adsViewAdSets: 'Visa annonsgrupper',
+  adsViewAds: 'Visa annonser',
+  adsSaveBudget: 'Spara budget',
+  adsDetailsCampaign: 'Kampanjdetaljer',
+  adsDetailsAdSet: 'Annonsgruppsdetaljer',
+  adsDetailsAd: 'Annonsdetaljer',
+  adsMetaSyncNote:
+    'Ändringar synkas till Meta när Facebook är kopplat med annonsbehörigheter; demorader uppdateras lokalt.',
+  adsToastActive: 'Satt till Aktiv',
+  adsToastPaused: 'Pausad',
+  adsToastBudget: 'Daglig budget uppdaterad',
+  adsBudgetHint: 'Belopp Meta kan spendera per dag för denna {kind}.',
+  adsFromDate: 'Från',
+  adsCreateTitle: 'Skapa kampanj',
+  adsStepObjective: 'Mål',
+  adsStepAudience: 'Målgrupp & retargeting',
+  adsStepCreative: 'Creative',
+  adsCampaignName: 'Kampanjnamn',
+  adsDailyBudgetLabel: 'Daglig budget ({currency})',
+  adsContinue: 'Fortsätt',
+  adsCancel: 'Avbryt',
+  adsBack: 'Tillbaka',
+  adsCreateSubmit: 'Skapa kampanj',
+  adsAiCopywriter: 'AI-copywriter',
+  adsCreativeSources: 'Lägg till från enhet, mediabibliotek eller Google Drive.',
+  adsFromDevice: 'Från enhet',
+  adsMediaLibrary: 'Mediabibliotek',
+  adsDropCreative: 'Släpp en bild eller video här',
+  adsOrChooseSource: 'Eller välj källa nedan',
+  adsRemove: 'Ta bort',
+  adsSelected: '{kind} vald',
+  adsObjSales: 'Försäljning',
+  adsObjLeads: 'Leads',
+  adsObjTraffic: 'Trafik',
+  adsObjEngagement: 'Engagemang',
+  adsObjSalesBlurb: 'Driv köp och checkout-kompletteringar.',
+  adsObjLeadsBlurb: 'Samla e-post, väntelistor och formulär.',
+  adsObjTrafficBlurb: 'Skicka trafik till din store eller bio-länk.',
+  adsObjEngagementBlurb: 'Boosta inlägg och Reels-interaktioner.',
 };
 
 /** Norwegian — full extras (planner + landing), based on SV with NO spelling. */
@@ -3839,6 +4605,261 @@ navFeatures: 'Ominaisuudet',
   instagramDmReplyPlaceholder: 'Vastaa Instagramissa…',
   instagramDmSend: 'Lähetä vastaus',
   instagramNotConnected: 'Yhdistä Instagram tähän social spaceen',
+  toastChooseImage: 'Valitse kuva',
+  toastChooseImageFile: 'Valitse kuvatiedosto',
+  toastUploadFailed: 'Lähetys epäonnistui',
+  toastLogoUpdated: 'Logo päivitetty',
+  toastFaviconUpdated: 'Favicon päivitetty',
+  toastBrandingSaveFailed: 'Brändäystä ei voitu tallentaa tietokantaan',
+  toastProfilePhotoUpdated: 'Profiilikuva päivitetty',
+  toastProfilePhotoUploadFailed: 'Profiilikuvaa ei voitu ladata',
+  toastTimezoneSaveFailed: 'Aikavyöhykettä ei voitu tallentaa',
+  toastNotifPrefsSaveFailed: 'Ilmoitusasetuksia ei voitu tallentaa',
+  toastDeleteAccountFailed: 'Tiliä ei voitu poistaa — ota yhteyttä tukeen',
+  orgBrandingTitle: 'Organisaation brändäys',
+  orgBrandingSub: 'Nimi ja resurssit, jotka näkyvät creator-brändissäsi.',
+  orgNameLabel: 'Organisaation nimi',
+  orgLogoLabel: 'Organisaation logo',
+  orgLogoHint: 'Neliömäinen PNG/JPG suositellaan.',
+  orgFaviconLabel: 'Favicon',
+  uploadLogo: 'Lataa logo',
+  uploadFavicon: 'Lataa favicon',
+  profilePhotoLabel: 'Profiilikuva',
+  uploadingEllipsis: 'Ladataan…',
+  timezoneLabel: 'Aikavyöhyke',
+  timezoneHint: 'Käytetään kalentereissa, raporteissa ja ajastetuissa julkaisuissa.',
+  notifInAppTitle: 'Sovellusilmoitukset (kello)',
+  notifInAppBellHint: 'Kelloilmoitukset Creator Adminissa',
+  notifEmailTitle: 'Sähköposti-ilmoitukset',
+  deleteAccountTitle: 'Poista tili?',
+  deleteAccountBody:
+    'Tämä poistaa tilisi ja workspace-datan pysyvästi. Kirjoita DELETE vahvistaaksesi.',
+  deleteAccountConfirmPlaceholder: 'Kirjoita DELETE',
+  deleteAccountConfirm: 'Poista tili',
+  closeAria: 'Sulje',
+  aiUsageThisMonth: 'Tässä kuussa',
+  aiUsageWordsUsed: 'sanaa käytetty',
+  aiUsageGateTitle: 'AI-käyttö',
+  aiUsageGateBody: 'Seuraa kuukausittaista AI-sanan kiintiötä tälle workspacelle.',
+  toastSelectWorkspaceBeforeConnect: 'Valitse workspace ennen tilin yhdistämistä',
+  toastSocialConnected: '{platform} yhdistetty!',
+  toastPopupBlocked: 'Ponnahdusikkuna estetty — salli pop-upit ja yritä uudelleen',
+  toastConnectionFailed: 'Yhdistäminen epäonnistui',
+  toastCouldNotConnect: 'Ei voitu yhdistää: {platform}',
+  toastAccountDisconnected: 'Tili irrotettu',
+  toastDisconnectNetworkError: 'Verkkovirhe irrotettaessa tiliä',
+  toastTikTokSessionExpired: 'TikTok-istunto vanhentui — yhdistä uudelleen',
+  toastTikTokSwitchFailed: 'TikTok-tiliä ei voitu vaihtaa',
+  connectMetaAccountsTitle: 'Yhdistä Meta-tilit',
+  connectMetaAccountsSub:
+    'Yhdistä Instagram ja Facebook erikseen tai molemmat yhdellä Meta Suite -kirjautumisella.',
+  resyncMetaWebhooks: 'Synkronoi Meta-webhookit uudelleen',
+  connectTikTokTitle: 'Yhdistä TikTok-tili',
+  connectTikTokSub: 'Linkitä TikTok Display API -analytiikkaan ja Content Postingiin.',
+  demoModeSimulatedTitle: 'Demotila — simuloitu OAuth',
+  demoModeSimulatedSub:
+    'Poista demotila käytöstä live-Instagram-, Facebook-, TikTok-, YouTube-, LinkedIn- ja Pinterest-yhteyksiä varten.',
+  toastPickScheduleFirst: 'Valitse ensin päivämäärä ja aika',
+  toastConnectIgFbSettings: 'Yhdistä Instagram tai Facebook kohdassa Asetukset → Socials ensin',
+  toastPostedSuccess: 'Julkaistu',
+  toastSavedScheduled: 'Tallennettu & ajastettu',
+  studioActions: 'Toiminnot',
+  studioPublish: 'Julkaise',
+  studioSaveOptions: 'Tallennusvaihtoehdot',
+  createBrandWorkspaceTitle: 'Luo uusi Team Workspace / brändi',
+  createBrandWorkspaceSub:
+    'Luo workspace brändille tai tiimille omilla kanavilla ja sisällöllä.',
+  brandWorkspaceNameLabel: 'Brändi / Team Workspace -nimi',
+  brandWorkspaceNamePlaceholder: 'esim. "Acme Brand Scandinavia"',
+  socialHandleLabel: 'Some-käyttäjänimi',
+  socialHandlePlaceholder: 'esim. "@acme_official"',
+  connectedChannelsLabel: 'Yhdistetyt kanavat',
+  toastWorkspaceActivated: '“{name}” aktivoitu',
+  toastWorkspaceCreateFailed: 'Workspacen luonti epäonnistui',
+  toastWorkspaceSaveFailed: 'Workspacen tallennus tietokantaan epäonnistui',
+  toastWorkspaceDeleteFailed: 'Workspacen poisto tietokannasta epäonnistui',
+  toastBioSaveFailed: 'Bion tallennus tietokantaan epäonnistui',
+  toastLessonProgressFailed: 'Oppitunnin edistymistä ei voitu tallentaa',
+  pickLessonHint: 'Valitse oppitunti vasemmalta',
+  toastCourseSaved: 'Kurssi tallennettu',
+  toastCommunityRequired: 'Valitse ensin yhteisö',
+  classroomEmptyAdminTitle: 'Ei kursseja vielä',
+  classroomEmptyAdminBody: 'Luo ensimmäinen kurssi tälle yhteisölle.',
+  toastOfferTitleRequired: 'Tarjouksen otsikko vaaditaan',
+  toastOfferPriceRequired: 'Anna kelvollinen hinta',
+  toastOfferCommunityRequired: 'Yhteisö vaaditaan',
+  toastCsvImportSuccess: 'Tuotiin {count} tilaajaa',
+  toastCsvImportFailed: 'CSV-tuonti epäonnistui',
+  toastFolderRenamed: 'Kansio nimetty uudelleen',
+  toastFolderRenameFailed: 'Kansion uudelleennimeäminen epäonnistui',
+  toastFolderCreated: 'Kansio luotu',
+  toastFolderCreateFailed: 'Kansion luonti epäonnistui',
+  toastFolderDeleted: 'Kansio poistettu',
+  toastFolderDeleteFailed: 'Kansion poisto epäonnistui',
+  toastReorderProjectsFailed: 'Projektien järjestystä ei voitu muuttaa',
+  toastReorderFoldersFailed: 'Kansioiden järjestystä ei voitu muuttaa',
+  toastSelectWorkspaceBeforeConnectShort: 'Valitse workspace ennen yhdistämistä',
+  toastAllowPopupsConnect: 'Salli ponnahdusikkunat some-tilien yhdistämiseen',
+  toastCreateProjectFailed: 'Projektin luonti epäonnistui',
+  toastHashtagsAdded: 'Hashtagit lisätty',
+  toastAddHashtagsFirst: 'Lisää hashtagit ensin',
+  toastSavedToFavourites: 'Tallennettu suosikkeihin',
+  toastUpdatePlanFailed: 'Suunnitelman päivitys epäonnistui',
+  toastPostedToCommunity: 'Julkaistu yhteisöön',
+  toastCommentFailed: 'Kommenttia ei voitu lisätä',
+  toastPostDeleted: 'Julkaisu poistettu',
+  toastPostUpdated: 'Julkaisu päivitetty',
+  toastOfferAddTitle: 'Lisää tarjouksen otsikko',
+  toastOfferEnterPriceSek: 'Anna hinta SEK (0 = ilmainen)',
+  toastOfferNeedCommunity: 'Luo yhteisö ennen kaupan tarjouksia',
+  toastAddEmailAddress: 'Lisää vähintään yksi sähköposti',
+  toastUploadCsvFirst: 'Lataa CSV, jossa on vähintään yksi kelvollinen sähköposti',
+  toastUploadCsvOnly: 'Lataa .csv-tiedosto',
+  toastNoValidEmailsCsv: 'CSV:stä ei löytynyt kelvollisia sähköposteja',
+  toastCsvReadFailed: 'CSV:tä ei voitu lukea',
+  toastCommunityUnlocked: 'Yhteisön hallinta avattu tälle workspacelle',
+  toastCourseNeedCommunity: 'Valitse yhteisö ennen kurssin tallennusta',
+  toastFileUploaded: 'Tiedosto ladattu',
+  toastFileDeleted: 'Tiedosto poistettu',
+  toastFileDeleteFailed: 'Tiedoston poisto epäonnistui',
+  toastGoogleDisconnected: 'Google-tili irrotettu',
+  toastGoogleDisconnectFailed: 'Googlen irrotus epäonnistui',
+  toastSelectWorkspaceFirst: 'Valitse workspace ensin',
+  toastProjectUpdated: 'Projekti päivitetty',
+  toastProjectUpdateFailed: 'Projektin päivitys epäonnistui',
+  toastProjectGoalSaved: 'Projektitavoite tallennettu',
+  toastProjectGoalSaveFailed: 'Projektitavoitetta ei voitu tallentaa',
+  toastStripeConnectUpdated: 'Stripe Connect päivitetty — voit pyytää maksua kun olet valmis',
+  toastStripeFinishOnboarding: 'Viimeistele Stripe Connect -onboarding maksuja varten',
+  toastBankAlreadyConnected: 'Pankkitili on jo yhdistetty',
+  toastFrozenReportCreated: 'Jäädytetty raportti luotu',
+  toastAutomationSaved: 'Automaatioasetukset tallennettu',
+  toastReportDeleted: 'Raportti poistettu',
+  toastShareLinkCopied: 'Jakolinkki kopioitu',
+  toastSelectFileFirst: 'Valitse vähintään yksi tiedosto',
+  toastDriveImportNoFile: 'Drive-tuonti ei palauttanut tiedostoa',
+  toastAutomationDeleted: 'Automaatiosääntö poistettu',
+  toastLiveDiagnosticPassed: 'Live-diagnostiikka OK — Comment-to-DM-pino näyttää valmiilta.',
+  toastSaveFailed: 'Tallennus epäonnistui',
+  toastPublishFailed: 'Julkaisu epäonnistui',
+  toastPlanSwitched: 'Vaihdettu suunnitelmaan {plan}',
+  toastCouldNotPost: 'Julkaisu epäonnistui',
+  toastCouldNotSaveOffer: 'Tarjousta ei voitu tallentaa',
+  toastCsvContactsFound: 'Löytyi {count} yhteystietoa',
+  toastCouldNotSaveCourse: 'Kurssia ei voitu tallentaa',
+  toastLinkMediaFolderFailed: 'Mediakansiota ei voitu linkittää',
+  toastCreateMediaFolderFailed: 'Mediakansion luonti epäonnistui',
+  toastLinkedMediaFolder: 'Linkitetty “{name}” tähän projektiin',
+  toastCreatedLinkedFolder: 'Luotu ja linkitetty “{name}”',
+  toastRevenueLoadFailed: 'Tulojen lataus epäonnistui',
+  toastStripeConnectStartFailed: 'Stripe Connectin käynnistys epäonnistui',
+  toastConnectFailed: 'Yhdistäminen epäonnistui',
+  toastBuildFailed: 'Rakennus epäonnistui',
+  toastDeleteFailed: 'Poisto epäonnistui',
+  toastMaxFilesPerPost: 'Enintään {count} tiedostoa per julkaisu',
+  toastExtraFilesSkipped: 'Vain {count} tiedostoa per julkaisu — ylimääräiset ohitettiin',
+  toastRuleUpdated: 'Sääntö päivitetty',
+  toastCommentToDmCreated: 'Comment-to-DM-sääntö luotu',
+  toastToggleFailed: 'Vaihto epäonnistui',
+  toastDeleteAutomationFailed: 'Automaation poisto epäonnistui',
+  toastNoRecentIgComments: 'Instagramista ei löytynyt tuoreita kommentteja.',
+  toastFetchedIgComments: 'Haettiin {count} kommenttia Instagramista.',
+  toastFetchCommentsFailed: 'Kommentteja ei voitu hakea',
+  toastUpdateProjectLinkFailed: 'Projektilinkin päivitys epäonnistui',
+  toastUploadedFromDevice: 'Ladattu laitteeltasi',
+  toastMovedToFolder: 'Siirretty kansioon {dest}',
+  toastMoveFileFailed: 'Tiedoston siirto epäonnistui',
+  toastDeletedFromLibrary: 'Poistettu mediakirjastosta',
+  toastUploadedToFolder: 'Ladattu kansioon',
+  toastImportedFile: 'Tuotu {name}',
+  toastInviteResent: 'Kutsu lähetetty uudelleen osoitteeseen {email}',
+  toastConnectionFailedDetail: 'Yhdistäminen epäonnistui: {error}',
+  adsEyebrow: 'Meta · Mainokset',
+  adsManagerTitle: 'Mainosten hallinta',
+  adsManagerSub: 'Kampanjat, mainosjoukot ja mainokset',
+  adsCreateCampaign: 'Luo kampanja',
+  adsSyncMeta: 'Synkronoi Meta',
+  adsDemoData: 'Demoaineisto',
+  adsPerformance: 'Suorituskyky',
+  adsPerformanceSub: 'Kulutus, konversiot, ROAS ja CPC valitulle jaksolle.',
+  adsLast7Days: 'Viimeiset 7 päivää',
+  adsLast30Days: 'Viimeiset 30 päivää',
+  adsSpend: 'Kulutus',
+  adsConversions: 'Konversiot',
+  adsRoas: 'ROAS',
+  adsCpc: 'CPC',
+  adsTrend: '{metric}-trendi',
+  adsNoInsightData: 'Ei näkemystietoja tälle jaksolle vielä.',
+  adsCampaigns: 'Kampanjat',
+  adsAdSets: 'Mainosjoukot',
+  adsAds: 'Mainokset',
+  adsClearFilter: 'Tyhjennä suodatin',
+  adsStatus: 'Tila',
+  adsCampaign: 'Kampanja',
+  adsAdSet: 'Mainosjoukko',
+  adsAd: 'Mainos',
+  adsDailyBudget: 'Päiväbudjetti',
+  adsImpressions: 'Näyttökerrat',
+  adsClicks: 'Klikkaukset',
+  adsActive: 'Aktiivinen',
+  adsPaused: 'Keskeytetty',
+  adsNoCampaigns: 'Ei kampanjoita vielä — luo yksi tai synkronoi Metasta.',
+  adsNoAdSets: 'Ei mainosjoukkoja tälle suodattimelle.',
+  adsNoAds: 'Ei mainoksia tälle suodattimelle.',
+  adsLoading: 'Ladataan mainosten hallintaa…',
+  adsSave: 'Tallenna',
+  adsDelivery: 'Toimitus',
+  adsDeliveryActiveHint: 'Toimitetaan juuri nyt Metassa',
+  adsDeliveryPausedHint: 'Keskeytetty — ei kulutusta',
+  adsPerformanceSection: 'Suorituskyky',
+  adsSettings: 'Asetukset',
+  adsObjective: 'Tavoite',
+  adsTargeting: 'Kohdennus',
+  adsHeadline: 'Otsikko',
+  adsCreative: 'Creative',
+  adsNoCreative: 'Ei creative-esikatselua',
+  adsParentCampaign: 'Kampanja',
+  adsParentAdSet: 'Mainosjoukko',
+  adsAdAccount: 'Mainostili',
+  adsViewAdSets: 'Näytä mainosjoukot',
+  adsViewAds: 'Näytä mainokset',
+  adsSaveBudget: 'Tallenna budjetti',
+  adsDetailsCampaign: 'Kampanjan tiedot',
+  adsDetailsAdSet: 'Mainosjoukon tiedot',
+  adsDetailsAd: 'Mainoksen tiedot',
+  adsMetaSyncNote:
+    'Muutokset synkataan Metaan, kun Facebook on yhdistetty mainosoikeuksilla; demorivit päivittyvät paikallisesti.',
+  adsToastActive: 'Asetettu aktiiviseksi',
+  adsToastPaused: 'Keskeytetty',
+  adsToastBudget: 'Päiväbudjetti päivitetty',
+  adsBudgetHint: 'Summa, jonka Meta voi käyttää päivässä tälle: {kind}.',
+  adsFromDate: 'Alkaen',
+  adsCreateTitle: 'Luo kampanja',
+  adsStepObjective: 'Tavoite',
+  adsStepAudience: 'Yleisö ja uudelleenkohdennus',
+  adsStepCreative: 'Creative',
+  adsCampaignName: 'Kampanjan nimi',
+  adsDailyBudgetLabel: 'Päiväbudjetti ({currency})',
+  adsContinue: 'Jatka',
+  adsCancel: 'Peruuta',
+  adsBack: 'Takaisin',
+  adsCreateSubmit: 'Luo kampanja',
+  adsAiCopywriter: 'AI-copywriter',
+  adsCreativeSources: 'Lisää laitteelta, mediakirjastosta tai Google Drivesta.',
+  adsFromDevice: 'Laitteelta',
+  adsMediaLibrary: 'Mediakirjasto',
+  adsDropCreative: 'Pudota kuva tai video tähän',
+  adsOrChooseSource: 'Tai valitse lähde alta',
+  adsRemove: 'Poista',
+  adsSelected: '{kind} valittu',
+  adsObjSales: 'Myynti',
+  adsObjLeads: 'Liidit',
+  adsObjTraffic: 'Liikenne',
+  adsObjEngagement: 'Engagement',
+  adsObjSalesBlurb: 'Kasvata ostoksia ja checkout-valmistumisia.',
+  adsObjLeadsBlurb: 'Kerää sähköposteja, jonolistoja ja lomakkeita.',
+  adsObjTrafficBlurb: 'Ohjaa liikennettä kauppaan tai bio-linkkiin.',
+  adsObjEngagementBlurb: 'Kasvata julkaisujen ja Reelsien vuorovaikutusta.',
 };
 
 export const EXTRA_BY_LOCALE: Record<ExtraLocale, ExtraDict> = {

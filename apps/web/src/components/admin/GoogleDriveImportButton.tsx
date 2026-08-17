@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderOpen, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 
 type DriveFile = {
@@ -20,6 +21,8 @@ type DriveFile = {
 type Props = {
   target?: 'media_library' | 'planner';
   className?: string;
+  /** Stacking class for the Drive picker overlay (raise above nested dialogs). */
+  overlayClassName?: string;
   onImported?: (payload: {
     fileUrl: string;
     mediaId: string | number | null;
@@ -31,8 +34,10 @@ type Props = {
 export default function GoogleDriveImportButton({
   target = 'media_library',
   className = '',
+  overlayClassName = 'z-50',
   onImported,
 }: Props) {
+  const { t } = useLanguage();
   const workspace = useWorkspaceOptional();
   const workspaceId = workspace?.activeWorkspace?.id ?? null;
   const qc = useQueryClient();
@@ -95,7 +100,7 @@ export default function GoogleDriveImportButton({
       return json;
     },
     onSuccess: (json) => {
-      toast.success(`Imported ${json.fileName || 'file'}`);
+      toast.success(t('toastImportedFile', { name: json.fileName || 'file' }));
       setOpen(false);
       void qc.invalidateQueries({ queryKey: ['media-folder'] });
       void qc.invalidateQueries({ queryKey: ['media-folders'] });
@@ -120,7 +125,7 @@ export default function GoogleDriveImportButton({
 
   const handleClick = () => {
     if (!workspaceId) {
-      toast.message('Select a workspace first');
+      toast.message(t('toastSelectWorkspaceFirst'));
       return;
     }
     if (!connected) {
@@ -144,8 +149,9 @@ export default function GoogleDriveImportButton({
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <button
+        <div
+          className={`fixed inset-0 flex items-end sm:items-center justify-center ${overlayClassName}`}
+        >          <button
             type="button"
             aria-label="Close"
             className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"

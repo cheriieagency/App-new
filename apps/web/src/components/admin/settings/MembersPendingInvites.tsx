@@ -3,6 +3,7 @@
 import { Mail, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminCardClass } from '@/components/admin/AdminUi';
+import { useLanguage } from '@/lib/i18n';
 import type { PendingInvite } from '@/lib/settings-prefs';
 
 type MembersPendingInvitesProps = {
@@ -16,6 +17,8 @@ export default function MembersPendingInvites({
   onResend,
   onRevoke,
 }: MembersPendingInvitesProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="mt-8 pt-6 border-t border-slate-100">
       <div className="flex items-center justify-between gap-3 mb-3">
@@ -70,7 +73,7 @@ export default function MembersPendingInvites({
                   type="button"
                   onClick={() => {
                     onResend(invite.id);
-                    toast.success(`Invite resent to ${invite.email}`);
+                    toast.success(t('toastInviteResent', { email: invite.email }));
                   }}
                   className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
                 >

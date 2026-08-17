@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Eye, Pencil, Radio, Target, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 import { adminCardClass } from '@/components/admin/AdminUi';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
@@ -35,6 +37,7 @@ export default function ProjectGoalProgress({
   campaign,
   compact = false,
 }: ProjectGoalProgressProps) {
+  const { locale } = useLanguage();
   const queryClient = useQueryClient();
   const workspace = useWorkspaceOptional();
   const projectName = workspace?.activeWorkspace?.name ?? '';
@@ -165,9 +168,9 @@ export default function ProjectGoalProgress({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['planner-campaigns'] });
       setEditing(false);
-      toast.success('Project goal saved');
+      toast.success(t('toastProjectGoalSaved', locale));
     },
-    onError: () => toast.error('Could not save project goal'),
+    onError: () => toast.error(t('toastProjectGoalSaveFailed', locale)),
   });
 
   const label = metric === 'engagement' ? 'Engagement' : 'Views';

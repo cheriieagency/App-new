@@ -26,14 +26,16 @@ async function requireSession() {
 }
 
 async function emptyEmailCrmPayload(creatorId: string, cid?: number) {
-  const automations = await listPersistedAutomations({
-    creatorId,
-    communityId: cid,
-  });
-  const community_emails = await listPersistedCommunityEmails({
-    creatorId,
-    communityId: cid,
-  });
+  const [automations, community_emails] = await Promise.all([
+    listPersistedAutomations({
+      creatorId,
+      communityId: cid,
+    }),
+    listPersistedCommunityEmails({
+      creatorId,
+      communityId: cid,
+    }),
+  ]);
   return {
     total_subscribers: 0,
     average_open_rate: 0,
@@ -74,8 +76,9 @@ export async function GET(request: Request) {
     await ensureEmailCrmSchema();
 
     // Scope by creator; when a community is selected, prefer that brand's contacts.
-    const rows = cid
-      ? await sql`
+    // Subscribers + broadcasts load in parallel (independent tables).
+    const subscribersQuery = cid
+      ? sql`
           SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
           FROM email_subscribers
           WHERE creator_id = ${session.user.id}
@@ -83,7 +86,7 @@ export async function GET(request: Request) {
           ORDER BY subscribed_at DESC
           LIMIT 500
         `
-      : await sql`
+      : sql`
           SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
           FROM email_subscribers
           WHERE creator_id = ${session.user.id}
@@ -91,17 +94,40 @@ export async function GET(request: Request) {
           LIMIT 500
         `;
 
+    const [rows, broadcasts, automations, community_emails] = await Promise.all([
+      subscribersQuery,
+      sql`
+        SELECT * FROM email_broadcasts
+        WHERE creator_id = ${session.user.id}
+        ORDER BY sent_at DESC
+        LIMIT 50
+      `,
+      listPersistedAutomations({
+        creatorId: session.user.id,
+        communityId: cid,
+      }),
+      listPersistedCommunityEmails({
+        creatorId: session.user.id,
+        communityId: cid,
+      }),
+    ]);
+
     if (!Array.isArray(rows) || rows.length === 0) {
       // Real empty CRM — do not inject seed/mock contacts when DB is configured.
-      return Response.json(await emptyEmailCrmPayload(session.user.id, cid));
+      return Response.json({
+        total_subscribers: 0,
+        average_open_rate: 0,
+        total_broadcasts: Array.isArray(broadcasts) ? broadcasts.length : 0,
+        subscribers: [] as unknown[],
+        broadcasts: broadcasts ?? [],
+        automations,
+        community_emails,
+        audiences: AUDIENCE_OPTIONS,
+        tags: ['all'],
+        demo: false as const,
+        email_provider_ready: providerReady,
+      });
     }
-
-    const broadcasts = await sql`
-      SELECT * FROM email_broadcasts
-      WHERE creator_id = ${session.user.id}
-      ORDER BY sent_at DESC
-      LIMIT 50
-    `;
 
     let subscribers = (rows as Array<Record<string, unknown>>).map((r) => ({
       id: String(r.id),
@@ -135,15 +161,6 @@ export async function GET(request: Request) {
       sent.length === 0
         ? 0
         : sent.reduce((n, b) => n + Number(b.open_rate ?? 0), 0) / sent.length;
-
-    const automations = await listPersistedAutomations({
-      creatorId: session.user.id,
-      communityId: cid,
-    });
-    const community_emails = await listPersistedCommunityEmails({
-      creatorId: session.user.id,
-      communityId: cid,
-    });
 
     return Response.json({
       total_subscribers: subscribers.length,

@@ -28,7 +28,7 @@ import { adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { LIVE_ANALYTICS_QUERY } from '@/lib/analytics/live-query';
 import { useLanguage } from '@/lib/locale-context';
-import { localeTag } from '@/lib/i18n';
+import { localeTag, t } from '@/lib/i18n';
 
 type RevenuePayload = {
   ok?: boolean;
@@ -108,7 +108,9 @@ export default function RevenueAnalyticsPanel({
 
   useEffect(() => {
     if (!isError || !error) return;
-    toast.error(error instanceof Error ? error.message : 'Revenue failed to load');
+    toast.error(
+      error instanceof Error ? error.message : t('toastRevenueLoadFailed', locale)
+    );
   }, [isError, error]);
 
   // After Stripe Connect onboarding, reopen the payout drawer + refresh wallet.
@@ -120,9 +122,9 @@ export default function RevenueAnalyticsPanel({
 
     if (connect === 'return') {
       setPayoutOpen(true);
-      toast.success('Stripe Connect updated — you can request a payout when ready');
+      toast.success(t('toastStripeConnectUpdated', locale));
     } else {
-      toast.message('Finish Stripe Connect onboarding to enable payouts');
+      toast.message(t('toastStripeFinishOnboarding', locale));
     }
 
     void qc.invalidateQueries({
@@ -150,10 +152,14 @@ export default function RevenueAnalyticsPanel({
         stripeConnectEnabled?: boolean;
       };
       if (!res.ok) {
-        throw new Error(json.error || 'Could not start Stripe Connect');
+        throw new Error(
+          json.error || t('toastStripeConnectStartFailed', locale)
+        );
       }
       if (!json.url && !json.stripeConnectEnabled) {
-        throw new Error(json.error || 'Could not start Stripe Connect');
+        throw new Error(
+          json.error || t('toastStripeConnectStartFailed', locale)
+        );
       }
       return json;
     },
@@ -162,11 +168,13 @@ export default function RevenueAnalyticsPanel({
         window.location.href = json.url;
         return;
       }
-      toast.success('Bank account already connected');
+      toast.success(t('toastBankAlreadyConnected', locale));
       void qc.invalidateQueries({ queryKey: ['analytics-revenue', activeWorkspace.id] });
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Connect failed');
+      toast.error(
+        err instanceof Error ? err.message : t('toastConnectFailed', locale)
+      );
     },
   });
 

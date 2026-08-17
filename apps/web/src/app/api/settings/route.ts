@@ -31,13 +31,16 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const workspaceId = url.searchParams.get('workspaceId')?.trim() || null;
-    const user = await getUserSettings(session.user.id);
-    let branding: OrgBranding | null = null;
-    let invites: PendingInvite[] = [];
-    if (workspaceId) {
-      branding = await getWorkspaceBranding(workspaceId, session.user.id);
-      invites = await getWorkspaceInvites(workspaceId, session.user.id);
-    }
+    // User prefs + workspace branding/invites are independent — fetch in parallel.
+    const [user, branding, invites] = await Promise.all([
+      getUserSettings(session.user.id),
+      workspaceId
+        ? getWorkspaceBranding(workspaceId, session.user.id)
+        : Promise.resolve(null as OrgBranding | null),
+      workspaceId
+        ? getWorkspaceInvites(workspaceId, session.user.id)
+        : Promise.resolve([] as PendingInvite[]),
+    ]);
     return Response.json({
       demo: false,
       timezone: user.timezone,

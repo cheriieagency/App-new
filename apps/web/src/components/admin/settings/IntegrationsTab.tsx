@@ -82,7 +82,7 @@ export default function IntegrationsTab({
     const path = LOGIN_PATH[platform];
     if (!path) return;
     if (!workspaceId) {
-      toast.error('Select a workspace before connecting');
+      toast.error(t('toastSelectWorkspaceBeforeConnectShort', locale));
       return;
     }
     const label = PLATFORM_META[platform].label;
@@ -97,9 +97,13 @@ export default function IntegrationsTab({
       ]);
       toast.success(`${label} connected successfully!`);
     } else if (result.error === 'popup_blocked') {
-      toast.error('Allow popups to connect social accounts');
+      toast.error(t('toastAllowPopupsConnect', locale));
     } else if (result.error && result.error !== 'popup_closed') {
-      toast.error(`Connection failed: ${result.error.replace(/_/g, ' ')}`);
+      toast.error(
+        tf('toastConnectionFailedDetail', locale, {
+          error: result.error.replace(/_/g, ' '),
+        })
+      );
     }
   };
 

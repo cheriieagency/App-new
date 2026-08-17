@@ -229,7 +229,7 @@ export default function ClassroomAdminSection({
       });
 
       if (String(variables.action) === 'create_course') {
-        toast.success('Course saved');
+        toast.success(t('toastCourseSaved', locale));
       }
 
       // Soft revalidate — cache already has the new course.
@@ -243,7 +243,9 @@ export default function ClassroomAdminSection({
       });
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : 'Could not save course');
+      toast.error(
+        err instanceof Error ? err.message : t('toastCouldNotSaveCourse', locale)
+      );
     },
   });
 
@@ -321,7 +323,7 @@ export default function ClassroomAdminSection({
   const submitCourse = () => {
     if (!form.title.trim()) return;
     if (!communityId) {
-      toast.error('Select a community before saving a course');
+      toast.error(t('toastCourseNeedCommunity', locale));
       return;
     }
     mutation.mutate(
@@ -676,8 +678,8 @@ export default function ClassroomAdminSection({
       {courses.length === 0 ? (
         <AdminEmptyState
           icon={GraduationCap}
-          headline="No courses yet"
-          description="Build your first classroom module for this community — lessons, PDFs, and videos."
+          headline={t('classroomEmptyAdminTitle', locale)}
+          description={t('classroomEmptyAdminBody', locale)}
           ctaLabel="+ Create First Course"
           onCta={() => setShowForm(true)}
         />

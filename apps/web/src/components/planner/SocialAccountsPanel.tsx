@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Loader2,
   RefreshCw,
-  Shield,
   Unplug,
   X,
 } from 'lucide-react';
@@ -21,6 +20,7 @@ import {
 } from '@/components/icons/SocialBrandIcons';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
 import IgBusinessRequiredBanner from '@/components/admin/IgBusinessRequiredBanner';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 import {
   PLATFORM_META,
   type ConnectedSocialAccount,
@@ -41,8 +41,6 @@ import WorkspaceOAuthGuideBanner from '@/components/admin/WorkspaceOAuthGuideBan
 import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
 import { openOAuthPopup } from '@/lib/oauth/popup';
 import { refreshMetaSync } from '@/hooks/useMetaSync';
-
-const DEMO_MODE_KEY = 'clikd_oauth_demo_recording_mode';
 
 function withWorkspaceQuery(path: string, workspaceId: string | null | undefined) {
   if (!workspaceId) return path;
@@ -142,9 +140,12 @@ function ConnectedAccountChip({
     <div className="flex items-center gap-2 min-w-0 mt-2 px-1">
       {account.avatar_url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <OptimizedImage
           src={account.avatar_url}
           alt=""
+          width={28}
+          height={28}
+          sizes="28px"
           className="w-7 h-7 rounded-full object-cover border border-emerald-200 flex-shrink-0"
         />
       ) : (
@@ -281,7 +282,6 @@ export default function SocialAccountsPanel({
   const workspaceCtx = useWorkspaceOptional();
   const activeWorkspace = workspaceCtx?.activeWorkspace;
   const activeWorkspaceId = workspaceCtx?.activeWorkspaceId || null;
-  const [demoMode, setDemoMode] = useState(false);
 
   const connectLabel = (platform: SocialPlatform) => {
     const keys: Partial<Record<SocialPlatform, string>> = {
@@ -302,29 +302,6 @@ export default function SocialAccountsPanel({
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(
     null
   );
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(DEMO_MODE_KEY);
-      // Default is live OAuth (off). Only enable Demo Mode when explicitly stored as on.
-      if (stored === '1') setDemoMode(true);
-      else {
-        setDemoMode(false);
-        if (stored !== '0') localStorage.setItem(DEMO_MODE_KEY, '0');
-      }
-    } catch {
-      setDemoMode(false);
-    }
-  }, []);
-
-  const persistDemoMode = (on: boolean) => {
-    setDemoMode(on);
-    try {
-      localStorage.setItem(DEMO_MODE_KEY, on ? '1' : '0');
-    } catch {
-      /* ignore */
-    }
-  };
 
   const { data, isLoading, accounts: liveAccounts } = useSocialAccounts();
 
@@ -357,7 +334,7 @@ export default function SocialAccountsPanel({
   const resyncMetaWebhooks = useMutation({
     mutationFn: async () => {
       if (!activeWorkspaceId) {
-        throw new Error('Select a workspace first');
+        throw new Error(t('toastSelectWorkspaceBeforeConnect'));
       }
       const r = await fetch('/api/admin/inbox/automations/test', {
         method: 'POST',
@@ -446,7 +423,7 @@ export default function SocialAccountsPanel({
     loginUrl: string
   ) => {
     if (!activeWorkspaceId) {
-      toast.error('Select a workspace before connecting an account');
+      toast.error(t('toastSelectWorkspaceBeforeConnect'));
       return;
     }
     try {
@@ -455,12 +432,12 @@ export default function SocialAccountsPanel({
 
       if (result.success) {
         await refreshSocialAccounts(result.platform);
-        toast.success(`${platformLabel} connected successfully!`);
+        toast.success(t('toastSocialConnected', { platform: platformLabel }));
         return;
       }
 
       if (result.error === 'popup_blocked') {
-        toast.error('Allow popups for clikd: to connect social accounts');
+        toast.error(t('toastPopupBlocked'));
         return;
       }
       if (result.error === 'popup_closed') {
@@ -471,13 +448,13 @@ export default function SocialAccountsPanel({
         const detail = result.detail?.trim();
         toast.error(
           detail
-            ? `${platformLabel} connection failed: ${detail}`
-            : `${platformLabel} connection failed: ${result.error.replace(/_/g, ' ')}`
+            ? `${t('toastConnectionFailed')}: ${detail}`
+            : t('toastCouldNotConnect', { platform: platformLabel })
         );
       }
     } catch (err) {
       console.error(`[${platformLabel} Popup Error]`, err);
-      toast.error(`Could not connect ${platformLabel}`);
+      toast.error(t('toastCouldNotConnect', { platform: platformLabel }));
     } finally {
       setConnectingPlatform(null);
       setIsSwitchingTikTok(false);
@@ -485,8 +462,8 @@ export default function SocialAccountsPanel({
   };
 
   const startConnect = (platform: SocialPlatform) => {
-    // Live OAuth when Demo Mode is off — always bind to active workspace.
-    if (!demoMode && platform === 'instagram') {
+    // Live OAuth — always bind to active workspace.
+    if (platform === 'instagram') {
       void handleConnectPlatform(
         'Instagram',
         withWorkspaceQuery(
@@ -496,7 +473,7 @@ export default function SocialAccountsPanel({
       );
       return;
     }
-    if (!demoMode && platform === 'facebook') {
+    if (platform === 'facebook') {
       void handleConnectPlatform(
         'Facebook',
         withWorkspaceQuery(
@@ -506,33 +483,29 @@ export default function SocialAccountsPanel({
       );
       return;
     }
-    if (!demoMode && platform === 'youtube') {
+    if (platform === 'youtube') {
       void handleConnectPlatform(
         'YouTube',
         withWorkspaceQuery('/api/auth/youtube/login', activeWorkspaceId)
       );
       return;
     }
-    if (!demoMode && platform === 'linkedin') {
+    if (platform === 'linkedin') {
       void handleConnectPlatform(
         'LinkedIn',
         withWorkspaceQuery('/api/auth/linkedin/login', activeWorkspaceId)
       );
       return;
     }
-    if (!demoMode && platform === 'tiktok') {
+    if (platform === 'tiktok') {
       startTikTokOAuth(true);
       return;
     }
-    if (!demoMode && platform === 'pinterest') {
+    if (platform === 'pinterest') {
       void handleConnectPlatform(
         'Pinterest',
         withWorkspaceQuery('/api/auth/pinterest/login', activeWorkspaceId)
       );
-      return;
-    }
-    if (demoMode) {
-      setOauthPlatform(platform);
       return;
     }
     toggle.mutate({ platform, connect: true });
@@ -618,7 +591,7 @@ export default function SocialAccountsPanel({
         'google',
       ]);
 
-      if (!demoMode && livePlatforms.has(account.platform)) {
+      if (livePlatforms.has(account.platform)) {
         const workspaceId =
           account.workspace_id || activeWorkspaceId || undefined;
         const body = {
@@ -657,14 +630,14 @@ export default function SocialAccountsPanel({
 
         // 404 = already gone — treat as successful disconnect for the UI.
         if (!res.ok && res.status !== 404) {
-          toast.error(errData.error || 'Failed to disconnect account');
+          toast.error(errData.error || t('toastConnectionFailed'));
           return;
         }
 
         // Optimistic UI update, then re-fetch from server.
         markDisconnectedInCache(account);
         toast.success(
-          errData.message || 'Account disconnected successfully'
+          errData.message || t('toastAccountDisconnected')
         );
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['social-accounts'] }),
@@ -677,7 +650,7 @@ export default function SocialAccountsPanel({
           connect: false,
         });
         markDisconnectedInCache(account);
-        toast.success('Account disconnected successfully');
+        toast.success(t('toastAccountDisconnected'));
       }
 
       // Mandatory App Review data-deletion callback (best-effort).
@@ -697,7 +670,7 @@ export default function SocialAccountsPanel({
       }
     } catch (err) {
       console.error('[Disconnect Error]', err);
-      toast.error('Network error while disconnecting account');
+      toast.error(t('toastDisconnectNetworkError'));
     } finally {
       setIsDisconnecting(false);
     }
@@ -719,7 +692,7 @@ export default function SocialAccountsPanel({
 
   const startTikTokOAuth = (force = true) => {
     if (!activeWorkspaceId) {
-      toast.error('Select a workspace before connecting TikTok');
+      toast.error(t('toastSelectWorkspaceBeforeConnect'));
       setIsSwitchingTikTok(false);
       return;
     }
@@ -733,7 +706,7 @@ export default function SocialAccountsPanel({
     try {
       setIsSwitchingTikTok(true);
       if (!activeWorkspaceId && !currentAccount?.workspace_id) {
-        toast.error('Select a workspace before switching TikTok account');
+        toast.error(t('toastSelectWorkspaceBeforeConnect'));
         setIsSwitchingTikTok(false);
         return;
       }
@@ -782,7 +755,7 @@ export default function SocialAccountsPanel({
             queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
           ]);
         } else if (res.status === 401) {
-          toast.error('Session expired — sign in again to switch TikTok');
+          toast.error(t('toastTikTokSessionExpired'));
           setIsSwitchingTikTok(false);
           return;
         }
@@ -793,7 +766,7 @@ export default function SocialAccountsPanel({
       startTikTokOAuth(true);
     } catch (err) {
       console.error('[TikTok Switch Error]', err);
-      toast.error('Could not switch TikTok account');
+      toast.error(t('toastTikTokSwitchFailed'));
       setIsSwitchingTikTok(false);
     }
   };
@@ -839,109 +812,28 @@ export default function SocialAccountsPanel({
       ) : null}
 
       {!compact && (
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="min-w-0">
-            <h2 className="font-outfit font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">
-              {t('socials.title')}
-            </h2>
-            <p className="text-sm sm:text-[15px] text-slate-500 font-medium mt-2 max-w-2xl leading-relaxed">
-              {t('socials.subtitle')}
-            </p>
-          </div>
-
-          <label className="inline-flex items-center gap-2.5 self-start rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 min-h-[44px] shadow-sm cursor-pointer select-none">
-            <span className="text-[11px] font-extrabold uppercase tracking-wide text-slate-600">
-              {t('socials.demoMode')}
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={demoMode}
-              onClick={() => persistDemoMode(!demoMode)}
-              className={`relative h-6 w-11 rounded-full transition-colors ${
-                demoMode ? 'bg-[#10B981]' : 'bg-slate-200'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  demoMode ? 'translate-x-[22px]' : 'translate-x-0.5'
-                }`}
-              />
-            </button>
-          </label>
-        </div>
-      )}
-
-      {compact && (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-bold text-slate-500">{t('socials.demoMode')}</p>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={demoMode}
-            onClick={() => persistDemoMode(!demoMode)}
-            className={`relative h-6 w-11 rounded-full transition-colors ${
-              demoMode ? 'bg-[#10B981]' : 'bg-slate-200'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                demoMode ? 'translate-x-[22px]' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
-        </div>
-      )}
-
-      {demoMode && (
-        <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-4 py-3 flex items-start gap-2.5">
-          <Shield size={16} className="text-[#10B981] mt-0.5 flex-shrink-0" />
-          <p className="text-[12px] sm:text-[13px] text-emerald-900 font-medium leading-snug">
-            {t('socials.demoModeHint')}
+        <div className="min-w-0">
+          <h2 className="font-outfit font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">
+            {t('socials.title')}
+          </h2>
+          <p className="text-sm sm:text-[15px] text-slate-500 font-medium mt-2 max-w-2xl leading-relaxed">
+            {t('socials.subtitle')}
           </p>
         </div>
       )}
 
       {needsIgBusiness ? <IgBusinessRequiredBanner /> : null}
 
-      {!demoMode &&
-      (liveAccounts ?? data?.accounts ?? []).some((a) => a.connected) ? (
-        <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-3 flex flex-wrap items-center gap-2">
-          <p className="text-[11px] font-extrabold uppercase tracking-wide text-emerald-800 mr-1">
-            Connected
-          </p>
-          {(liveAccounts ?? data?.accounts ?? [])
-            .filter((a) => a.connected)
-            .map((a) => (
-              <span
-                key={a.platform}
-                className="inline-flex items-center gap-1.5 min-h-[36px] px-2.5 rounded-xl bg-white border border-emerald-200 text-xs font-bold text-slate-800"
-              >
-                {(() => {
-                  const Icon = ICONS[a.platform];
-                  return Icon ? <Icon size={14} /> : null;
-                })()}
-                {PLATFORM_META[a.platform]?.label || a.platform}
-                {(a.handle || a.display_name) && (
-                  <span className="font-mono font-semibold text-slate-500 truncate max-w-[140px]">
-                    {a.handle || a.display_name}
-                  </span>
-                )}
-              </span>
-            ))}
-        </div>
-      ) : null}
+      {!compact ? <WorkspaceOAuthGuideBanner /> : null}
 
-      {!compact && !demoMode ? <WorkspaceOAuthGuideBanner /> : null}
-
-      {!compact && !demoMode && (
+      {!compact && (
         <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3">
           <div className="min-w-0">
             <p className="text-sm font-extrabold text-slate-900">
-              Connect Meta accounts
+              {t('connectMetaAccountsTitle')}
             </p>
             <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
-              Connect Instagram and Facebook separately, or link both in one Meta Suite login.
+              {t('connectMetaAccountsSub')}
             </p>
             <p className="text-[10px] font-semibold text-slate-500 leading-snug mt-1.5">
               {t('socials.workspaceGuidePerWorkspace')}
@@ -960,7 +852,7 @@ export default function SocialAccountsPanel({
               ) : (
                 <RefreshCw size={16} />
               )}
-              🔄 Re-sync Meta Webhooks
+              {t('resyncMetaWebhooks')}
             </button>
           )}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
@@ -1033,15 +925,15 @@ export default function SocialAccountsPanel({
         </div>
       )}
 
-      {!compact && !demoMode && (
+      {!compact && (
         <div className="space-y-3 sm:space-y-4">
           <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3 w-full">
             <div className="min-w-0">
               <p className="text-sm font-extrabold text-slate-900">
-                Connect TikTok Account
+                {t('connectTikTokTitle')}
               </p>
               <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
-                Link TikTok for Display API analytics and Content Posting.
+                {t('connectTikTokSub')}
               </p>
               <p className="text-[10px] font-semibold text-slate-500 leading-snug mt-1.5">
                 {t('socials.workspaceGuidePerWorkspace')}
@@ -1184,21 +1076,8 @@ export default function SocialAccountsPanel({
         </div>
       )}
 
-      {!compact && demoMode && (
-        <div className="rounded-2xl border border-[#1877F2]/25 bg-[#1877F2]/5 px-4 py-4 sm:px-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-extrabold text-slate-900">
-              Demo Mode — simulated OAuth
-            </p>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Turn Demo Mode off to use live Instagram, Facebook, TikTok, YouTube, LinkedIn, and Pinterest connections.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Platform cards only in Demo Mode / compact modal — live settings use the strips above. */}
-      {(compact || demoMode) && (
+      {/* Platform cards in compact modal — full settings page uses the strips above. */}
+      {compact && (
       <div className={`grid grid-cols-1 ${compact ? 'gap-3' : 'md:grid-cols-2 gap-3 sm:gap-4'}`}>
         {ORDER.map((platform) => {
           const acc = byPlatform.get(platform);
@@ -1238,9 +1117,12 @@ export default function SocialAccountsPanel({
                   {connected && acc ? (
                     <div className="flex items-center gap-2.5 mt-3">
                       {acc.avatar_url ? (
-                        <img
+                        <OptimizedImage
                           src={acc.avatar_url}
                           alt=""
+                          width={44}
+                          height={44}
+                          sizes="44px"
                           className="w-11 h-11 rounded-full object-cover border-2 border-[#10B981]/40"
                         />
                       ) : (

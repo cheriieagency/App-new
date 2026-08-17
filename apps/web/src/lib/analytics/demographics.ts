@@ -440,57 +440,67 @@ export async function fetchMultiPlatformDemographics(input: {
   }
 
   const slices: PlatformDemographicsSlice[] = [];
+  const tasks: Array<Promise<PlatformDemographicsSlice | null>> = [];
 
   const ig = byPlatform.get('instagram');
   if (ig?.access_token && ig.platform_user_id) {
-    try {
-      const demo = await fetchInstagramAudienceDemographics(
-        ig.platform_user_id,
-        ig.access_token
-      );
-      slices.push({
-        platform: 'instagram',
-        available: demo.available,
-        message: demo.message,
-        countries: demo.countries,
-        cities: demo.cities,
-        genders: demo.genders,
-        ages: demo.ages,
-        active_hours: demo.active_hours,
-      });
-    } catch (error) {
-      slices.push({
-        platform: 'instagram',
-        available: false,
-        countries: [],
-        cities: [],
-        genders: [],
-        ages: [],
-        active_hours: emptyHours(),
-        message:
-          error instanceof Error ? error.message : 'Instagram demographics failed',
-      });
-    }
+    tasks.push(
+      (async () => {
+        try {
+          const demo = await fetchInstagramAudienceDemographics(
+            ig.platform_user_id!,
+            ig.access_token!
+          );
+          return {
+            platform: 'instagram' as const,
+            available: demo.available,
+            message: demo.message,
+            countries: demo.countries,
+            cities: demo.cities,
+            genders: demo.genders,
+            ages: demo.ages,
+            active_hours: demo.active_hours,
+          };
+        } catch (error) {
+          return {
+            platform: 'instagram' as const,
+            available: false,
+            countries: [],
+            cities: [],
+            genders: [],
+            ages: [],
+            active_hours: emptyHours(),
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Instagram demographics failed',
+          };
+        }
+      })()
+    );
   }
 
   const fb = byPlatform.get('facebook');
   if (fb?.access_token) {
     const pageId = fb.page_id || fb.platform_user_id;
     if (pageId) {
-      slices.push(await fetchFacebookPageDemographics(pageId, fb.access_token));
+      tasks.push(fetchFacebookPageDemographics(pageId, fb.access_token));
     }
   }
 
   const yt = byPlatform.get('youtube');
   if (yt?.access_token && yt.platform_user_id) {
-    slices.push(
-      await fetchYouTubeDemographics(yt.platform_user_id, yt.access_token)
-    );
+    tasks.push(fetchYouTubeDemographics(yt.platform_user_id, yt.access_token));
   }
 
   const pin = byPlatform.get('pinterest');
   if (pin?.access_token) {
-    slices.push(await fetchPinterestDemographics(pin.access_token));
+    tasks.push(fetchPinterestDemographics(pin.access_token));
+  }
+
+  const settled = await Promise.all(tasks);
+  for (const slice of settled) {
+    if (slice) slices.push(slice);
   }
 
   if (byPlatform.has('tiktok')) {

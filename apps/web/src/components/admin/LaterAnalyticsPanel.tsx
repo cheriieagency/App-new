@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BarChart3,
   CalendarDays,
@@ -68,6 +68,7 @@ import PostAnalyticsDetailModal, {
   type PostAnalyticsDetail,
 } from '@/components/admin/analytics/PostAnalyticsDetailModal';
 import MonthlyReportEngine from '@/components/admin/analytics/MonthlyReportEngine';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 const PLATFORM_LABEL: Record<string, string> = {
   instagram: 'Instagram',
@@ -380,9 +381,16 @@ export default function LaterAnalyticsPanel() {
     hasConnectedSocials && (sub === 'stories' || sub === 'analytics')
   );
 
-  // Hard refresh when switching analytics sub-tabs so data is never stale.
+  // Hard refresh when switching analytics sub-tabs / workspace / date range.
+  // Skip the initial mount — React Query already loads with staleTime; remounts
+  // are avoided by admin keep-alive so this only runs on intentional filter changes.
+  const analyticsHardRefreshSkip = useRef(true);
   useEffect(() => {
     if (!hasConnectedSocials) return;
+    if (analyticsHardRefreshSkip.current) {
+      analyticsHardRefreshSkip.current = false;
+      return;
+    }
     void refetchAnalytics();
     void refetchMetaSync();
     if (
@@ -1174,9 +1182,12 @@ export default function LaterAnalyticsPanel() {
                 className="rounded-2xl border border-slate-200/80 bg-white px-3.5 py-3 flex items-center gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
               >
                 {avatar ? (
-                  <img
+                  <OptimizedImage
                     src={avatar}
                     alt=""
+                    width={44}
+                    height={44}
+                    sizes="44px"
                     className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full object-cover border-2 border-[#E9D5FF]"
                   />
                 ) : (
@@ -1784,9 +1795,14 @@ function PostPerfRowItem({
       >
         {rank}
       </span>
-      <div className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={post.image} alt="" className="w-full h-full object-cover" />
+      <div className="relative w-12 h-12 min-h-[48px] min-w-[48px] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+        <OptimizedImage
+          src={post.image}
+          alt=""
+          fill
+          sizes="(max-width: 640px) 80px, 96px"
+          className="object-cover"
+        />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-slate-900 truncate">{post.title}</p>
@@ -2670,17 +2686,18 @@ function AudienceInsights({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
-                        className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-full border border-slate-100 inline-flex items-center justify-center flex-shrink-0 overflow-hidden bg-slate-50"
+                        className="relative w-10 h-10 min-h-[40px] min-w-[40px] rounded-full border border-slate-100 inline-flex items-center justify-center flex-shrink-0 overflow-hidden bg-slate-50"
                         style={{
                           color: PLATFORM_COLORS[row.platform] || '#1a1848',
                         }}
                       >
                         {row.avatar_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <OptimizedImage
                             src={row.avatar_url}
                             alt=""
-                            className="w-full h-full object-cover"
+                            fill
+                            sizes="40px"
+                            className="object-cover"
                           />
                         ) : (
                           <Icon size={18} />

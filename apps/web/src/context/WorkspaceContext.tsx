@@ -12,6 +12,7 @@ import {
 import { usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n';
 import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner';
 import {
   blankWorkspaceProfile,
@@ -70,6 +71,7 @@ function mirrorActiveCookies(id: string, ws?: WorkspaceProfile | null) {
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [workspaces, setWorkspaces] = useState<WorkspaceProfile[]>(() =>
     listWorkspaceProfiles()
   );
@@ -225,11 +227,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
         body: JSON.stringify({ id: activeWorkspaceId, bio: patch }),
       }).then(async (r) => {
-        if (!r.ok) toast.error('Could not save bio to database');
+        if (!r.ok) toast.error(t('toastBioSaveFailed'));
         else refreshWorkspaces();
       });
     },
-    [activeWorkspaceId, refreshWorkspaces]
+    [activeWorkspaceId, refreshWorkspaces, t]
   );
 
   const createWorkspace = useCallback(
@@ -251,7 +253,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         }),
       }).then(async (r) => {
         if (!r.ok) {
-          toast.error('Could not save workspace to database');
+          toast.error(t('toastWorkspaceSaveFailed'));
           return;
         }
         refreshWorkspaces();
@@ -259,7 +261,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       return created;
     },
-    [setActiveWorkspaceId, refreshWorkspaces]
+    [setActiveWorkspaceId, refreshWorkspaces, t]
   );
 
   const deleteWorkspace = useCallback(
@@ -273,11 +275,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         method: 'DELETE',
         credentials: 'include',
       }).then(async (r) => {
-        if (!r.ok) toast.error('Could not delete workspace in database');
+        if (!r.ok) toast.error(t('toastWorkspaceDeleteFailed'));
         else refreshWorkspaces();
       });
     },
-    [setActiveWorkspaceId, refreshWorkspaces]
+    [setActiveWorkspaceId, refreshWorkspaces, t]
   );
 
   const value = useMemo(

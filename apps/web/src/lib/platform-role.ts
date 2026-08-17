@@ -74,7 +74,7 @@ export const MEMBER_ROUTE_PREFIXES = [
 ] as const;
 
 /** Creator/admin-only studio prefixes (members are redirected away — unless dual access). */
-export const CREATOR_ROUTE_PREFIXES = ['/admin', '/planner'] as const;
+export const CREATOR_ROUTE_PREFIXES = ['/admin', '/planner', '/ads'] as const;
 
 export function pathMatchesPrefix(pathname: string, prefixes: readonly string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));

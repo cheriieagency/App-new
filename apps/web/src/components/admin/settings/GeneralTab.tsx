@@ -95,14 +95,14 @@ export default function GeneralTab({
       credentials: 'include',
       body: JSON.stringify({ workspaceId, branding: next }),
     }).then(async (r) => {
-      if (!r.ok) toast.error('Could not save branding to database');
+      if (!r.ok) toast.error(t('toastBrandingSaveFailed', locale));
     });
   };
 
   const onPick = async (kind: 'logo' | 'favicon', file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast.error('Please choose an image');
+      toast.error(t('toastChooseImage', locale));
       return;
     }
     setBusy(kind);
@@ -112,24 +112,28 @@ export default function GeneralTab({
     );
     setBusy(null);
     if (!url) {
-      toast.error('Upload failed');
+      toast.error(t('toastUploadFailed', locale));
       return;
     }
     persist({
       ...branding,
       ...(kind === 'logo' ? { logoUrl: url } : { faviconUrl: url }),
     });
-    toast.success(kind === 'logo' ? 'Logo updated' : 'Favicon updated');
+    toast.success(
+      kind === 'logo'
+        ? t('toastLogoUpdated', locale)
+        : t('toastFaviconUpdated', locale)
+    );
   };
 
   return (
     <>
       <SectionBlock
-        title="Organization branding"
-        subtitle="Name and assets shown across your creator brand."
+        title={t('orgBrandingTitle', locale)}
+        subtitle={t('orgBrandingSub', locale)}
       >
         <div className="space-y-5">
-          <FieldRow label="Organization name">
+          <FieldRow label={t('orgNameLabel', locale)}>
             <input
               value={branding.name}
               onChange={(e) => persist({ ...branding, name: e.target.value })}
@@ -138,7 +142,7 @@ export default function GeneralTab({
             />
           </FieldRow>
 
-          <FieldRow label="Organization logo" hint="Square PNG/JPG recommended.">
+          <FieldRow label={t('orgLogoLabel', locale)} hint={t('orgLogoHint', locale)}>
             <div className="flex items-center gap-3">
               <div className="h-14 w-14 min-h-[56px] min-w-[56px] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
                 {branding.logoUrl ? (
@@ -161,7 +165,7 @@ export default function GeneralTab({
                 {busy === 'logo' ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : null}
-                Upload logo
+                {t('uploadLogo', locale)}
               </button>
               <input
                 ref={logoRef}
@@ -177,7 +181,7 @@ export default function GeneralTab({
           </FieldRow>
 
           <FieldRow
-            label="Custom domain favicon"
+            label={t('orgFaviconLabel', locale)}
             hint="16×16 or 32×32 ICO/PNG for your custom domain."
           >
             <div className="flex items-center gap-3">
@@ -202,7 +206,7 @@ export default function GeneralTab({
                 {busy === 'favicon' ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : null}
-                Upload favicon
+                {t('uploadFavicon', locale)}
               </button>
               <input
                 ref={favRef}

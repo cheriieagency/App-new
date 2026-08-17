@@ -606,7 +606,7 @@ export default function CommunityAdminPanel({
     void queryClient.invalidateQueries({ queryKey: ['admin-community'] });
     void queryClient.invalidateQueries({ queryKey: ['communities'] });
     void queryClient.invalidateQueries({ queryKey: ['communities-public'] });
-    toast.message('Community dashboard unlocked for this workspace');
+    toast.message(t('toastCommunityUnlocked', locale));
   };
 
   const mutation = useMutation({

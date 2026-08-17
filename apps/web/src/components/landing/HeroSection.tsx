@@ -18,6 +18,7 @@ import {
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
 import { useLanguage } from '@/lib/i18n';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 type PlannerView = 'calendar' | 'kanban' | 'feed' | 'analytics';
 type ChannelFilter = 'all' | 'instagram' | 'tiktok' | 'linkedin' | 'youtube';
@@ -177,9 +178,13 @@ function HeroPlannerMockup() {
       {/* Social set + channels */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 px-3 sm:px-4 py-3 border-b border-slate-100 bg-[#FAFAFA]/80">
         <div className="flex items-center gap-2.5 min-w-0">
-          <img
+          <OptimizedImage
             src={AVATAR}
             alt=""
+            width={36}
+            height={36}
+            sizes="36px"
+            priority
             className="h-9 w-9 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0"
           />
           <div className="min-w-0">

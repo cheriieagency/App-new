@@ -170,9 +170,9 @@ export default function ProjectsPanel() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['planner-campaigns'] });
       setEditOpen(false);
-      toast.success('Project updated');
+      toast.success(t('toastProjectUpdated', locale));
     },
-    onError: () => toast.error('Could not update project'),
+    onError: () => toast.error(t('toastProjectUpdateFailed', locale)),
   });
 
   const openEditDialog = () => {
@@ -213,9 +213,11 @@ export default function ProjectsPanel() {
       queryClient.invalidateQueries({ queryKey: ['media-folders'] });
       setLinkFolderOpen(false);
       setLinkFolderId('');
-      toast.success(`Linked “${data.folder.name}” to this project`);
+      toast.success(
+        tf('toastLinkedMediaFolder', locale, { name: data.folder.name })
+      );
     },
-    onError: () => toast.error('Could not link media folder'),
+    onError: () => toast.error(t('toastLinkMediaFolderFailed', locale)),
   });
 
   const createLinkedFolderMutation = useMutation({
@@ -244,10 +246,12 @@ export default function ProjectsPanel() {
       setLinkFolderOpen(false);
       setNewFolderName('');
       setLinkFolderId('');
-      toast.success(`Created and linked “${data.folder.name}”`);
+      toast.success(
+        tf('toastCreatedLinkedFolder', locale, { name: data.folder.name })
+      );
       setActiveMediaFolderId(data.folder.id);
     },
-    onError: () => toast.error('Could not create media folder'),
+    onError: () => toast.error(t('toastCreateMediaFolderFailed', locale)),
   });
 
   const openDeleteDialog = () => {

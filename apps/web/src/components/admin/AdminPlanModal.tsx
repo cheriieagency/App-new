@@ -135,7 +135,7 @@ export default function AdminPlanModal({
         pro_unlocked: res.pro_unlocked,
       });
       queryClient.invalidateQueries({ queryKey: ['planner-team'] });
-      toast.success(`Switched to ${planLabel(res.plan)}`);
+      toast.success(t('toastPlanSwitched', { plan: planLabel(res.plan) }));
       onOpenChange(false);
     },
     onError: () => toast.error(t('common.error')),

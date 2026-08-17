@@ -31,6 +31,7 @@ import {
   TikTokIcon,
 } from '@/components/icons/SocialBrandIcons';
 import { useLanguage } from '@/lib/i18n';
+import OptimizedImage from '@/components/ui/OptimizedImage';
 
 type FeatureTab = 'biostore' | 'planner' | 'analytics' | 'community' | 'crm' | 'dm';
 
@@ -282,9 +283,12 @@ function BioStoreCanvas() {
 
               <div className="px-2.5 pb-2.5 flex-1 flex flex-col">
                 <div className="relative mx-auto mb-1.5 mt-1">
-                  <img
+                  <OptimizedImage
                     src={AVATAR}
                     alt=""
+                    width={48}
+                    height={48}
+                    sizes="48px"
                     className="w-12 h-12 rounded-full object-cover ring-[2.5px] ring-[#93C5FD]"
                   />
                   <span className="absolute -bottom-0.5 -right-0.5 h-[15px] w-[15px] rounded-full bg-[#1a1848] border border-white/30 flex items-center justify-center">

@@ -10,6 +10,7 @@ import {
   FileText,
   Link2,
 } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n';
 import type {
   ClassroomCourse,
   ClassroomLesson,
@@ -101,6 +102,7 @@ export default function CourseLessonViewer({
   onBack: () => void;
   initialLessonId?: number;
 }) {
+  const { t } = useLanguage();
   const modules = useMemo(
     () => [...(course.modules ?? [])].sort((a, b) => a.order - b.order),
     [course.modules]
@@ -252,7 +254,7 @@ export default function CourseLessonViewer({
       <main className="flex-1 min-w-0">
         {!activeLesson ? (
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-10 text-center text-sm text-slate-400">
-            Välj en lektion till vänster
+            {t('pickLessonHint')}
           </div>
         ) : (
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
@@ -276,7 +278,7 @@ export default function CourseLessonViewer({
                 }`}
               >
                 <CheckCircle2 size={15} />
-                {isDone ? 'Done' : 'Mark as complete'}
+                {isDone ? t('done') : t('markComplete')}
               </button>
             </div>
 

@@ -107,27 +107,30 @@ export async function GET(request: Request) {
   try {
     const workspaceId =
       (await resolveWorkspaceId(request, userId, session.user.email)) || userId;
-    const folders = await listDurableMediaFolders({ workspaceId, userId });
 
     if (folderId) {
+      const [folders, assets] = await Promise.all([
+        listDurableMediaFolders({ workspaceId, userId }),
+        listAssetsDurable({
+          workspaceId,
+          userId,
+          folderId,
+        }),
+      ]);
       const folder =
         folders.find((f) => f.id === folderId) ||
-        (isMediaLibraryRoot(folderId)
-          ? folders[0]
-          : null);
-      const assets = await listAssetsDurable({
-        workspaceId,
-        userId,
-        folderId,
-      });
+        (isMediaLibraryRoot(folderId) ? folders[0] : null);
       return Response.json({ folder, assets, folders });
     }
 
-    const assets = await listAssetsDurable({
-      workspaceId,
-      userId,
-      folderId: MEDIA_LIBRARY_ROOT_ID,
-    });
+    const [folders, assets] = await Promise.all([
+      listDurableMediaFolders({ workspaceId, userId }),
+      listAssetsDurable({
+        workspaceId,
+        userId,
+        folderId: MEDIA_LIBRARY_ROOT_ID,
+      }),
+    ]);
     return Response.json({ folders, assets });
   } catch (error) {
     console.error('[GET /api/admin/media]', error);

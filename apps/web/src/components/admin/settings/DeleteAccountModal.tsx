@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
+import { t, type Locale } from '@/lib/i18n';
 
 type DeleteAccountModalProps = {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
   busy?: boolean;
+  locale: Locale;
 };
 
 /**
@@ -18,6 +20,7 @@ export default function DeleteAccountModal({
   onClose,
   onConfirm,
   busy = false,
+  locale,
 }: DeleteAccountModalProps) {
   const [confirmText, setConfirmText] = useState('');
 
@@ -33,7 +36,7 @@ export default function DeleteAccountModal({
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t('closeAria', locale)}
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
         onClick={onClose}
       />
@@ -54,17 +57,15 @@ export default function DeleteAccountModal({
           id="delete-account-title"
           className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight pr-10"
         >
-          Delete account?
+          {t('deleteAccountTitle', locale)}
         </h2>
         <p className="text-sm text-slate-500 font-medium mt-2 leading-relaxed">
-          This permanently removes your clikd: account and associated creator data.
-          Type <span className="font-mono font-bold text-slate-800">DELETE</span> to
-          confirm.
+          {t('deleteAccountBody', locale)}
         </p>
         <input
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
-          placeholder="Type DELETE"
+          placeholder={t('deleteAccountConfirmPlaceholder', locale)}
           autoComplete="off"
           className="mt-4 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-rose-300"
         />
@@ -75,7 +76,7 @@ export default function DeleteAccountModal({
             disabled={busy}
             className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
           >
-            Cancel
+            {t('cancel', locale)}
           </button>
           <button
             type="button"
@@ -84,7 +85,7 @@ export default function DeleteAccountModal({
             className="h-11 min-h-[44px] px-4 rounded-xl bg-rose-500 text-white text-sm font-bold hover:bg-rose-600 disabled:opacity-40 inline-flex items-center justify-center gap-2"
           >
             {busy ? <Loader2 size={15} className="animate-spin" /> : null}
-            Delete account
+            {t('deleteAccountConfirm', locale)}
           </button>
         </div>
       </div>

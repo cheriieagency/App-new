@@ -229,7 +229,7 @@ export async function GET(request: Request) {
         snapshot.instagram.profile_picture_url || by_platform.instagram.avatar_url;
     }
 
-    // Posts / Reels: Instagram + Facebook Page + TikTok (when tokens exist).
+    // Posts / Reels + audience demographics: run in parallel (independent APIs).
     let media: AnalyticsMediaItem[] = (snapshot?.media ?? []).map((item) => ({
       id: item.id.startsWith('instagram:') ? item.id : `instagram:${item.id}`,
       platform: 'instagram' as const,
@@ -244,17 +244,34 @@ export async function GET(request: Request) {
       view_count: null as number | null,
       timestamp: item.timestamp ?? null,
     }));
+    let demographics = null as Awaited<
+      ReturnType<typeof fetchMultiPlatformDemographics>
+    > | null;
+
     if (workspaceId) {
-      try {
-        media = await fetchMultiPlatformMedia({
+      const [mediaResult, demoResult] = await Promise.all([
+        fetchMultiPlatformMedia({
           userId: session.user.id,
           workspaceId,
           instagramMedia: snapshot?.media ?? null,
-        });
-      } catch (error) {
-        console.warn('[Analytics API] multi-platform media failed', error);
-      }
+        }).catch((error) => {
+          console.warn('[Analytics API] multi-platform media failed', error);
+          return null;
+        }),
+        fetchMultiPlatformDemographics({
+          userId: session.user.id,
+          workspaceId,
+        }).catch((error) => {
+          console.warn('[Analytics API] multi-platform demographics failed', error);
+          return null;
+        }),
+      ]);
+      if (mediaResult) media = mediaResult;
+      demographics =
+        demoResult ??
+        ((snapshot?.demographics as typeof demographics) ?? null);
     }
+
     const hashtags = extractHashtags(media);
 
     // Prefer Meta insights when present; otherwise roll up IG + FB + TikTok media.
@@ -272,23 +289,6 @@ export async function GET(request: Request) {
       reach > 0
         ? Math.round((engagementTotal / reach) * 1000) / 10
         : 0;
-
-    // Audience demographics across every connected API for this workspace.
-    let demographics = null as Awaited<
-      ReturnType<typeof fetchMultiPlatformDemographics>
-    > | null;
-    if (workspaceId) {
-      try {
-        demographics = await fetchMultiPlatformDemographics({
-          userId: session.user.id,
-          workspaceId,
-        });
-      } catch (error) {
-        console.warn('[Analytics API] multi-platform demographics failed', error);
-        // Fall back to Instagram-only snapshot demographics if present.
-        demographics = (snapshot?.demographics as typeof demographics) ?? null;
-      }
-    }
 
     const metrics = {
       reach,

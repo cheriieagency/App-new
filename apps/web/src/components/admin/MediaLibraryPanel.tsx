@@ -276,7 +276,7 @@ export default function MediaLibraryPanel() {
           : 'Project link removed'
       );
     },
-    onError: () => toast.error('Could not update project link'),
+    onError: () => toast.error(t('toastUpdateProjectLinkFailed', locale)),
   });
 
   const renameMutation = useMutation({
@@ -306,9 +306,9 @@ export default function MediaLibraryPanel() {
       queryClient.invalidateQueries({ queryKey: ['media-folders'] });
       queryClient.invalidateQueries({ queryKey: ['media-folder', activeId] });
       setRenaming(false);
-      toast.success('Folder renamed');
+      toast.success(t('toastFolderRenamed', locale));
     },
-    onError: () => toast.error('Could not rename folder'),
+    onError: () => toast.error(t('toastFolderRenameFailed', locale)),
   });
 
   const uploadMutation = useMutation({
@@ -347,7 +347,7 @@ export default function MediaLibraryPanel() {
       queryClient.invalidateQueries({ queryKey: ['media-folder', activeId] });
       queryClient.invalidateQueries({ queryKey: ['media-folder'] });
       queryClient.invalidateQueries({ queryKey: ['media-folders'] });
-      toast.success('Uploaded from your device');
+      toast.success(t('toastUploadedFromDevice', locale));
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : 'Upload failed');
@@ -386,9 +386,9 @@ export default function MediaLibraryPanel() {
           ? 'Brand assets'
           : nestedFolders.find((f) => f.id === vars.folderId)?.name ||
             'folder';
-      toast.success(`Moved to ${dest}`);
+      toast.success(tf('toastMovedToFolder', locale, { dest }));
     },
-    onError: () => toast.error('Could not move file'),
+    onError: () => toast.error(t('toastMoveFileFailed', locale)),
     onSettled: () => {
       setDropTargetId(null);
       setDraggingAssetId(null);
@@ -441,9 +441,9 @@ export default function MediaLibraryPanel() {
       queryClient.invalidateQueries({ queryKey: ['media-folder'] });
       queryClient.invalidateQueries({ queryKey: ['media-folders'] });
       setAssetToDelete(null);
-      toast.success('Deleted from media library');
+      toast.success(t('toastDeletedFromLibrary', locale));
     },
-    onError: () => toast.error('Could not delete file'),
+    onError: () => toast.error(t('toastFileDeleteFailed', locale)),
   });
 
   const onDeviceFiles = (files: FileList | null) => {
@@ -525,7 +525,7 @@ export default function MediaLibraryPanel() {
         if (!r.ok) throw new Error('Could not save to media library');
         queryClient.invalidateQueries({ queryKey: ['media-folder'] });
         queryClient.invalidateQueries({ queryKey: ['media-folders'] });
-        toast.success('Uploaded to folder');
+        toast.success(t('toastUploadedToFolder', locale));
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Upload failed');
       }
