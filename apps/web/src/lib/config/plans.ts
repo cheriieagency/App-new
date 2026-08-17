@@ -112,11 +112,14 @@ export const PLAN_RANK: Record<WorkspacePlan, number> = {
 export const PLAN_DISPLAY_NAME: Record<WorkspacePlan, string> = {
   starter: 'Starter',
   creator: 'Creator',
-  pro: 'Pro',
+  pro: 'Pro/Agency',
 };
 
 export function normalizeWorkspacePlan(value: unknown): WorkspacePlan {
   if (value === 'starter' || value === 'creator' || value === 'pro') return value;
+  // Legacy aliases from earlier Growth / Scale naming
+  if (value === 'growth') return 'creator';
+  if (value === 'scale') return 'pro';
   return 'starter';
 }
 
@@ -169,7 +172,7 @@ export function formatLimit(limit: number): string {
 }
 
 export function upgradeBadgeLabel(minPlan: WorkspacePlan): string {
-  if (minPlan === 'pro') return '⚡ Upgrade to Pro';
-  if (minPlan === 'creator') return '🔒 Requires Creator Plan';
+  if (minPlan === 'pro') return `⚡ Upgrade to ${PLAN_DISPLAY_NAME.pro}`;
+  if (minPlan === 'creator') return `🔒 Requires ${PLAN_DISPLAY_NAME.creator}`;
   return 'Upgrade required';
 }

@@ -1,17 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Folder, FolderKanban, Plus, Trash2 } from 'lucide-react';
+import { Folder, FolderKanban, Pencil, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import {
-  adminMediaHref,
-  useAdminNav,
-} from '@/components/admin/AdminNavContext';
+import { useAdminNav } from '@/components/admin/AdminNavContext';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
 import ProjectVisionBoard from '@/components/admin/ProjectVisionBoard';
+import ProjectFilesPanel from '@/components/admin/ProjectFilesPanel';
 import ContentPlannerShell from '@/components/planner/ContentPlannerShell';
 import {
   Dialog,
@@ -30,6 +28,7 @@ import {
 } from '@/lib/mock-media-library';
 
 const COLORS = ['#F472B6', '#9089F0', '#10B981', '#F59E0B', '#2B2568', '#0EA5E9'];
+const DEFAULT_FOLDER_COLOR = '#2B2568';
 
 /**
  * Projects section: overview of all projects as folders; open one to see
@@ -43,6 +42,7 @@ export default function ProjectsPanel() {
     setActiveCampaignId,
     createProjectOpen,
     setCreateProjectOpen,
+    setActiveMediaFolderId,
   } = useAdminNav();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
@@ -50,6 +50,13 @@ export default function ProjectsPanel() {
   const [description, setDescription] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
+  const [linkFolderOpen, setLinkFolderOpen] = useState(false);
+  const [linkFolderId, setLinkFolderId] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState(COLORS[1]);
+  const [editDescription, setEditDescription] = useState('');
   const creating = createProjectOpen;
 
   const { data: campaignsData, isLoading } = useQuery<{ campaigns: CampaignLabel[] }>({
@@ -99,6 +106,8 @@ export default function ProjectsPanel() {
     [active, mediaFolders]
   );
 
+  const linkableFolders = useMemo(() => mediaFolders, [mediaFolders]);
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const r = await fetch('/api/planner/campaigns', {
@@ -137,6 +146,107 @@ export default function ProjectsPanel() {
       setDeleteAcknowledged(false);
       setActiveCampaignId(null);
     },
+  });
+
+  const updateProjectMutation = useMutation({
+    mutationFn: async () => {
+      if (!active) throw new Error('No project selected');
+      const r = await fetch('/api/planner/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'update',
+          id: active.id,
+          name: editName.trim(),
+          color: editColor,
+          description: editDescription,
+        }),
+      });
+      if (!r.ok) throw new Error('Could not update project');
+      return r.json() as Promise<{ campaign: CampaignLabel }>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planner-campaigns'] });
+      setEditOpen(false);
+      toast.success('Project updated');
+    },
+    onError: () => toast.error('Could not update project'),
+  });
+
+  const openEditDialog = () => {
+    if (!active) return;
+    setEditName(active.name);
+    setEditColor(active.color || COLORS[1]);
+    setEditDescription(active.description || '');
+    setEditOpen(true);
+  };
+
+  const workspaceHeaders: Record<string, string> = activeWorkspace.id
+    ? {
+        'x-workspace-id': activeWorkspace.id,
+        'x-active-workspace-id': activeWorkspace.id,
+      }
+    : {};
+
+  const linkExistingFolderMutation = useMutation({
+    mutationFn: async (folderId: string) => {
+      if (!active) throw new Error('No project selected');
+      const r = await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...workspaceHeaders,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'update',
+          id: folderId,
+          campaignId: active.id,
+        }),
+      });
+      if (!r.ok) throw new Error('Could not link folder');
+      return r.json() as Promise<{ folder: MediaFolder }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+      setLinkFolderOpen(false);
+      setLinkFolderId('');
+      toast.success(`Linked “${data.folder.name}” to this project`);
+    },
+    onError: () => toast.error('Could not link media folder'),
+  });
+
+  const createLinkedFolderMutation = useMutation({
+    mutationFn: async () => {
+      if (!active) throw new Error('No project selected');
+      const r = await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...workspaceHeaders,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'create',
+          name: newFolderName.trim() || `${active.name} assets`,
+          color: DEFAULT_FOLDER_COLOR,
+          description: `Media for ${active.name}`,
+          campaignId: active.id,
+        }),
+      });
+      if (!r.ok) throw new Error('Could not create folder');
+      return r.json() as Promise<{ folder: MediaFolder }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+      setLinkFolderOpen(false);
+      setNewFolderName('');
+      setLinkFolderId('');
+      toast.success(`Created and linked “${data.folder.name}”`);
+      setActiveMediaFolderId(data.folder.id);
+    },
+    onError: () => toast.error('Could not create media folder'),
   });
 
   const openDeleteDialog = () => {
@@ -199,7 +309,198 @@ export default function ProjectsPanel() {
     </Dialog>
   ) : null;
 
-  // Creating a project: hide planner until the new project is saved.
+  const linkFolderDialog = active ? (
+    <Dialog
+      open={linkFolderOpen}
+      onOpenChange={(open) => {
+        setLinkFolderOpen(open);
+        if (!open) {
+          setLinkFolderId('');
+          setNewFolderName('');
+        }
+      }}
+    >
+      <DialogContent className="max-w-[min(440px,94vw)] rounded-2xl border-slate-200/90 p-0 gap-0">
+        <DialogHeader className="px-5 sm:px-6 pt-5 pb-3 text-left">
+          <DialogTitle className="text-base font-bold text-slate-900">
+            Link media folder
+          </DialogTitle>
+          <DialogDescription className="text-sm text-slate-500 font-medium pt-1">
+            Connect a Media Library folder to{' '}
+            <span className="font-semibold text-slate-800">{active.name}</span>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="px-5 sm:px-6 pb-4 space-y-4">
+          <label className="block">
+            <span className="block text-xs font-bold text-slate-700 mb-1.5">
+              Existing folder
+            </span>
+            <select
+              value={linkFolderId}
+              onChange={(e) => setLinkFolderId(e.target.value)}
+              className="w-full h-11 min-h-[44px] px-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            >
+              <option value="">
+                {linkableFolders.length === 0
+                  ? 'No folders yet — create one below'
+                  : 'Choose a folder…'}
+              </option>
+              {linkableFolders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                  {f.campaign_id === active.id
+                    ? ' (linked here)'
+                    : f.campaign_id
+                      ? ' (linked to another project)'
+                      : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="relative flex items-center gap-3">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+              or
+            </span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+
+          <label className="block">
+            <span className="block text-xs font-bold text-slate-700 mb-1.5">
+              Create new folder
+            </span>
+            <input
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder={`${active.name} assets`}
+              className="w-full h-11 min-h-[44px] px-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            />
+          </label>
+        </div>
+
+        <DialogFooter className="px-5 sm:px-6 py-4 border-t border-slate-100 flex-col sm:flex-row gap-2 sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setLinkFolderOpen(false)}
+            className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50"
+          >
+            {t('cancel', locale)}
+          </button>
+          <button
+            type="button"
+            disabled={
+              !linkFolderId ||
+              linkExistingFolderMutation.isPending ||
+              createLinkedFolderMutation.isPending ||
+              linkableFolders.find((f) => f.id === linkFolderId)?.campaign_id ===
+                active.id
+            }
+            onClick={() => linkExistingFolderMutation.mutate(linkFolderId)}
+            className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40"
+          >
+            Link selected
+          </button>
+          <button
+            type="button"
+            disabled={
+              createLinkedFolderMutation.isPending ||
+              linkExistingFolderMutation.isPending
+            }
+            onClick={() => createLinkedFolderMutation.mutate()}
+            className="h-11 min-h-[44px] px-4 rounded-xl bg-[#F472B6] hover:opacity-90 text-white text-xs font-semibold disabled:opacity-40"
+          >
+            Create & link
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  ) : null;
+
+  const editProjectDialog = active ? (
+    <Dialog
+      open={editOpen}
+      onOpenChange={(open) => {
+        setEditOpen(open);
+      }}
+    >
+      <DialogContent className="max-w-[min(440px,94vw)] rounded-2xl border-slate-200/90 p-0 gap-0">
+        <DialogHeader className="px-5 sm:px-6 pt-5 pb-3 text-left">
+          <DialogTitle className="text-base font-bold text-slate-900">
+            Edit project
+          </DialogTitle>
+          <DialogDescription className="text-sm text-slate-500 font-medium pt-1">
+            Update the name, color, and description for this project.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="px-5 sm:px-6 pb-4 space-y-3">
+          <label className="block">
+            <span className="block text-xs font-bold text-slate-700 mb-1.5">
+              Name
+            </span>
+            <input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder={t('projectNamePlaceholder', locale)}
+              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            />
+          </label>
+          <label className="block">
+            <span className="block text-xs font-bold text-slate-700 mb-1.5">
+              Description
+            </span>
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              placeholder={t('projectDescPlaceholder', locale)}
+              className="w-full min-h-[72px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            />
+          </label>
+          <div>
+            <span className="block text-xs font-bold text-slate-700 mb-2">
+              Color
+            </span>
+            <div className="flex flex-wrap items-center gap-2.5">
+              {COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setEditColor(c)}
+                  className={`w-9 h-9 min-h-[36px] min-w-[36px] rounded-full transition-transform ${
+                    editColor === c
+                      ? 'ring-2 ring-offset-2 ring-slate-900 scale-110'
+                      : 'hover:scale-105'
+                  }`}
+                  style={{ background: c }}
+                  aria-label={`Color ${c}`}
+                  aria-pressed={editColor === c}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="px-5 sm:px-6 py-4 border-t border-slate-100 flex-row gap-2 sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setEditOpen(false)}
+            className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50"
+          >
+            {t('cancel', locale)}
+          </button>
+          <button
+            type="button"
+            disabled={!editName.trim() || updateProjectMutation.isPending}
+            onClick={() => updateProjectMutation.mutate()}
+            className="h-11 min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold disabled:opacity-40"
+          >
+            {t('save', locale)}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  ) : null;
+
   if (creating) {
     return (
       <div className="space-y-6">
@@ -300,11 +601,57 @@ export default function ProjectsPanel() {
 
   return (
     <div className="space-y-6">
+      <ProjectVisionBoard campaign={active} />
+      <ProjectFilesPanel
+        campaign={active}
+        headerExtra={
+          linkedMediaFolders[0] ? (
+            <button
+              type="button"
+              onClick={() => setActiveMediaFolderId(linkedMediaFolders[0].id)}
+              className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-extrabold text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <Folder size={14} aria-hidden />
+              {linkedMediaFolders[0].name}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setLinkFolderId('');
+                setNewFolderName('');
+                setLinkFolderOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl border border-dashed border-slate-300 bg-white text-xs font-extrabold text-slate-500 hover:bg-slate-50 transition-colors"
+            >
+              Link media folder
+            </button>
+          )
+        }
+      />
       <ContentPlannerShell
         campaignId={active.id}
         embedded
         eyebrow={t('adminNavProjects', locale)}
-        title={active.name}
+        title={
+          <span className="inline-flex items-center gap-2 min-w-0">
+            <span
+              className="w-3.5 h-3.5 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm"
+              style={{ background: active.color || COLORS[1] }}
+              aria-hidden
+            />
+            <span className="truncate">{active.name}</span>
+            <button
+              type="button"
+              onClick={openEditDialog}
+              className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex-shrink-0"
+              aria-label="Edit project"
+              title="Edit project"
+            >
+              <Pencil size={15} />
+            </button>
+          </span>
+        }
         description={
           active.description ||
           (activeWorkspace
@@ -312,36 +659,19 @@ export default function ProjectsPanel() {
             : undefined)
         }
         headerExtra={
-          <div className="flex flex-wrap items-center gap-2">
-            {linkedMediaFolders[0] ? (
-              <Link
-                href={adminMediaHref({ folderId: linkedMediaFolders[0].id })}
-                className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-extrabold text-slate-700 hover:bg-slate-50 transition-colors"
-              >
-                <Folder size={14} aria-hidden />
-                {linkedMediaFolders[0].name}
-              </Link>
-            ) : (
-              <Link
-                href="/admin?tab=media"
-                className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl border border-dashed border-slate-300 bg-white text-xs font-extrabold text-slate-500 hover:bg-slate-50 transition-colors"
-              >
-                Link media folder
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={openDeleteDialog}
-              className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-              aria-label={t('delete', locale)}
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={openDeleteDialog}
+            className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            aria-label={t('delete', locale)}
+          >
+            <Trash2 size={16} />
+          </button>
         }
       />
-      <ProjectVisionBoard campaign={active} />
       {deleteDialog}
+      {linkFolderDialog}
+      {editProjectDialog}
     </div>
   );
 }

@@ -72,7 +72,7 @@ const NAV: NavItem[] = [
 ];
 
 function planName(plan: WorkspacePlan) {
-  return `${PLAN_DISPLAY_NAME[plan]} Plan`;
+  return PLAN_DISPLAY_NAME[plan];
 }
 
 export default function AdminSidebar() {

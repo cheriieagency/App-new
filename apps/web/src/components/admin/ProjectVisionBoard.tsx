@@ -119,7 +119,7 @@ export default function ProjectVisionBoard({ campaign }: ProjectVisionBoardProps
   };
 
   return (
-    <section className="space-y-4 pt-2 border-t border-slate-200/80">
+    <section className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">

@@ -104,7 +104,7 @@ export default function VillkorContent() {
       <ul>
         <li>
           Depending on your plan (Starter, Creator, Pro), clikd: charges a platform fee (0% – 8%) per
-          transaction. Pro plan users enjoy 0% platform fees.
+          transaction. Pro/Agency plan users enjoy 0% platform fees.
         </li>
         <li>
           Earnings are held in your clikd: creator wallet balance and transferred to your bank

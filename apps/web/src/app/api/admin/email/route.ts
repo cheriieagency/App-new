@@ -7,6 +7,7 @@ import {
   listPersistedAutomations,
   listPersistedCommunityEmails,
   persistSubscriber,
+  deletePersistedAutomation,
   setPersistedAutomationStatus,
   upsertPersistedAutomation,
 } from '@/lib/email/crm-persist';
@@ -196,6 +197,22 @@ export async function POST(request: Request) {
       });
     }
 
+    if (action === 'delete_automation') {
+      const id = String(body.id ?? '').trim();
+      if (!id) {
+        return Response.json({ error: 'id required' }, { status: 400 });
+      }
+      const deleted = await deletePersistedAutomation(session.user.id, id);
+      if (!deleted) {
+        return Response.json({ error: 'Automation not found' }, { status: 404 });
+      }
+      return Response.json({
+        success: true,
+        deleted: true,
+        demo: !process.env.DATABASE_URL?.trim(),
+      });
+    }
+
     if (action === 'upsert_automation') {
       const trigger = String(body.trigger ?? 'community_join') as EmailAutomationTrigger;
       const name = String(body.name ?? '').trim();
@@ -301,6 +318,49 @@ export async function POST(request: Request) {
       }
 
       return Response.json({ success: true, imported, community_id: communityId, demo: false });
+    }
+
+    if (action === 'import_subscribers') {
+      const rawContacts = Array.isArray(body.contacts) ? body.contacts : [];
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      let imported = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (const row of rawContacts.slice(0, 5000)) {
+        if (!row || typeof row !== 'object') {
+          skipped += 1;
+          continue;
+        }
+        const contact = row as Record<string, unknown>;
+        const email = String(contact.email || '')
+          .toLowerCase()
+          .trim();
+        const name = String(contact.name || '').trim() || email.split('@')[0] || 'Subscriber';
+        if (!email || !emailRe.test(email)) {
+          skipped += 1;
+          if (email) errors.push(`Invalid email: ${email}`);
+          continue;
+        }
+        const ok = await persistSubscriber({
+          creatorId: session.user.id,
+          email,
+          name,
+          source: 'imported_list',
+          communityId: null,
+          tags: ['Imported List'],
+        });
+        if (ok) imported += 1;
+        else skipped += 1;
+      }
+
+      return Response.json({
+        success: true,
+        imported,
+        skipped,
+        errors: errors.slice(0, 20),
+        demo: !process.env.DATABASE_URL?.trim(),
+      });
     }
 
     // Auto-sync from join / purchase flows.

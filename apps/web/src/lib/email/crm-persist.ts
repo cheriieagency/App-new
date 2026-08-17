@@ -7,6 +7,7 @@ import sql from '@/app/api/utils/sql';
 import {
   AUTOMATION_TRIGGER_OPTIONS,
   applyMergeTags,
+  deleteEmailAutomation as deleteMockAutomation,
   listCommunityAutomationEmails,
   listEmailAutomations,
   logCommunityAutomationEmail,
@@ -250,37 +251,7 @@ function mapAutomationRow(r: Record<string, unknown>): EmailAutomation {
   };
 }
 
-/** Seed the 4 default automations once for a creator (active by default). */
-async function ensureDefaultAutomations(creatorId: string): Promise<void> {
-  const existing = await sql`
-    SELECT id FROM email_automations WHERE creator_id = ${creatorId} LIMIT 1
-  `;
-  if (Array.isArray(existing) && existing.length > 0) return;
-
-  for (const opt of AUTOMATION_TRIGGER_OPTIONS) {
-    const id = `auto-${creatorId.slice(0, 8)}-${opt.value}`;
-    // Keep description as a plain string — nested templates inside sql`` confuse Turbopack.
-    const description = `Automated email for ${opt.label.toLowerCase()}.`;
-    await sql`
-      INSERT INTO email_automations (
-        id, creator_id, community_id, name, description, trigger, subject, body, status
-      )
-      VALUES (
-        ${id},
-        ${creatorId},
-        ${null},
-        ${opt.defaultName},
-        ${description},
-        ${opt.value},
-        ${opt.defaultSubject},
-        ${opt.defaultBody},
-        'active'
-      )
-      ON CONFLICT (id) DO NOTHING
-    `;
-  }
-}
-
+/** List automations — never auto-seed placeholders; creators add their own. */
 export async function listPersistedAutomations(input: {
   creatorId: string;
   communityId?: number;
@@ -290,7 +261,8 @@ export async function listPersistedAutomations(input: {
   }
   try {
     await ensureEmailCrmSchema();
-    await ensureDefaultAutomations(input.creatorId);
+    // One-time cleanup of legacy seeded defaults (auto-{creatorPrefix}-{trigger}).
+    await purgeLegacySeedAutomations(input.creatorId);
     const rows = input.communityId
       ? await sql`
           SELECT * FROM email_automations
@@ -307,6 +279,22 @@ export async function listPersistedAutomations(input: {
   } catch (error) {
     console.warn('[email/crm] list automations failed', error);
     return listEmailAutomations({ community_id: input.communityId });
+  }
+}
+
+/** Remove the old ensureDefaultAutomations seed rows if still present. */
+async function purgeLegacySeedAutomations(creatorId: string): Promise<void> {
+  const prefix = `auto-${creatorId.slice(0, 8)}-`;
+  for (const opt of AUTOMATION_TRIGGER_OPTIONS) {
+    const id = `${prefix}${opt.value}`;
+    try {
+      await sql`
+        DELETE FROM email_automations
+        WHERE creator_id = ${creatorId} AND id = ${id}
+      `;
+    } catch {
+      // ignore — table may be mid-heal
+    }
   }
 }
 
@@ -377,6 +365,23 @@ export async function setPersistedAutomationStatus(
   `;
   if (!Array.isArray(rows) || !rows[0]) return null;
   return mapAutomationRow(rows[0] as Record<string, unknown>);
+}
+
+/** Permanently delete an automation owned by this creator. */
+export async function deletePersistedAutomation(
+  creatorId: string,
+  id: string
+): Promise<boolean> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return deleteMockAutomation(id);
+  }
+  await ensureEmailCrmSchema();
+  const rows = await sql`
+    DELETE FROM email_automations
+    WHERE id = ${id} AND creator_id = ${creatorId}
+    RETURNING id
+  `;
+  return Array.isArray(rows) && rows.length > 0;
 }
 
 export async function listPersistedCommunityEmails(input: {
@@ -507,7 +512,6 @@ export async function fireEmailAutomations(
   if (process.env.DATABASE_URL?.trim()) {
     try {
       await ensureEmailCrmSchema();
-      await ensureDefaultAutomations(input.creatorId);
       const rows = await sql`
         SELECT * FROM email_automations
         WHERE creator_id = ${input.creatorId}
@@ -543,10 +547,15 @@ export async function fireEmailAutomations(
     const subject = auto.subject
       .replace(/\{community\}/gi, input.communityName)
       .replace(/\{first_name\}/gi, firstName)
+      .replace(/\{name\}/gi, input.recipientName || firstName)
+      .replace(/\{email\}/gi, email)
       .replace(/\{community_url\}/gi, communityUrl);
-    const body = applyMergeTags(auto.body, firstName)
-      .replace(/\{community\}/gi, input.communityName)
-      .replace(/\{community_url\}/gi, communityUrl);
+    const body = applyMergeTags(auto.body, firstName, {
+      name: input.recipientName || firstName,
+      email,
+      community: input.communityName,
+      communityUrl,
+    });
 
     let resendId: string | null = null;
     if (!input.dryRun) {

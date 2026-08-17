@@ -54,7 +54,7 @@ export function PlanLockBadge({
       } ${className}`}
     >
       {isPro ? <Zap size={10} /> : <Lock size={10} />}
-      {isPro ? 'Pro Plan Feature' : upgradeBadgeLabel(minPlan)}
+      {isPro ? `${PLAN_DISPLAY_NAME.pro} Feature` : upgradeBadgeLabel(minPlan)}
     </span>
   );
 }
@@ -110,15 +110,12 @@ export function FeatureGate({
   }
 
   const headline =
-    title ??
-    (required === 'pro'
-      ? 'Unlock with Pro'
-      : `Unlock with ${PLAN_DISPLAY_NAME[required]}`);
+    title ?? `Unlock with ${PLAN_DISPLAY_NAME[required]}`;
   const body =
     description ??
     (required === 'pro'
-      ? 'This capability is included on the Pro / Agency plan.'
-      : 'Upgrade to Creator to unlock this feature for your workspace.');
+      ? `This capability is included on the ${PLAN_DISPLAY_NAME.pro} plan.`
+      : `Upgrade to ${PLAN_DISPLAY_NAME.creator} to unlock this feature for your workspace.`);
 
   if (mode === 'inline') {
     return (

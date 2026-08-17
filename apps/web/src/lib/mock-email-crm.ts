@@ -10,7 +10,8 @@ export type SubscriberSource =
   | 'ebook_purchaser'
   | 'webinar_attendee'
   | 'vip_access'
-  | 'store_purchase';
+  | 'store_purchase'
+  | 'imported_list';
 
 export type EmailSubscriber = {
   id: string;
@@ -219,6 +220,7 @@ export const SOURCE_LABELS: Record<SubscriberSource, string> = {
   webinar_attendee: 'Webinar Attendee',
   vip_access: 'VIP Access',
   store_purchase: 'Store Purchase',
+  imported_list: 'Imported List',
 };
 
 export const AUDIENCE_OPTIONS = [
@@ -228,6 +230,7 @@ export const AUDIENCE_OPTIONS = [
   { value: 'webinar_attendee', label: 'Endast Webinar-deltagare' },
   { value: 'vip_access', label: 'Endast VIP Access' },
   { value: 'store_purchase', label: 'Endast Store-köpare' },
+  { value: 'imported_list', label: 'Imported list' },
 ] as const;
 
 function daysAgo(days: number): string {
@@ -398,6 +401,13 @@ export function upsertEmailAutomation(input: UpsertAutomationInput): EmailAutoma
   return { ...created };
 }
 
+/** Remove an automation from the in-memory store. */
+export function deleteEmailAutomation(id: string): boolean {
+  const before = automationStore.length;
+  automationStore = automationStore.filter((a) => a.id !== id);
+  return automationStore.length < before;
+}
+
 /** Recent automated emails for a community (purchase unlocks + member autos). */
 export function listCommunityAutomationEmails(opts?: {
   community_id?: number;
@@ -531,8 +541,29 @@ export function createBroadcast(input: {
   return broadcast;
 }
 
-export function applyMergeTags(body: string, firstName: string) {
-  return body.replace(/\{first_name\}/gi, firstName || 'där');
+export type MergeTagContext = {
+  name?: string;
+  email?: string;
+  community?: string;
+  communityUrl?: string;
+};
+
+/** Replace personalization brackets in subject/body templates. */
+export function applyMergeTags(
+  body: string,
+  firstName: string,
+  ctx?: MergeTagContext
+) {
+  const name = ctx?.name || firstName || 'there';
+  const email = ctx?.email || '';
+  const community = ctx?.community || '';
+  const communityUrl = ctx?.communityUrl || '';
+  return body
+    .replace(/\{first_name\}/gi, firstName || 'there')
+    .replace(/\{name\}/gi, name)
+    .replace(/\{email\}/gi, email)
+    .replace(/\{community\}/gi, community)
+    .replace(/\{community_url\}/gi, communityUrl);
 }
 
 /**

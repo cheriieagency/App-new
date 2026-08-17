@@ -67,7 +67,7 @@ type ContentPlannerShellProps = {
   /** Skip sticky top chrome — admin shell already provides it. */
   embedded?: boolean;
   eyebrow?: string;
-  title?: string;
+  title?: ReactNode;
   description?: string;
   /** Extra actions rendered next to platform/view controls (e.g. New project). */
   headerExtra?: ReactNode;

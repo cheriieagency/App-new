@@ -205,7 +205,7 @@ export default function DomainSettingsPage() {
         </Link>
 
         <AdminPageHeader
-          eyebrow="Pro"
+          eyebrow="Pro/Agency"
           title="Custom domain"
           description="Point yourname.se or hub.yourname.se at your clikd: bio & community."
           actions={<PlanLockBadge minPlan="pro" />}
@@ -215,7 +215,7 @@ export default function DomainSettingsPage() {
           <FeatureGate
             feature="customDomain"
             title="Custom Domain Linking"
-            description="Connect your own domain on the Pro plan."
+            description="Connect your own domain on the Pro/Agency plan."
           />
         ) : loading ? (
           <div className={`${adminCardClass} p-8 flex items-center justify-center gap-2 text-slate-400`}>

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { WorkspacePlan } from '@/lib/mock-content-planner';
+import { PLAN_DISPLAY_NAME } from '@/lib/config/plans';
 
 const PLANS: {
   id: WorkspacePlan;
@@ -24,7 +25,7 @@ const PLANS: {
 }[] = [
   {
     id: 'starter',
-    name: 'Starter',
+    name: PLAN_DISPLAY_NAME.starter,
     price: '0 SEK',
     priceNote: 'Free forever',
     desc: 'Launch your first digital product or bio link without fixed costs.',
@@ -40,7 +41,7 @@ const PLANS: {
   },
   {
     id: 'creator',
-    name: 'Creator',
+    name: PLAN_DISPLAY_NAME.creator,
     price: '199 SEK',
     priceNote: 'per month',
     desc: 'Everything you need to sell, post, and grow your community.',
@@ -57,7 +58,7 @@ const PLANS: {
   },
   {
     id: 'pro',
-    name: 'Pro / Agency',
+    name: PLAN_DISPLAY_NAME.pro,
     price: '699 SEK',
     priceNote: 'per month',
     desc: 'For high-earning creators, educators, and multi-brand agencies.',
@@ -72,10 +73,8 @@ const PLANS: {
   },
 ];
 
-function planLabel(plan: WorkspacePlan) {
-  if (plan === 'starter') return 'Starter Plan';
-  if (plan === 'pro') return 'Pro Plan';
-  return 'Creator Plan';
+export function planLabel(plan: WorkspacePlan) {
+  return PLAN_DISPLAY_NAME[plan];
 }
 
 export function useAdminPlan() {
@@ -106,8 +105,6 @@ export function useAdminPlan() {
     refetchOnWindowFocus: true,
   });
 }
-
-export { planLabel };
 
 export default function AdminPlanModal({
   open,
@@ -158,7 +155,7 @@ export default function AdminPlanModal({
             {isLoading
               ? t('common.loading')
               : proUnlocked && data?.pro_unlocked
-                ? 'Pro Plan unlocked on this account — no payment wall.'
+                ? 'Pro/Agency unlocked on this account — no payment wall.'
                 : `Current: ${planLabel(current)}. Choose a plan to upgrade or change.`}
           </DialogDescription>
         </DialogHeader>

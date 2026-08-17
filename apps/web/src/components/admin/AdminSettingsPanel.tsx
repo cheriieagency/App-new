@@ -64,6 +64,7 @@ import {
   type NotifPrefKey,
   type NotificationPrefs,
 } from '@/lib/notification-prefs';
+import { PLAN_DISPLAY_NAME } from '@/lib/config/plans';
 
 type SettingsTab =
   | 'profile'
@@ -95,30 +96,27 @@ const ORG_NAV: NavItem[] = [
 
 const TIERS = [
   {
-    id: 'starter',
-    name: 'Starter',
+    id: 'starter' as const,
+    name: PLAN_DISPLAY_NAME.starter,
     socialSets: 1,
     profiles: 8,
     price: 'Free',
-    current: true,
   },
   {
-    id: 'growth',
-    name: 'Growth',
+    id: 'creator' as const,
+    name: PLAN_DISPLAY_NAME.creator,
     socialSets: 2,
     profiles: 16,
     price: '199 SEK/mo',
-    current: false,
   },
   {
-    id: 'scale',
-    name: 'Scale',
+    id: 'pro' as const,
+    name: PLAN_DISPLAY_NAME.pro,
     socialSets: 6,
     profiles: 48,
-    price: '499 SEK/mo',
-    current: false,
+    price: '699 SEK/mo',
   },
-] as const;
+];
 
 const SOCIAL_ICONS = {
   instagram: InstagramIcon,
@@ -470,6 +468,8 @@ export default function AdminSettingsPanel() {
   const seatCount = Math.max(1, orgMembers.length);
   const billingName = session?.user?.name || userName;
   const billingAddress = 'Sturegatan 18B, 211 50 Malmö, Sweden';
+  const { plan: currentPlan } = useSubscription();
+  const currentPlanName = PLAN_DISPLAY_NAME[currentPlan];
 
   const navBtn = (item: NavItem) => {
     const Icon = item.icon;
@@ -1111,7 +1111,7 @@ export default function AdminSettingsPanel() {
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
                       <div>
                         <p className="text-base font-extrabold text-slate-900">
-                          clikd: Starter
+                          clikd: {currentPlanName}
                         </p>
                         <p className="text-sm text-slate-500 font-medium mt-0.5">
                           {tf('settingsPlanSince', locale, { date: planSinceStamp })}
@@ -1162,18 +1162,20 @@ export default function AdminSettingsPanel() {
                     {t('settingsAvailablePlans', locale)}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {TIERS.map((tier) => (
+                    {TIERS.map((tier) => {
+                      const isCurrent = tier.id === currentPlan;
+                      return (
                       <div
                         key={tier.id}
                         className={`rounded-2xl border p-4 ${
-                          tier.current
+                          isCurrent
                             ? 'border-slate-900 bg-slate-50'
                             : 'border-slate-200/80 bg-white'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-sm font-extrabold text-slate-900">{tier.name}</p>
-                          {tier.current && (
+                          {isCurrent && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
                               <Check size={11} /> {t('settingsPlanActive', locale)}
                             </span>
@@ -1187,7 +1189,8 @@ export default function AdminSettingsPanel() {
                           {tier.price}
                         </p>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
 
@@ -1606,7 +1609,7 @@ function CustomDomainSettingsCard() {
         </div>
         <p className="text-sm text-slate-600 leading-relaxed">
           Connect an apex domain (A → 76.76.21.21) or subdomain (CNAME →
-          cname.vercel-dns.com). Pro plan required.
+          cname.vercel-dns.com). Pro/Agency plan required.
         </p>
         {canUse ? (
           <a
@@ -1627,7 +1630,7 @@ function CustomDomainSettingsCard() {
             <FeatureGate
               feature="customDomain"
               title="Custom Domain Linking"
-              description="Connect yourname.se on the Pro plan."
+              description="Connect yourname.se on the Pro/Agency plan."
             />
           </>
         )}
