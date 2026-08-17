@@ -1054,50 +1054,8 @@ CREATE POLICY verification_deny_client
   WITH CHECK (false);
 
 -- -----------------------------------------------------------------------------
--- 11) Optional starter seed (safe to re-run)
+-- 11) No starter community / course seed — creators add their own via Admin.
 -- -----------------------------------------------------------------------------
-
-INSERT INTO communities (name, slug, description, category, creator_name, cover_color, member_count, is_featured)
-VALUES
-  (
-    'Clikd Hub',
-    'nordic-creator',
-    'Allt-i-ett community för nordiska kreatörer — store, kurser, events och AI.',
-    'Marknadsföring',
-    'clikd:',
-    '#0f1f1c',
-    1280,
-    true
-  ),
-  (
-    'Hälsosam Tillväxt',
-    'halsa-tillvaxt',
-    'Vanor, träning och mindset för hållbart skapande.',
-    'Hälsa',
-    'Lisa Holm',
-    '#be123c',
-    640,
-    false
-  )
-ON CONFLICT (slug) DO NOTHING;
-
-INSERT INTO courses (title, description, is_published, sort_order)
-SELECT 'Kom igång som kreatör', 'Grundkurs i att sälja och bygga community i Norden.', true, 1
-WHERE NOT EXISTS (SELECT 1 FROM courses WHERE title = 'Kom igång som kreatör');
-
-INSERT INTO lessons (course_id, title, video_url, "order")
-SELECT c.id, l.title, l.video_url, l.ord
-FROM courses c
-CROSS JOIN (
-  VALUES
-    ('Välkommen & setup', NULL, 1),
-    ('Din första produkt', NULL, 2),
-    ('Checkout på 10 sekunder', NULL, 3)
-) AS l(title, video_url, ord)
-WHERE c.title = 'Kom igång som kreatör'
-  AND NOT EXISTS (
-    SELECT 1 FROM lessons x WHERE x.course_id = c.id AND x.title = l.title
-  );
 
 COMMIT;
 

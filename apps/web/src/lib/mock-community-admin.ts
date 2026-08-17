@@ -20,7 +20,7 @@ function daysAgo(days: number): string {
 }
 
 let managedCommunitySeq = 200;
-const NC_MANAGED_COMMUNITIES_KEY = 'nc_managed_communities_v1';
+const NC_MANAGED_COMMUNITIES_KEY = 'nc_managed_communities_v2';
 
 export type CommunityAdminMember = {
   id: string;
@@ -222,9 +222,7 @@ export function registerManagedCommunity(community: ManagedCommunity): void {
   );
 }
 
-const MOCK_MEMBERS_101: CommunityAdminMember[] = [];
-
-const MOCK_MEMBERS_102: CommunityAdminMember[] = [];
+const MOCK_MEMBERS: CommunityAdminMember[] = [];
 function postsForCommunity(_communityId: number): CommunityAdminPost[] {
   // No seeded feed posts — empty until the creator publishes.
   void _communityId;
@@ -268,8 +266,7 @@ export function getMockCommunityAdminPayload(communityId?: number) {
     };
   }
 
-  const members =
-    selected.id === 102 ? MOCK_MEMBERS_102 : MOCK_MEMBERS_101;
+  const members = MOCK_MEMBERS;
   const posts = sortPostsPinnedFirst(postsForCommunity(selected.id));
   const commentTotal = posts.reduce((n, p) => n + p.comments.length, 0);
   const joinedThisWeek = members.filter(

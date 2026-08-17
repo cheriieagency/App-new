@@ -2,56 +2,21 @@ import type { SearchableCommunity } from '@/components/landing/CommunitySearchAu
 import { extractCommunityPrice } from '@/lib/communities/pricing';
 import { listPublicCatalogCommunities } from '@/lib/public-communities-store';
 
-/** Test account used for local / membership QA. */
-export const EBBA_TEST_USER = {
-  email: 'ebbabrobeck@test.se',
-  name: 'Ebba Brobeck',
-  password: 'ebba1234',
-} as const;
-
-/** Slugs for the two communities Ebba is a member of. */
-export const EBBA_MEMBER_COMMUNITY_SLUGS = [
-  'ebba-creator-lab',
-  'ebba-live-studio',
-] as const;
-
 /** Local fallback when /api/communities is loading or unavailable. */
 export const MOCK_COMMUNITIES: SearchableCommunity[] = [];
 
-export function isEbbaTestUser(email?: string | null, name?: string | null): boolean {
-  const e = (email ?? '').toLowerCase();
-  const n = (name ?? '').toLowerCase();
-  return (
-    e.includes('ebbabrobeck') ||
-    e === EBBA_TEST_USER.email ||
-    n.includes('ebbabrobeck') ||
-    n.includes('ebba brobeck')
-  );
-}
-
-/** Mock list with catalog communities + Ebba membership marks when session matches. */
-export function getMockCommunitiesForUser(opts?: {
+/** Catalog-backed list for no-DB / loading fallbacks (no demo memberships). */
+export function getMockCommunitiesForUser(_opts?: {
   email?: string | null;
   name?: string | null;
   forceJoined?: boolean;
 }): SearchableCommunity[] {
-  const markJoined = opts?.forceJoined || isEbbaTestUser(opts?.email, opts?.name);
-  const catalog = listPublicCatalogCommunities(opts);
+  const catalog = listPublicCatalogCommunities();
   const byId = new Map<number, SearchableCommunity>();
   for (const c of [...MOCK_COMMUNITIES, ...catalog]) {
-    byId.set(c.id, { ...c });
+    byId.set(c.id, { ...c, is_joined: Boolean(c.is_joined) });
   }
-  return [...byId.values()].map((c) => ({
-    ...c,
-    is_joined:
-      markJoined &&
-      (EBBA_MEMBER_COMMUNITY_SLUGS.includes(
-        c.slug as (typeof EBBA_MEMBER_COMMUNITY_SLUGS)[number]
-      ) ||
-        Boolean(c.is_joined))
-        ? true
-        : Boolean(c.is_joined),
-  }));
+  return [...byId.values()];
 }
 
 export function normalizeCommunities(data: unknown): SearchableCommunity[] {

@@ -64,13 +64,12 @@ function isCategoryActive(searchQuery: string, filter: string) {
   return searchQuery.trim().toLowerCase() === filter.toLowerCase();
 }
 
-/** Prefer the curated Clikd Hub for the hero card when present. */
+/** Prefer an explicitly featured community, else the first available. */
 function resolveFeatured(
   featured: CommunityCard | null | undefined,
   all: CommunityCard[]
 ): CommunityCard | null {
-  const hub = all.find((c) => c.slug === 'nordic-creator' || c.name === 'Clikd Hub');
-  return hub ?? featured ?? all.find((c) => c.is_featured) ?? all[0] ?? null;
+  return featured ?? all.find((c) => c.is_featured) ?? all[0] ?? null;
 }
 
 export function ShowcaseSection({

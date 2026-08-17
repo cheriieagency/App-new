@@ -684,13 +684,6 @@ function DashboardPageInner() {
   });
 
   useEffect(() => {
-    if (!session || !(communities as any[]).length) return;
-    const main = (communities as any[]).find((c: any) => c.slug === 'nordic-creator');
-    if (main && !main.is_joined) joinMutation.mutate({ id: main.id, action: 'join' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, communities]);
-
-  useEffect(() => {
     if (!mounted || !events?.length) return;
     const tick = () => {
       const now = window.performance.timeOrigin + window.performance.now();
@@ -1291,9 +1284,16 @@ function DashboardPageInner() {
                     </button>
                     <button
                       onClick={() => {
-                        const nc = (communities as any[]).find((c) => c.slug === 'nordic-creator');
-                        if (nc) {
-                          setSelectedCommunity(nc);
+                        const fromPost =
+                          post.community_id != null
+                            ? (communities as any[]).find(
+                                (c) => Number(c.id) === Number(post.community_id)
+                              )
+                            : null;
+                        const fallback = (communities as any[]).find((c) => c.is_joined);
+                        const target = fromPost || fallback;
+                        if (target) {
+                          setSelectedCommunity(target);
                           setSidebarView('community');
                         }
                       }}

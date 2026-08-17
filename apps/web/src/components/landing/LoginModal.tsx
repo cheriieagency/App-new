@@ -30,7 +30,6 @@ import {
 } from '@/lib/remember-auth';
 import { persistPlatformRole } from '@/lib/use-platform-role';
 import { homeForRole, type PlatformRole } from '@/lib/platform-role';
-import { EBBA_TEST_USER } from '@/lib/mock-communities';
 import { isDualAccessEmail } from '@/lib/platform-role';
 
 type Role = 'member' | 'creator';
@@ -166,7 +165,7 @@ export function LoginModal({
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={EBBA_TEST_USER.email}
+                placeholder="you@email.com"
                 className="min-h-11 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all placeholder:text-zinc-300"
               />
             </label>

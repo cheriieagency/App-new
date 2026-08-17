@@ -92,26 +92,13 @@ export function filterCoursesForCommunity(
   const id = opts?.communityId != null ? Number(opts.communityId) : null;
   const slug = (opts?.slug ?? '').toLowerCase();
 
-  // Platform hub sees the full classroom catalog.
-  if (slug === 'nordic-creator' || id === 1) {
-    return courses;
-  }
-
   if (id == null && !slug) return courses;
 
-  const filtered = courses.filter((c) => {
-    const cid = c.community_id ?? COURSE_COMMUNITY_MAP[c.id] ?? null;
-    if (id != null && cid === id) return true;
-    // Slug fallbacks for demo communities.
-    if (slug === 'ebba-creator-lab' && (cid === 101 || [701, 702, 703, 501].includes(c.id)))
-      return true;
-    if (slug === 'ebba-live-studio' && (cid === 102 || [704, 502].includes(c.id)))
-      return true;
-    return false;
-  });
-
   // Empty communities stay empty — Classroom tab is hidden until courses exist.
-  return filtered;
+  return courses.filter((c) => {
+    const cid = c.community_id ?? COURSE_COMMUNITY_MAP[c.id] ?? null;
+    return id != null && cid === id;
+  });
 }
 
 export const SKOOL_CLASSROOM_COURSES: ClassroomCourse[] = [];

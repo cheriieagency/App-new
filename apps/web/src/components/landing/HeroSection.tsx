@@ -129,7 +129,7 @@ function HeroPlannerMockup() {
         <div className="flex-1 min-w-0 flex items-center justify-center">
           <div className="inline-flex items-center gap-1.5 max-w-full rounded-lg bg-white border border-slate-200/90 px-2.5 py-1 text-[10px] sm:text-[11px] font-mono text-slate-500 shadow-sm">
             <Lock size={10} className="text-[#10B981] flex-shrink-0" strokeWidth={2.5} />
-            <span className="truncate">https://admin.clikd.app/planner/ebba-creator-lab</span>
+            <span className="truncate">https://admin.clikd.app/planner</span>
           </div>
         </div>
         <span className="hidden sm:inline-flex flex-shrink-0 items-center rounded-full bg-[#E9D5FF]/70 border border-[#E9D5FF] px-2 py-0.5 text-[10px] font-bold text-[#2B2568] font-mono">

@@ -86,7 +86,7 @@ function seedCourses(): AdminCourse[] {
     title: c.title,
     description: c.description,
     category: c.category ?? 'Allmänt',
-    community_id: c.community_id ?? COURSE_COMMUNITY_MAP[c.id] ?? 101,
+    community_id: c.community_id ?? COURSE_COMMUNITY_MAP[c.id] ?? null,
     cover_image: c.cover_image,
     video_url: c.video_url ?? null,
     pdf_url: c.pdf_url ?? null,

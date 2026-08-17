@@ -6,7 +6,6 @@
 import { applyBioPreset, type BioTheme } from '@/lib/bio-theme';
 import type { SocialPlatform } from '@/lib/mock-content-planner';
 import type { UtmClickStat } from '@/lib/bio-utm';
-import { buildTrackedShortUrl } from '@/lib/bio-utm';
 import { computeBioAnalyticsSlice } from '@/lib/bio-sales';
 
 export const NC_WORKSPACE_STORAGE_KEY = 'nc_active_workspace_id';
@@ -92,125 +91,6 @@ export type WorkspaceProfile = {
   email: WorkspaceEmailData;
   planner: WorkspacePlannerData;
 };
-
-function utm(
-  slug: string,
-  title: string,
-  clicks: number,
-  unique: number,
-  destination: string
-): UtmClickStat {
-  return {
-    slug,
-    title,
-    clicks,
-    unique,
-    destination_url: destination,
-    tracked_url: buildTrackedShortUrl(slug),
-  };
-}
-
-const creatorLabBlocks: WorkspaceBioBlock[] = [
-  {
-    id: '101-1',
-    type: 'lead_magnet',
-    category: 'links',
-    title: 'Gratis E-bok',
-    subtitle: 'Ladda ned gratis PDF-guide • 312 nedladdningar',
-    emoji: '📘',
-    color: '#3B82F6',
-    visible: true,
-    price: 0,
-  },
-  {
-    id: '101-2',
-    type: 'course',
-    category: 'links',
-    title: 'Kurs: Clikd Studio',
-    subtitle: 'Onlinekurs · 12 lektioner • Masterclass',
-    emoji: '🎓',
-    color: '#9b8afb',
-    visible: true,
-    price: 1499,
-  },
-  {
-    id: '101-3',
-    type: 'coaching',
-    category: 'links',
-    title: '1:1 Coaching',
-    subtitle: 'Boka ett samtal • 45 min Zoom',
-    emoji: '🤝',
-    color: '#10B981',
-    visible: true,
-    price: 599,
-  },
-  {
-    id: '101-s1',
-    type: 'store',
-    category: 'store',
-    title: 'Creator Starter Pack',
-    subtitle: 'Extern butik',
-    emoji: '🛒',
-    color: '#9b8afb',
-    visible: true,
-    destination_url: 'https://example.com/starter-pack',
-    utm_slug: 'starter-pack-lab',
-    price: 1499,
-  },
-];
-
-const liveStudioBlocks: WorkspaceBioBlock[] = [
-  {
-    id: '102-1',
-    type: 'lead_magnet',
-    category: 'links',
-    title: 'Live Hook Checklist',
-    subtitle: 'Ladda ned gratis PDF-guide • 142 nedladdningar',
-    emoji: '📋',
-    color: '#0369a1',
-    visible: true,
-    price: 0,
-  },
-  {
-    id: '102-2',
-    type: 'community',
-    category: 'links',
-    title: 'Live Studio Community',
-    subtitle: 'Webbinarier & RSVP • Free & open',
-    emoji: '📡',
-    color: '#0f766e',
-    visible: true,
-    price: 0,
-    grants_community_access: true,
-    access_community_id: 102,
-  },
-  {
-    id: '102-3',
-    type: 'coaching',
-    category: 'links',
-    title: 'Live Coaching Slot',
-    subtitle: '45 min · Zoom',
-    emoji: '🎥',
-    color: '#E11D48',
-    visible: true,
-    price: 599,
-    grants_community_access: true,
-    access_community_id: 102,
-  },
-  {
-    id: '102-s1',
-    type: 'store',
-    category: 'store',
-    title: 'Live Studio Hook Pack',
-    subtitle: 'Digital produkt',
-    emoji: '📦',
-    color: '#0f766e',
-    visible: true,
-    destination_url: 'https://example.com/hook-pack',
-    utm_slug: 'hook-pack-live',
-    price: 299,
-  },
-];
 
 function buildProfiles(): WorkspaceProfile[] {
   // Empty until hydrated from localStorage or ensureDefaultWorkspace().

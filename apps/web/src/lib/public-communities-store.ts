@@ -9,7 +9,7 @@ import type { ManagedCommunity } from '@/lib/mock-community-admin';
 /** In-memory public catalog (demo / no-DB, and client hydration cache). */
 export const PUBLIC_COMMUNITY_CATALOG: SearchableCommunity[] = [];
 
-const NC_PUBLIC_COMMUNITIES_KEY = 'nc_public_communities_v1';
+const NC_PUBLIC_COMMUNITIES_KEY = 'nc_public_communities_v2';
 
 export function managedToSearchable(
   c: ManagedCommunity,
