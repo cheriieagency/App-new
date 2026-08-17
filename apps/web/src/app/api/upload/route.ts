@@ -20,6 +20,8 @@ async function resolveStoredUrl(input: {
   buffer: Buffer;
   mimeType: string;
   fileName?: string;
+  folder?: string;
+  bucket?: string;
 }): Promise<{ url: string; mimeType: string; storage: 'supabase' | 'data_url' }> {
   if (isSupabaseAdminConfigured()) {
     try {
@@ -27,7 +29,8 @@ async function resolveStoredUrl(input: {
         bytes: input.buffer,
         mimeType: input.mimeType,
         fileName: input.fileName,
-        folder: 'uploads',
+        folder: input.folder || 'uploads',
+        bucket: input.bucket,
       });
       if (stored?.url) {
         return { url: stored.url, mimeType: input.mimeType, storage: 'supabase' };
@@ -75,10 +78,22 @@ export async function POST(request: Request) {
 
       const buffer = Buffer.from(await file.arrayBuffer());
       const mimeType = file.type || 'application/octet-stream';
+      const folderRaw = form.get('folder');
+      const bucketRaw = form.get('bucket');
+      const folder =
+        typeof folderRaw === 'string' && folderRaw.trim()
+          ? folderRaw.trim()
+          : 'uploads';
+      const bucket =
+        typeof bucketRaw === 'string' && bucketRaw.trim()
+          ? bucketRaw.trim()
+          : undefined;
       const result = await resolveStoredUrl({
         buffer,
         mimeType,
         fileName: file.name,
+        folder,
+        bucket,
       });
       return Response.json(result);
     }

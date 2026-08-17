@@ -39,6 +39,8 @@ import { useSocialAccounts } from '@/hooks/useSocialAccounts';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import WorkspaceOAuthGuideBanner from '@/components/admin/WorkspaceOAuthGuideBanner';
 import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
+import { openOAuthPopup } from '@/lib/oauth/popup';
+import { refreshMetaSync } from '@/hooks/useMetaSync';
 
 const DEMO_MODE_KEY = 'clikd_oauth_demo_recording_mode';
 
@@ -182,6 +184,7 @@ function ConnectOrConnectedButton({
   switchLabel = 'Switch account',
   helperHint,
   switchBusy = false,
+  connectBusy = false,
 }: {
   connected: boolean;
   account?: ConnectedSocialAccount | null;
@@ -197,6 +200,7 @@ function ConnectOrConnectedButton({
   /** Small tip under the connect CTA (e.g. per-workspace support). */
   helperHint?: string;
   switchBusy?: boolean;
+  connectBusy?: boolean;
 }) {
   if (connected && account) {
     return (
@@ -246,10 +250,15 @@ function ConnectOrConnectedButton({
       <button
         type="button"
         onClick={onConnect}
+        disabled={connectBusy}
         title={helperHint}
-        className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl text-white text-sm font-bold shadow-sm transition-colors ${idleClassName}`}
+        className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl text-white text-sm font-bold shadow-sm transition-colors disabled:opacity-60 ${idleClassName}`}
       >
-        {icon}
+        {connectBusy ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          icon
+        )}
         {idleLabel}
       </button>
       {helperHint ? (
@@ -290,6 +299,9 @@ export default function SocialAccountsPanel({
     useState<ConnectedSocialAccount | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isSwitchingTikTok, setIsSwitchingTikTok] = useState(false);
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     try {
@@ -408,33 +420,103 @@ export default function SocialAccountsPanel({
     },
   });
 
+  const refreshSocialAccounts = async (platform?: string) => {
+    try {
+      if (
+        platform === 'instagram' ||
+        platform === 'facebook' ||
+        platform === 'meta'
+      ) {
+        await refreshMetaSync();
+      }
+    } catch {
+      /* callback may already have synced */
+    }
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['social-accounts'] }),
+      queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
+      queryClient.invalidateQueries({ queryKey: ['meta-sync'] }),
+      queryClient.invalidateQueries({ queryKey: ['planner-posts'] }),
+      queryClient.invalidateQueries({ queryKey: ['analytics'] }),
+    ]);
+  };
+
+  const handleConnectPlatform = async (
+    platformLabel: string,
+    loginUrl: string
+  ) => {
+    if (!activeWorkspaceId) {
+      toast.error('Select a workspace before connecting an account');
+      return;
+    }
+    try {
+      setConnectingPlatform(platformLabel);
+      const result = await openOAuthPopup(loginUrl, `Connect ${platformLabel}`);
+
+      if (result.success) {
+        await refreshSocialAccounts(result.platform);
+        toast.success(`${platformLabel} connected successfully!`);
+        return;
+      }
+
+      if (result.error === 'popup_blocked') {
+        toast.error('Allow popups for clikd: to connect social accounts');
+        return;
+      }
+      if (result.error === 'popup_closed') {
+        // User cancelled — quiet exit
+        return;
+      }
+      if (result.error) {
+        const detail = result.detail?.trim();
+        toast.error(
+          detail
+            ? `${platformLabel} connection failed: ${detail}`
+            : `${platformLabel} connection failed: ${result.error.replace(/_/g, ' ')}`
+        );
+      }
+    } catch (err) {
+      console.error(`[${platformLabel} Popup Error]`, err);
+      toast.error(`Could not connect ${platformLabel}`);
+    } finally {
+      setConnectingPlatform(null);
+      setIsSwitchingTikTok(false);
+    }
+  };
+
   const startConnect = (platform: SocialPlatform) => {
     // Live OAuth when Demo Mode is off — always bind to active workspace.
     if (!demoMode && platform === 'instagram') {
-      window.location.href = withWorkspaceQuery(
-        '/api/auth/meta/login?target=instagram',
-        activeWorkspaceId
+      void handleConnectPlatform(
+        'Instagram',
+        withWorkspaceQuery(
+          '/api/auth/meta/login?target=instagram',
+          activeWorkspaceId
+        )
       );
       return;
     }
     if (!demoMode && platform === 'facebook') {
-      window.location.href = withWorkspaceQuery(
-        '/api/auth/meta/login?target=facebook',
-        activeWorkspaceId
+      void handleConnectPlatform(
+        'Facebook',
+        withWorkspaceQuery(
+          '/api/auth/meta/login?target=facebook',
+          activeWorkspaceId
+        )
       );
       return;
     }
     if (!demoMode && platform === 'youtube') {
-      window.location.href = withWorkspaceQuery(
-        '/api/auth/youtube/login',
-        activeWorkspaceId
+      void handleConnectPlatform(
+        'YouTube',
+        withWorkspaceQuery('/api/auth/youtube/login', activeWorkspaceId)
       );
       return;
     }
     if (!demoMode && platform === 'linkedin') {
-      window.location.href = withWorkspaceQuery(
-        '/api/auth/linkedin/login',
-        activeWorkspaceId
+      void handleConnectPlatform(
+        'LinkedIn',
+        withWorkspaceQuery('/api/auth/linkedin/login', activeWorkspaceId)
       );
       return;
     }
@@ -443,9 +525,9 @@ export default function SocialAccountsPanel({
       return;
     }
     if (!demoMode && platform === 'pinterest') {
-      window.location.href = withWorkspaceQuery(
-        '/api/auth/pinterest/login',
-        activeWorkspaceId
+      void handleConnectPlatform(
+        'Pinterest',
+        withWorkspaceQuery('/api/auth/pinterest/login', activeWorkspaceId)
       );
       return;
     }
@@ -457,9 +539,18 @@ export default function SocialAccountsPanel({
   };
 
   const startMetaConnect = (target: 'instagram' | 'facebook' | 'both') => {
-    window.location.href = withWorkspaceQuery(
-      `/api/auth/meta/login?target=${target}`,
-      activeWorkspaceId
+    const label =
+      target === 'instagram'
+        ? 'Instagram'
+        : target === 'facebook'
+          ? 'Facebook'
+          : 'Instagram & Facebook';
+    void handleConnectPlatform(
+      label,
+      withWorkspaceQuery(
+        `/api/auth/meta/login?target=${target}`,
+        activeWorkspaceId
+      )
     );
   };
 
@@ -629,9 +720,10 @@ export default function SocialAccountsPanel({
   const startTikTokOAuth = (force = true) => {
     if (!activeWorkspaceId) {
       toast.error('Select a workspace before connecting TikTok');
+      setIsSwitchingTikTok(false);
       return;
     }
-    window.location.href = tiktokLoginUrl(force);
+    void handleConnectPlatform('TikTok', tiktokLoginUrl(force));
   };
 
   /** Disconnect current TikTok row, then OAuth with forced account chooser. */
@@ -883,6 +975,7 @@ export default function SocialAccountsPanel({
               idleLabel="Connect Instagram Only"
               idleClassName="bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-95"
               icon={<InstagramIcon size={16} />}
+              connectBusy={connectingPlatform === 'Instagram'}
             />
             <ConnectOrConnectedButton
               connected={Boolean(byPlatform.get('facebook')?.connected)}
@@ -895,6 +988,7 @@ export default function SocialAccountsPanel({
               idleLabel="Connect Facebook Page Only"
               idleClassName="bg-[#1877F2] hover:bg-[#166fe5]"
               icon={<FacebookIcon size={16} />}
+              connectBusy={connectingPlatform === 'Facebook'}
             />
             {byPlatform.get('instagram')?.connected &&
             byPlatform.get('facebook')?.connected ? (
@@ -924,9 +1018,14 @@ export default function SocialAccountsPanel({
               <button
                 type="button"
                 onClick={() => startMetaConnect('both')}
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white text-sm font-bold shadow-sm transition-colors"
+                disabled={connectingPlatform === 'Instagram & Facebook'}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white text-sm font-bold shadow-sm transition-colors disabled:opacity-60"
               >
-                <FacebookIcon size={16} />
+                {connectingPlatform === 'Instagram & Facebook' ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <FacebookIcon size={16} />
+                )}
                 Connect Meta Suite (Both)
               </button>
             )}
@@ -965,6 +1064,7 @@ export default function SocialAccountsPanel({
                 idleLabel="Connect TikTok Account"
                 idleClassName="bg-[#0F172A] hover:bg-[#1e293b]"
                 icon={<TikTokIcon size={16} />}
+                connectBusy={connectingPlatform === 'TikTok'}
               />
             </div>
           </div>
@@ -986,9 +1086,12 @@ export default function SocialAccountsPanel({
                 connected={Boolean(byPlatform.get('youtube')?.connected)}
                 account={byPlatform.get('youtube') ?? null}
                 onConnect={() => {
-                  window.location.href = withWorkspaceQuery(
-                    '/api/auth/youtube/login',
-                    activeWorkspaceId
+                  void handleConnectPlatform(
+                    'YouTube',
+                    withWorkspaceQuery(
+                      '/api/auth/youtube/login',
+                      activeWorkspaceId
+                    )
                   );
                 }}
                 onDisconnect={() =>
@@ -998,6 +1101,7 @@ export default function SocialAccountsPanel({
                 idleLabel="Connect YouTube"
                 idleClassName="bg-[#FF0000] hover:bg-[#e60000]"
                 icon={<YouTubeIcon size={16} />}
+                connectBusy={connectingPlatform === 'YouTube'}
               />
             </div>
           </div>
@@ -1019,9 +1123,12 @@ export default function SocialAccountsPanel({
                 connected={Boolean(byPlatform.get('linkedin')?.connected)}
                 account={byPlatform.get('linkedin') ?? null}
                 onConnect={() => {
-                  window.location.href = withWorkspaceQuery(
-                    '/api/auth/linkedin/login',
-                    activeWorkspaceId
+                  void handleConnectPlatform(
+                    'LinkedIn',
+                    withWorkspaceQuery(
+                      '/api/auth/linkedin/login',
+                      activeWorkspaceId
+                    )
                   );
                 }}
                 onDisconnect={() =>
@@ -1031,6 +1138,7 @@ export default function SocialAccountsPanel({
                 idleLabel="Connect LinkedIn"
                 idleClassName="bg-[#0A66C2] hover:bg-[#0958a8]"
                 icon={<LinkedInIcon size={16} />}
+                connectBusy={connectingPlatform === 'LinkedIn'}
               />
             </div>
           </div>
@@ -1052,9 +1160,12 @@ export default function SocialAccountsPanel({
                 connected={Boolean(byPlatform.get('pinterest')?.connected)}
                 account={byPlatform.get('pinterest') ?? null}
                 onConnect={() => {
-                  window.location.href = withWorkspaceQuery(
-                    '/api/auth/pinterest/login',
-                    activeWorkspaceId
+                  void handleConnectPlatform(
+                    'Pinterest',
+                    withWorkspaceQuery(
+                      '/api/auth/pinterest/login',
+                      activeWorkspaceId
+                    )
                   );
                 }}
                 onDisconnect={() =>
@@ -1064,6 +1175,7 @@ export default function SocialAccountsPanel({
                 idleLabel="Connect Pinterest Account"
                 idleClassName="bg-[#E60023] hover:bg-[#c4001a]"
                 icon={<PinterestIcon size={16} />}
+                connectBusy={connectingPlatform === 'Pinterest'}
               />
             </div>
           </div>

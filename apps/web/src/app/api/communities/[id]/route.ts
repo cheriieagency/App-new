@@ -86,11 +86,16 @@ export async function GET(_request: Request, context: Ctx) {
       if (Array.isArray(rows) && rows[0]) {
         return Response.json({ community: asPublic(rows[0] as Record<string, unknown>) });
       }
+      return Response.json({ error: 'not_found', community: null }, { status: 404 });
     }
   } catch (error) {
     console.error('[GET /api/communities/[id]]', error);
+    if (process.env.DATABASE_URL?.trim()) {
+      return Response.json({ error: 'load_failed', community: null }, { status: 500 });
+    }
   }
 
+  // Demo only when DATABASE_URL is unset.
   const catalog = [
     ...listPublicCatalogCommunities({ email, name, userId }),
     ...getMockCommunitiesForUser({ email, name }),

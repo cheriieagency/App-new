@@ -1,0 +1,36 @@
+---
+description: Full Supabase persistence — no mock/localStorage as source of truth
+alwaysApply: true
+---
+
+# Full Database Persistence (clikd:)
+
+All user actions, created content, settings changes, and interactions MUST persist to Supabase/Postgres (`DATABASE_URL`). Never treat isolated `useState`, in-memory Maps, or `localStorage` as the source of truth for creator data.
+
+## Rules
+
+1. **Real data retrieval** — Prefer Server Actions / API routes / SQL (`@/app/api/utils/sql`) or the Supabase client. Do not ship dummy arrays when `DATABASE_URL` is set.
+2. **Instant CRUD** — Creates, edits, deletes, and toggles must `INSERT` / `UPDATE` / `DELETE` immediately. Optimistic UI is fine; the write must still hit the DB.
+3. **Migrations** — New tables/columns need a SQL migration under `apps/web/supabase/migrations/` with RLS policies.
+4. **UI sync** — After mutations: invalidate React Query keys, `router.refresh()`, or revalidate tags so the UI matches DB state.
+5. **Error handling** — On write failure: toast / inline error and **do not** leave the UI looking saved. Return HTTP 4xx/5xx — never `{ success: true, demo: true }` or `persisted_in_memory` when `DATABASE_URL` is set.
+
+## Mock / demo gate (strict)
+
+```ts
+if (!process.env.DATABASE_URL?.trim()) {
+  // demo / offline only
+}
+```
+
+When `DATABASE_URL` **is** set:
+
+- Empty query → empty payload (`[]` / `{ items: [], demo: false }`), **not** `getMock*` seed data.
+- Failed mutation → error response, **not** `createManaged*` / `demoCreate*` success.
+- Do not merge in-memory “managed” rows into DB results.
+- Client `localStorage` may cache UX prefs (locale, active workspace id) only — never products, communities, posts, events, settings that must sync across devices.
+
+## Preferred pattern
+
+- Shared persist helpers in `lib/**/persist.ts` (see `lib/communities/persist.ts`).
+- `ensure*Schema()` healers are OK for additive columns; durable features still get a checked-in migration + RLS.

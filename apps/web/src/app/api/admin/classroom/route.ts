@@ -8,7 +8,6 @@ import {
   deleteManagedCourse,
   deleteManagedLesson,
   getMockClassroomAdmin,
-  listManagedCourses,
   updateManagedCourse,
   type AdminCourse,
 } from '@/lib/mock-classroom-admin';
@@ -114,14 +113,10 @@ export async function GET(request: Request) {
     >;
 
     if (courseList.length === 0) {
-      // Only return user-created managed fallbacks — never seed mock for live DB.
-      const managed = listManagedCourses(cid).filter((c) => c.id >= 10_000);
       return Response.json({
-        courses: managed,
-        categories: Array.from(
-          new Set([...COURSE_CATEGORIES, ...managed.map((c) => c.category)])
-        ),
-        demo: managed.length > 0,
+        courses: [],
+        categories: [...COURSE_CATEGORIES],
+        demo: false,
       });
     }
 
@@ -145,15 +140,6 @@ export async function GET(request: Request) {
       )
     );
 
-    // Merge any managed (fallback) courses not yet in DB for this community.
-    const managed = listManagedCourses(cid).filter((c) => c.id >= 10_000);
-    const ids = new Set(coursesWithLessons.map((c) => c.id));
-    for (const c of managed) {
-      if (!ids.has(c.id)) {
-        coursesWithLessons.unshift(c);
-      }
-    }
-
     return Response.json({
       courses: coursesWithLessons,
       categories: categoriesFor(coursesWithLessons),
@@ -161,13 +147,15 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('[GET /api/admin/classroom]', error);
-    const managed = listManagedCourses(cid).filter((c) => c.id >= 10_000);
-    return Response.json({
-      courses: managed,
-      categories: [...COURSE_CATEGORIES],
-      demo: false,
-      error: 'load_failed',
-    });
+    return Response.json(
+      {
+        courses: [],
+        categories: [...COURSE_CATEGORIES],
+        demo: false,
+        error: 'load_failed',
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -259,15 +247,17 @@ export async function POST(request: Request) {
         const course = mapCourseRow(row, []);
         return Response.json({ success: true, course, demo: false });
       } catch (dbError) {
-        console.warn('[create_course] DB failed — managed fallback', dbError);
-        // Community FK / schema issues — still unlock the admin UI.
-        const course = createManagedCourse(payload);
-        return Response.json({
-          success: true,
-          course,
-          demo: true,
-          warning: 'persisted_in_memory',
-        });
+        console.error('[create_course] DB failed', dbError);
+        return Response.json(
+          {
+            error: 'create_failed',
+            message:
+              dbError instanceof Error
+                ? dbError.message
+                : 'Failed to save course to database',
+          },
+          { status: 500 }
+        );
       }
     }
 

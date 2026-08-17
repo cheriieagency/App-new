@@ -5,7 +5,7 @@
  * 2) Resolve owned workspace (state/cookie → primary → auto-create)
  * 3) Exchange Meta code → long-lived token → Pages/IG
  * 4) Persist social_accounts with user_id + owned workspace_id
- * 5) Redirect /admin/settings/socials?success=…
+ * 5) Notify opener popup (or continue link) — socials list refreshes in main window
  *
  * Never redirects with workspace_forbidden — falls back / creates instead.
  */
@@ -30,6 +30,7 @@ import {
   setActiveWorkspaceCookies,
 } from '@/lib/social/oauth-workspace';
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
+import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 
 function clearOAuthState(res: NextResponse) {
   res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
@@ -47,6 +48,12 @@ function successLabel(target: MetaOAuthTarget): string {
   return 'meta_connected';
 }
 
+function platformName(target: MetaOAuthTarget): string {
+  if (target === 'instagram') return 'instagram';
+  if (target === 'facebook') return 'facebook';
+  return 'meta';
+}
+
 function failRedirect(
   origin: string,
   reason: string,
@@ -57,7 +64,13 @@ function failRedirect(
   if (detail) {
     dest.searchParams.set('detail', detail.slice(0, 180));
   }
-  const res = NextResponse.redirect(dest);
+  const res = oauthPopupCompleteResponse({
+    success: false,
+    platform: 'meta',
+    error: reason,
+    detail,
+    continueHref: `${dest.pathname}${dest.search}`,
+  });
   clearOAuthState(res);
   return res;
 }
@@ -237,7 +250,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // 5) Success — bind active workspace cookie to the owned id used for save
+    // 5) Success — notify opener popup / continue link, bind active workspace
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', successLabel(target));
     if (target === 'both' && hasFb && !hasIg) {
@@ -249,7 +262,11 @@ export async function GET(request: Request) {
     if (preferredWorkspaceId && preferredWorkspaceId !== workspaceId) {
       dest.searchParams.set('workspace_fallback', workspaceId);
     }
-    const res = NextResponse.redirect(dest);
+    const res = oauthPopupCompleteResponse({
+      success: true,
+      platform: platformName(target),
+      continueHref: `${dest.pathname}${dest.search}`,
+    });
     clearOAuthState(res);
     setActiveWorkspaceCookies(res, workspaceId);
     return res;

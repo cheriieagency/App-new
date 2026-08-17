@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
@@ -9,16 +8,12 @@ import {
   ChevronDown,
   CreditCard,
   ExternalLink,
-  Eye,
-  EyeOff,
   FileText,
   Grid3X3,
   List,
-  LogOut,
   Mail,
   Plus,
   Search,
-  Settings2,
   Shield,
   Sparkles,
   User,
@@ -29,42 +24,33 @@ import {
   Zap,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
-import { signOutAndRedirect } from '@/lib/sign-out-client';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
 import { adminCardClass } from '@/components/admin/AdminUi';
-import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
 import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
-import { FeatureGate, PlanLockBadge } from '@/components/common/FeatureGate';
-import { useSubscription } from '@/components/common/useSubscription';
-import UpgradeModal from '@/components/common/UpgradeModal';
+import ProfileTab from '@/components/admin/settings/ProfileTab';
+import NotificationsTab from '@/components/admin/settings/NotificationsTab';
+import IntegrationsTab from '@/components/admin/settings/IntegrationsTab';
+import GeneralTab from '@/components/admin/settings/GeneralTab';
+import AiUsageTab from '@/components/admin/settings/AiUsageTab';
+import MembersPendingInvites from '@/components/admin/settings/MembersPendingInvites';
 import {
-  FacebookIcon,
-  InstagramIcon,
-  LinkedInIcon,
-  PinterestIcon,
-  TikTokIcon,
-  YouTubeIcon,
-} from '@/components/icons/SocialBrandIcons';
-import {
-  PLATFORM_META,
   TEAM_ROLE_OPTIONS,
+  PLATFORM_META,
   type ConnectedSocialAccount,
   type PlannerTeamMember,
-  type SocialPlatform,
   type TeamRole,
 } from '@/lib/mock-content-planner';
 import type { EmailAutomation } from '@/lib/mock-email-crm';
 import { useLocale } from '@/lib/locale-context';
 import { t, tf, localeTag, type TranslationKey } from '@/lib/i18n';
 import {
-  DEFAULT_NOTIF_PREFS,
-  loadNotificationPrefs,
-  saveNotificationPrefs,
-  type NotifPrefKey,
-  type NotificationPrefs,
-} from '@/lib/notification-prefs';
+  loadPendingInvites,
+  savePendingInvites,
+  type PendingInvite,
+} from '@/lib/settings-prefs';
 import { PLAN_DISPLAY_NAME } from '@/lib/config/plans';
+import { useSubscription } from '@/components/common/useSubscription';
 
 type SettingsTab =
   | 'profile'
@@ -116,31 +102,6 @@ const TIERS = [
     profiles: 48,
     price: '699 SEK/mo',
   },
-];
-
-const SOCIAL_ICONS = {
-  instagram: InstagramIcon,
-  facebook: FacebookIcon,
-  tiktok: TikTokIcon,
-  linkedin: LinkedInIcon,
-  youtube: YouTubeIcon,
-  pinterest: PinterestIcon,
-} as const;
-
-const PLATFORM_ORDER: SocialPlatform[] = [
-  'instagram',
-  'facebook',
-  'tiktok',
-  'youtube',
-  'linkedin',
-  'pinterest',
-];
-
-const IN_APP_NOTIF_KEYS: Exclude<NotifPrefKey, 'weeklyEmailDigest'>[] = [
-  'notifNewMembers',
-  'notifPurchases',
-  'notifAutomations',
-  'notifLiveReminders',
 ];
 
 /** Demo renewal — first of next month. */
@@ -202,31 +163,6 @@ function SectionBlock({
   );
 }
 
-function FieldRow({
-  label,
-  hint,
-  children,
-  action,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <div>
-        <p className="text-sm font-semibold text-slate-800">{label}</p>
-        {hint ? <p className="text-xs text-slate-400 font-medium mt-0.5">{hint}</p> : null}
-      </div>
-      <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-        <div className="flex-1 min-w-0">{children}</div>
-        {action}
-      </div>
-    </div>
-  );
-}
-
 export default function AdminSettingsPanel() {
   const { locale } = useLocale();
   const { setSection } = useAdminNav();
@@ -240,15 +176,8 @@ export default function AdminSettingsPanel() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<SettingsTab>('profile');
   const [spaceQuery, setSpaceQuery] = useState('');
-  const [displayName, setDisplayName] = useState(session?.user?.name || 'Ebba');
-  const [email, setEmail] = useState(session?.user?.email || '');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [weekStart, setWeekStart] = useState('monday');
   const [savedFlash, setSavedFlash] = useState('');
-  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
   const [createWsOpen, setCreateWsOpen] = useState(false);
-  const [notifPrefs, setNotifPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIF_PREFS);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -259,18 +188,14 @@ export default function AdminSettingsPanel() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   /** Per-member space access override: 'all' or workspace name. */
   const [spaceAccess, setSpaceAccess] = useState<Record<string, string>>({});
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
 
   useEffect(() => {
-    if (session?.user?.name) setDisplayName(session.user.name);
-    if (session?.user?.email) setEmail(session.user.email);
-  }, [session?.user?.name, session?.user?.email]);
-
-  useEffect(() => {
-    setNotifPrefs(loadNotificationPrefs(session?.user?.id));
+    setPendingInvites(loadPendingInvites(session?.user?.id));
   }, [session?.user?.id]);
 
-  const userName = session?.user?.name || displayName || 'Creator';
-  const userEmail = session?.user?.email || email || '—';
+  const userName = session?.user?.name || 'Creator';
+  const userEmail = session?.user?.email || '—';
   const initial = (userName[0] || 'C').toUpperCase();
   const tag = localeTag(locale);
 
@@ -319,12 +244,6 @@ export default function AdminSettingsPanel() {
     },
     enabled: tab === 'workflows',
   });
-
-  const accountsByPlatform = useMemo(() => {
-    const map = new Map<SocialPlatform, ConnectedSocialAccount>();
-    for (const a of socialsData?.accounts ?? []) map.set(a.platform, a);
-    return map;
-  }, [socialsData?.accounts]);
 
   const membersByWorkspace = useMemo(() => {
     const all = teamData?.all_members ?? teamData?.members ?? [];
@@ -401,6 +320,19 @@ export default function AdminSettingsPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['planner-team'] });
+      const nextInvite: PendingInvite = {
+        id: `invite-${Date.now()}`,
+        name: inviteName.trim() || inviteEmail.split('@')[0] || '',
+        email: inviteEmail.trim(),
+        role: inviteRole === 'owner' ? 'editor' : inviteRole,
+        space: inviteSpace,
+        invitedAt: new Date().toISOString(),
+      };
+      setPendingInvites((prev) => {
+        const next = [nextInvite, ...prev];
+        savePendingInvites(next, session?.user?.id);
+        return next;
+      });
       flash(t('settingsInviteSent', locale));
       setInviteOpen(false);
       setInviteName('');
@@ -440,19 +372,6 @@ export default function AdminSettingsPanel() {
   const flash = (msg: string) => {
     setSavedFlash(msg);
     window.setTimeout(() => setSavedFlash(''), 1800);
-  };
-
-  const toggleNotif = (key: NotifPrefKey) => {
-    setNotifPrefs((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      saveNotificationPrefs(next, session?.user?.id);
-      flash(t('notifPrefsSaved', locale));
-      return next;
-    });
-  };
-
-  const signOut = () => {
-    void signOutAndRedirect('/');
   };
 
   const closeSettings = () => setSection('home');
@@ -607,302 +526,27 @@ export default function AdminSettingsPanel() {
 
           <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-2 pb-8">
             {tab === 'profile' && (
-              <>
-                <SectionBlock
-                  title={t('settingsNavProfile', locale)}
-                  subtitle={t('settingsUpdateProfile', locale)}
-                >
-                  <FieldRow
-                    label={t('displayName', locale)}
-                    action={
-                      <button
-                        type="button"
-                        onClick={() => flash(t('flashDisplayNameSaved', locale))}
-                        className="h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
-                      >
-                        {t('save', locale)}
-                      </button>
-                    }
-                  >
-                    <input
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:outline-none focus:border-slate-400"
-                    />
-                  </FieldRow>
-                </SectionBlock>
-
-                <SectionBlock
-                  title={t('settingsCalendar', locale)}
-                  subtitle={t('settingsCalendarSub', locale)}
-                >
-                  <FieldRow label={t('settingsWeekStart', locale)}>
-                    <select
-                      value={weekStart}
-                      onChange={(e) => setWeekStart(e.target.value)}
-                      className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:outline-none"
-                    >
-                      <option value="monday">{t('settingsMonday', locale)}</option>
-                      <option value="sunday">{t('settingsSunday', locale)}</option>
-                    </select>
-                  </FieldRow>
-                </SectionBlock>
-
-                <SectionBlock title={t('settingsSecurity', locale)}>
-                  <div className="space-y-4">
-                    <FieldRow
-                      label={t('settingsNewPassword', locale)}
-                      hint={t('settingsNewPasswordHint', locale)}
-                      action={
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPassword('');
-                            flash(t('flashPasswordUpdated', locale));
-                          }}
-                          className="h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
-                        >
-                          {t('settingsReset', locale)}
-                        </button>
-                      }
-                    >
-                      <div className="relative">
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 pr-11 text-sm font-medium focus:outline-none focus:border-slate-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-lg inline-flex items-center justify-center text-slate-400 hover:text-slate-600"
-                        >
-                          {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                        </button>
-                      </div>
-                    </FieldRow>
-
-                    <div className="rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                      <div className="min-w-0">
-                        <p className="text-sm font-extrabold text-slate-900">
-                          {t('settingsEnable2fa', locale)}
-                        </p>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">
-                          {twoFaEnabled
-                            ? t('settings2faOn', locale)
-                            : t('settingsEnable2faSub', locale)}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTwoFaEnabled((v) => !v);
-                          flash(
-                            twoFaEnabled
-                              ? t('flash2faDisabled', locale)
-                              : t('flash2faEnabled', locale)
-                          );
-                        }}
-                        className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors flex-shrink-0"
-                      >
-                        <Shield size={13} />
-                        {twoFaEnabled
-                          ? t('settingsManage2fa', locale)
-                          : t('settingsEnable2fa', locale)}
-                      </button>
-                    </div>
-                  </div>
-                </SectionBlock>
-
-                <SectionBlock title={t('settingsContact', locale)}>
-                  <FieldRow
-                    label={t('settingsNewEmail', locale)}
-                    hint={t('settingsNewEmailHint', locale)}
-                    action={
-                      <button
-                        type="button"
-                        onClick={() => flash(t('flashEmailConfirm', locale))}
-                        className="h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
-                      >
-                        {t('settingsReset', locale)}
-                      </button>
-                    }
-                  >
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium focus:outline-none focus:border-slate-400"
-                    />
-                  </FieldRow>
-                </SectionBlock>
-
-                <div className="pt-6 space-y-2.5">
-                  <button
-                    type="button"
-                    onClick={signOut}
-                    className="w-full h-12 min-h-[48px] rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors inline-flex items-center justify-center gap-2"
-                  >
-                    <LogOut size={15} />
-                    {t('settingsLogOut', locale)}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => flash(t('flashDeleteConfirm', locale))}
-                    className="w-full h-12 min-h-[48px] rounded-xl bg-rose-500 text-white text-sm font-bold hover:bg-rose-600 transition-colors"
-                  >
-                    {t('settingsDeleteAccount', locale)}
-                  </button>
-                </div>
-              </>
+              <ProfileTab locale={locale} flash={flash} />
             )}
 
             {tab === 'notifications' && (
-              <>
-                <SectionBlock
-                  title={t('settingsNavNotifications', locale)}
-                  subtitle={t('notifInAppHint', locale)}
-                >
-                  <div className="space-y-3">
-                    {IN_APP_NOTIF_KEYS.map((key) => (
-                      <label
-                        key={key}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 min-h-[52px] cursor-pointer hover:bg-slate-50/80 transition-colors"
-                      >
-                        <span className="text-sm font-semibold text-slate-800">
-                          {t(key, locale)}
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={notifPrefs[key]}
-                          onChange={() => toggleNotif(key)}
-                          className="h-5 w-5 rounded border-slate-300 accent-[#1a1848]"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </SectionBlock>
-                <SectionBlock
-                  title={t('notifWeeklyDigest', locale)}
-                  subtitle={t('notifWeeklyDigestHint', locale)}
-                >
-                  <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 min-h-[52px] cursor-pointer hover:bg-slate-50/80 transition-colors">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">
-                        {t('notifWeeklyDigest', locale)}
-                      </p>
-                      <p className="text-xs text-slate-400 font-medium mt-0.5 truncate">
-                        {userEmail}
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifPrefs.weeklyEmailDigest}
-                      onChange={() => toggleNotif('weeklyEmailDigest')}
-                      className="h-5 w-5 rounded border-slate-300 accent-[#1a1848] flex-shrink-0"
-                    />
-                  </label>
-                </SectionBlock>
-              </>
+              <NotificationsTab
+                locale={locale}
+                userId={session?.user?.id}
+                userEmail={userEmail}
+              />
             )}
 
             {tab === 'integrations' && (
-              <SectionBlock
-                title={t('settingsNavIntegrations', locale)}
-                subtitle={t('settingsIntegrationsSub', locale)}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">
-                      {activeWorkspace.name}
-                    </p>
-                    <p className="text-xs font-mono font-bold text-slate-400">
-                      @{activeWorkspace.handle.replace(/^@/, '')}
-                    </p>
-                  </div>
-                  <Link
-                    href="/admin/settings/integrations"
-                    className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
-                  >
-                    {t('settingsManageSocials', locale)}
-                  </Link>
-                </div>
-
-                <div className="mb-4">
-                  <GoogleIntegrationCard />
-                </div>
-
-                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
-                  {t('settingsIntegrationsOverview', locale)}
-                </p>
-
-                {socialsLoading ? (
-                  <p className="text-sm text-slate-400 font-medium py-6">
-                    {t('loading', locale)}
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {PLATFORM_ORDER.map((platform) => {
-                      const account = accountsByPlatform.get(platform);
-                      const connected = Boolean(account?.connected);
-                      const Icon = SOCIAL_ICONS[platform];
-                      const meta = PLATFORM_META[platform];
-                      return (
-                        <div
-                          key={platform}
-                          className={`${adminCardClass} p-4 flex items-start gap-3`}
-                        >
-                          <div
-                            className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center flex-shrink-0"
-                            style={{ background: `${meta.color}14` }}
-                          >
-                            <Icon size={18} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-extrabold text-slate-900">
-                              {meta.label}
-                            </p>
-                            <p className="text-xs font-medium text-slate-500 truncate mt-0.5">
-                              {connected
-                                ? account?.handle ||
-                                  account?.display_name ||
-                                  meta.label
-                                : t('settingsApiNotConnected', locale)}
-                            </p>
-                            <p
-                              className={`text-[10px] font-bold mt-1.5 ${
-                                connected ? 'text-emerald-600' : 'text-slate-400'
-                              }`}
-                            >
-                              {connected
-                                ? t('settingsApiAuthorized', locale)
-                                : t('settingsApiNotConnected', locale)}
-                            </p>
-                            {connected && account?.connected_at ? (
-                              <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                                {tf('settingsConnectedAt', locale, {
-                                  date: new Date(
-                                    account.connected_at
-                                  ).toLocaleDateString(tag),
-                                })}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {!socialsLoading &&
-                (socialsData?.accounts ?? []).every((a) => !a.connected) ? (
-                  <p className="text-xs text-slate-400 font-medium mt-4">
-                    {t('settingsNoSocialsYet', locale)}
-                  </p>
-                ) : null}
-              </SectionBlock>
+              <IntegrationsTab
+                locale={locale}
+                tag={tag}
+                workspaceName={activeWorkspace.name}
+                workspaceHandle={activeWorkspace.handle}
+                workspaceId={activeWorkspace.id}
+                accounts={socialsData?.accounts ?? []}
+                loading={socialsLoading}
+              />
             )}
 
             {tab === 'spaces' && (
@@ -1548,28 +1192,43 @@ export default function AdminSettingsPanel() {
                     </p>
                   )}
                 </div>
+
+                <MembersPendingInvites
+                  invites={pendingInvites}
+                  onResend={(id) => {
+                    setPendingInvites((prev) => {
+                      const next = prev.map((inv) =>
+                        inv.id === id
+                          ? { ...inv, invitedAt: new Date().toISOString() }
+                          : inv
+                      );
+                      savePendingInvites(next, session?.user?.id);
+                      return next;
+                    });
+                  }}
+                  onRevoke={(id) => {
+                    setPendingInvites((prev) => {
+                      const next = prev.filter((inv) => inv.id !== id);
+                      savePendingInvites(next, session?.user?.id);
+                      return next;
+                    });
+                    flash('Invite revoked');
+                  }}
+                />
               </SectionBlock>
             )}
 
-            {(tab === 'general' || tab === 'ai') && (
-              <SectionBlock
-                title={t(
-                  ORG_NAV.find((n) => n.id === tab)?.labelKey || 'settings',
-                  locale
-                )}
-                subtitle={
-                  tab === 'ai'
-                    ? 'AI Content & Member Copilot Suite'
-                    : 'Custom domain & workspace general settings'
-                }
-              >
-                {tab === 'general' ? (
-                  <CustomDomainSettingsCard />
-                ) : (
-                  <AiCopilotSettingsCard />
-                )}
-              </SectionBlock>
+            {tab === 'general' && (
+              <GeneralTab
+                locale={locale}
+                workspaceId={activeWorkspace.id}
+                workspaceName={activeWorkspace.name}
+              />
             )}
+
+            {tab === 'ai' && <AiUsageTab locale={locale} />}
+
+
           </div>
         </div>
       </div>
@@ -1588,104 +1247,4 @@ export default function AdminSettingsPanel() {
   );
 }
 
-function CustomDomainSettingsCard() {
-  const {
-    hasFeature,
-    requestUpgrade,
-    upgradeOpen,
-    setUpgradeOpen,
-    upgradeTarget,
-  } = useSubscription();
-  const canUse = hasFeature('customDomain');
 
-  return (
-    <>
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <PlanLockBadge minPlan="pro" />
-          <span className="text-xs font-medium text-slate-500">
-            Link yourname.se to your bio & community via Vercel DNS
-          </span>
-        </div>
-        <p className="text-sm text-slate-600 leading-relaxed">
-          Connect an apex domain (A → 76.76.21.21) or subdomain (CNAME →
-          cname.vercel-dns.com). Pro/Agency plan required.
-        </p>
-        {canUse ? (
-          <a
-            href="/admin/settings/domain"
-            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#0F172A] text-white text-sm font-bold"
-          >
-            Manage custom domain
-          </a>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => requestUpgrade('pro')}
-              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#0F172A] text-white text-sm font-bold"
-            >
-              Unlock on Pro
-            </button>
-            <FeatureGate
-              feature="customDomain"
-              title="Custom Domain Linking"
-              description="Connect yourname.se on the Pro/Agency plan."
-            />
-          </>
-        )}
-      </div>
-      <UpgradeModal
-        open={upgradeOpen}
-        onOpenChange={setUpgradeOpen}
-        minPlan={upgradeTarget}
-      />
-    </>
-  );
-}
-
-function AiCopilotSettingsCard() {
-  const {
-    hasFeature,
-    requestUpgrade,
-    upgradeOpen,
-    setUpgradeOpen,
-    upgradeTarget,
-  } = useSubscription();
-  const canUse = hasFeature('aiCopilotSuite');
-
-  if (!canUse) {
-    return (
-      <>
-        <FeatureGate
-          feature="aiCopilotSuite"
-          title="AI Content & Member Copilot"
-          description="Generate course outlines, posts, and sales emails. Available on Pro."
-        />
-        <UpgradeModal
-          open={upgradeOpen}
-          onOpenChange={setUpgradeOpen}
-          minPlan={upgradeTarget}
-        />
-      </>
-    );
-  }
-
-  return (
-    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-5 py-6">
-      <div className="flex items-center gap-2 mb-2">
-        <Sparkles size={16} className="text-emerald-700" />
-        <p className="text-sm font-extrabold text-emerald-900">AI Copilot Suite unlocked</p>
-      </div>
-      <p className="text-xs font-medium text-emerald-800/80">
-        Open the floating AI Copilot from Creator Admin to generate course outlines,
-        community posts, sales emails, and headlines.
-      </p>
-      <button
-        type="button"
-        onClick={() => requestUpgrade('pro')}
-        className="mt-4 hidden"
-      />
-    </div>
-  );
-}

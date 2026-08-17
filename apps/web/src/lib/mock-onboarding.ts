@@ -8,6 +8,7 @@ export type OnboardingPayload = {
   primary_use_cases: string[];
   referral_source: string;
   brand_name: string;
+  workspace_name?: string;
   brand_website: string;
   team_size: string;
 };

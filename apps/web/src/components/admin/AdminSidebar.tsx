@@ -231,12 +231,10 @@ export default function AdminSidebar() {
     );
     if (orderedIds.join('|') === campaigns.map((c) => c.id).join('|')) return;
     const byId = new Map(campaigns.map((c) => [c.id, c]));
-    const optimistic = orderedIds
-      .map((id, index) => {
-        const c = byId.get(id);
-        return c ? { ...c, sort_order: index } : null;
-      })
-      .filter((c): c is CampaignLabel => !!c);
+    const optimistic = orderedIds.flatMap((id, index) => {
+      const c = byId.get(id);
+      return c ? [{ ...c, sort_order: index }] : [];
+    });
     queryClient.setQueryData(['planner-campaigns'], { campaigns: optimistic });
     reorderProjectsMutation.mutate(orderedIds);
   };
@@ -249,12 +247,10 @@ export default function AdminSidebar() {
     );
     if (orderedIds.join('|') === mediaFolders.map((f) => f.id).join('|')) return;
     const byId = new Map(mediaFolders.map((f) => [f.id, f]));
-    const nestedOptimistic = orderedIds
-      .map((id, index) => {
-        const f = byId.get(id);
-        return f ? { ...f, sort_order: index } : null;
-      })
-      .filter((f): f is MediaFolder => !!f);
+    const nestedOptimistic = orderedIds.flatMap((id, index) => {
+      const f = byId.get(id);
+      return f ? [{ ...f, sort_order: index }] : [];
+    });
     const optimisticFolders = [
       ...(rootFolder ? [rootFolder] : []),
       ...nestedOptimistic,

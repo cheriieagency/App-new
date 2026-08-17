@@ -5,6 +5,7 @@
  */
 
 import sql from '@/app/api/utils/sql';
+import { resolveInitialWorkspaceName } from '@/lib/workspace-naming';
 
 export type WorkspaceAccessResult =
   | { ok: true; workspaceId: string }
@@ -118,23 +119,24 @@ async function findPrimaryWorkspaceId(userId: string): Promise<string | null> {
 
 /**
  * Always create a workspace this user owns.
- * Uses a unique id when the stable id is already taken by someone else.
+ * Uses signup workspace metadata when provided; otherwise "[First]'s Workspace".
  */
 export async function createDefaultWorkspaceForUser(input: {
   userId: string;
   email?: string | null;
+  userName?: string | null;
+  workspaceName?: string | null;
 }): Promise<string | null> {
   const uid = input.userId.trim();
   if (!uid) return null;
 
-  const handle = (input.email || '')
-    .split('@')[0]
-    ?.replace(/[^a-zA-Z0-9._-]/g, '')
-    .slice(0, 24);
-  const name = handle ? `${handle}'s Workspace` : 'My Workspace';
+  const name = resolveInitialWorkspaceName({
+    workspaceName: input.workspaceName,
+    userName: input.userName,
+    email: input.email,
+  });
   const slugBase = `ws-${uid.substring(0, 8)}`;
 
-  // Prefer stable per-user id; on conflict with another owner, mint a unique one.
   const candidates = [
     `ws-${uid.substring(0, 12)}`,
     `ws-${uid.substring(0, 8)}-${Date.now().toString(36)}`,
@@ -162,12 +164,22 @@ export async function createDefaultWorkspaceForUser(input: {
       }
     }
 
-    if (await userOwnsWorkspace(uid, id)) return id;
-
-    // Row exists but not ours — try next candidate.
+    if (await userOwnsWorkspace(uid, id)) {
+      if (input.workspaceName?.trim()) {
+        try {
+          await sql`
+            UPDATE public.workspaces
+            SET name = ${name}
+            WHERE id = ${id} AND user_id = ${uid}
+          `;
+        } catch {
+          /* name column may be missing in older schemas */
+        }
+      }
+      return id;
+    }
   }
 
-  // Last resort: force-upsert a unique id that cannot conflict.
   const forced = `ws-${uid.substring(0, 8)}-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 6)}`;
@@ -183,7 +195,7 @@ export async function createDefaultWorkspaceForUser(input: {
         VALUES (${forced}, ${uid})
       `;
     } catch (error) {
-      console.warn('[workspace-access] forced create failed', error);
+      console.warn('[workspace-access] forced insert failed', error);
       return null;
     }
   }
@@ -217,7 +229,6 @@ async function tryClaimPreferredWorkspace(
       if (owner && owner !== uid) {
         return null;
       }
-      // Unowned row — claim for this user.
       try {
         await sql`
           UPDATE public.workspaces
@@ -236,7 +247,6 @@ async function tryClaimPreferredWorkspace(
       return (await userOwnsWorkspace(uid, wid)) ? wid : null;
     }
 
-    // Missing row — create with the preferred id for this user.
     try {
       await sql`
         INSERT INTO public.workspaces (id, user_id)
@@ -263,12 +273,13 @@ async function tryClaimPreferredWorkspace(
 /**
  * OAuth / connect flows: resolve a workspace the user definitely owns.
  * Preferred id → claim if possible → primary → auto-create.
- * Never returns workspace_forbidden for a wrong cookie.
  */
 export async function resolveWorkspaceForOAuthUser(input: {
   userId: string;
   preferredWorkspaceId?: string | null;
   email?: string | null;
+  userName?: string | null;
+  workspaceName?: string | null;
 }): Promise<WorkspaceAccessResult> {
   const uid = input.userId?.trim();
   if (!uid) {
@@ -299,6 +310,8 @@ export async function resolveWorkspaceForOAuthUser(input: {
   const created = await createDefaultWorkspaceForUser({
     userId: uid,
     email: input.email,
+    userName: input.userName,
+    workspaceName: input.workspaceName,
   });
   if (created) {
     return { ok: true, workspaceId: created };
@@ -309,7 +322,6 @@ export async function resolveWorkspaceForOAuthUser(input: {
 
 /**
  * Claim or verify a specific workspace id (no fallback).
- * Prefer resolveWorkspaceForOAuthUser for OAuth callbacks.
  */
 export async function ensureWorkspaceOwnedByUser(
   userId: string,
@@ -345,11 +357,12 @@ export async function requireOwnedWorkspace(
 
 /**
  * OAuth callbacks: always return a workspace this user owns.
- * Preferred cookie/state → primary → auto-create. Never workspace_forbidden.
  */
 export async function resolveOwnedWorkspaceForOAuth(input: {
   userId: string;
   email?: string | null;
+  userName?: string | null;
+  workspaceName?: string | null;
   preferredWorkspaceId?: string | null;
 }): Promise<string | null> {
   const uid = input.userId?.trim();
@@ -359,6 +372,8 @@ export async function resolveOwnedWorkspaceForOAuth(input: {
     userId: uid,
     preferredWorkspaceId: input.preferredWorkspaceId,
     email: input.email,
+    userName: input.userName,
+    workspaceName: input.workspaceName,
   });
 
   if (access.ok && (await userOwnsWorkspace(uid, access.workspaceId))) {
@@ -368,6 +383,8 @@ export async function resolveOwnedWorkspaceForOAuth(input: {
   const created = await createDefaultWorkspaceForUser({
     userId: uid,
     email: input.email,
+    userName: input.userName,
+    workspaceName: input.workspaceName,
   });
   if (created && (await userOwnsWorkspace(uid, created))) {
     return created;

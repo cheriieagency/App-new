@@ -1,12 +1,23 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import {
   createManagedCommunity,
   getMockCommunityAdminPayload,
+  type ManagedCommunity,
 } from '@/lib/mock-community-admin';
 import { demoPostPinOverrides } from '@/lib/demo-pin-state';
 import { ensureCommunitiesSchema } from '@/lib/communities/schema';
+import { persistCommunityToDatabase } from '@/lib/communities/persist';
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
+} from '@/lib/social/oauth-workspace';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
+import {
+  managedToSearchable,
+  publishCommunityToPublicCatalog,
+} from '@/lib/public-communities-store';
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -225,123 +236,140 @@ export async function POST(request: Request) {
           .replace(/^-|-$/g, '') || `community-${Date.now()}`;
       const slug = `${slugBase}-${Date.now().toString(36).slice(-5)}`;
 
+      const jar = await cookies();
+      const hdrs = await headers();
+      const preferred =
+        (typeof body.workspaceId === 'string' && body.workspaceId.trim()) ||
+        (typeof body.workspace_id === 'string' && body.workspace_id.trim()) ||
+        hdrs.get('x-workspace-id')?.trim() ||
+        hdrs.get('x-active-workspace-id')?.trim() ||
+        jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+        jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+        null;
+
+      const access = await resolveStrictUserWorkspace({
+        userId: session.user.id,
+        preferredWorkspaceId: preferred,
+        email: session.user.email,
+      });
+      if (!access.ok) {
+        return Response.json(
+          { error: access.error || 'workspace_forbidden' },
+          { status: access.status === 400 ? 400 : 403 }
+        );
+      }
+      const workspaceId = access.workspaceId;
+
+      const isFree =
+        typeof body.is_free === 'boolean'
+          ? body.is_free
+          : typeof body.isFree === 'boolean'
+            ? body.isFree
+            : Number(body.monthly_price_sek ?? body.monthlyPriceSek ?? 0) <= 0;
+      const monthlyPriceSek = isFree
+        ? 0
+        : Math.max(0, Math.round(Number(body.monthly_price_sek ?? body.monthlyPriceSek ?? 0)));
+      const coverUrl =
+        (typeof body.cover_url === 'string' && body.cover_url.trim()) ||
+        (typeof body.coverUrl === 'string' && body.coverUrl.trim()) ||
+        null;
+      const avatarUrl =
+        (typeof body.avatar_url === 'string' && body.avatar_url.trim()) ||
+        (typeof body.avatarUrl === 'string' && body.avatarUrl.trim()) ||
+        null;
+      const category = String(body.category ?? 'Community').trim() || 'Community';
+
       // Demo / no database — still publish into the public catalog so site users can find it.
       if (!process.env.DATABASE_URL?.trim()) {
         const community = createManagedCommunity({
           name,
           description,
-          skipWorkspaceProfile: true,
+          workspaceId,
+          skipWorkspaceProfile: false,
         });
+        (community as { workspace_id?: string; creator_id?: string }).workspace_id =
+          workspaceId;
+        (community as { creator_id?: string }).creator_id = session.user.id;
+        publishCommunityToPublicCatalog(
+          managedToSearchable(community, {
+            creatorName: session.user.name,
+            creatorImage: session.user.image,
+            isJoined: true,
+          })
+        );
         return Response.json({
           success: true,
           community,
-          public_url: `/communities/${community.id}`,
+          public_url: `/communities/${community.slug || community.id}`,
+          workspace_id: workspaceId,
           demo: true,
         });
       }
 
       try {
-        let rows: Record<string, unknown>[] = [];
-        try {
-          rows = (await sql`
-            INSERT INTO communities (
-              name, slug, description, category, creator_id, creator_name,
-              creator_image, cover_color, member_count, is_featured, is_published
-            ) VALUES (
-              ${name},
-              ${slug},
-              ${description || 'Your creator community.'},
-              ${'Community'},
-              ${session.user.id},
-              ${session.user.name || 'Creator'},
-              ${session.user.image ?? null},
-              ${'#2B2568'},
-              ${1},
-              ${false},
-              ${true}
-            )
-            RETURNING id, name, slug, description, category, cover_color,
-                      member_count, creator_name, creator_image,
-                      COALESCE(is_published, true) AS is_published
-          `) as Record<string, unknown>[];
-        } catch (fkError) {
-          // If creator_id FK fails, still publish the community for site users.
-          console.warn('[create_community] retry without creator_id', fkError);
-          rows = (await sql`
-            INSERT INTO communities (
-              name, slug, description, category, creator_name,
-              creator_image, cover_color, member_count, is_featured, is_published
-            ) VALUES (
-              ${name},
-              ${slug},
-              ${description || 'Your creator community.'},
-              ${'Community'},
-              ${session.user.name || 'Creator'},
-              ${session.user.image ?? null},
-              ${'#2B2568'},
-              ${1},
-              ${false},
-              ${true}
-            )
-            RETURNING id, name, slug, description, category, cover_color,
-                      member_count, creator_name, creator_image,
-                      COALESCE(is_published, true) AS is_published
-          `) as Record<string, unknown>[];
-        }
+        const saved = await persistCommunityToDatabase({
+          name,
+          slug,
+          description: description || 'Your creator community.',
+          category,
+          coverColor: '#2B2568',
+          avatarUrl,
+          coverUrl,
+          isFree,
+          monthlyPriceSek,
+          isPublished: true,
+          userId: session.user.id,
+          userName: session.user.name,
+          userImage: session.user.image,
+          workspaceId,
+        });
 
-        const row = rows?.[0] as
-          | {
-              id: number;
-              name: string;
-              slug: string;
-              description: string | null;
-              category: string | null;
-              cover_color: string | null;
-              member_count: number | null;
-              creator_name: string | null;
-              creator_image: string | null;
-              is_published: boolean;
-            }
-          | undefined;
-
-        if (!row?.id) {
+        if (!saved.ok) {
           return Response.json(
             {
               error: 'create_failed',
-              message: 'Community insert returned no row. Check DATABASE_URL / schema.',
+              message: saved.error,
+              hint: 'Community was not published. Fix DB schema/credentials and retry.',
             },
-            { status: 500 }
+            { status: saved.status }
           );
         }
 
-        try {
-          await sql`
-            INSERT INTO community_memberships (user_id, community_id, role)
-            VALUES (${session.user.id}, ${row.id}, 'owner')
-            ON CONFLICT (user_id, community_id) DO UPDATE SET role = 'owner'
-          `;
-        } catch (membershipError) {
-          console.warn('[create_community] owner membership failed', membershipError);
-        }
-
-        const community = {
+        const row = saved.community;
+        const community: ManagedCommunity & {
+          workspace_id: string;
+          is_free: boolean;
+          monthly_price_sek: number;
+        } = {
           id: Number(row.id),
-          name: row.name,
-          slug: row.slug,
-          description: row.description || '',
-          category: row.category || 'Community',
-          cover_color: row.cover_color || '#2B2568',
+          name: String(row.name ?? name),
+          slug: String(row.slug ?? slug),
+          description: String(row.description ?? ''),
+          category: String(row.category ?? category),
+          cover_color: String(row.cover_color ?? '#2B2568'),
           member_count: Number(row.member_count) || 1,
-          is_published: Boolean(row.is_published),
+          is_published: row.is_published !== false,
           handle: `@${String(row.slug || name).replace(/-/g, '')}`,
-          avatar_url: row.creator_image || null,
+          avatar_url: (row.avatar_url as string | null) || (row.creator_image as string | null) || null,
           channels: ['instagram', 'tiktok', 'linkedin'],
+          workspace_id: workspaceId,
+          is_free: Boolean(isFree),
+          monthly_price_sek: monthlyPriceSek,
         };
+
+        publishCommunityToPublicCatalog(
+          managedToSearchable(community, {
+            creatorName: session.user.name,
+            creatorImage: session.user.image,
+            isJoined: true,
+          })
+        );
 
         return Response.json({
           success: true,
           community,
-          public_url: `/communities/${community.id}`,
+          public_url: `/communities/${community.slug || community.id}`,
+          workspace_id: workspaceId,
           demo: false,
         });
       } catch (error) {

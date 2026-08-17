@@ -6,6 +6,7 @@
 import { cookies } from 'next/headers';
 import sql from '@/app/api/utils/sql';
 import { ensureCommunitiesSchema } from '@/lib/communities/schema';
+import { persistCommunityToDatabase } from '@/lib/communities/persist';
 import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
@@ -151,17 +152,24 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Only communities in workspaces this user owns (or created by them).
+    // Workspace-scoped list: owned workspace, creator/user id, or owner membership.
     const rows = await sql`
       SELECT *
       FROM communities
-      WHERE (
+      WHERE workspace_id = ${workspaceId}
+        AND (
           workspace_id IN (
             SELECT id FROM public.workspaces WHERE user_id::text = ${userId}
           )
           OR creator_id::text = ${userId}
+          OR user_id::text = ${userId}
+          OR EXISTS (
+            SELECT 1 FROM community_memberships cm
+            WHERE cm.community_id = communities.id
+              AND cm.user_id::text = ${userId}
+              AND cm.role = 'owner'
+          )
         )
-        AND workspace_id = ${workspaceId}
       ORDER BY created_at DESC NULLS LAST, name ASC
     `;
 
@@ -306,87 +314,31 @@ export async function POST(request: Request) {
 
   try {
     const slug = `${baseSlug}-${Date.now().toString(36).slice(-4)}`;
+    const saved = await persistCommunityToDatabase({
+      name,
+      slug,
+      description: description || 'Your creator community.',
+      category,
+      coverColor: '#2B2568',
+      avatarUrl,
+      coverUrl,
+      isFree,
+      monthlyPriceSek: monthlyPrice,
+      isPublished: true,
+      userId,
+      userName: session.user.name,
+      userImage: session.user.image,
+      workspaceId,
+    });
 
-    let rows: Record<string, unknown>[] = [];
-    try {
-      rows = (await sql`
-        INSERT INTO communities (
-          name, slug, description, category,
-          creator_id, creator_name, creator_image,
-          avatar_url, cover_url, cover_image, cover_color,
-          member_count, is_featured, is_published,
-          workspace_id, is_free, monthly_price_sek
-        ) VALUES (
-          ${name},
-          ${slug},
-          ${description || 'Your creator community.'},
-          ${category},
-          ${userId},
-          ${session.user.name || 'Creator'},
-          ${session.user.image ?? null},
-          ${avatarUrl},
-          ${coverUrl},
-          ${coverUrl},
-          ${'#2B2568'},
-          ${1},
-          ${false},
-          ${true},
-          ${workspaceId},
-          ${isFree},
-          ${monthlyPrice}
-        )
-        RETURNING *
-      `) as Record<string, unknown>[];
-    } catch (fkError) {
-      console.warn('[POST /api/admin/communities] retry without creator_id', fkError);
-      rows = (await sql`
-        INSERT INTO communities (
-          name, slug, description, category,
-          creator_name, creator_image,
-          avatar_url, cover_url, cover_image, cover_color,
-          member_count, is_featured, is_published,
-          workspace_id, is_free, monthly_price_sek
-        ) VALUES (
-          ${name},
-          ${slug},
-          ${description || 'Your creator community.'},
-          ${category},
-          ${session.user.name || 'Creator'},
-          ${session.user.image ?? null},
-          ${avatarUrl},
-          ${coverUrl},
-          ${coverUrl},
-          ${'#2B2568'},
-          ${1},
-          ${false},
-          ${true},
-          ${workspaceId},
-          ${isFree},
-          ${monthlyPrice}
-        )
-        RETURNING *
-      `) as Record<string, unknown>[];
-    }
-
-    const row = rows?.[0];
-    if (!row?.id) {
+    if (!saved.ok) {
       return Response.json(
-        { error: 'create_failed', message: 'Insert returned no row.' },
-        { status: 500 }
+        { error: 'create_failed', message: saved.error },
+        { status: saved.status }
       );
     }
 
-    try {
-      await sql`
-        INSERT INTO community_memberships (user_id, community_id, role)
-        VALUES (${userId}, ${Number(row.id)}, 'owner')
-        ON CONFLICT (user_id, community_id) DO UPDATE SET role = 'owner'
-      `;
-    } catch (membershipError) {
-      console.warn('[POST /api/admin/communities] owner membership', membershipError);
-    }
-
-    const community = mapRow(row);
+    const community = mapRow(saved.community);
     publishCommunityToPublicCatalog(
       managedToSearchable(community, {
         creatorName: session.user.name,

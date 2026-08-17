@@ -64,6 +64,9 @@ import {
 import type { UtmClickStat } from '@/lib/bio-utm';
 import { syncWorkspaceBioAnalytics } from '@/lib/mock-workspace-profiles';
 import RevenueAnalyticsPanel from '@/components/admin/analytics/RevenueAnalyticsPanel';
+import PostAnalyticsDetailModal, {
+  type PostAnalyticsDetail,
+} from '@/components/admin/analytics/PostAnalyticsDetailModal';
 import MonthlyReportEngine from '@/components/admin/analytics/MonthlyReportEngine';
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -194,6 +197,9 @@ type PostPerfRow = {
   shares: number;
   /** YYYY-MM-DD publish day for date-range filtering / export. */
   publishedAt?: string;
+  caption?: string;
+  permalink?: string;
+  mediaType?: string;
 };
 
 const PLATFORM_ORDER = [
@@ -717,6 +723,9 @@ export default function LaterAnalyticsPanel() {
         comments: item.comments,
         shares: item.shares ?? 0,
         publishedAt: String(item.publishedAt || '').slice(0, 10) || undefined,
+        caption: item.caption,
+        permalink: item.permalink,
+        mediaType: item.mediaType,
       });
 
       const inRange = (iso: string) =>
@@ -910,7 +919,7 @@ export default function LaterAnalyticsPanel() {
     { key: 'hashtags', label: t('analyticsHashtags', locale), icon: Hash },
     { key: 'linkinbio', label: t('analyticsLinkinBio', locale), icon: Link2 },
     { key: 'revenue', label: t('analyticsOverview', locale), icon: BarChart3 },
-    { key: 'monthly', label: 'Monthly Reports', icon: CalendarDays },
+    { key: 'monthly', label: t('analyticsMonthlyReports', locale), icon: CalendarDays },
   ];
 
   const activeTabLabel =
@@ -1742,29 +1751,41 @@ function PostPerfRowItem({
   tone,
   rank,
   reachLabelKey,
+  onSelect,
 }: {
   post: PostPerfRow;
   locale: Locale;
-  tone: 'best' | 'worst';
+  tone: 'best' | 'viewed';
   rank: number;
   reachLabelKey: 'metricImpressions' | 'metricPlays';
+  onSelect: (post: PostPerfRow) => void;
 }) {
   const maxEr = 8;
-  const barPct = Math.min(100, (post.er / maxEr) * 100);
-  const barColor = tone === 'best' ? '#10B981' : '#F472B6';
+  const maxViews = Math.max(post.impressions, 1);
+  // Best: ER bar scaled to ~8%. Viewed: relative fill from impressions (log-ish clamp).
+  const barPct =
+    tone === 'best'
+      ? Math.min(100, (post.er / maxEr) * 100)
+      : Math.min(100, Math.max(8, Math.log10(maxViews + 1) * 28));
+  const barColor = tone === 'best' ? '#10B981' : '#6366F1';
 
   return (
-    <article className="flex items-center gap-3 px-3 py-2.5 min-h-[64px] hover:bg-slate-50/80 transition-colors">
+    <button
+      type="button"
+      onClick={() => onSelect(post)}
+      className="w-full text-left flex items-center gap-3 px-3 py-2.5 min-h-[64px] hover:bg-slate-50/80 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#F472B6]/40"
+    >
       <span
         className={`w-6 h-6 min-h-[24px] min-w-[24px] rounded-md text-[11px] font-extrabold tabular-nums inline-flex items-center justify-center flex-shrink-0 ${
           tone === 'best'
             ? 'bg-emerald-500 text-white'
-            : 'bg-slate-200 text-slate-600'
+            : 'bg-indigo-500 text-white'
         }`}
       >
         {rank}
       </span>
       <div className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={post.image} alt="" className="w-full h-full object-cover" />
       </div>
       <div className="min-w-0 flex-1">
@@ -1780,10 +1801,12 @@ function PostPerfRowItem({
             className={`text-[11px] font-extrabold tabular-nums flex-shrink-0 px-1.5 py-0.5 rounded-md ${
               tone === 'best'
                 ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-pink-50 text-[#DB2777]'
+                : 'bg-indigo-50 text-indigo-700'
             }`}
           >
-            {post.er.toFixed(1)}%
+            {tone === 'best'
+              ? `${post.er.toFixed(1)}%`
+              : formatCompact(post.impressions, locale)}
           </span>
         </div>
       </div>
@@ -1813,23 +1836,24 @@ function PostPerfRowItem({
           </p>
         </div>
       </div>
-    </article>
+    </button>
   );
 }
 
-/** Top 2–3 by ER and bottom 2–3 by ER (no overlap when few posts). */
-function splitBestWorst(rows: PostPerfRow[], take = 3) {
+/** Top by engagement rate + top by impressions/views (independent lists). */
+function splitBestAndMostViewed(rows: PostPerfRow[], take = 3) {
   if (rows.length === 0) {
-    return { best: [] as PostPerfRow[], worst: [] as PostPerfRow[] };
+    return { best: [] as PostPerfRow[], mostViewed: [] as PostPerfRow[] };
   }
-  const sorted = [...rows].sort((a, b) => b.er - a.er);
-  const n = Math.min(take, sorted.length);
-  if (sorted.length <= n) {
-    return { best: sorted, worst: [] as PostPerfRow[] };
-  }
-  const best = sorted.slice(0, n);
-  const worst = [...sorted].reverse().slice(0, Math.min(take, sorted.length - n));
-  return { best, worst };
+  const n = Math.min(take, rows.length);
+  const best = [...rows].sort((a, b) => b.er - a.er).slice(0, n);
+  const mostViewed = [...rows]
+    .sort(
+      (a, b) =>
+        b.impressions - a.impressions || b.er - a.er || b.likes - a.likes
+    )
+    .slice(0, n);
+  return { best, mostViewed };
 }
 
 function formatAccountPillLabel(account: PlatformAccountPill) {
@@ -1861,6 +1885,7 @@ function ContentPerformanceTab({
   accounts: PlatformAccountPill[];
   loading?: boolean;
 }) {
+  const [selectedPost, setSelectedPost] = useState<PostPerfRow | null>(null);
   // Prefer API account pills; otherwise derive from rows present.
   const pills = useMemo(() => {
     if (accounts.length > 0) return accounts;
@@ -1903,7 +1928,7 @@ function ContentPerformanceTab({
       })
       .map((key) => {
         const sorted = [...(map.get(key) || [])].sort((a, b) => b.er - a.er);
-        const { best, worst } = splitBestWorst(sorted, 3);
+        const { best, mostViewed } = splitBestAndMostViewed(sorted, 3);
         const pill = pills.find((p) => p.platform === key);
         return {
           key,
@@ -1912,7 +1937,7 @@ function ContentPerformanceTab({
           Icon: PLATFORM_ICON[key] || InstagramIcon,
           count: sorted.length,
           best,
-          worst,
+          mostViewed,
           status: pill?.status ?? (sorted.length ? 'ok' : 'empty'),
           message:
             pill?.message ||
@@ -2043,6 +2068,7 @@ function ContentPerformanceTab({
                         tone="best"
                         rank={i + 1}
                         reachLabelKey={reachLabelKey}
+                        onSelect={setSelectedPost}
                       />
                     ))}
                   </div>
@@ -2052,29 +2078,30 @@ function ContentPerformanceTab({
                   <div className="px-3.5 py-3 border-b border-slate-100">
                     <h4 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
                       <span
-                        className="w-2 h-2 rounded-full bg-[#F472B6]"
+                        className="w-2 h-2 rounded-full bg-indigo-500"
                         aria-hidden
                       />
-                      {t('worstPerformingPosts', locale)}
+                      {t('mostViewedPosts', locale)}
                     </h4>
                     <p className="text-[11px] font-medium text-slate-400 mt-0.5">
-                      {t('worstPerformingSub', locale)}
+                      {t('mostViewedSub', locale)}
                     </p>
                   </div>
                   <div className="divide-y divide-slate-100">
-                    {group.worst.length === 0 ? (
+                    {group.mostViewed.length === 0 ? (
                       <p className="px-3.5 py-8 text-sm text-slate-400 text-center">
                         —
                       </p>
                     ) : (
-                      group.worst.map((post, i) => (
+                      group.mostViewed.map((post, i) => (
                         <PostPerfRowItem
                           key={post.id}
                           post={post}
                           locale={locale}
-                          tone="worst"
+                          tone="viewed"
                           rank={i + 1}
                           reachLabelKey={reachLabelKey}
+                          onSelect={setSelectedPost}
                         />
                       ))
                     )}
@@ -2085,6 +2112,13 @@ function ContentPerformanceTab({
           </section>
         ))
       )}
+
+      <PostAnalyticsDetailModal
+        post={selectedPost as PostAnalyticsDetail | null}
+        locale={locale}
+        reachLabelKey={reachLabelKey}
+        onClose={() => setSelectedPost(null)}
+      />
     </div>
   );
 }

@@ -42,6 +42,7 @@ function SignUpForm() {
 	const callbackUrl = role === "creator" ? "/admin" : "/dashboard";
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [workspaceName, setWorkspaceName] = useState("");
 	const [rememberMe, setRememberMe] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -62,13 +63,26 @@ function SignUpForm() {
 		setError(null);
 
 		try {
-			// The server backfills `name` from the email local-part when it's missing,
-			// so email + password is enough. Demo mode uses in-memory auth when
-			// Supabase / DATABASE_URL env is missing or still a placeholder.
+			const trimmedWorkspace = workspaceName.trim();
+			if (trimmedWorkspace.length < 2) {
+				setError("Workspace name is required");
+				setLoading(false);
+				return;
+			}
+
+			const { stashPendingWorkspaceName } = await import(
+				'@/lib/workspace-naming'
+			);
+			stashPendingWorkspaceName(trimmedWorkspace);
+
+			// Better Auth stores workspaceName on the user via additionalFields.
 			const { error: signUpError } = await authClient.signUp.email({
 				email,
 				password,
 				name: "",
+				workspaceName: trimmedWorkspace,
+			} as Parameters<typeof authClient.signUp.email>[0] & {
+				workspaceName: string;
 			});
 
 			if (signUpError) {
@@ -89,7 +103,7 @@ function SignUpForm() {
 				const { ensureDefaultWorkspace } = await import(
 					'@/lib/mock-workspace-profiles'
 				);
-				ensureDefaultWorkspace();
+				ensureDefaultWorkspace(trimmedWorkspace);
 			} catch {
 				/* ignore */
 			}
@@ -130,6 +144,22 @@ function SignUpForm() {
 						Demo mode: Supabase env missing/placeholder — signup uses in-memory auth for local testing.
 					</div>
 				)}
+
+				<label className="flex flex-col gap-[4px] text-[14px]">
+					Workspace name
+					<input
+						type="text"
+						required
+						name="workspaceName"
+						minLength={2}
+						maxLength={80}
+						value={workspaceName}
+						onChange={(e) => setWorkspaceName(e.target.value)}
+						autoComplete="organization"
+						placeholder="e.g. Ebba Creator Lab"
+						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff]"
+					/>
+				</label>
 
 				<label className="flex flex-col gap-[4px] text-[14px]">
 					{t('emailAddress', locale)}

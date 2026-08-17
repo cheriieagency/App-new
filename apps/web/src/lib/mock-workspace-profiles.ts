@@ -7,6 +7,11 @@ import { applyBioPreset, type BioTheme } from '@/lib/bio-theme';
 import type { SocialPlatform } from '@/lib/mock-content-planner';
 import type { UtmClickStat } from '@/lib/bio-utm';
 import { computeBioAnalyticsSlice } from '@/lib/bio-sales';
+import {
+  clearPendingWorkspaceName,
+  peekPendingWorkspaceName,
+  resolveInitialWorkspaceName,
+} from '@/lib/workspace-naming';
 
 export const NC_WORKSPACE_STORAGE_KEY = 'nc_active_workspace_id';
 /** v2 drops seeded Ebba / demo brand profiles from older local sessions. */
@@ -186,21 +191,52 @@ export function listWorkspaceProfiles(): WorkspaceProfile[] {
 }
 
 /**
- * Ensure every account has at least one workspace named "My workspace".
+ * Ensure every account has at least one workspace.
+ * Uses the signup-provided name when available (arg / sessionStorage).
  * Called on first admin load / after signup — idempotent.
  */
-export function ensureDefaultWorkspace(): WorkspaceProfile {
+export function ensureDefaultWorkspace(preferredName?: string): WorkspaceProfile {
   hydrateProfilesFromStorage();
+  const pending =
+    (preferredName || '').trim() || peekPendingWorkspaceName() || '';
+  const resolved = resolveInitialWorkspaceName({ workspaceName: pending });
+
   if (profiles.length > 0) {
+    const current = profiles[0];
+    const isGeneric =
+      !current.name ||
+      current.name === DEFAULT_WORKSPACE_NAME ||
+      current.name === 'My Workspace';
+    if (pending && isGeneric && current.name !== resolved) {
+      profiles[0] = {
+        ...current,
+        name: resolved,
+        bio: {
+          ...current.bio,
+          display_name: resolved,
+        },
+      };
+      persistProfiles();
+      clearPendingWorkspaceName();
+      return cloneProfile(profiles[0]);
+    }
+    if (pending) clearPendingWorkspaceName();
     return cloneProfile(profiles[0]);
   }
-  return createWorkspaceProfile({
+
+  const created = createWorkspaceProfile({
     id: DEFAULT_WORKSPACE_ID,
-    name: DEFAULT_WORKSPACE_NAME,
-    handle: 'myworkspace',
+    name: resolved,
+    handle:
+      resolved
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '')
+        .slice(0, 24) || 'myworkspace',
     channels: [],
     color: '#2B2568',
   });
+  clearPendingWorkspaceName();
+  return created;
 }
 
 export function getWorkspaceProfile(id: string): WorkspaceProfile | null {

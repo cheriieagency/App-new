@@ -47,10 +47,12 @@ export async function uploadToSupabaseStorage(input: {
   mimeType: string;
   fileName?: string;
   folder?: string;
+  /** Optional bucket override (default: configured media bucket). */
+  bucket?: string;
 }): Promise<{ url: string; path: string; bucket: string } | null> {
   if (!isSupabaseAdminConfigured()) return null;
 
-  const bucket = supabaseEnv.storageBucket();
+  const bucket = (input.bucket || supabaseEnv.storageBucket()).trim() || 'media';
   await ensurePublicBucket(bucket);
 
   const folder = (input.folder || 'uploads').replace(/^\/+|\/+$/g, '');

@@ -1,6 +1,6 @@
 /**
  * GET /api/auth/callback/pinterest
- * Pinterest OAuth callback → social_accounts (workspace-bound) → redirect.
+ * Pinterest OAuth callback → social_accounts (workspace-bound) → popup close.
  */
 
 import { NextResponse } from 'next/server';
@@ -14,6 +14,7 @@ import {
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
+import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 
 function clearState(res: NextResponse) {
   res.cookies.set(PINTEREST_OAUTH_STATE_COOKIE, '', {
@@ -35,7 +36,12 @@ export async function GET(request: Request) {
   const fail = (reason: string) => {
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('error', reason);
-    const res = NextResponse.redirect(dest);
+    const res = oauthPopupCompleteResponse({
+      success: false,
+      platform: 'pinterest',
+      error: reason,
+      continueHref: `${dest.pathname}${dest.search}`,
+    });
     clearState(res);
     return res;
   };
@@ -89,7 +95,11 @@ export async function GET(request: Request) {
 
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', 'pinterest_connected');
-    const res = NextResponse.redirect(dest);
+    const res = oauthPopupCompleteResponse({
+      success: true,
+      platform: 'pinterest',
+      continueHref: `${dest.pathname}${dest.search}`,
+    });
     clearState(res);
     return res;
   } catch (error) {

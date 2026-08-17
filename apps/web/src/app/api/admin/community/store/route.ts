@@ -202,24 +202,17 @@ export async function POST(request: Request) {
           product: normalizeProduct(rows[0] as Record<string, unknown>),
         });
       } catch (dbError) {
-        console.warn('[community/store create] fallback demo', dbError);
-        const product = demoCreateStoreProduct({
-          name,
-          description,
-          price,
-          type,
-          kind,
-          image_url,
-          community_id,
-          workspace_id,
-          is_published,
-          collect_fields,
-          order_bump,
-          billing_interval,
-          fulfillment,
-          require_custom_fields,
-        });
-        return Response.json({ product, demo: true, warning: 'persisted_in_memory' });
+        console.error('[community/store create] DB failed', dbError);
+        return Response.json(
+          {
+            error: 'create_failed',
+            message:
+              dbError instanceof Error
+                ? dbError.message
+                : 'Failed to save product to database',
+          },
+          { status: 500 }
+        );
       }
     }
 

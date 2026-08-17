@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { GraduationCap } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   filterCoursesForCommunity,
   normalizeClassroomCourses,
@@ -15,7 +16,7 @@ import { t, tf } from '@/lib/i18n';
 
 const STORAGE_KEY = 'nc-classroom-completed';
 
-function loadCompleted(): Set<number> {
+function loadCompletedCache(): Set<number> {
   if (typeof window === 'undefined') return new Set();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -24,6 +25,15 @@ function loadCompleted(): Set<number> {
     return new Set(Array.isArray(arr) ? arr.map(Number) : []);
   } catch {
     return new Set();
+  }
+}
+
+function saveCompletedCache(ids: Set<number>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+  } catch {
+    /* ignore */
   }
 }
 
@@ -43,14 +53,45 @@ export default function ClassroomView({
   const [completedLessons, setCompletedLessons] = useState<Set<number>>(new Set());
   const [hydrated, setHydrated] = useState(false);
 
+  // Prefer DB progress; cache locally for paint / offline.
   useEffect(() => {
-    setCompletedLessons(loadCompleted());
-    setHydrated(true);
-  }, []);
+    let cancelled = false;
+    (async () => {
+      const cached = loadCompletedCache();
+      if (!cancelled) setCompletedLessons(cached);
+
+      try {
+        const qs = new URLSearchParams();
+        if (communityId != null) qs.set('community_id', String(communityId));
+        const r = await fetch(`/api/classroom/progress?${qs}`, {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (r.ok) {
+          const data = (await r.json()) as {
+            lesson_ids?: number[];
+            demo?: boolean;
+          };
+          if (!cancelled && Array.isArray(data.lesson_ids) && !data.demo) {
+            const next = new Set(data.lesson_ids.map(Number));
+            setCompletedLessons(next);
+            saveCompletedCache(next);
+          }
+        }
+      } catch {
+        /* keep cache */
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [communityId]);
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...completedLessons]));
+    saveCompletedCache(completedLessons);
   }, [completedLessons, hydrated]);
 
   // Reset open course when switching communities in the dashboard.
@@ -84,14 +125,60 @@ export default function ClassroomView({
     if (found) setActiveCourse(found);
   }, [initialCourseId, courses, activeCourse]);
 
-  const toggleComplete = (lessonId: number) => {
-    setCompletedLessons((prev) => {
-      const next = new Set(prev);
-      if (next.has(lessonId)) next.delete(lessonId);
-      else next.add(lessonId);
-      return next;
-    });
-  };
+  const toggleComplete = useCallback(
+    (lessonId: number) => {
+      const wasDone = completedLessons.has(lessonId);
+      const nextCompleted = !wasDone;
+
+      setCompletedLessons((prev) => {
+        const next = new Set(prev);
+        if (next.has(lessonId)) next.delete(lessonId);
+        else next.add(lessonId);
+        return next;
+      });
+
+      void (async () => {
+        try {
+          const r = await fetch('/api/classroom/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              lesson_id: lessonId,
+              completed: nextCompleted,
+              course_id: activeCourse?.id ?? null,
+              community_id: communityId ?? null,
+            }),
+          });
+          if (!r.ok) {
+            // Roll back optimistic UI when DB write fails.
+            setCompletedLessons((prev) => {
+              const next = new Set(prev);
+              if (wasDone) next.add(lessonId);
+              else next.delete(lessonId);
+              return next;
+            });
+            const err = (await r.json().catch(() => ({}))) as { message?: string };
+            toast.error(err.message || 'Could not save lesson progress');
+            return;
+          }
+          const data = (await r.json()) as { lesson_ids?: number[] };
+          if (Array.isArray(data.lesson_ids)) {
+            setCompletedLessons(new Set(data.lesson_ids.map(Number)));
+          }
+        } catch {
+          setCompletedLessons((prev) => {
+            const next = new Set(prev);
+            if (wasDone) next.add(lessonId);
+            else next.delete(lessonId);
+            return next;
+          });
+          toast.error('Could not save lesson progress');
+        }
+      })();
+    },
+    [activeCourse?.id, communityId, completedLessons]
+  );
 
   if (isLoading) {
     return (

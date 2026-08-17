@@ -19,6 +19,10 @@ function normalizeInvites(v: unknown): string[] {
 
 export async function GET() {
   try {
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json(getMockEvents());
+    }
+
     const events = await sql`
       SELECT
         e.*,
@@ -36,13 +40,13 @@ export async function GET() {
       GROUP BY e.id
       ORDER BY e.start_time ASC
     `;
-    if (!Array.isArray(events) || events.length === 0) {
-      return Response.json(getMockEvents());
-    }
-    return Response.json(events);
+    return Response.json(Array.isArray(events) ? events : []);
   } catch (error) {
     console.error(error);
-    return Response.json(getMockEvents());
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json(getMockEvents());
+    }
+    return Response.json({ error: 'Failed to load events' }, { status: 500 });
   }
 }
 
@@ -90,23 +94,32 @@ export async function POST(request: Request) {
       `;
       return Response.json(result[0]);
     } catch (dbError) {
-      // Demo / missing DB — keep the admin composer working.
       console.error(dbError);
-      const mock = createMockEvent({
-        title,
-        description,
-        start_time,
-        stream_url: location_type === 'online' ? stream_url : null,
-        image_url,
-        speaker_name,
-        speaker_bio,
-        category,
-        location_type,
-        location_address: location_type === 'in_person' ? location_address : null,
-        audience,
-        invited_member_ids,
-      });
-      return Response.json(mock);
+      if (!process.env.DATABASE_URL?.trim()) {
+        const mock = createMockEvent({
+          title,
+          description,
+          start_time,
+          stream_url: location_type === 'online' ? stream_url : null,
+          image_url,
+          speaker_name,
+          speaker_bio,
+          category,
+          location_type,
+          location_address: location_type === 'in_person' ? location_address : null,
+          audience,
+          invited_member_ids,
+        });
+        return Response.json(mock);
+      }
+      return Response.json(
+        {
+          error: 'create_failed',
+          message:
+            dbError instanceof Error ? dbError.message : 'Failed to create event',
+        },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error(error);

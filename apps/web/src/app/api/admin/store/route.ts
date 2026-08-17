@@ -76,7 +76,7 @@ export async function GET(request: Request) {
         `;
 
     if (!Array.isArray(rows) || rows.length === 0) {
-      return Response.json(getMockStoreAdmin(cid));
+      return Response.json({ products: [], demo: false });
     }
 
     return Response.json({
@@ -85,7 +85,10 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error(error);
-    return Response.json(getMockStoreAdmin(cid));
+    return Response.json(
+      { products: [], demo: false, error: 'list_failed' },
+      { status: 500 }
+    );
   }
 }
 

@@ -19,8 +19,31 @@ export default function PublicBioPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setProfile(getWorkspaceProfileByHandle(handle));
-    setReady(true);
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/bio/${encodeURIComponent(handle)}`, {
+          cache: 'no-store',
+        });
+        if (r.ok) {
+          const data = (await r.json()) as { profile?: WorkspaceProfile | null };
+          if (!cancelled) {
+            setProfile(data.profile ?? null);
+            setReady(true);
+            return;
+          }
+        }
+      } catch {
+        /* local fallback for demo */
+      }
+      if (!cancelled) {
+        setProfile(getWorkspaceProfileByHandle(handle));
+        setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [handle]);
 
   if (!ready) {

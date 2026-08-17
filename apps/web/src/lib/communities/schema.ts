@@ -6,7 +6,7 @@
 import sql from '@/app/api/utils/sql';
 
 /** Bump when new healers are added so hot servers re-run. */
-const COMMUNITIES_SCHEMA_VERSION = 2;
+const COMMUNITIES_SCHEMA_VERSION = 3;
 let schemaVersionApplied = 0;
 let schemaReady: Promise<void> | null = null;
 
@@ -28,15 +28,24 @@ export async function ensureCommunitiesSchema(): Promise<void> {
     await safeAlter('communities.workspace_pricing', () => sql`
       ALTER TABLE communities
         ADD COLUMN IF NOT EXISTS workspace_id text,
+        ADD COLUMN IF NOT EXISTS user_id text,
         ADD COLUMN IF NOT EXISTS avatar_url text,
         ADD COLUMN IF NOT EXISTS cover_url text,
         ADD COLUMN IF NOT EXISTS is_free boolean NOT NULL DEFAULT true,
         ADD COLUMN IF NOT EXISTS monthly_price_sek integer NOT NULL DEFAULT 0
     `);
+    await safeAlter('communities.user_id', () =>
+      sql`ALTER TABLE communities ADD COLUMN IF NOT EXISTS user_id text`
+    );
     await safeAlter('communities_workspace_id_idx', () => sql`
       CREATE INDEX IF NOT EXISTS communities_workspace_id_idx
         ON communities (workspace_id)
         WHERE workspace_id IS NOT NULL AND workspace_id <> ''
+    `);
+    await safeAlter('communities_user_id_idx', () => sql`
+      CREATE INDEX IF NOT EXISTS communities_user_id_idx
+        ON communities (user_id)
+        WHERE user_id IS NOT NULL AND user_id <> ''
     `);
     // Backfill orphans so revenue + admin filters always have a workspace.
     await safeAlter('communities.workspace_backfill', () => sql`
@@ -47,6 +56,14 @@ export async function ensureCommunitiesSchema(): Promise<void> {
         'default-my-workspace'
       )
       WHERE workspace_id IS NULL OR workspace_id = ''
+    `);
+    // Mirror creator_id onto user_id when user_id is empty.
+    await safeAlter('communities.user_id_backfill', () => sql`
+      UPDATE communities
+      SET user_id = COALESCE(NULLIF(user_id, ''), NULLIF(creator_id, ''))
+      WHERE (user_id IS NULL OR user_id = '')
+        AND creator_id IS NOT NULL
+        AND creator_id <> ''
     `);
 
     // Pin columns required by /api/admin/community + feed/comments.

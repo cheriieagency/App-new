@@ -186,6 +186,13 @@ export const auth = betterAuth({
         type: 'string',
         required: false,
       },
+      /** Chosen at signup — used when seeding the first workspace/org. */
+      workspaceName: {
+        type: 'string',
+        required: false,
+        input: true,
+        returned: true,
+      },
     },
   },
   // Enable Authorization: Bearer <session-token> so mobile apps (which can't

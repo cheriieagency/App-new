@@ -1,6 +1,6 @@
 /**
  * GET /api/auth/callback/youtube
- * Google OAuth callback → social_accounts bound to workspace_id → redirect.
+ * Google OAuth callback → social_accounts bound to workspace_id → popup close.
  */
 
 import { NextResponse } from 'next/server';
@@ -12,10 +12,9 @@ import {
   fetchYouTubeChannel,
 } from '@/lib/youtube/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
-import {
-  resolveOAuthWorkspaceId,
-} from '@/lib/social/oauth-workspace';
+import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
+import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 
 function clearState(res: NextResponse) {
   res.cookies.set(YOUTUBE_OAUTH_STATE_COOKIE, '', {
@@ -37,7 +36,12 @@ export async function GET(request: Request) {
   const fail = (reason: string) => {
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('error', reason);
-    const res = NextResponse.redirect(dest);
+    const res = oauthPopupCompleteResponse({
+      success: false,
+      platform: 'youtube',
+      error: reason,
+      continueHref: `${dest.pathname}${dest.search}`,
+    });
     clearState(res);
     return res;
   };
@@ -91,7 +95,11 @@ export async function GET(request: Request) {
 
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', 'youtube_connected');
-    const res = NextResponse.redirect(dest);
+    const res = oauthPopupCompleteResponse({
+      success: true,
+      platform: 'youtube',
+      continueHref: `${dest.pathname}${dest.search}`,
+    });
     clearState(res);
     return res;
   } catch (error) {

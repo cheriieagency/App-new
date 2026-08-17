@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner';
 import {
   blankWorkspaceProfile,
@@ -52,6 +53,20 @@ function readStoredId(fallback: string) {
   return localStorage.getItem(NC_WORKSPACE_STORAGE_KEY) || fallback;
 }
 
+function mirrorActiveCookies(id: string, ws?: WorkspaceProfile | null) {
+  try {
+    localStorage.setItem(NC_WORKSPACE_STORAGE_KEY, id);
+    document.cookie = `nc_active_workspace_id=${encodeURIComponent(id)}; path=/; max-age=31536000; samesite=lax`;
+    document.cookie = `active_workspace_id=${encodeURIComponent(id)}; path=/; max-age=31536000; samesite=lax`;
+    if (ws) {
+      localStorage.setItem('nc_active_workspace_name', ws.name);
+      localStorage.setItem('nc_active_workspace_handle', ws.handle);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -87,7 +102,42 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     })();
   }, [queryClient]);
 
-  // Hydrate profiles + seed default "My workspace" on first visit.
+  const refreshWorkspaces = useCallback(() => {
+    void (async () => {
+      try {
+        const r = await fetch('/api/admin/workspaces', {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (!r.ok) {
+          setWorkspaces(listWorkspaceProfiles());
+          return;
+        }
+        const json = (await r.json()) as {
+          profiles?: WorkspaceProfile[];
+          demo?: boolean;
+        };
+        if (Array.isArray(json.profiles) && json.profiles.length > 0) {
+          setWorkspaces(json.profiles);
+          // Keep local cache warm for offline paint.
+          try {
+            localStorage.setItem(
+              'nc_workspace_profiles_v2',
+              JSON.stringify(json.profiles)
+            );
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+      } catch {
+        /* fall through */
+      }
+      setWorkspaces(listWorkspaceProfiles());
+    })();
+  }, []);
+
+  // Hydrate from DB (or local demo) on first visit.
   useEffect(() => {
     const seeded = ensureDefaultWorkspace();
     const list = listWorkspaceProfiles();
@@ -100,19 +150,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         : list[0]?.id || seeded.id;
 
     setActiveWorkspaceIdState(activeId);
-    try {
-      localStorage.setItem(NC_WORKSPACE_STORAGE_KEY, activeId);
-      document.cookie = `nc_active_workspace_id=${encodeURIComponent(activeId)}; path=/; max-age=31536000; samesite=lax`;
-      document.cookie = `active_workspace_id=${encodeURIComponent(activeId)}; path=/; max-age=31536000; samesite=lax`;
-      const ws = list.find((w) => w.id === activeId);
-      if (ws) {
-        localStorage.setItem('nc_active_workspace_name', ws.name);
-        localStorage.setItem('nc_active_workspace_handle', ws.handle);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    mirrorActiveCookies(
+      activeId,
+      list.find((w) => w.id === activeId) || seeded
+    );
+
+    refreshWorkspaces();
+  }, [refreshWorkspaces]);
+
+  // When remote list arrives, keep active id valid.
+  useEffect(() => {
+    if (!workspaces.length || !activeWorkspaceId) return;
+    if (workspaces.some((w) => w.id === activeWorkspaceId)) return;
+    const next = workspaces[0].id;
+    setActiveWorkspaceIdState(next);
+    mirrorActiveCookies(next, workspaces[0]);
+  }, [workspaces, activeWorkspaceId]);
 
   // Refresh plan/status whenever the admin shell mounts or the route changes.
   useEffect(() => {
@@ -123,19 +176,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const setActiveWorkspaceId = useCallback(
     (id: string) => {
       setActiveWorkspaceIdState(id);
-      try {
-        localStorage.setItem(NC_WORKSPACE_STORAGE_KEY, id);
-        // Mirror into cookies so OAuth callbacks / API routes bind workspace_id.
-        document.cookie = `nc_active_workspace_id=${encodeURIComponent(id)}; path=/; max-age=31536000; samesite=lax`;
-        document.cookie = `active_workspace_id=${encodeURIComponent(id)}; path=/; max-age=31536000; samesite=lax`;
-        const ws = workspaces.find((w) => w.id === id);
-        if (ws) {
-          localStorage.setItem('nc_active_workspace_name', ws.name);
-          localStorage.setItem('nc_active_workspace_handle', ws.handle);
-        }
-      } catch {
-        /* ignore quota */
-      }
+      mirrorActiveCookies(
+        id,
+        workspaces.find((w) => w.id === id)
+      );
     },
     [workspaces]
   );
@@ -153,18 +197,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [workspaces]
   );
 
-  const refreshWorkspaces = useCallback(() => {
-    setWorkspaces(listWorkspaceProfiles());
-  }, []);
-
   const updateActiveBio = useCallback(
     (patch: Partial<WorkspaceBioData>) => {
       if (!activeWorkspaceId) return;
       const updated = updateWorkspaceBio(activeWorkspaceId, patch);
       if (!updated) return;
       setWorkspaces(listWorkspaceProfiles());
+      void fetch('/api/admin/workspaces', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: activeWorkspaceId, bio: patch }),
+      }).then(async (r) => {
+        if (!r.ok) toast.error('Could not save bio to database');
+        else refreshWorkspaces();
+      });
     },
-    [activeWorkspaceId]
+    [activeWorkspaceId, refreshWorkspaces]
   );
 
   const createWorkspace = useCallback(
@@ -172,9 +221,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const created = createWorkspaceProfile(input);
       setWorkspaces(listWorkspaceProfiles());
       setActiveWorkspaceId(created.id);
+
+      void fetch('/api/admin/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: input.name,
+          handle: input.handle,
+          channels: input.channels,
+          clientWorkspaceId: created.id,
+          existingCount: listWorkspaceProfiles().length,
+        }),
+      }).then(async (r) => {
+        if (!r.ok) {
+          toast.error('Could not save workspace to database');
+          return;
+        }
+        refreshWorkspaces();
+      });
+
       return created;
     },
-    [setActiveWorkspaceId]
+    [setActiveWorkspaceId, refreshWorkspaces]
   );
 
   const deleteWorkspace = useCallback(
@@ -183,8 +252,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setWorkspaces(remaining);
       const nextId = remaining[0]?.id;
       if (nextId) setActiveWorkspaceId(nextId);
+
+      void fetch(`/api/admin/workspaces?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      }).then(async (r) => {
+        if (!r.ok) toast.error('Could not delete workspace in database');
+        else refreshWorkspaces();
+      });
     },
-    [setActiveWorkspaceId]
+    [setActiveWorkspaceId, refreshWorkspaces]
   );
 
   const value = useMemo(

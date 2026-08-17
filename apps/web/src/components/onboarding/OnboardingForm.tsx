@@ -80,6 +80,7 @@ export default function OnboardingForm() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [workspaceName, setWorkspaceName] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -95,7 +96,21 @@ export default function OnboardingForm() {
     if (session.user.name && !fullName) {
       setFullName(session.user.name);
     }
-  }, [isPending, session?.user, fullName]);
+    const metaName = (session.user as { workspaceName?: string | null })
+      .workspaceName;
+    if (metaName && !workspaceName) {
+      setWorkspaceName(metaName);
+      if (!brandName) setBrandName(metaName);
+    } else {
+      void import('@/lib/workspace-naming').then(({ peekPendingWorkspaceName }) => {
+        const pending = peekPendingWorkspaceName();
+        if (pending && !workspaceName) {
+          setWorkspaceName(pending);
+          if (!brandName) setBrandName(pending);
+        }
+      });
+    }
+  }, [isPending, session?.user, fullName, workspaceName, brandName]);
 
   const progress = useMemo(() => {
     if (step === 0) return 0;
@@ -113,10 +128,26 @@ export default function OnboardingForm() {
     setLoading(true);
     setError(null);
     try {
+      const trimmedName = fullName.trim() || email.split('@')[0] || 'Creator';
+      const trimmedWorkspace = workspaceName.trim();
+      if (trimmedWorkspace.length < 2) {
+        setError('Workspace name is required');
+        setLoading(false);
+        return;
+      }
+
+      const { stashPendingWorkspaceName } = await import(
+        '@/lib/workspace-naming'
+      );
+      stashPendingWorkspaceName(trimmedWorkspace);
+
       const { error: signUpError } = await authClient.signUp.email({
         email: email.trim(),
         password,
-        name: fullName.trim() || email.split('@')[0] || 'Creator',
+        name: trimmedName,
+        workspaceName: trimmedWorkspace,
+      } as Parameters<typeof authClient.signUp.email>[0] & {
+        workspaceName: string;
       });
       if (signUpError) {
         setError(formatAuthError(signUpError, 'Could not create account'));
@@ -127,10 +158,11 @@ export default function OnboardingForm() {
         const { ensureDefaultWorkspace } = await import(
           '@/lib/mock-workspace-profiles'
         );
-        ensureDefaultWorkspace();
+        ensureDefaultWorkspace(trimmedWorkspace);
       } catch {
         /* ignore */
       }
+      if (!brandName.trim()) setBrandName(trimmedWorkspace);
       await persistPlatformRole('creator');
       setStep(1);
     } catch (err) {
@@ -144,6 +176,8 @@ export default function OnboardingForm() {
     setLoading(true);
     setError(null);
     try {
+      const resolvedBrand =
+        brandName.trim() || workspaceName.trim() || fullName.trim();
       const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,7 +187,8 @@ export default function OnboardingForm() {
           role_category: roleCategory,
           primary_use_cases: useCases,
           referral_source: referralSource,
-          brand_name: brandName.trim(),
+          brand_name: resolvedBrand,
+          workspace_name: workspaceName.trim() || resolvedBrand,
           brand_website: brandWebsite.trim(),
           team_size: teamSize,
         }),
@@ -163,6 +198,14 @@ export default function OnboardingForm() {
         setError(typeof data.error === 'string' ? data.error : 'Could not save onboarding');
         setLoading(false);
         return;
+      }
+      try {
+        const { ensureDefaultWorkspace } = await import(
+          '@/lib/mock-workspace-profiles'
+        );
+        ensureDefaultWorkspace(resolvedBrand);
+      } catch {
+        /* ignore */
       }
       await persistPlatformRole('creator');
       router.replace(typeof data.redirect === 'string' ? data.redirect : '/admin');
@@ -279,6 +322,21 @@ export default function OnboardingForm() {
                 onChange={(e) => setFullName(e.target.value)}
                 className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#F472B6]/30"
                 placeholder="Ebba Brobeck"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
+                Workspace name
+              </span>
+              <input
+                required
+                minLength={2}
+                maxLength={80}
+                value={workspaceName}
+                onChange={(e) => setWorkspaceName(e.target.value)}
+                className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#F472B6]/30"
+                placeholder="e.g. Ebba Creator Lab"
+                autoComplete="organization"
               />
             </label>
             <label className="block">
@@ -463,7 +521,7 @@ export default function OnboardingForm() {
                 Brand / studio name
               </span>
               <input
-                value={brandName}
+                value={brandName || workspaceName}
                 onChange={(e) => setBrandName(e.target.value)}
                 className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#F472B6]/30"
                 placeholder="e.g. Ebba Creator Lab"

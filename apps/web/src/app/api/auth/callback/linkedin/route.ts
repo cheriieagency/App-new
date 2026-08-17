@@ -1,6 +1,6 @@
 /**
  * GET /api/auth/callback/linkedin
- * LinkedIn OAuth callback → social_accounts bound to workspace_id → redirect.
+ * LinkedIn OAuth callback → social_accounts bound to workspace_id → popup close.
  */
 
 import { NextResponse } from 'next/server';
@@ -14,6 +14,7 @@ import {
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
+import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 
 function clearState(res: NextResponse) {
   res.cookies.set(LINKEDIN_OAUTH_STATE_COOKIE, '', {
@@ -35,7 +36,12 @@ export async function GET(request: Request) {
   const fail = (reason: string) => {
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('error', reason);
-    const res = NextResponse.redirect(dest);
+    const res = oauthPopupCompleteResponse({
+      success: false,
+      platform: 'linkedin',
+      error: reason,
+      continueHref: `${dest.pathname}${dest.search}`,
+    });
     clearState(res);
     return res;
   };
@@ -87,7 +93,11 @@ export async function GET(request: Request) {
 
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('success', 'linkedin_connected');
-    const res = NextResponse.redirect(dest);
+    const res = oauthPopupCompleteResponse({
+      success: true,
+      platform: 'linkedin',
+      continueHref: `${dest.pathname}${dest.search}`,
+    });
     clearState(res);
     return res;
   } catch (error) {

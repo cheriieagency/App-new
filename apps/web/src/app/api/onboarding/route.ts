@@ -6,6 +6,8 @@ import {
   saveDemoOnboarding,
   type OnboardingPayload,
 } from '@/lib/mock-onboarding';
+import { createDefaultWorkspaceForUser } from '@/lib/social/workspace-access';
+import { resolveInitialWorkspaceName } from '@/lib/workspace-naming';
 
 const ROLE_CATEGORIES = [
   'creator',
@@ -34,6 +36,7 @@ function parsePayload(body: unknown): OnboardingPayload | { error: string } {
   const role_category = String(b.role_category ?? '').trim();
   const referral_source = String(b.referral_source ?? '').trim();
   const brand_name = String(b.brand_name ?? '').trim();
+  const workspace_name = String(b.workspace_name ?? b.workspaceName ?? '').trim();
   const brand_website = String(b.brand_website ?? '').trim();
   const team_size = String(b.team_size ?? '').trim();
 
@@ -59,7 +62,8 @@ function parsePayload(body: unknown): OnboardingPayload | { error: string } {
     role_category,
     primary_use_cases,
     referral_source,
-    brand_name,
+    brand_name: brand_name || workspace_name,
+    workspace_name: workspace_name || brand_name,
     brand_website,
     team_size: team_size || 'solo',
   };
@@ -149,15 +153,32 @@ export async function POST(request: Request) {
 
   const userId = session.user.id;
   const payload = parsed;
+  const userMeta = session.user as {
+    workspaceName?: string | null;
+    name?: string | null;
+    email?: string | null;
+  };
+  const workspaceDisplayName = resolveInitialWorkspaceName({
+    workspaceName:
+      payload.workspace_name ||
+      payload.brand_name ||
+      userMeta.workspaceName,
+    userName: payload.full_name || userMeta.name,
+    email: userMeta.email || session.user.email,
+  });
 
   // Demo / local — no Postgres
   if (!process.env.DATABASE_URL?.trim()) {
-    const saved = saveDemoOnboarding(userId, payload);
+    const saved = saveDemoOnboarding(userId, {
+      ...payload,
+      brand_name: workspaceDisplayName,
+    });
     return Response.json({
       ok: true,
       demo: true,
       profile: saved.profile,
       response: saved.response,
+      workspace_name: workspaceDisplayName,
       redirect: '/admin',
     });
   }
@@ -177,7 +198,7 @@ export async function POST(request: Request) {
         role_category = ${payload.role_category},
         primary_use_cases = ${payload.primary_use_cases},
         referral_source = ${payload.referral_source},
-        brand_name = ${payload.brand_name || null},
+        brand_name = ${workspaceDisplayName || null},
         brand_website = ${payload.brand_website || null},
         team_size = ${payload.team_size},
         onboarding_completed = true,
@@ -218,18 +239,39 @@ export async function POST(request: Request) {
         ${payload.role_category},
         ${payload.primary_use_cases},
         ${payload.referral_source},
-        ${payload.brand_name || null},
+        ${workspaceDisplayName || null},
         ${payload.brand_website || null},
         ${payload.team_size}
       )
       RETURNING *
     `;
 
+    // Seed / rename the first org workspace from signup metadata.
+    const workspaceId = await createDefaultWorkspaceForUser({
+      userId,
+      email: session.user.email,
+      userName: payload.full_name || session.user.name,
+      workspaceName: workspaceDisplayName,
+    });
+    if (workspaceId) {
+      try {
+        await sql`
+          UPDATE public.workspaces
+          SET name = ${workspaceDisplayName}
+          WHERE id = ${workspaceId} AND user_id = ${userId}
+        `;
+      } catch {
+        /* ignore rename failures on lean schemas */
+      }
+    }
+
     return Response.json({
       ok: true,
       demo: false,
       profile: Array.isArray(updated) ? updated[0] : null,
       response: Array.isArray(history) ? history[0] : null,
+      workspace_id: workspaceId,
+      workspace_name: workspaceDisplayName,
       redirect: '/admin',
       meta: {
         role_categories: ROLE_CATEGORIES,
@@ -239,13 +281,17 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('[onboarding POST]', error);
     // Schema may not have new columns yet — fall back to demo persistence.
-    const saved = saveDemoOnboarding(userId, payload);
+    const saved = saveDemoOnboarding(userId, {
+      ...payload,
+      brand_name: workspaceDisplayName,
+    });
     return Response.json({
       ok: true,
       demo: true,
       fallback: true,
       profile: saved.profile,
       response: saved.response,
+      workspace_name: workspaceDisplayName,
       redirect: '/admin',
       warning: 'Database write failed; saved in demo store. Apply onboarding schema migration.',
     });

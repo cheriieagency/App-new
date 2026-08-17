@@ -160,11 +160,7 @@ export async function GET(request: Request) {
 
     const list = (Array.isArray(rows) ? rows : []) as Record<string, unknown>[];
     if (list.length === 0) {
-      const managed = listManagedFeedPosts(communityId, session.user.id);
-      return Response.json({
-        posts: managed,
-        demo: managed.length > 0,
-      });
+      return Response.json({ posts: [], demo: false });
     }
 
     const postIds = list.map((r) => Number(r.id));
@@ -216,22 +212,13 @@ export async function GET(request: Request) {
       )
     );
 
-    // Merge any managed fallback posts for this community.
-    const managed = listManagedFeedPosts(communityId, session.user.id).filter(
-      (p) => p.id >= 50_000
-    );
-    const ids = new Set(posts.map((p) => p.id));
-    for (const m of managed) {
-      if (!ids.has(m.id)) posts.unshift(m);
-    }
-
     return Response.json({ posts, demo: false });
   } catch (error) {
     console.error('[GET /api/admin/community/posts]', error);
-    return Response.json({
-      posts: listManagedFeedPosts(communityId, session.user.id),
-      demo: true,
-    });
+    return Response.json(
+      { posts: [], demo: false, error: 'list_failed' },
+      { status: 500 }
+    );
   }
 }
 
@@ -316,9 +303,17 @@ export async function POST(request: Request) {
       const post = mapDbPost(row, [], false, payload.author_role);
       return Response.json({ post, demo: false });
     } catch (dbError) {
-      console.warn('[POST posts] DB fallback', dbError);
-      const post = createManagedFeedPost(payload);
-      return Response.json({ post, demo: true, warning: 'persisted_in_memory' });
+      console.error('[POST posts] DB failed', dbError);
+      return Response.json(
+        {
+          error: 'create_failed',
+          message:
+            dbError instanceof Error
+              ? dbError.message
+              : 'Failed to save post to database',
+        },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error('[POST /api/admin/community/posts]', error);

@@ -11,10 +11,7 @@ import { fireEmailAutomations, persistSubscriber } from '@/lib/email/crm-persist
 import { syncSubscriber } from '@/lib/mock-email-crm';
 import { getSiteUrl } from '@/lib/site';
 import { extractCommunityPrice } from '@/lib/communities/pricing';
-import {
-  listPublicCatalogCommunities,
-  publishCommunityToPublicCatalog,
-} from '@/lib/public-communities-store';
+import { publishCommunityToPublicCatalog } from '@/lib/public-communities-store';
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
@@ -49,7 +46,7 @@ export async function GET() {
     }
 
     if (Array.isArray(communities) && communities.length > 0) {
-      // Keep catalog warm for about-page fallbacks — preserve admin pricing.
+      // Optional warm catalog for about-page fallbacks — DB remains source of truth.
       const publicRows = communities.map((raw) => {
         const c = raw as Record<string, unknown>;
         const pricing = extractCommunityPrice(c);
@@ -78,13 +75,14 @@ export async function GET() {
       return Response.json(publicRows);
     }
 
-    // DB empty — include any in-memory / demo published communities.
-    const catalog = listPublicCatalogCommunities({ email, name, userId });
-    if (catalog.length > 0) return Response.json(catalog);
-    return Response.json(getMockCommunitiesForUser({ email, name }));
+    // Empty DB — never inject seed/mock communities when DATABASE_URL is set.
+    return Response.json([]);
   } catch (error) {
     console.error('[GET /api/communities]', error);
-    return Response.json(getMockCommunitiesForUser({ email, name }));
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json(getMockCommunitiesForUser({ email, name }));
+    }
+    return Response.json({ error: 'Failed to load communities' }, { status: 500 });
   }
 }
 

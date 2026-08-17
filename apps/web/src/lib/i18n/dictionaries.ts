@@ -148,6 +148,35 @@ export type NestedDict = {
     export: string;
     connectedAccounts: string;
     projects: string;
+    homeEyebrow: string;
+    homeTitle: string;
+    homeSub: string;
+    focusTitle: string;
+    addSticky: string;
+    stickyPrompt: string;
+    kanbanTitle: string;
+    newTask: string;
+    taskPrompt: string;
+    colTodo: string;
+    colDoing: string;
+    colDone: string;
+    activityTitle: string;
+    realtime: string;
+    filterAll: string;
+    filterFeedback: string;
+    filterPurchase: string;
+    filterCommunity: string;
+    filterDm: string;
+    activityEmpty: string;
+    shortcutPlanner: string;
+    shortcutPlannerOpen: string;
+    shortcutAnalytics: string;
+    shortcutAnalyticsOpen: string;
+    shortcutBio: string;
+    shortcutBioOpen: string;
+    catGeneral: string;
+    stickyEmpty: string;
+    kanbanEmpty: string;
   };
   socials: {
     title: string;
@@ -336,6 +365,36 @@ export const DICT_EN: NestedDict = {
     export: 'Export',
     connectedAccounts: 'Connected Accounts',
     projects: 'Projects',
+    homeEyebrow: 'Command Center',
+    homeTitle: 'Admin Home',
+    homeSub:
+      'Today’s focus, shortcuts, Kanban and latest activity — all in one place.',
+    focusTitle: "Today’s Focus & To-Do's",
+    addSticky: 'Add sticky note',
+    stickyPrompt: 'New sticky note',
+    kanbanTitle: 'Kanban To-Do Board',
+    newTask: 'New task',
+    taskPrompt: 'New task',
+    colTodo: 'To Do / Ideas',
+    colDoing: 'In progress',
+    colDone: 'Done / Review',
+    activityTitle: 'Latest activity & alerts',
+    realtime: 'Live',
+    filterAll: 'All',
+    filterFeedback: '💬 Feedback',
+    filterPurchase: '💰 Purchases',
+    filterCommunity: '👥 Community',
+    filterDm: '✉️ DMs & Email',
+    activityEmpty: 'No alerts in this category yet.',
+    shortcutPlanner: 'Content Planner',
+    shortcutPlannerOpen: 'Open planner',
+    shortcutAnalytics: 'Analytics & Revenue',
+    shortcutAnalyticsOpen: 'Open analytics',
+    shortcutBio: 'Bio Store & Links',
+    shortcutBioOpen: 'Open bio store',
+    catGeneral: 'General',
+    stickyEmpty: 'No focus items yet — add your first sticky note.',
+    kanbanEmpty: 'No tasks yet',
   },
   socials: {
     title: 'Connected Social Accounts',
@@ -527,6 +586,36 @@ export const DICT_SV: NestedDict = {
     export: 'Exportera',
     connectedAccounts: 'Anslutna konton',
     projects: 'Projekt',
+    homeEyebrow: 'Command Center',
+    homeTitle: 'Admin Hem',
+    homeSub:
+      'Dagens fokus, genvägar, Kanban och senaste aktivitet — samlat på ett ställe.',
+    focusTitle: "Dagens Fokus & To-Do's",
+    addSticky: 'Lägg till lapp-notering',
+    stickyPrompt: 'Ny lapp-notering',
+    kanbanTitle: 'Kanban To-Do Board',
+    newTask: 'Ny Uppgift',
+    taskPrompt: 'Ny uppgift',
+    colTodo: 'Att Göra / Idéer',
+    colDoing: 'Pågående',
+    colDone: 'Klart / Granskas',
+    activityTitle: 'Senaste Aktivitet & Notiser',
+    realtime: 'Realtid',
+    filterAll: 'Alla',
+    filterFeedback: '💬 Feedback',
+    filterPurchase: '💰 Köp',
+    filterCommunity: '👥 Community',
+    filterDm: '✉️ DMs & Mejl',
+    activityEmpty: 'Inga notiser i den här kategorin ännu.',
+    shortcutPlanner: 'Content Planner',
+    shortcutPlannerOpen: 'Öppna planner',
+    shortcutAnalytics: 'Analytics & Intäkter',
+    shortcutAnalyticsOpen: 'Öppna analytics',
+    shortcutBio: 'Bio Store & Länkar',
+    shortcutBioOpen: 'Öppna bio store',
+    catGeneral: 'Allmänt',
+    stickyEmpty: 'Inga fokuspunkter ännu — lägg till din första lapp.',
+    kanbanEmpty: 'Inga uppgifter ännu',
   },
   socials: {
     title: 'Anslutna sociala konton',
@@ -938,6 +1027,36 @@ export const DICT_FI: NestedDict = {
     export: 'Vie',
     connectedAccounts: 'Yhdistetyt tilit',
     projects: 'Projektit',
+    homeEyebrow: 'Command Center',
+    homeTitle: 'Admin-koti',
+    homeSub:
+      'Päivän fokus, oikotiet, Kanban ja viimeisin aktiviteetti — kaikki yhdessä paikassa.',
+    focusTitle: "Päivän fokus & tehtävät",
+    addSticky: 'Lisää muistilappu',
+    stickyPrompt: 'Uusi muistilappu',
+    kanbanTitle: 'Kanban-tehtävätaulu',
+    newTask: 'Uusi tehtävä',
+    taskPrompt: 'Uusi tehtävä',
+    colTodo: 'Tehtävät / ideat',
+    colDoing: 'Käynnissä',
+    colDone: 'Valmis / tarkistus',
+    activityTitle: 'Viimeisin aktiviteetti & ilmoitukset',
+    realtime: 'Reaaliaika',
+    filterAll: 'Kaikki',
+    filterFeedback: '💬 Palaute',
+    filterPurchase: '💰 Ostot',
+    filterCommunity: '👥 Yhteisö',
+    filterDm: '✉️ DM:t & sähköposti',
+    activityEmpty: 'Ei ilmoituksia tässä kategoriassa vielä.',
+    shortcutPlanner: 'Content Planner',
+    shortcutPlannerOpen: 'Avaa planner',
+    shortcutAnalytics: 'Analytiikka & tulot',
+    shortcutAnalyticsOpen: 'Avaa analytiikka',
+    shortcutBio: 'Bio Store & linkit',
+    shortcutBioOpen: 'Avaa bio-kauppa',
+    catGeneral: 'Yleinen',
+    stickyEmpty: 'Ei fokuskohtia vielä — lisää ensimmäinen muistilappu.',
+    kanbanEmpty: 'Ei tehtäviä vielä',
   },
   socials: {
     title: 'Yhdistetyt some-tilit',
