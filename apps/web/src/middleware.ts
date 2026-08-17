@@ -23,23 +23,18 @@ function isPlatformHost(host: string): boolean {
   return false;
 }
 
-/** Public webhook callbacks — never run auth / role redirects on these. */
-function isWebhookPath(pathname: string): boolean {
-  return (
-    pathname === '/api/webhooks' || pathname.startsWith('/api/webhooks/')
-  );
-}
-
 /**
  * 1) Custom domain → rewrite to public bio (URL bar stays on customer domain)
  * 2) Platform host → enforce member ↔ creator studio split
+ *
+ * Webhooks bypass ALL checks below (auth / session / CSRF / role redirects).
  */
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const pathname = request.nextUrl.pathname;
 
-  // TikTok / Meta / Resend webhooks must bypass session + role checks.
-  // Portal verification GETs and event POSTs must never see 401/403 redirects.
-  if (isWebhookPath(pathname)) {
+  // ── Public webhooks: FIRST exit — before any auth / CSRF / role logic ──
+  // TikTok, Meta, Stripe, Resend must never receive 401/403 from middleware.
+  if (pathname.startsWith('/api/webhooks')) {
     return NextResponse.next();
   }
 
@@ -68,7 +63,6 @@ export async function middleware(request: NextRequest) {
           rewrite_community?: string | null;
         };
         if (data.found) {
-          // Root (and unknown paths) → bio storefront; keep /communities/* if present.
           const target =
             pathname === '/' || pathname === ''
               ? data.rewrite_bio || data.rewrite_community
@@ -91,7 +85,6 @@ export async function middleware(request: NextRequest) {
   }
 
   // --- Role split (admin vs member) on platform hosts ---
-  // Allow post-login to set the role cookie before /admin or /dashboard.
   if (pathname.startsWith('/account/')) {
     return NextResponse.next();
   }
@@ -121,11 +114,9 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all paths except:
-     * - Next internals & common static files
-     * - /api/webhooks/* (TikTok / Meta / Resend — no auth, no role redirects)
-     * Custom domains need `/` matched; role split still applies on platform hosts.
+     * Match app routes + /api/webhooks/* so the early bypass above always runs.
+     * (Do NOT exclude webhooks from the matcher — that can hide the bypass rule.)
      */
-    '/((?!_next/static|_next/image|favicon.ico|api/webhooks(?:/.*)?|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };

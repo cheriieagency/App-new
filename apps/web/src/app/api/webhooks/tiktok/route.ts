@@ -1,14 +1,14 @@
 /**
  * TikTok webhook — Developer Portal verification + event ingest.
  *
- * Callback URL: https://clikd.app/api/webhooks/tiktok
+ * Prefer callback URL (no apex→www redirect):
+ *   https://www.clikd.app/api/webhooks/tiktok
  *
- * GET  — verification handshake (challenge / hub.challenge → plain text 200)
- * POST — ack immediately with { code: 0 }; process im.message.receive / comment.create
- * HEAD — health check for portal URL probes
+ * GET  — echo challenge as plain text 200 (no auth / origin / IP checks)
+ * POST — always { code: 0, message: "success" }; ingest IM / comment events
+ * HEAD / OPTIONS — 200 for portal probes
  */
 
-import { NextResponse } from 'next/server';
 import { extractTikTokImEvents } from '@/lib/tiktok/im-webhook';
 import {
   ingestTikTokIncomingMessage,
@@ -20,33 +20,21 @@ export const runtime = 'nodejs';
 
 const ACK = { code: 0, message: 'success' } as const;
 
-function plainText(body: string, status = 200) {
-  return new NextResponse(body, {
-    status,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Cache-Control': 'no-store',
-    },
-  });
-}
+const PUBLIC_HEADERS: HeadersInit = {
+  'Cache-Control': 'no-store',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, HEAD, OPTIONS',
+  'Access-Control-Allow-Headers': '*',
+};
 
-function ackJson() {
-  return NextResponse.json(ACK, {
-    status: 200,
-    headers: { 'Cache-Control': 'no-store' },
-  });
-}
-
-/** Extract challenge from common TikTok / Meta-style verify query keys. */
 function extractChallenge(url: URL): string {
-  const keys = [
+  for (const key of [
     'challenge',
     'hub.challenge',
     'hub_challenge',
     'echostr',
     'crc_token',
-  ];
-  for (const key of keys) {
+  ]) {
     const value = url.searchParams.get(key);
     if (value != null && String(value).length > 0) {
       return String(value).trim();
@@ -62,34 +50,32 @@ function eventName(payload: unknown): string {
 }
 
 /**
- * GET — TikTok / portal verification handshake.
- * Echo challenge as text/plain 200; otherwise "TikTok Webhook Ready".
+ * GET — verification handshake.
+ * Returns challenge as plain text 200; no Origin / IP / auth gates.
  */
 export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const challenge = extractChallenge(url);
-    if (challenge) {
-      return plainText(challenge, 200);
-    }
-    return plainText('TikTok Webhook Ready', 200);
-  } catch (error) {
-    console.error('[webhooks/tiktok] GET failed', error);
-    return plainText('TikTok Webhook Ready', 200);
-  }
-}
-
-/** HEAD — used by some URL health / portal probes. */
-export async function HEAD() {
-  return new NextResponse(null, {
+  const url = new URL(request.url);
+  const challenge = extractChallenge(url);
+  const body = challenge || 'TikTok Webhook Ready';
+  return new Response(body, {
     status: 200,
-    headers: { 'Cache-Control': 'no-store' },
+    headers: {
+      ...PUBLIC_HEADERS,
+      'Content-Type': 'text/plain; charset=utf-8',
+    },
   });
 }
 
+export async function HEAD() {
+  return new Response(null, { status: 200, headers: PUBLIC_HEADERS });
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 200, headers: PUBLIC_HEADERS });
+}
+
 /**
- * POST — incoming events. Always acknowledge 200 + { code: 0 } immediately
- * after reading the body (TikTok retries on non-200).
+ * POST — always acknowledge immediately. No signature / origin / IP 403s.
  */
 export async function POST(request: Request) {
   let rawText = '';
@@ -99,7 +85,6 @@ export async function POST(request: Request) {
     rawText = '';
   }
 
-  // Fire-and-forget persistence — never block the ack.
   void (async () => {
     try {
       let payload: unknown = {};
@@ -114,7 +99,6 @@ export async function POST(request: Request) {
       const event = eventName(payload);
       console.info('[webhooks/tiktok] event', event || '(unknown)');
 
-      // comment.create — acknowledge + log (ingest path reserved for future)
       if (event === 'comment.create' || event.includes('comment')) {
         console.info('[webhooks/tiktok] comment event received', {
           event,
@@ -122,7 +106,6 @@ export async function POST(request: Request) {
         });
       }
 
-      // im.message.receive (+ tolerant aliases) → Social Inbox
       const events = extractTikTokImEvents(payload);
       for (const im of events) {
         const account =
@@ -157,5 +140,5 @@ export async function POST(request: Request) {
     }
   })();
 
-  return ackJson();
+  return Response.json(ACK, { status: 200, headers: PUBLIC_HEADERS });
 }
