@@ -6,11 +6,11 @@ import { Slider } from '@/components/ui/slider';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 
-const FOLLOWER_MIN = 1000;
-const FOLLOWER_MAX = 50000;
+const FOLLOWER_MIN = 0;
+const FOLLOWER_MAX = 100000;
 const FOLLOWER_STEP = 500;
-const PRICE_MIN = 149;
-const PRICE_MAX = 499;
+const PRICE_MIN = 0;
+const PRICE_MAX = 3000;
 const PRICE_STEP = 10;
 const CONVERSION_MIN = 0.5;
 const CONVERSION_MAX = 10;
@@ -113,8 +113,8 @@ export function RoiCalculator() {
                     className={sliderAccent}
                   />
                   <div className="flex justify-between text-[11px] font-bold text-slate-400 mt-2 font-mono">
-                    <span>{PRICE_MIN} SEK</span>
-                    <span>{PRICE_MAX} SEK</span>
+                    <span>{formatNum(PRICE_MIN, locale)} SEK</span>
+                    <span>{formatNum(PRICE_MAX, locale)} SEK</span>
                   </div>
                 </div>
 

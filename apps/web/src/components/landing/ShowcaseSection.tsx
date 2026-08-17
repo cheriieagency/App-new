@@ -201,19 +201,10 @@ export function ShowcaseSection({
                   </div>
                 </div>
 
-                <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10">
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
-                    {t('membershipFee', locale)}
-                  </p>
-                  <p className="font-outfit font-extrabold text-3xl text-white mb-1 tracking-tight tabular-nums">
-                    199 <span className="text-base font-bold text-slate-400 font-mono">{t('sekPerMo', locale)}</span>
-                  </p>
-                  <p className="text-xs font-medium text-slate-400 mb-5 font-display">
-                    {t('cancelAnytimeReady', locale)}
-                  </p>
+                <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 flex items-center">
                   <Link
                     href={`/communities/${hero.id}`}
-                    className="bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-[0.98]"
+                    className="w-full bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-[0.98]"
                   >
                     {t('viewCommunity', locale)} →
                   </Link>

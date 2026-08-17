@@ -1028,7 +1028,7 @@ export const EXTRA_EN: ExtraDict = {
   suiteEmailSummary:
     'Subscriber directory, automated email broadcasts, tags, and engagement analytics for every brand workspace.',
   roiEyebrow: 'ROI Calculator',
-  roiHeadline: 'Estimate your monthly revenue',
+  roiHeadline: 'Estimate your monthly revenue from your community',
   roiSub: 'Adjust the sliders. 1–3% conversion is realistic for an engaged creator audience.',
   roiFollowers: 'Select Follower Count',
   roiMonthlyPrice: 'Monthly Membership Price',
@@ -1983,7 +1983,7 @@ export const EXTRA_SV: ExtraDict = {
   suiteEmailSummary:
     'Prenumerantdirectory, automatiska utskick, taggar och engagemangsanalytics per varumärke.',
   roiEyebrow: 'ROI-kalkylator',
-  roiHeadline: 'Uppskatta din månadsintäkt',
+  roiHeadline: 'Uppskatta din månadsintäkt från din community',
   roiSub: 'Justera reglagen. 1–3% konvertering är realistiskt för en engagerad publik.',
   roiFollowers: 'Välj antal följare',
   roiMonthlyPrice: 'Månadspris för medlemskap',
@@ -3198,7 +3198,7 @@ export const EXTRA_FI: ExtraDict = {
   suiteEmailSummary:
     'Tilaajahakemisto, automaattiset lähetykset, tagit ja engagement-analytiikka per brändi.',
   roiEyebrow: 'ROI-laskuri',
-  roiHeadline: 'Arvioi kuukausitulosi',
+  roiHeadline: 'Arvioi kuukausitulosi yhteisöstäsi',
   roiSub: 'Säädä liukusäätimiä. 1–3 % konversio on realistinen sitoutuneelle yleisölle.',
   roiFollowers: 'Valitse seuraajien määrä',
   roiMonthlyPrice: 'Jäsenyyden kuukausihinta',
