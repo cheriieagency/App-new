@@ -1,10 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Folder, FolderKanban, Plus, Trash2 } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { useAdminNav } from '@/components/admin/AdminNavContext';
+import {
+  adminMediaHref,
+  useAdminNav,
+} from '@/components/admin/AdminNavContext';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
 import ProjectVisionBoard from '@/components/admin/ProjectVisionBoard';
@@ -20,6 +24,10 @@ import {
 import { useLanguage } from '@/lib/locale-context';
 import { t, tf } from '@/lib/i18n';
 import type { CampaignLabel } from '@/lib/mock-content-planner';
+import {
+  isMediaLibraryRoot,
+  type MediaFolder,
+} from '@/lib/mock-media-library';
 
 const COLORS = ['#F472B6', '#9089F0', '#10B981', '#F59E0B', '#2B2568', '#0EA5E9'];
 
@@ -53,21 +61,43 @@ export default function ProjectsPanel() {
     },
   });
 
-  const campaigns = campaignsData?.campaigns ?? [];
+  const { data: mediaFoldersData } = useQuery<{ folders: MediaFolder[] }>({
+    queryKey: ['media-folders', activeWorkspace.id],
+    queryFn: async () => {
+      const r = await fetch('/api/admin/media', {
+        headers: activeWorkspace.id
+          ? {
+              'x-workspace-id': activeWorkspace.id,
+              'x-active-workspace-id': activeWorkspace.id,
+            }
+          : undefined,
+        credentials: 'include',
+      });
+      if (!r.ok) throw new Error('Failed');
+      return r.json();
+    },
+  });
 
-  // A–Z so the folder grid reads as a sorted project library.
-  const sortedProjects = useMemo(
-    () =>
-      [...campaigns].sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-      ),
-    [campaigns]
+  const campaigns = campaignsData?.campaigns ?? [];
+  const mediaFolders = (mediaFoldersData?.folders ?? []).filter(
+    (f) => !isMediaLibraryRoot(f.id)
   );
+
+  // Keep Projects overview in the same order as the sidebar (sort_order).
+  const sortedProjects = useMemo(() => [...campaigns], [campaigns]);
 
   const active =
     activeCampaignId && campaigns.some((c) => c.id === activeCampaignId)
       ? (campaigns.find((c) => c.id === activeCampaignId) ?? null)
       : null;
+
+  const linkedMediaFolders = useMemo(
+    () =>
+      active
+        ? mediaFolders.filter((f) => f.campaign_id === active.id)
+        : [],
+    [active, mediaFolders]
+  );
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -282,14 +312,32 @@ export default function ProjectsPanel() {
             : undefined)
         }
         headerExtra={
-          <button
-            type="button"
-            onClick={openDeleteDialog}
-            className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-            aria-label={t('delete', locale)}
-          >
-            <Trash2 size={16} />
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {linkedMediaFolders[0] ? (
+              <Link
+                href={adminMediaHref({ folderId: linkedMediaFolders[0].id })}
+                className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-extrabold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Folder size={14} aria-hidden />
+                {linkedMediaFolders[0].name}
+              </Link>
+            ) : (
+              <Link
+                href="/admin?tab=media"
+                className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl border border-dashed border-slate-300 bg-white text-xs font-extrabold text-slate-500 hover:bg-slate-50 transition-colors"
+              >
+                Link media folder
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={openDeleteDialog}
+              className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              aria-label={t('delete', locale)}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
         }
       />
       <ProjectVisionBoard campaign={active} />

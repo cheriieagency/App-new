@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Folder, Pencil, Trash2, Upload } from 'lucide-react';
+import { Folder, FolderKanban, Pencil, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { useAdminNav } from '@/components/admin/AdminNavContext';
+import {
+  adminProjectsHref,
+  useAdminNav,
+} from '@/components/admin/AdminNavContext';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import {
@@ -25,6 +29,7 @@ import {
   type MediaAsset,
   type MediaFolder,
 } from '@/lib/mock-media-library';
+import type { CampaignLabel } from '@/lib/mock-content-planner';
 import GoogleDriveImportButton from '@/components/admin/GoogleDriveImportButton';
 import useUpload from '@/utils/useUpload';
 
@@ -73,8 +78,10 @@ export default function MediaLibraryPanel() {
   const [name, setName] = useState('');
   const [color, setColor] = useState(DEFAULT_FOLDER_COLOR);
   const [description, setDescription] = useState('');
+  const [campaignId, setCampaignId] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState<MediaAsset | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -99,6 +106,21 @@ export default function MediaLibraryPanel() {
       return r.json();
     },
   });
+
+  const { data: campaignsData } = useQuery<{ campaigns: CampaignLabel[] }>({
+    queryKey: ['planner-campaigns'],
+    queryFn: async () => {
+      const r = await fetch('/api/planner/campaigns', { credentials: 'include' });
+      if (!r.ok) throw new Error('Failed');
+      return r.json();
+    },
+  });
+  const projects = campaignsData?.campaigns ?? [];
+  const projectById = useMemo(() => {
+    const map = new Map<string, CampaignLabel>();
+    for (const p of projects) map.set(p.id, p);
+    return map;
+  }, [projects]);
 
   const folders = foldersData?.folders ?? [];
   const activeId =
@@ -200,7 +222,13 @@ export default function MediaLibraryPanel() {
             : {}),
         },
         credentials: 'include',
-        body: JSON.stringify({ action: 'create', name, color, description }),
+        body: JSON.stringify({
+          action: 'create',
+          name,
+          color,
+          description,
+          campaignId: campaignId || null,
+        }),
       });
       if (!r.ok) throw new Error('create failed');
       return r.json() as Promise<{ folder: MediaFolder }>;
@@ -210,9 +238,45 @@ export default function MediaLibraryPanel() {
       setName('');
       setDescription('');
       setColor(DEFAULT_FOLDER_COLOR);
+      setCampaignId('');
       setCreateMediaFolderOpen(false);
       setActiveMediaFolderId(data.folder.id);
+      toast.success(
+        data.folder.campaign_id
+          ? 'Folder created and linked to project'
+          : 'Folder created'
+      );
     },
+  });
+
+  const linkProjectMutation = useMutation({
+    mutationFn: async (nextCampaignId: string | null) => {
+      const r = await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...workspaceHeaders,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'update',
+          id: activeId,
+          campaignId: nextCampaignId,
+        }),
+      });
+      if (!r.ok) throw new Error('Could not link project');
+      return r.json() as Promise<{ folder: MediaFolder }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+      queryClient.invalidateQueries({ queryKey: ['media-folder', activeId] });
+      toast.success(
+        data.folder.campaign_id
+          ? 'Folder linked to project'
+          : 'Project link removed'
+      );
+    },
+    onError: () => toast.error('Could not update project link'),
   });
 
   const renameMutation = useMutation({
@@ -359,6 +423,29 @@ export default function MediaLibraryPanel() {
     },
   });
 
+  const deleteAssetMutation = useMutation({
+    mutationFn: async (assetId: string) => {
+      const r = await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...workspaceHeaders,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'delete_asset', assetId }),
+      });
+      if (!r.ok) throw new Error('Could not delete file');
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['media-folder'] });
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+      setAssetToDelete(null);
+      toast.success('Deleted from media library');
+    },
+    onError: () => toast.error('Could not delete file'),
+  });
+
   const onDeviceFiles = (files: FileList | null) => {
     if (!files?.length) return;
     Array.from(files).forEach((file) => uploadMutation.mutate(file));
@@ -469,7 +556,13 @@ export default function MediaLibraryPanel() {
           setDescription={setDescription}
           color={color}
           setColor={setColor}
-          onCancel={() => setCreateMediaFolderOpen(false)}
+          campaignId={campaignId}
+          setCampaignId={setCampaignId}
+          projects={projects}
+          onCancel={() => {
+            setCreateMediaFolderOpen(false);
+            setCampaignId('');
+          }}
           onSave={() => createMutation.mutate()}
           saving={createMutation.isPending}
           locale={locale}
@@ -577,6 +670,50 @@ export default function MediaLibraryPanel() {
         }
       />
 
+      {!isRoot ? (
+        <div className={`${adminCardClass} p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4`}>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <FolderKanban size={16} className="text-[#2B2568] shrink-0" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                Linked project
+              </p>
+              <p className="text-sm font-semibold text-slate-700 truncate">
+                {active.campaign_id && projectById.get(active.campaign_id)
+                  ? projectById.get(active.campaign_id)!.name
+                  : 'Not linked to a project'}
+              </p>
+            </div>
+          </div>
+          <label className="block sm:min-w-[220px]">
+            <span className="sr-only">Connect folder to project</span>
+            <select
+              value={active.campaign_id || ''}
+              disabled={linkProjectMutation.isPending}
+              onChange={(e) =>
+                linkProjectMutation.mutate(e.target.value || null)
+              }
+              className="w-full h-11 min-h-[44px] px-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 disabled:opacity-50"
+            >
+              <option value="">No project</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {active.campaign_id ? (
+            <Link
+              href={adminProjectsHref({ campaignId: active.campaign_id })}
+              className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-extrabold text-slate-700 hover:bg-slate-50 shrink-0"
+            >
+              Open project
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
       {isLoading ? (
         <div
           className={`${adminCardClass} py-16 text-center text-sm text-slate-400`}
@@ -652,6 +789,9 @@ export default function MediaLibraryPanel() {
                   ? nestedFolders.map((folder) => {
                       const count = assetCounts.get(folder.id) || 0;
                       const isHot = dropTargetId === folder.id;
+                      const linkedProject = folder.campaign_id
+                        ? projectById.get(folder.campaign_id)
+                        : null;
                       return (
                         <button
                           key={folder.id}
@@ -667,12 +807,20 @@ export default function MediaLibraryPanel() {
                           }`}
                         >
                           <div
-                            className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl text-white flex items-center justify-center"
+                            className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl text-white flex items-center justify-center relative"
                             style={{
                               background: folder.color || DEFAULT_FOLDER_COLOR,
                             }}
                           >
                             <Folder size={26} />
+                            {linkedProject ? (
+                              <span
+                                className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-white border border-slate-200 text-[#2B2568] inline-flex items-center justify-center"
+                                title={`Linked to ${linkedProject.name}`}
+                              >
+                                <FolderKanban size={11} aria-hidden />
+                              </span>
+                            ) : null}
                           </div>
                           <p className="text-sm font-extrabold text-slate-900 text-center line-clamp-2 leading-snug">
                             {folder.name}
@@ -680,6 +828,11 @@ export default function MediaLibraryPanel() {
                           <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
                             {count} {count === 1 ? 'file' : 'files'}
                           </p>
+                          {linkedProject ? (
+                            <p className="text-[10px] font-semibold text-[#2B2568] text-center line-clamp-1 leading-snug">
+                              {linkedProject.name}
+                            </p>
+                          ) : null}
                         </button>
                       );
                     })
@@ -714,25 +867,42 @@ export default function MediaLibraryPanel() {
                   draggable
                   onDragStart={(e) => onAssetDragStart(e, m.id)}
                   onDragEnd={onAssetDragEnd}
-                  className={`${adminCardClass} overflow-hidden text-left cursor-grab active:cursor-grabbing transition-opacity ${
+                  className={`${adminCardClass} group relative overflow-hidden text-left cursor-grab active:cursor-grabbing transition-opacity ${
                     draggingAssetId === m.id ? 'opacity-50' : ''
                   }`}
                 >
-                  {m.kind === 'video' ? (
-                    <video
-                      src={m.image}
-                      className="w-full aspect-square object-cover bg-slate-100 pointer-events-none"
-                      muted
-                      playsInline
-                    />
-                  ) : (
-                    <img
-                      src={m.image}
-                      alt={m.label}
-                      className="w-full aspect-square object-cover pointer-events-none"
+                  <div className="relative">
+                    {m.kind === 'video' ? (
+                      <video
+                        src={m.image}
+                        className="w-full aspect-square object-cover bg-slate-100 pointer-events-none"
+                        muted
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        src={m.image}
+                        alt={m.label}
+                        className="w-full aspect-square object-cover pointer-events-none"
+                        draggable={false}
+                      />
+                    )}
+                    <button
+                      type="button"
                       draggable={false}
-                    />
-                  )}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setAssetToDelete(m);
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="absolute top-2 right-2 z-10 h-11 min-h-[44px] w-11 min-w-[44px] rounded-xl bg-white/95 border border-slate-200 text-rose-600 shadow-sm inline-flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-rose-50"
+                      aria-label={`Delete ${m.label}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                   <div className="p-3">
                     <p className="text-sm font-semibold text-slate-900 truncate">
                       {m.label}
@@ -751,6 +921,48 @@ export default function MediaLibraryPanel() {
           ) : null}
         </div>
       )}
+
+      <Dialog
+        open={Boolean(assetToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setAssetToDelete(null);
+        }}
+      >
+        <DialogContent className="max-w-[min(440px,94vw)] rounded-2xl border-slate-200/90 p-0 gap-0">
+          <DialogHeader className="px-5 sm:px-6 pt-5 pb-3 text-left">
+            <DialogTitle className="text-base font-bold text-slate-900">
+              Delete file?
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500 font-medium pt-1">
+              <span className="font-semibold text-slate-800">
+                {assetToDelete?.label}
+              </span>
+              {' — '}
+              This removes it from your media library. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="px-5 sm:px-6 py-4 border-t border-slate-100 flex-row gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setAssetToDelete(null)}
+              className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50"
+            >
+              {t('cancel', locale)}
+            </button>
+            <button
+              type="button"
+              disabled={!assetToDelete || deleteAssetMutation.isPending}
+              onClick={() => {
+                if (!assetToDelete) return;
+                deleteAssetMutation.mutate(assetToDelete.id);
+              }}
+              className="h-11 min-h-[44px] px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold disabled:opacity-40 disabled:pointer-events-none"
+            >
+              {t('delete', locale)}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {!isRoot ? (
         <Dialog
@@ -817,6 +1029,9 @@ function CreateFolderForm({
   setDescription,
   color,
   setColor,
+  campaignId,
+  setCampaignId,
+  projects,
   onCancel,
   onSave,
   saving,
@@ -828,6 +1043,9 @@ function CreateFolderForm({
   setDescription: (v: string) => void;
   color: string;
   setColor: (v: string) => void;
+  campaignId: string;
+  setCampaignId: (v: string) => void;
+  projects: CampaignLabel[];
   onCancel: () => void;
   onSave: () => void;
   saving: boolean;
@@ -850,6 +1068,28 @@ function CreateFolderForm({
         placeholder={t('mediaFolderDescPlaceholder', locale)}
         className="w-full min-h-[72px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-slate-900/5"
       />
+      <label className="block">
+        <span className="block text-xs font-bold text-slate-700 mb-1.5">
+          Link to project (optional)
+        </span>
+        <select
+          value={campaignId}
+          onChange={(e) => setCampaignId(e.target.value)}
+          className="w-full h-11 min-h-[44px] px-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+        >
+          <option value="">No project</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+        {projects.length === 0 ? (
+          <p className="mt-1.5 text-xs text-slate-500 font-medium">
+            Create a project under Projects first, then link it here.
+          </p>
+        ) : null}
+      </label>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 w-full">
         <div className="grid grid-cols-8 gap-2.5 w-fit max-w-full">
           {COLORS.map((c) => (

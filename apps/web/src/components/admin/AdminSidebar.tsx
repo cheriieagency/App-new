@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, type ElementType } from 'react';
+import { useEffect, useState, type DragEvent, type ElementType } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
   CalendarDays,
   ChevronDown,
   FolderKanban,
+  GripVertical,
   Image as ImageIcon,
   Inbox,
   Link2,
@@ -28,13 +29,27 @@ import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { useLanguage } from '@/lib/i18n';
 import type { NestedKey } from '@/lib/i18n';
 import type { CampaignLabel } from '@/lib/mock-content-planner';
-import { MEDIA_LIBRARY_ROOT_ID } from '@/lib/mock-media-library';
+import {
+  MEDIA_LIBRARY_ROOT_ID,
+  type MediaFolder,
+} from '@/lib/mock-media-library';
 import {
   PLAN_DISPLAY_NAME,
   normalizeWorkspacePlan,
   type WorkspacePlan,
 } from '@/lib/config/plans';
 
+const PROJECT_DND = 'application/x-clikd-project';
+const FOLDER_DND = 'application/x-clikd-media-folder';
+
+function moveItemBefore(ids: string[], fromId: string, toId: string): string[] {
+  if (fromId === toId) return ids;
+  const next = ids.filter((id) => id !== fromId);
+  const toIndex = next.indexOf(toId);
+  if (toIndex < 0) return ids;
+  next.splice(toIndex, 0, fromId);
+  return next;
+}
 type NavItem = {
   key: AdminSection;
   labelKey: NestedKey;
@@ -87,6 +102,10 @@ export default function AdminSidebar() {
   const [mediaOpen, setMediaOpen] = useState(section === 'media');
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
+  const [draggingProjectId, setDraggingProjectId] = useState<string | null>(null);
+  const [dropProjectId, setDropProjectId] = useState<string | null>(null);
+  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
+  const [dropFolderId, setDropFolderId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { data: planData } = useAdminPlan();
   const plan = normalizeWorkspacePlan(planData?.plan);
@@ -101,7 +120,7 @@ export default function AdminSidebar() {
   });
   const campaigns = campaignsData?.campaigns ?? [];
 
-  const { data: mediaData } = useQuery<{ folders: { id: string; name: string; color: string }[] }>({
+  const { data: mediaData } = useQuery<{ folders: MediaFolder[] }>({
     queryKey: ['media-folders', activeWorkspaceId],
     queryFn: async () => {
       const r = await fetch('/api/admin/media', {
@@ -127,7 +146,16 @@ export default function AdminSidebar() {
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       const r = await fetch('/api/admin/media', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activeWorkspaceId
+            ? {
+                'x-workspace-id': activeWorkspaceId,
+                'x-active-workspace-id': activeWorkspaceId,
+              }
+            : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ action: 'rename', id, name }),
       });
       if (!r.ok) throw new Error('rename failed');
@@ -142,6 +170,98 @@ export default function AdminSidebar() {
     onError: () => toast.error('Could not rename folder'),
   });
 
+  const reorderProjectsMutation = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const r = await fetch('/api/planner/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'reorder', orderedIds }),
+      });
+      if (!r.ok) throw new Error('reorder failed');
+      return r.json() as Promise<{ campaigns: CampaignLabel[] }>;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(['planner-campaigns'], { campaigns: data.campaigns });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['planner-campaigns'] });
+      toast.error('Could not reorder projects');
+    },
+  });
+
+  const reorderFoldersMutation = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const r = await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activeWorkspaceId
+            ? {
+                'x-workspace-id': activeWorkspaceId,
+                'x-active-workspace-id': activeWorkspaceId,
+              }
+            : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'reorder_folders', orderedIds }),
+      });
+      if (!r.ok) throw new Error('reorder failed');
+      return r.json() as Promise<{ folders: MediaFolder[] }>;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(['media-folders', activeWorkspaceId], {
+        folders: data.folders,
+      });
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+      toast.error('Could not reorder folders');
+    },
+  });
+
+  const applyProjectReorder = (fromId: string, toId: string) => {
+    const orderedIds = moveItemBefore(
+      campaigns.map((c) => c.id),
+      fromId,
+      toId
+    );
+    if (orderedIds.join('|') === campaigns.map((c) => c.id).join('|')) return;
+    const byId = new Map(campaigns.map((c) => [c.id, c]));
+    const optimistic = orderedIds
+      .map((id, index) => {
+        const c = byId.get(id);
+        return c ? { ...c, sort_order: index } : null;
+      })
+      .filter((c): c is CampaignLabel => !!c);
+    queryClient.setQueryData(['planner-campaigns'], { campaigns: optimistic });
+    reorderProjectsMutation.mutate(orderedIds);
+  };
+
+  const applyFolderReorder = (fromId: string, toId: string) => {
+    const orderedIds = moveItemBefore(
+      mediaFolders.map((f) => f.id),
+      fromId,
+      toId
+    );
+    if (orderedIds.join('|') === mediaFolders.map((f) => f.id).join('|')) return;
+    const byId = new Map(mediaFolders.map((f) => [f.id, f]));
+    const nestedOptimistic = orderedIds
+      .map((id, index) => {
+        const f = byId.get(id);
+        return f ? { ...f, sort_order: index } : null;
+      })
+      .filter((f): f is MediaFolder => !!f);
+    const optimisticFolders = [
+      ...(rootFolder ? [rootFolder] : []),
+      ...nestedOptimistic,
+    ];
+    queryClient.setQueryData(['media-folders', activeWorkspaceId], {
+      folders: optimisticFolders,
+    });
+    reorderFoldersMutation.mutate(orderedIds);
+  };
   const commitFolderRename = () => {
     if (!renamingFolderId || renameFolderMutation.isPending) return;
     const next = renameDraft.trim();
@@ -373,13 +493,58 @@ export default function AdminSidebar() {
                               return (
                                 <div
                                   key={f.id}
+                                  draggable
+                                  onDragStart={(e: DragEvent) => {
+                                    e.dataTransfer.setData(FOLDER_DND, f.id);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    setDraggingFolderId(f.id);
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggingFolderId(null);
+                                    setDropFolderId(null);
+                                  }}
+                                  onDragOver={(e: DragEvent) => {
+                                    if (
+                                      !e.dataTransfer.types.includes(FOLDER_DND) &&
+                                      !draggingFolderId
+                                    ) {
+                                      return;
+                                    }
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = 'move';
+                                    setDropFolderId(f.id);
+                                  }}
+                                  onDragLeave={() => {
+                                    if (dropFolderId === f.id) setDropFolderId(null);
+                                  }}
+                                  onDrop={(e: DragEvent) => {
+                                    e.preventDefault();
+                                    const fromId =
+                                      e.dataTransfer.getData(FOLDER_DND) ||
+                                      draggingFolderId;
+                                    setDraggingFolderId(null);
+                                    setDropFolderId(null);
+                                    if (!fromId) return;
+                                    applyFolderReorder(fromId, f.id);
+                                  }}
                                   className={[
                                     'group w-full flex items-center gap-1 rounded-xl transition-colors',
                                     selected
                                       ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
                                       : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+                                    draggingFolderId === f.id ? 'opacity-50' : '',
+                                    dropFolderId === f.id && draggingFolderId !== f.id
+                                      ? 'ring-2 ring-[#F472B6]/50 ring-inset'
+                                      : '',
                                   ].join(' ')}
                                 >
+                                  <span
+                                    className="flex-shrink-0 h-10 w-6 min-h-[40px] inline-flex items-center justify-center text-slate-300 cursor-grab active:cursor-grabbing"
+                                    aria-hidden
+                                    title="Drag to reorder"
+                                  >
+                                    <GripVertical size={12} />
+                                  </span>
                                   <button
                                     type="button"
                                     onClick={() => setActiveMediaFolderId(f.id)}
@@ -388,7 +553,7 @@ export default function AdminSidebar() {
                                       setRenamingFolderId(f.id);
                                     }}
                                     className={[
-                                      'flex-1 flex items-center gap-2.5 h-10 min-h-[40px] pl-3 pr-1 rounded-xl text-left',
+                                      'flex-1 flex items-center gap-2.5 h-10 min-h-[40px] pl-0 pr-1 rounded-xl text-left',
                                       selected ? 'font-semibold' : 'font-medium',
                                     ].join(' ')}
                                     aria-current={selected ? 'page' : undefined}
@@ -499,31 +664,86 @@ export default function AdminSidebar() {
                           campaigns.map((c) => {
                             const selected = c.id === activeCampaignId;
                             return (
-                              <button
+                              <div
                                 key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  setActiveCampaignId(c.id);
-                                  if (!pathname.startsWith('/admin')) {
-                                    router.push(adminProjectsHref({ campaignId: c.id }));
+                                draggable
+                                onDragStart={(e: DragEvent) => {
+                                  e.dataTransfer.setData(PROJECT_DND, c.id);
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  setDraggingProjectId(c.id);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggingProjectId(null);
+                                  setDropProjectId(null);
+                                }}
+                                onDragOver={(e: DragEvent) => {
+                                  if (
+                                    !e.dataTransfer.types.includes(PROJECT_DND) &&
+                                    !draggingProjectId
+                                  ) {
+                                    return;
                                   }
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                  setDropProjectId(c.id);
+                                }}
+                                onDragLeave={() => {
+                                  if (dropProjectId === c.id) setDropProjectId(null);
+                                }}
+                                onDrop={(e: DragEvent) => {
+                                  e.preventDefault();
+                                  const fromId =
+                                    e.dataTransfer.getData(PROJECT_DND) ||
+                                    draggingProjectId;
+                                  setDraggingProjectId(null);
+                                  setDropProjectId(null);
+                                  if (!fromId) return;
+                                  applyProjectReorder(fromId, c.id);
                                 }}
                                 className={[
-                                  'w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-left transition-colors',
+                                  'group w-full flex items-center gap-1 rounded-xl transition-colors',
                                   selected
-                                    ? 'bg-[#E9D5FF]/70 text-[#1a1848] font-semibold'
-                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium',
+                                    ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
+                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+                                  draggingProjectId === c.id ? 'opacity-50' : '',
+                                  dropProjectId === c.id &&
+                                  draggingProjectId !== c.id
+                                    ? 'ring-2 ring-[#F472B6]/50 ring-inset'
+                                    : '',
                                 ].join(' ')}
-                                aria-current={selected ? 'page' : undefined}
                               >
                                 <span
-                                  className="w-2 h-2 rounded-full flex-shrink-0"
-                                  style={{ background: c.color }}
-                                />
-                                <span className="text-[12px] truncate tracking-tight">
-                                  {c.name}
+                                  className="flex-shrink-0 h-10 w-6 min-h-[40px] inline-flex items-center justify-center text-slate-300 cursor-grab active:cursor-grabbing"
+                                  aria-hidden
+                                  title="Drag to reorder"
+                                >
+                                  <GripVertical size={12} />
                                 </span>
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveCampaignId(c.id);
+                                    if (!pathname.startsWith('/admin')) {
+                                      router.push(
+                                        adminProjectsHref({ campaignId: c.id })
+                                      );
+                                    }
+                                  }}
+                                  className={[
+                                    'flex-1 flex items-center gap-2.5 h-10 min-h-[40px] pl-0 pr-3 rounded-xl text-left transition-colors',
+                                    selected ? 'font-semibold' : 'font-medium',
+                                  ].join(' ')}
+                                  aria-current={selected ? 'page' : undefined}
+                                >
+                                  <span
+                                    className="w-2 h-2 rounded-full flex-shrink-0"
+                                    style={{ background: c.color }}
+                                  />
+                                  <span className="text-[12px] truncate tracking-tight">
+                                    {c.name}
+                                  </span>
+                                </button>
+                              </div>
                             );
                           })
                         )}

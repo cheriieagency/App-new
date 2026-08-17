@@ -23,7 +23,7 @@ export type MediaLibraryRecord = {
 };
 
 let schemaReady: Promise<void> | null = null;
-const MEDIA_SCHEMA_VERSION = 2;
+const MEDIA_SCHEMA_VERSION = 4;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -93,6 +93,16 @@ export async function ensureMediaLibrarySchema(): Promise<void> {
       CREATE INDEX IF NOT EXISTS media_folders_workspace_idx
         ON public.media_folders (workspace_id, created_at DESC)
     `);
+    await safeAlter('media_folders.campaign_id', () =>
+      sql`ALTER TABLE public.media_folders ADD COLUMN IF NOT EXISTS campaign_id text`
+    );
+    await safeAlter('media_folders_campaign_idx', () => sql`
+      CREATE INDEX IF NOT EXISTS media_folders_campaign_idx
+        ON public.media_folders (workspace_id, campaign_id)
+    `);
+    await safeAlter('media_folders.sort_order', () =>
+      sql`ALTER TABLE public.media_folders ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0`
+    );
 
     schemaVersionApplied = MEDIA_SCHEMA_VERSION;
   })().catch((error) => {
@@ -282,11 +292,11 @@ export async function listDurableMediaFolders(input: {
   if (!process.env.DATABASE_URL?.trim()) return [rootFolder(input.userId)];
   await ensureMediaLibrarySchema();
   const rows = await sql`
-    SELECT id, name, color, description, created_at, user_id
+    SELECT id, name, color, description, created_at, user_id, campaign_id, sort_order
     FROM public.media_folders
     WHERE workspace_id = ${input.workspaceId}
       AND user_id = ${input.userId}
-    ORDER BY created_at DESC
+    ORDER BY sort_order ASC, created_at DESC
   `;
   const folders = (rows || []).map((row) => ({
     id: String(row.id),
@@ -295,6 +305,8 @@ export async function listDurableMediaFolders(input: {
     description: String(row.description ?? ''),
     created_at: String(row.created_at ?? new Date().toISOString()),
     owner_user_id: String(row.user_id ?? input.userId),
+    campaign_id: row.campaign_id != null ? String(row.campaign_id) : null,
+    sort_order: Number(row.sort_order) || 0,
   }));
   return [rootFolder(input.userId), ...folders];
 }
@@ -305,7 +317,29 @@ export async function createDurableMediaFolder(input: {
   name: string;
   color?: string;
   description?: string;
+  campaignId?: string | null;
 }): Promise<MediaFolder> {
+  const campaignId = input.campaignId?.trim() || null;
+  if (!process.env.DATABASE_URL?.trim()) {
+    return {
+      id: `folder-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: input.name.trim() || 'Untitled folder',
+      color: input.color || '#2B2568',
+      description: (input.description ?? '').trim(),
+      created_at: new Date().toISOString(),
+      owner_user_id: input.userId,
+      campaign_id: campaignId,
+      sort_order: 0,
+    };
+  }
+  await ensureMediaLibrarySchema();
+  const maxRows = await sql`
+    SELECT COALESCE(MAX(sort_order), -1) AS max_order
+    FROM public.media_folders
+    WHERE workspace_id = ${input.workspaceId}
+      AND user_id = ${input.userId}
+  `;
+  const nextOrder = Number(maxRows?.[0]?.max_order ?? -1) + 1;
   const folder: MediaFolder = {
     id: `folder-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     name: input.name.trim() || 'Untitled folder',
@@ -313,19 +347,21 @@ export async function createDurableMediaFolder(input: {
     description: (input.description ?? '').trim(),
     created_at: new Date().toISOString(),
     owner_user_id: input.userId,
+    campaign_id: campaignId,
+    sort_order: nextOrder,
   };
-  if (!process.env.DATABASE_URL?.trim()) return folder;
-  await ensureMediaLibrarySchema();
   await sql`
     INSERT INTO public.media_folders (
-      id, workspace_id, user_id, name, color, description
+      id, workspace_id, user_id, name, color, description, campaign_id, sort_order
     ) VALUES (
       ${folder.id},
       ${input.workspaceId},
       ${input.userId},
       ${folder.name},
       ${folder.color},
-      ${folder.description}
+      ${folder.description},
+      ${campaignId},
+      ${nextOrder}
     )
   `;
   return folder;
@@ -350,7 +386,7 @@ export async function renameDurableMediaFolder(input: {
     WHERE id = ${input.id}
       AND workspace_id = ${input.workspaceId}
       AND user_id = ${input.userId}
-    RETURNING id, name, color, description, created_at, user_id
+    RETURNING id, name, color, description, created_at, user_id, campaign_id
   `;
   const row = rows?.[0];
   if (!row) return null;
@@ -361,6 +397,76 @@ export async function renameDurableMediaFolder(input: {
     description: String(row.description ?? ''),
     created_at: String(row.created_at),
     owner_user_id: String(row.user_id ?? input.userId),
+    campaign_id: row.campaign_id != null ? String(row.campaign_id) : null,
+  };
+}
+
+/** Update folder fields including optional project (campaign) link. */
+export async function updateDurableMediaFolder(input: {
+  workspaceId: string;
+  userId: string;
+  id: string;
+  name?: string;
+  color?: string;
+  description?: string;
+  campaignId?: string | null;
+}): Promise<MediaFolder | null> {
+  if (isMediaLibraryRoot(input.id)) return null;
+  if (!process.env.DATABASE_URL?.trim()) return null;
+  await ensureMediaLibrarySchema();
+
+  const existing = await sql`
+    SELECT id, name, color, description, created_at, user_id, campaign_id
+    FROM public.media_folders
+    WHERE id = ${input.id}
+      AND workspace_id = ${input.workspaceId}
+      AND user_id = ${input.userId}
+    LIMIT 1
+  `;
+  const current = existing?.[0];
+  if (!current) return null;
+
+  const nextName =
+    typeof input.name === 'string' ? input.name.trim() : String(current.name);
+  if (!nextName) return null;
+  const nextColor =
+    typeof input.color === 'string' && input.color.trim()
+      ? input.color.trim()
+      : String(current.color ?? '#2B2568');
+  const nextDescription =
+    typeof input.description === 'string'
+      ? input.description.trim()
+      : String(current.description ?? '');
+  const nextCampaignId =
+    input.campaignId !== undefined
+      ? input.campaignId?.trim() || null
+      : current.campaign_id != null
+        ? String(current.campaign_id)
+        : null;
+
+  const rows = await sql`
+    UPDATE public.media_folders
+    SET
+      name = ${nextName},
+      color = ${nextColor},
+      description = ${nextDescription},
+      campaign_id = ${nextCampaignId},
+      updated_at = now()
+    WHERE id = ${input.id}
+      AND workspace_id = ${input.workspaceId}
+      AND user_id = ${input.userId}
+    RETURNING id, name, color, description, created_at, user_id, campaign_id
+  `;
+  const row = rows?.[0];
+  if (!row) return null;
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    color: String(row.color ?? '#2B2568'),
+    description: String(row.description ?? ''),
+    created_at: String(row.created_at),
+    owner_user_id: String(row.user_id ?? input.userId),
+    campaign_id: row.campaign_id != null ? String(row.campaign_id) : null,
   };
 }
 
@@ -448,5 +554,77 @@ export async function moveDurableMediaAsset(input: {
     source: String(row.source || 'upload'),
     external_id: row.external_id != null ? String(row.external_id) : null,
     folder_id: row.folder_id != null ? String(row.folder_id) : MEDIA_LIBRARY_ROOT_ID,
+  });
+}
+
+/** Permanently remove a single image/video from the durable media library. */
+export async function deleteDurableMediaAsset(input: {
+  workspaceId: string;
+  userId: string;
+  assetId: string;
+}): Promise<boolean> {
+  if (!process.env.DATABASE_URL?.trim()) return false;
+  await ensureMediaLibrarySchema();
+
+  const numericId = Number(input.assetId);
+  const rows = Number.isFinite(numericId)
+    ? await sql`
+        DELETE FROM public.media_library
+        WHERE id = ${numericId}
+          AND workspace_id = ${input.workspaceId}
+          AND (user_id IS NULL OR user_id = ${input.userId})
+        RETURNING id
+      `
+    : await sql`
+        DELETE FROM public.media_library
+        WHERE id::text = ${input.assetId}
+          AND workspace_id = ${input.workspaceId}
+          AND (user_id IS NULL OR user_id = ${input.userId})
+        RETURNING id
+      `;
+
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+/** Persist sidebar drag-and-drop order for media folders (excludes Brand assets root). */
+export async function reorderDurableMediaFolders(input: {
+  workspaceId: string;
+  userId: string;
+  orderedIds: string[];
+}): Promise<MediaFolder[]> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return [rootFolder(input.userId)];
+  }
+  await ensureMediaLibrarySchema();
+
+  const existing = await listDurableMediaFolders({
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+  });
+  const nested = existing.filter((f) => !isMediaLibraryRoot(f.id));
+  const allowed = new Set(nested.map((f) => f.id));
+  const ordered = input.orderedIds.filter(
+    (id, index, arr) =>
+      !isMediaLibraryRoot(id) &&
+      allowed.has(id) &&
+      arr.indexOf(id) === index
+  );
+  for (const f of nested) {
+    if (!ordered.includes(f.id)) ordered.push(f.id);
+  }
+
+  for (let i = 0; i < ordered.length; i += 1) {
+    await sql`
+      UPDATE public.media_folders
+      SET sort_order = ${i}, updated_at = now()
+      WHERE id = ${ordered[i]}
+        AND workspace_id = ${input.workspaceId}
+        AND user_id = ${input.userId}
+    `;
+  }
+
+  return listDurableMediaFolders({
+    workspaceId: input.workspaceId,
+    userId: input.userId,
   });
 }

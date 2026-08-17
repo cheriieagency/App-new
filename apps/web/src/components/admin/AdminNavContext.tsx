@@ -74,6 +74,14 @@ export function adminProjectsHref(opts?: {
   return `/admin?${params.toString()}`;
 }
 
+/** Build an /admin deep-link into a Media Library folder. */
+export function adminMediaHref(opts?: { folderId?: string | null }): string {
+  const params = new URLSearchParams();
+  params.set('tab', 'media');
+  if (opts?.folderId) params.set('folder', opts.folderId);
+  return `/admin?${params.toString()}`;
+}
+
 function writeUrl(
   tab: AdminSection,
   opts: {

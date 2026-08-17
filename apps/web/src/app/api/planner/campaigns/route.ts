@@ -1,17 +1,62 @@
 /**
  * GET/POST /api/planner/campaigns
- * Campaign labels are scoped to the authenticated session user.
+ * Projects (campaign labels) scoped to the authenticated user + workspace.
+ * Persists to planner_campaigns when DATABASE_URL is set.
  */
 
+import { cookies } from 'next/headers';
 import { requireApiSession } from '@/lib/auth/require-api-session';
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
+} from '@/lib/social/oauth-workspace';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 import {
   createCampaignLabel,
   deleteCampaignLabel,
+  getCampaignLabel,
   listCampaignLabels,
   listPostsForCampaign,
+  reorderCampaignLabels,
   updateCampaignLabel,
   type VisionPin,
 } from '@/lib/mock-content-planner';
+import {
+  createDurableCampaign,
+  deleteDurableCampaign,
+  getDurableCampaign,
+  listDurableCampaigns,
+  reorderDurableCampaigns,
+  updateDurableCampaign,
+} from '@/lib/planner/campaigns';
+
+function useDurable(): boolean {
+  return Boolean(process.env.DATABASE_URL?.trim());
+}
+
+async function resolveWorkspaceId(
+  request: Request,
+  userId: string,
+  email?: string | null
+): Promise<string> {
+  const url = new URL(request.url);
+  const jar = await cookies();
+  const preferred =
+    url.searchParams.get('workspaceId')?.trim() ||
+    request.headers.get('x-workspace-id')?.trim() ||
+    request.headers.get('x-active-workspace-id')?.trim() ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+    null;
+
+  const access = await resolveStrictUserWorkspace({
+    userId,
+    preferredWorkspaceId: preferred,
+    email: email ?? null,
+  });
+  if (!access.ok) return preferred || userId;
+  return access.workspaceId;
+}
 
 function sanitizeVisionPins(raw: unknown): VisionPin[] | undefined {
   if (!Array.isArray(raw)) return undefined;
@@ -46,13 +91,52 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const project = searchParams.get('project') || undefined;
-  if (id) {
+  const durable = useDurable();
+
+  try {
+    if (durable) {
+      const workspaceId = await resolveWorkspaceId(
+        request,
+        userId,
+        session.user.email
+      );
+      if (id) {
+        const campaign = await getDurableCampaign({
+          workspaceId,
+          userId,
+          id,
+        });
+        return Response.json({
+          campaign,
+          posts: listPostsForCampaign(id, project, userId),
+        });
+      }
+      const campaigns = await listDurableCampaigns({ workspaceId, userId });
+      return Response.json({ campaigns });
+    }
+
+    if (id) {
+      return Response.json({
+        campaign: getCampaignLabel(id, userId),
+        posts: listPostsForCampaign(id, project, userId),
+      });
+    }
+    return Response.json({ campaigns: listCampaignLabels(userId) });
+  } catch (error) {
+    console.error('[GET /api/planner/campaigns]', error);
+    // Soft-fallback so Projects UI never hard-crashes.
+    if (id) {
+      return Response.json({
+        campaign: getCampaignLabel(id, userId),
+        posts: listPostsForCampaign(id, project, userId),
+        demo: true,
+      });
+    }
     return Response.json({
-      campaign: listCampaignLabels(userId).find((c) => c.id === id) ?? null,
-      posts: listPostsForCampaign(id, project, userId),
+      campaigns: listCampaignLabels(userId),
+      demo: true,
     });
   }
-  return Response.json({ campaigns: listCampaignLabels(userId) });
 }
 
 export async function POST(request: Request) {
@@ -64,50 +148,90 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const action = String(body.action ?? 'create');
+    const durable = useDurable();
+    const workspaceId = durable
+      ? await resolveWorkspaceId(request, userId, session.user.email)
+      : userId;
 
     if (action === 'create') {
-      const campaign = createCampaignLabel({
-        name: String(body.name ?? ''),
-        color: typeof body.color === 'string' ? body.color : undefined,
-        description:
-          typeof body.description === 'string' ? body.description : undefined,
-        ownerUserId: userId,
-      });
-      return Response.json({
-        campaign,
-        campaigns: listCampaignLabels(userId),
-      });
+      const campaign = durable
+        ? await createDurableCampaign({
+            workspaceId,
+            userId,
+            name: String(body.name ?? ''),
+            color: typeof body.color === 'string' ? body.color : undefined,
+            description:
+              typeof body.description === 'string' ? body.description : undefined,
+          })
+        : createCampaignLabel({
+            name: String(body.name ?? ''),
+            color: typeof body.color === 'string' ? body.color : undefined,
+            description:
+              typeof body.description === 'string' ? body.description : undefined,
+            ownerUserId: userId,
+          });
+      const campaigns = durable
+        ? await listDurableCampaigns({ workspaceId, userId })
+        : listCampaignLabels(userId);
+      return Response.json({ campaign, campaigns });
     }
 
     if (action === 'update') {
-      const campaign = updateCampaignLabel(
-        String(body.id ?? ''),
-        {
-          name: typeof body.name === 'string' ? body.name : undefined,
-          color: typeof body.color === 'string' ? body.color : undefined,
-          description:
-            typeof body.description === 'string' ? body.description : undefined,
-          vision_pins: sanitizeVisionPins(body.vision_pins),
-        },
-        userId
-      );
+      const patch = {
+        name: typeof body.name === 'string' ? body.name : undefined,
+        color: typeof body.color === 'string' ? body.color : undefined,
+        description:
+          typeof body.description === 'string' ? body.description : undefined,
+        vision_pins: sanitizeVisionPins(body.vision_pins),
+      };
+      const campaign = durable
+        ? await updateDurableCampaign({
+            workspaceId,
+            userId,
+            id: String(body.id ?? ''),
+            ...patch,
+          })
+        : updateCampaignLabel(String(body.id ?? ''), patch, userId);
       if (!campaign) {
         return Response.json({ error: 'Not found' }, { status: 404 });
       }
-      return Response.json({
-        campaign,
-        campaigns: listCampaignLabels(userId),
-      });
+      const campaigns = durable
+        ? await listDurableCampaigns({ workspaceId, userId })
+        : listCampaignLabels(userId);
+      return Response.json({ campaign, campaigns });
     }
 
     if (action === 'delete') {
-      const ok = deleteCampaignLabel(String(body.id ?? ''), userId);
-      return Response.json({ ok, campaigns: listCampaignLabels(userId) });
+      const ok = durable
+        ? await deleteDurableCampaign({
+            workspaceId,
+            userId,
+            id: String(body.id ?? ''),
+          })
+        : deleteCampaignLabel(String(body.id ?? ''), userId);
+      const campaigns = durable
+        ? await listDurableCampaigns({ workspaceId, userId })
+        : listCampaignLabels(userId);
+      return Response.json({ ok, campaigns });
+    }
+
+    if (action === 'reorder') {
+      const orderedIds = Array.isArray(body.orderedIds)
+        ? body.orderedIds.map((id: unknown) => String(id)).filter(Boolean)
+        : [];
+      const campaigns = durable
+        ? await reorderDurableCampaigns({
+            workspaceId,
+            userId,
+            orderedIds,
+          })
+        : reorderCampaignLabels(orderedIds, userId);
+      return Response.json({ campaigns });
     }
 
     return Response.json({ error: 'Unknown action' }, { status: 400 });
   } catch (error) {
-    console.error(error);
+    console.error('[POST /api/planner/campaigns]', error);
     return Response.json({ error: 'Failed' }, { status: 500 });
   }
 }

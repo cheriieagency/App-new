@@ -125,6 +125,8 @@ export type CampaignLabel = {
   owner_user_id?: string;
   /** Moodboard / visionboard pins for this project. */
   vision_pins?: VisionPin[];
+  /** Manual sidebar / grid order (lower = earlier). */
+  sort_order?: number;
 };
 
 export type ConnectedSocialAccount = {
@@ -495,9 +497,12 @@ export function listCampaignLabels(ownerUserId?: string): CampaignLabel[] {
   const scoped = ownerUserId
     ? campaigns.filter((c) => c.owner_user_id === ownerUserId)
     : campaigns;
-  return [...scoped].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  return [...scoped].sort((a, b) => {
+    const ao = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+    const bo = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+    if (ao !== bo) return ao - bo;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 }
 
 export function getCampaignLabel(
@@ -518,6 +523,11 @@ export function createCampaignLabel(input: {
   description?: string;
   ownerUserId?: string;
 }): CampaignLabel {
+  const owned = input.ownerUserId
+    ? campaigns.filter((c) => c.owner_user_id === input.ownerUserId)
+    : campaigns;
+  const nextOrder =
+    owned.reduce((max, c) => Math.max(max, c.sort_order ?? -1), -1) + 1;
   const label: CampaignLabel = {
     id: `camp-${++campaignSeq}`,
     name: input.name.trim() || 'Untitled project',
@@ -525,6 +535,7 @@ export function createCampaignLabel(input: {
     description: (input.description ?? '').trim(),
     created_at: new Date().toISOString(),
     owner_user_id: input.ownerUserId,
+    sort_order: nextOrder,
   };
   campaigns.unshift(label);
   return label;
@@ -569,6 +580,30 @@ export function deleteCampaignLabel(id: string, ownerUserId?: string): boolean {
     p.campaigns = (p.campaigns ?? []).filter((cid) => cid !== id);
   }
   return true;
+}
+
+/** Persist a manual project order (sidebar drag-and-drop). */
+export function reorderCampaignLabels(
+  orderedIds: string[],
+  ownerUserId?: string
+): CampaignLabel[] {
+  const scoped = listCampaignLabels(ownerUserId);
+  const byId = new Map(scoped.map((c) => [c.id, c]));
+  const seen = new Set<string>();
+  let order = 0;
+  for (const id of orderedIds) {
+    const c = byId.get(id);
+    if (!c || seen.has(id)) continue;
+    c.sort_order = order;
+    order += 1;
+    seen.add(id);
+  }
+  for (const c of scoped) {
+    if (seen.has(c.id)) continue;
+    c.sort_order = order;
+    order += 1;
+  }
+  return listCampaignLabels(ownerUserId);
 }
 
 /** Posts tagged with a campaign label (optionally scoped to a brand workspace). */

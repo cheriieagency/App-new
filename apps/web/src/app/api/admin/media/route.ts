@@ -14,6 +14,7 @@ import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace'
 import {
   addMediaAsset,
   createMediaFolder,
+  deleteMediaAsset,
   deleteMediaFolder,
   getMediaFolder,
   isMediaLibraryRoot,
@@ -22,11 +23,14 @@ import {
   MEDIA_LIBRARY_ROOT_ID,
   moveMediaAsset,
   renameMediaFolder,
+  reorderMediaFolders,
+  updateMediaFolder,
   type MediaAsset,
   type MediaFolder,
 } from '@/lib/mock-media-library';
 import {
   createDurableMediaFolder,
+  deleteDurableMediaAsset,
   deleteDurableMediaFolder,
   insertMediaLibraryRow,
   listDurableMediaFolders,
@@ -34,6 +38,8 @@ import {
   moveDurableMediaAsset,
   recordToMediaAsset,
   renameDurableMediaFolder,
+  reorderDurableMediaFolders,
+  updateDurableMediaFolder,
 } from '@/lib/media/library';
 
 async function resolveWorkspaceId(
@@ -150,6 +156,12 @@ export async function POST(request: Request) {
       : userId;
 
     if (action === 'create') {
+      const campaignId =
+        typeof body.campaignId === 'string'
+          ? body.campaignId.trim() || null
+          : typeof body.campaign_id === 'string'
+            ? body.campaign_id.trim() || null
+            : null;
       const folder = durable
         ? await createDurableMediaFolder({
             workspaceId,
@@ -158,12 +170,14 @@ export async function POST(request: Request) {
             color: typeof body.color === 'string' ? body.color : undefined,
             description:
               typeof body.description === 'string' ? body.description : undefined,
+            campaignId,
           })
         : createMediaFolder(userId, {
             name: String(body.name ?? ''),
             color: typeof body.color === 'string' ? body.color : undefined,
             description:
               typeof body.description === 'string' ? body.description : undefined,
+            campaignId,
           });
       const folders = durable
         ? await listDurableMediaFolders({ workspaceId, userId })
@@ -184,6 +198,42 @@ export async function POST(request: Request) {
         : renameMediaFolder(userId, id, name);
       if (!folder) {
         return Response.json({ error: 'rename_failed' }, { status: 400 });
+      }
+      const folders = durable
+        ? await listDurableMediaFolders({ workspaceId, userId })
+        : listMediaFolders(userId);
+      return Response.json({ folder, folders });
+    }
+
+    if (action === 'update') {
+      const id = String(body.id ?? '');
+      if (!id || isMediaLibraryRoot(id)) {
+        return Response.json({ error: 'invalid_folder' }, { status: 400 });
+      }
+      const patch = {
+        name: typeof body.name === 'string' ? body.name : undefined,
+        color: typeof body.color === 'string' ? body.color : undefined,
+        description:
+          typeof body.description === 'string' ? body.description : undefined,
+        campaignId:
+          body.campaignId === null || body.campaign_id === null
+            ? null
+            : typeof body.campaignId === 'string'
+              ? body.campaignId.trim() || null
+              : typeof body.campaign_id === 'string'
+                ? body.campaign_id.trim() || null
+                : undefined,
+      };
+      const folder = durable
+        ? await updateDurableMediaFolder({
+            workspaceId,
+            userId,
+            id,
+            ...patch,
+          })
+        : updateMediaFolder(userId, id, patch);
+      if (!folder) {
+        return Response.json({ error: 'update_failed' }, { status: 400 });
       }
       const folders = durable
         ? await listDurableMediaFolders({ workspaceId, userId })
@@ -263,6 +313,20 @@ export async function POST(request: Request) {
       return Response.json({ ok, folders });
     }
 
+    if (action === 'delete_asset') {
+      const assetId = String(body.assetId ?? body.id ?? '').trim();
+      if (!assetId) {
+        return Response.json({ error: 'assetId required' }, { status: 400 });
+      }
+      const ok = durable
+        ? await deleteDurableMediaAsset({ workspaceId, userId, assetId })
+        : deleteMediaAsset(userId, assetId);
+      if (!ok) {
+        return Response.json({ error: 'delete_failed' }, { status: 404 });
+      }
+      return Response.json({ ok: true, assetId });
+    }
+
     if (action === 'move') {
       const assetId = String(body.assetId ?? body.id ?? '').trim();
       const folderId =
@@ -291,6 +355,20 @@ export async function POST(request: Request) {
           })
         : listMediaAssets(userId, MEDIA_LIBRARY_ROOT_ID);
       return Response.json({ asset, assets });
+    }
+
+    if (action === 'reorder_folders') {
+      const orderedIds = Array.isArray(body.orderedIds)
+        ? body.orderedIds.map((id: unknown) => String(id)).filter(Boolean)
+        : [];
+      const folders = durable
+        ? await reorderDurableMediaFolders({
+            workspaceId,
+            userId,
+            orderedIds,
+          })
+        : reorderMediaFolders(userId, orderedIds);
+      return Response.json({ folders });
     }
 
     return Response.json({ error: 'Unknown action' }, { status: 400 });
