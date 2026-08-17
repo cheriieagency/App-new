@@ -1,7 +1,11 @@
 /**
- * TikTok webhook — verification + IM message ingest for Social Inbox.
- * GET  — echo challenge / hub.challenge as plain text 200
- * POST — ack immediately; persist im.message.receive into tiktok_* tables
+ * TikTok webhook — Developer Portal verification + event ingest.
+ *
+ * Callback URL: https://clikd.app/api/webhooks/tiktok
+ *
+ * GET  — verification handshake (challenge / hub.challenge → plain text 200)
+ * POST — ack immediately with { code: 0 }; process im.message.receive / comment.create
+ * HEAD — health check for portal URL probes
  */
 
 import { NextResponse } from 'next/server';
@@ -11,23 +15,83 @@ import {
   resolveTikTokAccountByOpenId,
 } from '@/lib/tiktok/inbox-persist';
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const challenge =
-    url.searchParams.get('challenge') ||
-    url.searchParams.get('echostr') ||
-    url.searchParams.get('hub.challenge') ||
-    '';
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-  const body = challenge.trim() || 'OK';
+const ACK = { code: 0, message: 'success' } as const;
+
+function plainText(body: string, status = 200) {
   return new NextResponse(body, {
-    status: 200,
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    status,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
   });
 }
 
+function ackJson() {
+  return NextResponse.json(ACK, {
+    status: 200,
+    headers: { 'Cache-Control': 'no-store' },
+  });
+}
+
+/** Extract challenge from common TikTok / Meta-style verify query keys. */
+function extractChallenge(url: URL): string {
+  const keys = [
+    'challenge',
+    'hub.challenge',
+    'hub_challenge',
+    'echostr',
+    'crc_token',
+  ];
+  for (const key of keys) {
+    const value = url.searchParams.get(key);
+    if (value != null && String(value).length > 0) {
+      return String(value).trim();
+    }
+  }
+  return '';
+}
+
+function eventName(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') return '';
+  const root = payload as Record<string, unknown>;
+  return String(root.event || root.type || '').trim();
+}
+
+/**
+ * GET — TikTok / portal verification handshake.
+ * Echo challenge as text/plain 200; otherwise "TikTok Webhook Ready".
+ */
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const challenge = extractChallenge(url);
+    if (challenge) {
+      return plainText(challenge, 200);
+    }
+    return plainText('TikTok Webhook Ready', 200);
+  } catch (error) {
+    console.error('[webhooks/tiktok] GET failed', error);
+    return plainText('TikTok Webhook Ready', 200);
+  }
+}
+
+/** HEAD — used by some URL health / portal probes. */
+export async function HEAD() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: { 'Cache-Control': 'no-store' },
+  });
+}
+
+/**
+ * POST — incoming events. Always acknowledge 200 + { code: 0 } immediately
+ * after reading the body (TikTok retries on non-200).
+ */
 export async function POST(request: Request) {
-  // Ack first — TikTok retries if we don't return 200 promptly.
   let rawText = '';
   try {
     rawText = await request.text();
@@ -35,7 +99,7 @@ export async function POST(request: Request) {
     rawText = '';
   }
 
-  // Fire-and-forget persistence so the HTTP response stays fast.
+  // Fire-and-forget persistence — never block the ack.
   void (async () => {
     try {
       let payload: unknown = {};
@@ -47,19 +111,30 @@ export async function POST(request: Request) {
         }
       }
 
+      const event = eventName(payload);
+      console.info('[webhooks/tiktok] event', event || '(unknown)');
+
+      // comment.create — acknowledge + log (ingest path reserved for future)
+      if (event === 'comment.create' || event.includes('comment')) {
+        console.info('[webhooks/tiktok] comment event received', {
+          event,
+          preview: rawText.slice(0, 400),
+        });
+      }
+
+      // im.message.receive (+ tolerant aliases) → Social Inbox
       const events = extractTikTokImEvents(payload);
-      for (const event of events) {
-        // Prefer business/creator open id for workspace lookup; fall back to sender.
+      for (const im of events) {
         const account =
-          (event.businessOpenId
-            ? await resolveTikTokAccountByOpenId(event.businessOpenId)
+          (im.businessOpenId
+            ? await resolveTikTokAccountByOpenId(im.businessOpenId)
             : null) ||
-          (await resolveTikTokAccountByOpenId(event.senderOpenId));
+          (await resolveTikTokAccountByOpenId(im.senderOpenId));
 
         if (!account?.workspaceId) {
           console.warn(
             '[webhooks/tiktok] no social_accounts match for open_id',
-            event.businessOpenId || event.senderOpenId
+            im.businessOpenId || im.senderOpenId
           );
           continue;
         }
@@ -67,14 +142,14 @@ export async function POST(request: Request) {
         await ingestTikTokIncomingMessage({
           workspaceId: account.workspaceId,
           userId: account.userId || null,
-          tiktokUserId: event.senderOpenId,
-          username: event.username,
-          avatarUrl: event.avatarUrl,
-          content: event.content,
-          mediaUrl: event.mediaUrl,
-          senderId: event.senderOpenId,
-          externalId: event.messageId,
-          createdAt: event.createTime,
+          tiktokUserId: im.senderOpenId,
+          username: im.username,
+          avatarUrl: im.avatarUrl,
+          content: im.content,
+          mediaUrl: im.mediaUrl,
+          senderId: im.senderOpenId,
+          externalId: im.messageId,
+          createdAt: im.createTime,
         });
       }
     } catch (error) {
@@ -82,8 +157,5 @@ export async function POST(request: Request) {
     }
   })();
 
-  return NextResponse.json(
-    { code: 0, message: 'success' },
-    { status: 200 }
-  );
+  return ackJson();
 }

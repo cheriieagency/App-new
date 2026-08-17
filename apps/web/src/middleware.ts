@@ -23,12 +23,26 @@ function isPlatformHost(host: string): boolean {
   return false;
 }
 
+/** Public webhook callbacks — never run auth / role redirects on these. */
+function isWebhookPath(pathname: string): boolean {
+  return (
+    pathname === '/api/webhooks' || pathname.startsWith('/api/webhooks/')
+  );
+}
+
 /**
  * 1) Custom domain → rewrite to public bio (URL bar stays on customer domain)
  * 2) Platform host → enforce member ↔ creator studio split
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // TikTok / Meta / Resend webhooks must bypass session + role checks.
+  // Portal verification GETs and event POSTs must never see 401/403 redirects.
+  if (isWebhookPath(pathname)) {
+    return NextResponse.next();
+  }
+
   const hostHeader = request.headers.get('host') || '';
   const host = hostHeader.toLowerCase().split(':')[0];
 
@@ -107,9 +121,11 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all paths except Next internals & common static files.
+     * Match all paths except:
+     * - Next internals & common static files
+     * - /api/webhooks/* (TikTok / Meta / Resend — no auth, no role redirects)
      * Custom domains need `/` matched; role split still applies on platform hosts.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks(?:/.*)?|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
