@@ -118,13 +118,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           demo?: boolean;
         };
         if (Array.isArray(json.profiles) && json.profiles.length > 0) {
-          setWorkspaces(json.profiles);
-          // Keep local cache warm for offline paint.
+          // Dedupe by id (defensive) — server also consolidates stubs.
+          const seen = new Set<string>();
+          const unique = json.profiles.filter((p) => {
+            if (!p?.id || seen.has(p.id)) return false;
+            seen.add(p.id);
+            return true;
+          });
+          setWorkspaces(unique);
           try {
             localStorage.setItem(
               'nc_workspace_profiles_v2',
-              JSON.stringify(json.profiles)
+              JSON.stringify(unique)
             );
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        // Empty DB list — clear stale local duplicates.
+        if (Array.isArray(json.profiles) && json.profiles.length === 0 && json.demo === false) {
+          setWorkspaces([]);
+          try {
+            localStorage.setItem('nc_workspace_profiles_v2', '[]');
           } catch {
             /* ignore */
           }

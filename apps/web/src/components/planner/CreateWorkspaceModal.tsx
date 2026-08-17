@@ -81,7 +81,7 @@ export default function CreateWorkspaceModal({
         return;
       }
 
-      // Primary path: persist in the browser workspace store (sidebar source of truth).
+      // Primary path: WorkspaceContext persists locally + to /api/admin/workspaces.
       if (workspaceCtx) {
         const created = workspaceCtx.createWorkspace({
           name: name.trim(),
@@ -91,23 +91,6 @@ export default function CreateWorkspaceModal({
         const brand = profileAsBrandWorkspace(created);
         onCreated(brand);
         toast.success(`“${created.name}” activated`);
-
-        // Best-effort community/API mirror — never block local create on failure.
-        void fetch(createUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            name: created.name,
-            handle: created.handle,
-            channels: created.channels,
-            existingCount,
-            clientWorkspaceId: created.id,
-          }),
-        }).catch(() => {
-          /* ignore */
-        });
-
         resetForm();
         onOpenChange(false);
         return;

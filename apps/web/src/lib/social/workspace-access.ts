@@ -120,6 +120,7 @@ async function findPrimaryWorkspaceId(userId: string): Promise<string | null> {
 /**
  * Always create a workspace this user owns.
  * Uses signup workspace metadata when provided; otherwise "[First]'s Workspace".
+ * Idempotent: returns an existing workspace if the user already has one.
  */
 export async function createDefaultWorkspaceForUser(input: {
   userId: string;
@@ -130,77 +131,60 @@ export async function createDefaultWorkspaceForUser(input: {
   const uid = input.userId.trim();
   if (!uid) return null;
 
+  // Never spawn a second default when the account already has a workspace.
+  const existing = await findPrimaryWorkspaceId(uid);
+  if (existing) {
+    const name = resolveInitialWorkspaceName({
+      workspaceName: input.workspaceName,
+      userName: input.userName,
+      email: input.email,
+    });
+    if (input.workspaceName?.trim()) {
+      try {
+        await sql`
+          UPDATE public.workspaces
+          SET name = COALESCE(NULLIF(name, ''), ${name})
+          WHERE id = ${existing} AND user_id::text = ${uid}
+        `;
+      } catch {
+        /* ignore */
+      }
+    }
+    return existing;
+  }
+
   const name = resolveInitialWorkspaceName({
     workspaceName: input.workspaceName,
     userName: input.userName,
     email: input.email,
   });
-  const slugBase = `ws-${uid.substring(0, 8)}`;
+  // Stable id shared with ensureDurableDefaultWorkspace — one row per user.
+  const id = `ws-${uid.substring(0, 12)}`;
+  const slug = `ws-${uid.substring(0, 8)}`;
 
-  const candidates = [
-    `ws-${uid.substring(0, 12)}`,
-    `ws-${uid.substring(0, 8)}-${Date.now().toString(36)}`,
-    `ws-${uid.substring(0, 8)}-${Math.random().toString(36).slice(2, 8)}`,
-  ];
-
-  for (const id of candidates) {
-    const slug = id === candidates[0] ? slugBase : `${slugBase}-${id.slice(-6)}`;
-    try {
-      await sql`
-        INSERT INTO public.workspaces (id, user_id, name, slug)
-        VALUES (${id}, ${uid}, ${name}, ${slug})
-        ON CONFLICT (id) DO NOTHING
-      `;
-    } catch {
-      try {
-        await sql`
-          INSERT INTO public.workspaces (id, user_id)
-          VALUES (${id}, ${uid})
-          ON CONFLICT (id) DO NOTHING
-        `;
-      } catch (error) {
-        console.warn('[workspace-access] insert attempt failed', id, error);
-        continue;
-      }
-    }
-
-    if (await userOwnsWorkspace(uid, id)) {
-      if (input.workspaceName?.trim()) {
-        try {
-          await sql`
-            UPDATE public.workspaces
-            SET name = ${name}
-            WHERE id = ${id} AND user_id = ${uid}
-          `;
-        } catch {
-          /* name column may be missing in older schemas */
-        }
-      }
-      return id;
-    }
-  }
-
-  const forced = `ws-${uid.substring(0, 8)}-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
   try {
     await sql`
       INSERT INTO public.workspaces (id, user_id, name, slug)
-      VALUES (${forced}, ${uid}, ${name}, ${forced})
+      VALUES (${id}, ${uid}, ${name}, ${slug})
+      ON CONFLICT (id) DO UPDATE SET
+        user_id = COALESCE(public.workspaces.user_id, EXCLUDED.user_id),
+        name = COALESCE(NULLIF(public.workspaces.name, ''), EXCLUDED.name)
     `;
   } catch {
     try {
       await sql`
-        INSERT INTO public.workspaces (id, user_id)
-        VALUES (${forced}, ${uid})
+        INSERT INTO public.workspaces (id, user_id, name)
+        VALUES (${id}, ${uid}, ${name})
+        ON CONFLICT (id) DO NOTHING
       `;
     } catch (error) {
-      console.warn('[workspace-access] forced insert failed', error);
-      return null;
+      console.warn('[workspace-access] default insert failed', error);
+      return findPrimaryWorkspaceId(uid);
     }
   }
 
-  return (await userOwnsWorkspace(uid, forced)) ? forced : null;
+  if (await userOwnsWorkspace(uid, id)) return id;
+  return findPrimaryWorkspaceId(uid);
 }
 
 /**
@@ -246,6 +230,11 @@ async function tryClaimPreferredWorkspace(
       }
       return (await userOwnsWorkspace(uid, wid)) ? wid : null;
     }
+
+    // Preferred id does not exist. Do NOT insert a second stub for a stale
+    // cookie (e.g. default-my-workspace) when the user already has a workspace.
+    const primary = await findPrimaryWorkspaceId(uid);
+    if (primary) return primary;
 
     try {
       await sql`
