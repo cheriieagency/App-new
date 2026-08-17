@@ -144,6 +144,10 @@ const EmailAdminPanel = dynamic(
   () => import('@/components/admin/EmailAdminPanel'),
   { loading: PanelFallback }
 );
+const AdminHomeDashboard = dynamic(
+  () => import('@/components/admin/AdminHomeDashboard'),
+  { loading: PanelFallback }
+);
 
 type BioSubTab = 'blocks' | 'design' | 'analytics' | 'settings';
 
@@ -2551,6 +2555,8 @@ export default function AdminPage() {
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 py-8 pb-24 md:pb-16">
         {section === 'settings' ? (
           <AdminSettingsPanel />
+        ) : section === 'home' ? (
+          <AdminHomeDashboard />
         ) : socialsLoading ? (
           <div className="py-16 text-center text-sm font-semibold text-slate-400">
             Loading…

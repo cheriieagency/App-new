@@ -455,7 +455,7 @@ export default function AdminSettingsPanel() {
     void signOutAndRedirect('/');
   };
 
-  const closeSettings = () => setSection('analytics');
+  const closeSettings = () => setSection('home');
   const renewalLabel = nextRenewalDate(tag);
   const planSinceStamp = formatBillingStamp(planStartDate(), tag);
   const trialEndsStamp = formatBillingStamp(trialEndDate(), tag);

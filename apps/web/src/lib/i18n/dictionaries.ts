@@ -73,6 +73,8 @@ export type NestedDict = {
     communitySummary: string;
     crmTitle: string;
     crmSummary: string;
+    dmTitle: string;
+    dmSummary: string;
     buyNow: string;
     joinCommunity: string;
     oneTapCheckout: string;
@@ -93,8 +95,8 @@ export type NestedDict = {
     toolCommunitySub: string;
     toolPlanner: string;
     toolPlannerSub: string;
-    toolVat: string;
-    toolVatSub: string;
+    toolDm: string;
+    toolDmSub: string;
     extraTime: string;
     pillarCheckout: string;
     pillarCheckoutBody: string;
@@ -102,9 +104,10 @@ export type NestedDict = {
     pillarBioBody: string;
     pillarPlanner: string;
     pillarPlannerBody: string;
-    pillarVat: string;
-    pillarVatBody: string;
+    pillarDm: string;
+    pillarDmBody: string;
     cta: string;
+    saveBanner: string;
   };
   bio: {
     links: string;
@@ -133,6 +136,7 @@ export type NestedDict = {
     updatePublishBody: string;
   };
   admin: {
+    home: string;
     planner: string;
     mediaLibrary: string;
     socialInbox: string;
@@ -242,7 +246,7 @@ export const DICT_EN: NestedDict = {
   features: {
     eyebrow: 'The Platform',
     headline: 'Everything you need to grow',
-    sub: 'Bio store, planner, analytics, community and email — one Nordic studio.',
+    sub: 'Bio store, planner, analytics, community, email and DM automation — one Nordic studio.',
     bioTitle: 'Link-in-Bio Builder',
     bioSummary: 'Luxury themes, custom blocks, UTM analytics, products & 1-tap checkout.',
     plannerTitle: 'Content Planner & Social Sets',
@@ -253,6 +257,9 @@ export const DICT_EN: NestedDict = {
     communitySummary: 'Discussion feeds, classroom courses, live events & member leaderboards.',
     crmTitle: 'Email CRM & Automation',
     crmSummary: 'Subscriber CRM, automated welcome sequences & broadcast emails.',
+    dmTitle: 'DM Automation & Social Inbox',
+    dmSummary:
+      'Auto-reply to comments and DMs, qualify leads, and manage conversations in one inbox.',
     buyNow: 'Buy now',
     joinCommunity: 'Join community',
     oneTapCheckout: '1-Tap Checkout',
@@ -268,13 +275,13 @@ export const DICT_EN: NestedDict = {
     fragmentedTitle: 'Fragmented Tool Stack',
     winnerTitle: 'All-in-One Winner',
     toolBio: 'Link in Bio & Store',
-    toolBioSub: 'Stan Store / Linktree',
+    toolBioSub: 'Separate bio link + storefront tools',
     toolCommunity: 'Community & Courses',
-    toolCommunitySub: 'Skool / Circle',
+    toolCommunitySub: 'Separate community + course platforms',
     toolPlanner: 'Social Content Planner',
-    toolPlannerSub: 'Later / Planoly',
-    toolVat: 'Nordic VAT & Tax',
-    toolVatSub: 'Manual calculation & friction',
+    toolPlannerSub: 'Separate scheduling apps',
+    toolDm: 'DM Automation',
+    toolDmSub: 'Separate inbox bots & comment tools',
     extraTime: 'Extra Time',
     pillarCheckout: '1-Tap Mobile Checkout',
     pillarCheckoutBody: 'Convert mobile visitors in 10s with BankID, cards & Apple Pay.',
@@ -282,9 +289,12 @@ export const DICT_EN: NestedDict = {
     pillarBioBody: 'Sell e-books, courses & coaching with luxury theme presets.',
     pillarPlanner: 'Social Planner & Social Sets',
     pillarPlannerBody: 'Monthly calendar, Kanban board & multi-channel post scheduler.',
-    pillarVat: 'Automated Nordic VAT & Tax',
-    pillarVatBody: 'Automated 6%/25% VAT, Fortnox sync & receipt exports built-in.',
+    pillarDm: 'DM Automation & Social Inbox',
+    pillarDmBody:
+      'Auto-reply to comments and DMs, route leads, and manage conversations in one inbox.',
     cta: 'Get started free',
+    saveBanner:
+      'Save over {amount} / year and 15+ hours a week by consolidating your creator stack into Clikd.',
   },
   bio: {
     links: 'Links',
@@ -314,6 +324,7 @@ export const DICT_EN: NestedDict = {
     updatePublishBody: 'Your link-in-bio updates are saved and live on your public page.',
   },
   admin: {
+    home: 'Home',
     planner: 'Planner',
     mediaLibrary: 'Media Library',
     socialInbox: 'Social Inbox',
@@ -426,7 +437,7 @@ export const DICT_SV: NestedDict = {
   features: {
     eyebrow: 'Plattformen',
     headline: 'Allt du behöver för att växa',
-    sub: 'Bio-butik, planner, analys, community och e-post — en nordisk studio.',
+    sub: 'Bio-butik, planner, analys, community, e-post och DM-automation — en nordisk studio.',
     bioTitle: 'Link-in-Bio Builder',
     bioSummary: 'Lyxiga teman, egna block, UTM-analys, produkter & 1-trycks checkout.',
     plannerTitle: 'Content Planner & Social Sets',
@@ -437,6 +448,9 @@ export const DICT_SV: NestedDict = {
     communitySummary: 'Diskussioner, kurser, live-event & member-leaderboards.',
     crmTitle: 'E-post CRM & Automation',
     crmSummary: 'Prenumerant-CRM, välkomstsekvenser & broadcast-mail.',
+    dmTitle: 'DM-automation & Social Inbox',
+    dmSummary:
+      'Autosvar på kommentarer och DM:ar, kvalificera leads och hantera konversationer i en inbox.',
     buyNow: 'Köp nu',
     joinCommunity: 'Gå med i community',
     oneTapCheckout: '1-trycks Checkout',
@@ -452,13 +466,13 @@ export const DICT_SV: NestedDict = {
     fragmentedTitle: 'Fragmenterad verktygsstack',
     winnerTitle: 'Allt-i-ett-vinnaren',
     toolBio: 'Link in Bio & butik',
-    toolBioSub: 'Stan Store / Linktree',
+    toolBioSub: 'Separata bio-länk- och butiksverktyg',
     toolCommunity: 'Community & kurser',
-    toolCommunitySub: 'Skool / Circle',
+    toolCommunitySub: 'Separata community- och kursplattformar',
     toolPlanner: 'Social content planner',
-    toolPlannerSub: 'Later / Planoly',
-    toolVat: 'Nordisk moms & skatt',
-    toolVatSub: 'Manuell beräkning & friktion',
+    toolPlannerSub: 'Separata schemaläggningsappar',
+    toolDm: 'DM-automation',
+    toolDmSub: 'Separata inbox-bots & kommentarsverktyg',
     extraTime: 'Extra tid',
     pillarCheckout: '1-trycks mobilcheckout',
     pillarCheckoutBody: 'Konvertera mobila besökare på 10s med BankID, kort & Apple Pay.',
@@ -466,9 +480,12 @@ export const DICT_SV: NestedDict = {
     pillarBioBody: 'Sälj e-böcker, kurser & coaching med lyxiga temapreset.',
     pillarPlanner: 'Social planner & Social Sets',
     pillarPlannerBody: 'Månadskalender, Kanban & flerkalender-schemaläggare.',
-    pillarVat: 'Automatiserad nordisk moms',
-    pillarVatBody: 'Automatisk 6%/25% moms, Fortnox-synk & kvittoexport inbyggt.',
+    pillarDm: 'DM-automation & Social Inbox',
+    pillarDmBody:
+      'Autosvar på kommentarer och DM:ar, leda leads och hantera konversationer i en inbox.',
     cta: 'Kom igång gratis',
+    saveBanner:
+      'Spara över {amount} / år och 15+ timmar i veckan genom att samla din creator-stack i Clikd.',
   },
   bio: {
     links: 'Länkar',
@@ -498,6 +515,7 @@ export const DICT_SV: NestedDict = {
     updatePublishBody: 'Dina link-in-bio-uppdateringar är sparade och live på din publika sida.',
   },
   admin: {
+    home: 'Hem',
     planner: 'Planner',
     mediaLibrary: 'Mediabibliotek',
     socialInbox: 'Social Inbox',
@@ -621,6 +639,8 @@ export const DICT_NO: NestedDict = {
     headline: 'Slutt å sjonglere flere abonnementer',
     sub: 'Ett samlet studio som erstatter 4+ separate abonnementer, kronglete innlogginger og skjulte gebyrer.',
     cta: 'Kom i gang gratis',
+    saveBanner:
+      'Spar over {amount} / år og 15+ timer i uken ved å samle creator-stacken din i Clikd.',
   },
   bio: {
     ...DICT_SV.bio,
@@ -727,6 +747,8 @@ export const DICT_DA: NestedDict = {
     headline: 'Stop med at jonglere flere abonnementer',
     sub: 'Ét samlet studio der erstatter 4+ separate abonnementer, komplekse logins og skjulte gebyrer.',
     cta: 'Kom i gang gratis',
+    saveBanner:
+      'Spar over {amount} / år og 15+ timer om ugen ved at samle din creator-stack i Clikd.',
   },
   bio: {
     ...DICT_SV.bio,
@@ -826,7 +848,7 @@ export const DICT_FI: NestedDict = {
   features: {
     eyebrow: 'Alusta',
     headline: 'Kaikki mitä tarvitset kasvuun',
-    sub: 'Bio-kauppa, planner, analytiikka, yhteisö ja sähköposti — yksi pohjoismainen studio.',
+    sub: 'Bio-kauppa, planner, analytiikka, yhteisö, sähköposti ja DM-automaatio — yksi pohjoismainen studio.',
     bioTitle: 'Link-in-Bio Builder',
     bioSummary: 'Luksus-teemat, omat lohkot, UTM-analytiikka, tuotteet & 1-napin checkout.',
     plannerTitle: 'Content Planner & Social Sets',
@@ -837,6 +859,9 @@ export const DICT_FI: NestedDict = {
     communitySummary: 'Keskustelut, kurssit, live-tapahtumat & jäsen-leaderboardit.',
     crmTitle: 'Sähköposti-CRM & automaatio',
     crmSummary: 'Tilaaja-CRM, tervetulosekvenssit & broadcast-sähköpostit.',
+    dmTitle: 'DM-automaatio & Social Inbox',
+    dmSummary:
+      'Autovastaukset kommentteihin ja DM:iin, liidien karsinta ja keskustelut yhdessä inboxissa.',
     buyNow: 'Osta nyt',
     joinCommunity: 'Liity yhteisöön',
     oneTapCheckout: '1-napin Checkout',
@@ -852,13 +877,13 @@ export const DICT_FI: NestedDict = {
     fragmentedTitle: 'Hajanainen työkalupino',
     winnerTitle: 'Kaikki yhdessä -voittaja',
     toolBio: 'Link in Bio & kauppa',
-    toolBioSub: 'Stan Store / Linktree',
+    toolBioSub: 'Erilliset bio-linkki- ja kauppatoiminnot',
     toolCommunity: 'Yhteisö & kurssit',
-    toolCommunitySub: 'Skool / Circle',
+    toolCommunitySub: 'Erilliset yhteisö- ja kurssialustat',
     toolPlanner: 'Some-sisällön planner',
-    toolPlannerSub: 'Later / Planoly',
-    toolVat: 'Pohjoismainen ALV & vero',
-    toolVatSub: 'Manuaalinen laskenta & kitka',
+    toolPlannerSub: 'Erilliset aikataulutussovellukset',
+    toolDm: 'DM-automaatio',
+    toolDmSub: 'Erilliset inbox-botit & kommenttityökalut',
     extraTime: 'Lisäaikaa',
     pillarCheckout: '1-napin mobiili-checkout',
     pillarCheckoutBody: 'Konvertoi mobiilivieraat 10s:ssä BankID:llä, korteilla & Apple Paylla.',
@@ -866,9 +891,12 @@ export const DICT_FI: NestedDict = {
     pillarBioBody: 'Myy e-kirjoja, kursseja & coachingia luksus-teemoilla.',
     pillarPlanner: 'Some-planner & Social Sets',
     pillarPlannerBody: 'Kuukausikalenteri, Kanban & monikanava-aikataulutus.',
-    pillarVat: 'Automatisoitu pohjoismainen ALV',
-    pillarVatBody: 'Automaattinen 6%/25% ALV, Fortnox-synk & kuittivienti sisäänrakennettuna.',
+    pillarDm: 'DM-automaatio & Social Inbox',
+    pillarDmBody:
+      'Autovastaukset kommentteihin ja DM:iin, liidien ohjaus ja keskustelut yhdessä inboxissa.',
     cta: 'Aloita ilmaiseksi',
+    saveBanner:
+      'Säästä yli {amount} / vuodessa ja 15+ tuntia viikossa yhdistämällä creator-stackisi Clikdiin.',
   },
   bio: {
     links: 'Linkit',
@@ -898,6 +926,7 @@ export const DICT_FI: NestedDict = {
     updatePublishBody: 'Link-in-bio-päivityksesi on tallennettu ja live julkisella sivullasi.',
   },
   admin: {
+    home: 'Koti',
     planner: 'Planner',
     mediaLibrary: 'Mediakirjasto',
     socialInbox: 'Social Inbox',

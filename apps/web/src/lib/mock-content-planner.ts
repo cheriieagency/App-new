@@ -115,6 +115,8 @@ export type VisionPin = {
   created_at: string;
 };
 
+export type CampaignGoalMetric = 'views' | 'engagement';
+
 export type CampaignLabel = {
   id: string;
   name: string;
@@ -127,6 +129,10 @@ export type CampaignLabel = {
   vision_pins?: VisionPin[];
   /** Manual sidebar / grid order (lower = earlier). */
   sort_order?: number;
+  /** Views or engagement goal for this project (0 = unset). */
+  goal_metric?: CampaignGoalMetric;
+  goal_target?: number;
+  goal_current?: number;
 };
 
 export type ConnectedSocialAccount = {
@@ -536,6 +542,9 @@ export function createCampaignLabel(input: {
     created_at: new Date().toISOString(),
     owner_user_id: input.ownerUserId,
     sort_order: nextOrder,
+    goal_metric: 'views',
+    goal_target: 0,
+    goal_current: 0,
   };
   campaigns.unshift(label);
   return label;
@@ -544,7 +553,16 @@ export function createCampaignLabel(input: {
 export function updateCampaignLabel(
   id: string,
   patch: Partial<
-    Pick<CampaignLabel, 'name' | 'color' | 'description' | 'vision_pins'>
+    Pick<
+      CampaignLabel,
+      | 'name'
+      | 'color'
+      | 'description'
+      | 'vision_pins'
+      | 'goal_metric'
+      | 'goal_target'
+      | 'goal_current'
+    >
   >,
   ownerUserId?: string
 ): CampaignLabel | null {
@@ -557,6 +575,13 @@ export function updateCampaignLabel(
   if (patch.color !== undefined) c.color = patch.color;
   if (patch.description !== undefined) c.description = patch.description.trim();
   if (patch.vision_pins !== undefined) c.vision_pins = patch.vision_pins;
+  if (patch.goal_metric !== undefined) c.goal_metric = patch.goal_metric;
+  if (patch.goal_target !== undefined) {
+    c.goal_target = Math.max(0, Math.floor(Number(patch.goal_target) || 0));
+  }
+  if (patch.goal_current !== undefined) {
+    c.goal_current = Math.max(0, Math.floor(Number(patch.goal_current) || 0));
+  }
   return c;
 }
 

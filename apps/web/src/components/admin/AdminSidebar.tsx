@@ -10,6 +10,7 @@ import {
   ChevronDown,
   FolderKanban,
   GripVertical,
+  Home,
   Image as ImageIcon,
   Inbox,
   Link2,
@@ -60,6 +61,7 @@ type NavItem = {
 
 /** Clean labels matching the Clikd admin shell reference. */
 const NAV: NavItem[] = [
+  { key: 'home', labelKey: 'admin.home', icon: Home, href: '/admin?tab=home' },
   { key: 'calendar', labelKey: 'admin.planner', icon: CalendarDays, href: '/planner' },
   { key: 'media', labelKey: 'admin.mediaLibrary', icon: ImageIcon, href: '/admin?tab=media' },
   { key: 'projects', labelKey: 'admin.projects', icon: FolderKanban, href: '/admin?tab=projects' },

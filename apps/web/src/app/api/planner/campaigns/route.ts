@@ -177,12 +177,22 @@ export async function POST(request: Request) {
     }
 
     if (action === 'update') {
+      const goalMetricRaw = body.goal_metric;
+      const goalMetric =
+        goalMetricRaw === 'views' || goalMetricRaw === 'engagement'
+          ? goalMetricRaw
+          : undefined;
       const patch = {
         name: typeof body.name === 'string' ? body.name : undefined,
         color: typeof body.color === 'string' ? body.color : undefined,
         description:
           typeof body.description === 'string' ? body.description : undefined,
         vision_pins: sanitizeVisionPins(body.vision_pins),
+        goal_metric: goalMetric,
+        goal_target:
+          body.goal_target !== undefined ? Number(body.goal_target) : undefined,
+        goal_current:
+          body.goal_current !== undefined ? Number(body.goal_current) : undefined,
       };
       const campaign = durable
         ? await updateDurableCampaign({

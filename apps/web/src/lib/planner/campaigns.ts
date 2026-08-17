@@ -4,10 +4,14 @@
  */
 
 import sql from '@/app/api/utils/sql';
-import type { CampaignLabel, VisionPin } from '@/lib/mock-content-planner';
+import type {
+  CampaignGoalMetric,
+  CampaignLabel,
+  VisionPin,
+} from '@/lib/mock-content-planner';
 
 let schemaReady: Promise<void> | null = null;
-const CAMPAIGN_SCHEMA_VERSION = 2;
+const CAMPAIGN_SCHEMA_VERSION = 3;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -49,6 +53,15 @@ export async function ensureCampaignsSchema(): Promise<void> {
     await safeAlter('planner_campaigns.sort_order', () =>
       sql`ALTER TABLE public.planner_campaigns ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0`
     );
+    await safeAlter('planner_campaigns.goal_metric', () =>
+      sql`ALTER TABLE public.planner_campaigns ADD COLUMN IF NOT EXISTS goal_metric text NOT NULL DEFAULT 'views'`
+    );
+    await safeAlter('planner_campaigns.goal_target', () =>
+      sql`ALTER TABLE public.planner_campaigns ADD COLUMN IF NOT EXISTS goal_target integer NOT NULL DEFAULT 0`
+    );
+    await safeAlter('planner_campaigns.goal_current', () =>
+      sql`ALTER TABLE public.planner_campaigns ADD COLUMN IF NOT EXISTS goal_current integer NOT NULL DEFAULT 0`
+    );
 
     schemaVersionApplied = CAMPAIGN_SCHEMA_VERSION;
   })().catch((error) => {
@@ -85,6 +98,10 @@ function parseVisionPins(raw: unknown): VisionPin[] {
     .filter((p): p is VisionPin => !!p);
 }
 
+function parseGoalMetric(raw: unknown): CampaignGoalMetric {
+  return raw === 'engagement' ? 'engagement' : 'views';
+}
+
 function rowToCampaign(row: Record<string, unknown>): CampaignLabel {
   return {
     id: String(row.id),
@@ -95,6 +112,9 @@ function rowToCampaign(row: Record<string, unknown>): CampaignLabel {
     owner_user_id: String(row.user_id ?? ''),
     vision_pins: parseVisionPins(row.vision_pins),
     sort_order: Number(row.sort_order) || 0,
+    goal_metric: parseGoalMetric(row.goal_metric),
+    goal_target: Math.max(0, Number(row.goal_target) || 0),
+    goal_current: Math.max(0, Number(row.goal_current) || 0),
   };
 }
 
@@ -105,7 +125,8 @@ export async function listDurableCampaigns(input: {
   if (!process.env.DATABASE_URL?.trim()) return [];
   await ensureCampaignsSchema();
   const rows = await sql`
-    SELECT id, name, color, description, vision_pins, created_at, user_id, sort_order
+    SELECT id, name, color, description, vision_pins, created_at, user_id, sort_order,
+           goal_metric, goal_target, goal_current
     FROM public.planner_campaigns
     WHERE workspace_id = ${input.workspaceId}
       AND user_id = ${input.userId}
@@ -122,7 +143,8 @@ export async function getDurableCampaign(input: {
   if (!process.env.DATABASE_URL?.trim()) return null;
   await ensureCampaignsSchema();
   const rows = await sql`
-    SELECT id, name, color, description, vision_pins, created_at, user_id, sort_order
+    SELECT id, name, color, description, vision_pins, created_at, user_id, sort_order,
+           goal_metric, goal_target, goal_current
     FROM public.planner_campaigns
     WHERE id = ${input.id}
       AND workspace_id = ${input.workspaceId}
@@ -150,6 +172,9 @@ export async function createDurableCampaign(input: {
       owner_user_id: input.userId,
       vision_pins: [],
       sort_order: 0,
+      goal_metric: 'views',
+      goal_target: 0,
+      goal_current: 0,
     };
   }
   await ensureCampaignsSchema();
@@ -169,10 +194,14 @@ export async function createDurableCampaign(input: {
     owner_user_id: input.userId,
     vision_pins: [],
     sort_order: nextOrder,
+    goal_metric: 'views',
+    goal_target: 0,
+    goal_current: 0,
   };
   await sql`
     INSERT INTO public.planner_campaigns (
-      id, workspace_id, user_id, name, color, description, vision_pins, sort_order
+      id, workspace_id, user_id, name, color, description, vision_pins, sort_order,
+      goal_metric, goal_target, goal_current
     ) VALUES (
       ${campaign.id},
       ${input.workspaceId},
@@ -181,7 +210,10 @@ export async function createDurableCampaign(input: {
       ${campaign.color},
       ${campaign.description},
       ${JSON.stringify(campaign.vision_pins || [])},
-      ${nextOrder}
+      ${nextOrder},
+      ${campaign.goal_metric},
+      ${campaign.goal_target},
+      ${campaign.goal_current}
     )
   `;
   return campaign;
@@ -195,6 +227,9 @@ export async function updateDurableCampaign(input: {
   color?: string;
   description?: string;
   vision_pins?: VisionPin[];
+  goal_metric?: CampaignGoalMetric;
+  goal_target?: number;
+  goal_current?: number;
 }): Promise<CampaignLabel | null> {
   if (!process.env.DATABASE_URL?.trim()) return null;
   await ensureCampaignsSchema();
@@ -220,6 +255,18 @@ export async function updateDurableCampaign(input: {
       : existing.description;
   const nextPins =
     input.vision_pins !== undefined ? input.vision_pins : existing.vision_pins || [];
+  const nextMetric =
+    input.goal_metric !== undefined
+      ? input.goal_metric
+      : existing.goal_metric || 'views';
+  const nextTarget =
+    input.goal_target !== undefined
+      ? Math.max(0, Math.floor(Number(input.goal_target) || 0))
+      : existing.goal_target || 0;
+  const nextCurrent =
+    input.goal_current !== undefined
+      ? Math.max(0, Math.floor(Number(input.goal_current) || 0))
+      : existing.goal_current || 0;
 
   const rows = await sql`
     UPDATE public.planner_campaigns
@@ -228,11 +275,15 @@ export async function updateDurableCampaign(input: {
       color = ${nextColor},
       description = ${nextDescription},
       vision_pins = ${JSON.stringify(nextPins)},
+      goal_metric = ${nextMetric},
+      goal_target = ${nextTarget},
+      goal_current = ${nextCurrent},
       updated_at = now()
     WHERE id = ${input.id}
       AND workspace_id = ${input.workspaceId}
       AND user_id = ${input.userId}
-    RETURNING id, name, color, description, vision_pins, created_at, user_id, sort_order
+    RETURNING id, name, color, description, vision_pins, created_at, user_id, sort_order,
+              goal_metric, goal_target, goal_current
   `;
   const row = rows?.[0] as Record<string, unknown> | undefined;
   return row ? rowToCampaign(row) : null;

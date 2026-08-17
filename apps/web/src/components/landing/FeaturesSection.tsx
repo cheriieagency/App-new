@@ -19,6 +19,7 @@ import {
   Link2,
   Mail,
   MessageCircle,
+  Bot,
   Save,
   Sparkles,
   Users,
@@ -31,7 +32,7 @@ import {
 } from '@/components/icons/SocialBrandIcons';
 import { useLanguage } from '@/lib/i18n';
 
-type FeatureTab = 'biostore' | 'planner' | 'analytics' | 'community' | 'crm';
+type FeatureTab = 'biostore' | 'planner' | 'analytics' | 'community' | 'crm' | 'dm';
 
 const AVATAR =
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&fit=crop&q=80';
@@ -790,6 +791,135 @@ function CrmCanvas() {
   );
 }
 
+/** Social Inbox + DM automation preview for the landing features canvas. */
+function DmCanvas() {
+  const threads = [
+    {
+      name: 'Sara M.',
+      preview: 'Price for the coaching pack?',
+      tag: 'Comment → DM',
+      time: '2m',
+      unread: true,
+    },
+    {
+      name: 'Noah K.',
+      preview: 'Thanks! Just joined the community 🙌',
+      tag: 'Auto-replied',
+      time: '18m',
+      unread: false,
+    },
+    {
+      name: 'Linnea Å.',
+      preview: 'Can I get the free guide link?',
+      tag: 'Keyword: GUIDE',
+      time: '1h',
+      unread: true,
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[
+          { label: 'Automations', value: '4', hint: 'Active rules' },
+          { label: 'Replies sent', value: '312', hint: 'Last 7 days' },
+          { label: 'Leads captured', value: '86', hint: 'From comments' },
+        ].map((kpi) => (
+          <div
+            key={kpi.label}
+            className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4"
+          >
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+              {kpi.label}
+            </p>
+            <p className="mt-2 text-2xl font-extrabold text-slate-900 font-outfit tabular-nums">
+              {kpi.value}
+            </p>
+            <p className="mt-1 text-xs font-bold text-[#F472B6]">{kpi.hint}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1.05fr] gap-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400 mb-3">
+            Automation rules
+          </p>
+          <div className="space-y-2">
+            {[
+              { name: 'Comment keyword → DM', status: 'Active', trigger: 'COMMENT' },
+              { name: 'Story reply welcome', status: 'Active', trigger: 'STORY' },
+              { name: 'After-hours auto reply', status: 'Paused', trigger: 'DM' },
+            ].map((rule) => (
+              <div
+                key={rule.name}
+                className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 min-h-[44px]"
+              >
+                <div className="min-w-0">
+                  <p className="text-[12px] font-bold text-slate-900 truncate">{rule.name}</p>
+                  <p className="text-[10px] text-slate-500 font-medium font-mono">{rule.trigger}</p>
+                </div>
+                <span
+                  className={`text-[10px] font-extrabold px-2 py-1 rounded-full flex-shrink-0 ${
+                    rule.status === 'Active'
+                      ? 'bg-emerald-50 text-[#10B981] border border-emerald-200/80'
+                      : 'bg-slate-100 text-slate-500 border border-slate-200'
+                  }`}
+                >
+                  {rule.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+              Social Inbox
+            </p>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#FCE7F3] border border-[#F472B6]/30 px-2 py-0.5 text-[10px] font-extrabold text-[#F472B6]">
+              <Bot size={11} strokeWidth={2.5} />
+              Live
+            </span>
+          </div>
+          <div className="space-y-2">
+            {threads.map((thread) => (
+              <div
+                key={thread.name}
+                className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5 min-h-[52px]"
+              >
+                <span className="h-8 w-8 rounded-full bg-[#2B2568] text-white text-[11px] font-extrabold flex items-center justify-center flex-shrink-0">
+                  {thread.name[0]}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[12px] font-extrabold text-slate-900 truncate">
+                      {thread.name}
+                    </p>
+                    {thread.unread ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#F472B6] flex-shrink-0" />
+                    ) : null}
+                    <span className="ml-auto text-[10px] font-mono text-slate-400 flex-shrink-0">
+                      {thread.time}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                    {thread.preview}
+                  </p>
+                  <span className="inline-flex mt-1 rounded-full bg-white border border-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                    {thread.tag}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PreviewCanvas({ tab }: { tab: FeatureTab }) {
   switch (tab) {
     case 'planner':
@@ -800,6 +930,8 @@ function PreviewCanvas({ tab }: { tab: FeatureTab }) {
       return <CommunityCanvas />;
     case 'crm':
       return <CrmCanvas />;
+    case 'dm':
+      return <DmCanvas />;
     default:
       return <BioStoreCanvas />;
   }
@@ -832,7 +964,7 @@ export function FeaturesSection() {
       summary: t('features.plannerSummary'),
       icon: CalendarDays,
       iconWrap: 'bg-[#E9D5FF]/70 text-[#2B2568]',
-      hrefPreview: 'https://admin.clikd.app/planner/ebba-creator-lab',
+      hrefPreview: 'https://admin.clikd.app/planner',
     },
     {
       key: 'analytics',
@@ -857,6 +989,14 @@ export function FeaturesSection() {
       icon: Mail,
       iconWrap: 'bg-orange-50 text-orange-600',
       hrefPreview: 'https://admin.clikd.app/email-crm',
+    },
+    {
+      key: 'dm',
+      title: t('features.dmTitle'),
+      summary: t('features.dmSummary'),
+      icon: Bot,
+      iconWrap: 'bg-[#E9D5FF]/80 text-[#2B2568]',
+      hrefPreview: 'https://admin.clikd.app/inbox',
     },
   ];
 

@@ -10,6 +10,7 @@ import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { AdminPageHeader, adminCardClass } from '@/components/admin/AdminUi';
 import ProjectVisionBoard from '@/components/admin/ProjectVisionBoard';
 import ProjectFilesPanel from '@/components/admin/ProjectFilesPanel';
+import ProjectGoalProgress from '@/components/admin/ProjectGoalProgress';
 import ContentPlannerShell from '@/components/planner/ContentPlannerShell';
 import {
   Dialog,
@@ -578,6 +579,7 @@ export default function ProjectsPanel() {
                   <p className="text-sm font-extrabold text-slate-900 text-center line-clamp-2 leading-snug">
                     {project.name}
                   </p>
+                  <ProjectGoalProgress campaign={project} compact />
                 </button>
               ))}
               <button
@@ -601,6 +603,7 @@ export default function ProjectsPanel() {
 
   return (
     <div className="space-y-6">
+      <ProjectGoalProgress campaign={active} />
       <ProjectVisionBoard campaign={active} />
       <ProjectFilesPanel
         campaign={active}

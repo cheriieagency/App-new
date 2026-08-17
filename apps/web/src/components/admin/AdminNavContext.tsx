@@ -12,6 +12,7 @@ import {
 
 /** Later-style admin sections driven by the left icon rail. */
 export type AdminSection =
+  | 'home'
   | 'calendar'
   | 'media'
   | 'projects'
@@ -42,6 +43,7 @@ type AdminNavContextValue = {
 const AdminNavContext = createContext<AdminNavContextValue | null>(null);
 
 const VALID: AdminSection[] = [
+  'home',
   'calendar',
   'media',
   'projects',
@@ -58,6 +60,7 @@ function normalizeTabParam(raw: string | null): AdminSection | null {
   if (raw === 'bio' || raw === 'biobuilder') return 'biobuilder';
   if (raw === 'content' || raw === 'event' || raw === 'broadcast') return 'community';
   if (raw === 'planner') return 'calendar';
+  if (raw === 'dashboard' || raw === 'command') return 'home';
   if (VALID.includes(raw as AdminSection)) return raw as AdminSection;
   return null;
 }
@@ -118,7 +121,7 @@ function writeUrl(
 }
 
 export function AdminNavProvider({ children }: { children: ReactNode }) {
-  const [section, setSectionState] = useState<AdminSection>('analytics');
+  const [section, setSectionState] = useState<AdminSection>('home');
   const [activeCampaignId, setActiveCampaignIdState] = useState<string | null>(null);
   const [createProjectOpen, setCreateProjectOpenState] = useState(false);
   const [activeMediaFolderId, setActiveMediaFolderIdState] = useState<string | null>(

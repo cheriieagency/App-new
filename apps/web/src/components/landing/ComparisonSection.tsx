@@ -2,16 +2,14 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { Check, LayoutGrid, List, X } from 'lucide-react';
-import { useState } from 'react';
+import { Check, X } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
-
-type MockupView = 'bento' | 'table';
+import { getComparisonPrices } from '@/lib/i18n/display-currency';
 
 /** Why Choose Us — bento comparison: fragmented stack vs clikd: Creator Studio. */
 export function ComparisonSection() {
-  const { t } = useLanguage();
-  const [view, setView] = useState<MockupView>('bento');
+  const { t, locale } = useLanguage();
+  const prices = getComparisonPrices(locale);
 
   return (
     <section
@@ -35,48 +33,9 @@ export function ComparisonSection() {
           <p className="mt-4 text-slate-500 font-medium text-base sm:text-lg leading-relaxed font-sans max-w-2xl mx-auto">
             {t('comparison.sub')}
           </p>
-
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2.5">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
-              {t('comparison.mockupView')}
-            </span>
-            <div className="inline-flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setView('bento')}
-                className={`inline-flex items-center gap-1.5 min-h-[40px] px-3.5 rounded-full text-[11px] font-extrabold transition-colors ${
-                  view === 'bento'
-                    ? 'bg-[#2B2568] text-white shadow-sm'
-                    : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-300'
-                }`}
-              >
-                <LayoutGrid size={13} strokeWidth={2.4} />
-                {t('comparison.optionBento')}
-                <span
-                  className={`ml-0.5 text-[9px] font-bold ${
-                    view === 'bento' ? 'text-white/70' : 'text-slate-400'
-                  }`}
-                >
-                  (Recommended)
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setView('table')}
-                className={`inline-flex items-center gap-1.5 min-h-[40px] px-3.5 rounded-full text-[11px] font-extrabold transition-colors ${
-                  view === 'table'
-                    ? 'bg-[#2B2568] text-white shadow-sm'
-                    : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-300'
-                }`}
-              >
-                <List size={13} strokeWidth={2.4} />
-                {t('comparison.optionTable')}
-              </button>
-            </div>
-          </div>
         </div>
 
-        {view === 'bento' ? <BentoComparison /> : <GlassTableComparison />}
+        <BentoComparison />
 
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -87,10 +46,19 @@ export function ComparisonSection() {
         >
           <p className="text-sm sm:text-base font-bold text-slate-800 font-sans leading-snug">
             <span aria-hidden>💡 </span>
-            Save over{' '}
-            <span className="font-extrabold text-[#2B2568]">$2,000 / year</span> and{' '}
-            <span className="font-extrabold text-[#2B2568]">15+ hours a week</span> by consolidating
-            your creator stack into Clikd.
+            {(() => {
+              const amount = prices.yearlySavings;
+              const text = t('comparison.saveBanner', { amount });
+              const idx = text.indexOf(amount);
+              if (idx < 0) return text;
+              return (
+                <>
+                  {text.slice(0, idx)}
+                  <span className="font-extrabold text-[#2B2568]">{amount}</span>
+                  {text.slice(idx + amount.length)}
+                </>
+              );
+            })()}
           </p>
         </motion.div>
       </div>
@@ -99,20 +67,33 @@ export function ComparisonSection() {
 }
 
 function BentoComparison() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const prices = getComparisonPrices(locale);
 
   const fragmentedTools = [
-    { title: t('comparison.toolBio'), sub: t('comparison.toolBioSub'), cost: '~$99 / mo' },
-    { title: t('comparison.toolCommunity'), sub: t('comparison.toolCommunitySub'), cost: '~$99 / mo' },
-    { title: t('comparison.toolPlanner'), sub: t('comparison.toolPlannerSub'), cost: '~$25 / mo' },
-    { title: t('comparison.toolVat'), sub: t('comparison.toolVatSub'), cost: t('comparison.extraTime') },
+    { title: t('comparison.toolBio'), sub: t('comparison.toolBioSub'), cost: prices.bio },
+    {
+      title: t('comparison.toolCommunity'),
+      sub: t('comparison.toolCommunitySub'),
+      cost: prices.community,
+    },
+    {
+      title: t('comparison.toolPlanner'),
+      sub: t('comparison.toolPlannerSub'),
+      cost: prices.planner,
+    },
+    {
+      title: t('comparison.toolDm'),
+      sub: t('comparison.toolDmSub'),
+      cost: t('comparison.extraTime'),
+    },
   ];
 
   const winnerPillars = [
     { title: t('comparison.pillarCheckout'), body: t('comparison.pillarCheckoutBody') },
     { title: t('comparison.pillarBio'), body: t('comparison.pillarBioBody') },
     { title: t('comparison.pillarPlanner'), body: t('comparison.pillarPlannerBody') },
-    { title: t('comparison.pillarVat'), body: t('comparison.pillarVatBody') },
+    { title: t('comparison.pillarDm'), body: t('comparison.pillarDmBody') },
   ];
 
   return (
@@ -173,7 +154,7 @@ function BentoComparison() {
             Total Estimated Cost:
           </p>
           <p className="text-xl sm:text-2xl font-mono font-extrabold text-rose-500 tabular-nums tracking-tight">
-            ~$223+ / mo
+            {prices.total}
           </p>
         </div>
       </div>
@@ -235,7 +216,8 @@ function BentoComparison() {
               Starting from
             </p>
             <p className="mt-1 text-2xl sm:text-3xl font-mono font-extrabold text-white tabular-nums tracking-tight">
-              199 SEK <span className="text-lg text-white/60">/mo</span>
+              {prices.clikd}{' '}
+              <span className="text-lg text-white/60">/mo</span>
             </p>
           </div>
           <Link
@@ -246,65 +228,6 @@ function BentoComparison() {
           </Link>
         </div>
       </div>
-    </motion.div>
-  );
-}
-
-/** Compact glass table fallback (Option B). */
-function GlassTableComparison() {
-  const rows = [
-    { feature: 'Monthly cost', old: '~$223+ / mo', neu: '199 SEK / mo' },
-    { feature: 'Link in bio + store', old: 'Stan / Linktree', neu: 'Built-in luxury themes' },
-    { feature: 'Community & courses', old: 'Skool / Circle', neu: 'Hub + classroom + events' },
-    { feature: 'Content planner', old: 'Later / Planoly', neu: 'Social Sets calendar' },
-    { feature: 'Nordic VAT & tax', old: 'Manual friction', neu: '6%/25% + Fortnox sync' },
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.45 }}
-      className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white/80 backdrop-blur-sm shadow-[0_8px_40px_-12px_rgba(15,23,42,0.12)] overflow-hidden"
-    >
-      <div className="grid grid-cols-[1fr_1fr_1.15fr] border-b border-slate-100">
-        <div className="px-3 sm:px-5 py-4 sm:py-5" />
-        <div className="px-3 sm:px-5 py-4 sm:py-5 border-l border-slate-100">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-rose-400">
-            Fragmented stack
-          </p>
-        </div>
-        <div className="px-3 sm:px-5 py-4 sm:py-5 bg-[#2B2568] text-white">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#10B981]">
-            ✓ clikd: Studio
-          </p>
-        </div>
-      </div>
-      {rows.map((row, i) => (
-        <div
-          key={row.feature}
-          className={`grid grid-cols-[1fr_1fr_1.15fr] ${
-            i < rows.length - 1 ? 'border-b border-slate-100' : ''
-          }`}
-        >
-          <div className="px-3 sm:px-5 py-3.5 sm:py-4 flex items-center">
-            <p className="text-[12px] sm:text-sm font-extrabold text-slate-800">{row.feature}</p>
-          </div>
-          <div className="px-3 sm:px-5 py-3.5 sm:py-4 border-l border-slate-100 flex items-center gap-2">
-            <X size={12} className="text-rose-400 flex-shrink-0 hidden sm:block" strokeWidth={2.5} />
-            <p className="text-[11px] sm:text-sm font-semibold text-slate-500">{row.old}</p>
-          </div>
-          <div className="px-3 sm:px-5 py-3.5 sm:py-4 bg-[#2B2568] flex items-center gap-2">
-            <Check
-              size={12}
-              className="text-[#10B981] flex-shrink-0 hidden sm:block"
-              strokeWidth={2.75}
-            />
-            <p className="text-[11px] sm:text-sm font-bold text-white">{row.neu}</p>
-          </div>
-        </div>
-      ))}
     </motion.div>
   );
 }
