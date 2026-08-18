@@ -57,6 +57,11 @@ function MetaConnectToast() {
         toast.success('LinkedIn profile connected');
       } else if (success === 'tiktok_connected') {
         toast.success('TikTok account connected');
+        if (warning === 'tiktok_no_publish_scope') {
+          toast.error(
+            'TikTok connected, but posting was not granted. Add Content Posting API (video.publish + video.upload) in TikTok for Developers, then Disconnect and Connect again.'
+          );
+        }
       } else if (success === 'pinterest_connected') {
         toast.success('Pinterest account connected');
       } else if (success === 'google_connected') {

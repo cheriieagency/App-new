@@ -12,6 +12,7 @@
  */
 
 import { toVerifiedPublishMediaUrl } from '@/lib/media/proxy-url';
+import { TIKTOK_POSTING_SCOPE_HELP } from '@/lib/tiktok/scopes';
 
 export type TikTokPublishKind = 'image' | 'video';
 
@@ -69,10 +70,7 @@ function explainTikTokCode(code: string, message: string): string {
     return 'TikTok session expired — reconnect under Settings → Socials.';
   }
   if (c === 'scope_not_authorized' || c.includes('scope')) {
-    return (
-      `${message} Disconnect and reconnect TikTok so clikd: can request ` +
-      'video.publish (Direct Post) and video.upload (inbox fallback).'
-    );
+    return TIKTOK_POSTING_SCOPE_HELP;
   }
   return message;
 }
@@ -120,15 +118,6 @@ class TikTokApiError extends Error {
     super(message);
     this.code = code;
   }
-}
-
-function isRecoverableDirectPostError(code: string): boolean {
-  return (
-    code === 'unaudited_client_can_only_post_to_private_accounts' ||
-    code === 'scope_not_authorized' ||
-    code === 'privacy_level_option_mismatch' ||
-    code === 'url_ownership_unverified'
-  );
 }
 
 async function tikTokJson(
@@ -393,7 +382,7 @@ async function publishVideoViaFileUpload(input: {
   try {
     if (!input.creator) {
       throw new TikTokApiError(
-        'creator_info missing',
+        'Direct Post unavailable without creator_info',
         'scope_not_authorized'
       );
     }
@@ -403,21 +392,31 @@ async function publishVideoViaFileUpload(input: {
       sourceInfo,
       postInfo
     );
-  } catch (error) {
-    const code = error instanceof TikTokApiError ? error.code : '';
-    if (!isRecoverableDirectPostError(code) && input.creator) {
-      throw error;
-    }
-    console.warn('[tiktok] Direct Post blocked — uploading to inbox', {
+  } catch (directError) {
+    const code =
+      directError instanceof TikTokApiError ? directError.code : '';
+    console.warn('[tiktok] Direct Post blocked — trying inbox upload', {
       code,
-      error: error instanceof Error ? error.message : error,
+      error: directError instanceof Error ? directError.message : directError,
     });
-    raw = await initVideoUpload(
-      input.accessToken,
-      'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/',
-      sourceInfo
-    );
-    inbox = true;
+    try {
+      raw = await initVideoUpload(
+        input.accessToken,
+        'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/',
+        sourceInfo
+      );
+      inbox = true;
+    } catch (inboxError) {
+      const inboxCode =
+        inboxError instanceof TikTokApiError ? inboxError.code : '';
+      if (
+        code === 'scope_not_authorized' ||
+        inboxCode === 'scope_not_authorized'
+      ) {
+        throw new Error(TIKTOK_POSTING_SCOPE_HELP);
+      }
+      throw inboxError instanceof Error ? inboxError : directError;
+    }
   }
 
   const publishId = extractPublishId(raw);
@@ -518,8 +517,8 @@ async function publishPhotoPost(input: {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('TikTok photo publish failed');
         const code = error instanceof TikTokApiError ? error.code : '';
-        if (!isRecoverableDirectPostError(code) && postMode === 'MEDIA_UPLOAD') {
-          continue;
+        if (code === 'scope_not_authorized') {
+          throw new Error(TIKTOK_POSTING_SCOPE_HELP);
         }
       }
     }

@@ -33,6 +33,7 @@ export type UpsertOAuthSocialAccountInput = {
   expiresIn?: number | null;
   companyUrl?: string | null;
   workspaceId?: string | null;
+  scope?: string | null;
 };
 
 /** Upsert one OAuth-connected social account for the user. */
@@ -62,6 +63,7 @@ export async function upsertOAuthSocialAccount(
       company_url: input.companyUrl ?? null,
       refresh_token: input.refreshToken ?? null,
       email: input.handle?.includes('@') ? input.handle : null,
+      scope: input.scope ?? null,
     },
   });
 }

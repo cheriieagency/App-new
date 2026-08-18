@@ -22,6 +22,7 @@ import {
   getTikTokSuccessRedirectPath,
 } from '@/lib/tiktok/oauth';
 import { upsertTikTokToken } from '@/lib/tiktok/tokens-persist';
+import { tikTokHasPostingScope } from '@/lib/tiktok/scopes';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
@@ -112,6 +113,7 @@ export async function GET(request: Request) {
   if (!ownedWorkspaceId) return fail('workspace_create_failed');
 
   try {
+    let loginKitScope: string | null = null;
     if (isBusinessFlow) {
       console.info('[tiktok/callback] business token exchange', {
         redirect_uri: getTikTokCallbackUrl(origin),
@@ -157,6 +159,7 @@ export async function GET(request: Request) {
       });
 
       const tokens = await exchangeTikTokCode(authCode, origin, codeVerifier);
+      loginKitScope = tokens.scope ?? null;
       const profile = await fetchTikTokUserInfo(tokens.access_token);
       const openId = profile.open_id || tokens.open_id;
       if (!openId) return fail('tiktok_missing_open_id');
@@ -189,11 +192,16 @@ export async function GET(request: Request) {
         refreshToken: tokens.refresh_token ?? null,
         expiresIn: tokens.expires_in ?? null,
         workspaceId: ownedWorkspaceId,
+        scope: tokens.scope ?? null,
       });
     }
 
     const dest = new URL(successPath, origin);
     dest.searchParams.set('success', 'tiktok_connected');
+    if (!isBusinessFlow && !tikTokHasPostingScope(loginKitScope)) {
+      dest.searchParams.set('warning', 'tiktok_no_publish_scope');
+      dest.searchParams.set('detail', loginKitScope || 'none');
+    }
     const res = oauthPopupCompleteResponse({
       success: true,
       platform: 'tiktok',

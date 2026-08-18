@@ -14,6 +14,7 @@ import { ensurePublicHttpsMediaUrl } from '@/lib/supabase/storage';
 import { ensureFreshTikTokAccessToken } from '@/lib/tiktok/oauth';
 import { getTikTokAccessTokenForWorkspace } from '@/lib/tiktok/inbox-persist';
 import { getTikTokTokenForWorkspace } from '@/lib/tiktok/tokens-persist';
+import { TIKTOK_POSTING_SCOPE_HELP, tikTokHasPostingScope } from '@/lib/tiktok/scopes';
 import { publishTikTokPost } from '@/lib/tiktok/publish';
 import { getYouTubeAccessTokenForWorkspace } from '@/lib/youtube/tokens';
 import { publishYouTubeVideo } from '@/lib/youtube/publish';
@@ -104,6 +105,7 @@ async function loadTikTokPublishToken(
   accessToken: string;
   refreshToken: string | null;
   expiresAt: string | null;
+  scope: string | null;
 } | null> {
   const stored = await getTikTokTokenForWorkspace({ workspaceId, userId });
   const social = await getTikTokAccessTokenForWorkspace({ workspaceId, userId });
@@ -119,6 +121,7 @@ async function loadTikTokPublishToken(
       accessToken: stored.access_token,
       refreshToken: stored.refresh_token,
       expiresAt: stored.expires_at,
+      scope: stored.scope,
     };
   }
 
@@ -127,6 +130,7 @@ async function loadTikTokPublishToken(
       accessToken: social!.accessToken,
       refreshToken: social!.refreshToken,
       expiresAt: social!.expiresAt,
+      scope: stored?.scope ?? null,
     };
   }
 
@@ -135,6 +139,7 @@ async function loadTikTokPublishToken(
       accessToken: stored.access_token,
       refreshToken: stored.refresh_token,
       expiresAt: stored.expires_at,
+      scope: stored.scope,
     };
   }
 
@@ -367,6 +372,15 @@ export async function publishPlannerPost(
             ok: false,
             error:
               'No connected TikTok account with Content Posting. Connect TikTok under Settings → Socials (Login Kit with video.publish). Business Marketing tokens cannot publish organic posts.',
+          });
+          continue;
+        }
+
+        if (tokenRow.scope && !tikTokHasPostingScope(tokenRow.scope)) {
+          results.push({
+            platform,
+            ok: false,
+            error: TIKTOK_POSTING_SCOPE_HELP,
           });
           continue;
         }
