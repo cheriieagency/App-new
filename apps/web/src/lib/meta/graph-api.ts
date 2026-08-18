@@ -4,6 +4,8 @@
  */
 
 const GRAPH_BASE = 'https://graph.facebook.com/v19.0';
+/** Status polling uses v20 — required for reliable status_code on containers. */
+const GRAPH_STATUS_BASE = 'https://graph.facebook.com/v20.0';
 
 async function graphJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -124,48 +126,80 @@ async function graphPublishRequest(
 }
 
 /**
- * Poll Instagram media container until FINISHED/READY (videos/reels).
- * Max 5 attempts × 3s delay.
+ * Poll Instagram media container until status_code === FINISHED.
+ * Prevents Graph 9007 / subcode 2207027 ("Media ID is not available").
+ *
+ * Flow: mandatory 3s sleep after container creation → poll every 4s → max 12 attempts.
  */
 async function waitForInstagramContainerReady(
   containerId: string,
   accessToken: string
 ): Promise<void> {
-  const maxAttempts = 5;
-  const delayMs = 3000;
+  const maxAttempts = 12;
+  const pollDelayMs = 4000;
+  const initialSleepMs = 3000;
+
+  // Safety buffer — Meta often returns IN_PROGRESS immediately after container create.
+  await sleep(initialSleepMs);
+
+  let lastStatus = '';
+  let lastStatusCode = '';
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(containerId)}`);
-    url.searchParams.set('fields', 'status_code,status,id');
+    const url = new URL(
+      `${GRAPH_STATUS_BASE}/${encodeURIComponent(containerId)}`
+    );
+    url.searchParams.set('fields', 'status_code,status');
     url.searchParams.set('access_token', accessToken);
 
-    const { data } = await graphPublishRequest(url.toString(), { method: 'GET' }, 'container status');
-    const status = String(data.status_code || data.status || '')
-      .trim()
-      .toUpperCase();
+    const { data } = await graphPublishRequest(
+      url.toString(),
+      { method: 'GET' },
+      'container status'
+    );
 
-    if (status === 'FINISHED' || status === 'READY' || status === 'PUBLISHED') {
+    lastStatusCode = String(data.status_code || '').trim();
+    lastStatus = String(data.status || '').trim();
+    const statusCode = lastStatusCode.toUpperCase();
+
+    console.info('[meta/container status]', {
+      containerId,
+      attempt,
+      maxAttempts,
+      status_code: lastStatusCode,
+      status: lastStatus,
+    });
+
+    if (statusCode === 'FINISHED') {
       return;
     }
-    if (status === 'ERROR' || status === 'EXPIRED') {
+
+    if (statusCode === 'ERROR' || statusCode === 'EXPIRED') {
       throw new Error(
-        `Failed to create media container: Instagram status ${status} for ${containerId}`
+        `Instagram media not ready — container status ${statusCode || 'ERROR'}` +
+          (lastStatus ? ` (${lastStatus})` : '') +
+          `. Container ${containerId} cannot be published.`
       );
     }
 
     if (attempt < maxAttempts) {
-      await sleep(delayMs);
+      await sleep(pollDelayMs);
     }
   }
 
   throw new Error(
-    `Instagram media container ${containerId} was not FINISHED after ${maxAttempts} status checks. Wait and retry.`
+    `Instagram media not ready after ${maxAttempts} status checks (~${Math.round(
+      (initialSleepMs + maxAttempts * pollDelayMs) / 1000
+    )}s). ` +
+      `Last status_code: "${lastStatusCode || 'unknown'}"` +
+      (lastStatus ? `, status: "${lastStatus}"` : '') +
+      `. Meta error 9007 usually means the container was published before FINISHED — retry in a moment.`
   );
 }
 
 /**
  * Publish an image or video/reel to an Instagram Business account.
- * 1) Create media container → 2) Poll status for video → 3) media_publish.
+ * 1) Create media container → 2) Poll until FINISHED → 3) media_publish.
  * `mediaUrl` must be a public HTTPS URL (e.g. Supabase Storage).
  */
 export async function publishInstagramPost(
@@ -230,9 +264,8 @@ export async function publishInstagramPost(
     );
   }
 
-  if (isVideo) {
-    await waitForInstagramContainerReady(containerId, accessToken);
-  }
+  // Always poll — images can also return 9007 if published before FINISHED.
+  await waitForInstagramContainerReady(containerId, accessToken);
 
   const published = await graphPublishRequest(
     `${GRAPH_BASE}/${encodeURIComponent(igUserId)}/media_publish`,
