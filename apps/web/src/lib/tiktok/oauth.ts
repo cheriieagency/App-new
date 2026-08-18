@@ -120,7 +120,6 @@ export function buildTikTokLoginUrl(
   // https://developers.tiktok.com/doc/login-kit-web
   const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
   authUrl.searchParams.set('client_key', clientKey);
-  authUrl.searchParams.set('scope', TIKTOK_OAUTH_SCOPES.join(','));
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('state', state);
@@ -132,7 +131,9 @@ export function buildTikTokLoginUrl(
   if (options?.forceSelectAccount !== false) {
     authUrl.searchParams.set('disable_auto_auth', '1');
   }
-  return authUrl.toString();
+  // Append scope with literal commas — URLSearchParams would encode them as %2C,
+  // and TikTok must see `video.publish` in the query string as-is.
+  return `${authUrl.toString()}&scope=user.info.basic,user.info.profile,video.publish,video.upload`;
 }
 
 export type TikTokTokenResponse = {
