@@ -13,27 +13,46 @@ import {
   Text,
 } from '@react-email/components';
 
+export type BroadcastImagePlacement = 'top' | 'middle' | 'bottom';
+
 export type BroadcastEmailProps = {
   subject: string;
   previewText?: string;
+  /** Already personalized body (merge tags applied server-side). */
   bodyContent: string;
-  firstName?: string;
   imageUrl?: string | null;
+  imagePlacement?: BroadcastImagePlacement;
   unsubscribeUrl: string;
   workspaceName?: string;
 };
+
+function splitBodyForMiddle(text: string): [string, string] {
+  const parts = text.split(/\n\n+/);
+  if (parts.length <= 1) return [text, ''];
+  return [parts[0], parts.slice(1).join('\n\n')];
+}
 
 /** CRM broadcast / newsletter template with mandatory unsubscribe footer. */
 export function BroadcastEmail({
   subject,
   previewText,
   bodyContent,
-  firstName = 'there',
   imageUrl,
+  imagePlacement = 'top',
   unsubscribeUrl,
   workspaceName = 'clikd:',
 }: BroadcastEmailProps) {
-  const personalized = bodyContent.replace(/\{first_name\}/gi, firstName);
+  const [beforeMiddle, afterMiddle] = splitBodyForMiddle(bodyContent);
+  const imageBlock = imageUrl ? (
+    <Section style={{ margin: '16px 0' }}>
+      <Img
+        src={imageUrl}
+        alt=""
+        width="100%"
+        style={{ borderRadius: '12px', display: 'block', maxHeight: '320px' }}
+      />
+    </Section>
+  ) : null;
 
   return (
     <Html>
@@ -45,17 +64,17 @@ export function BroadcastEmail({
             clikd<span style={{ color: '#F472B6' }}>:</span>
           </Text>
           <Heading style={h1}>{subject}</Heading>
-          {imageUrl ? (
-            <Section style={{ marginBottom: '24px' }}>
-              <Img
-                src={imageUrl}
-                alt=""
-                width="100%"
-                style={{ borderRadius: '12px', display: 'block' }}
-              />
-            </Section>
-          ) : null}
-          <Text style={paragraph}>{personalized}</Text>
+          {imagePlacement === 'top' && imageBlock}
+          {imagePlacement === 'middle' ? (
+            <>
+              {beforeMiddle ? <Text style={paragraph}>{beforeMiddle}</Text> : null}
+              {imageBlock}
+              {afterMiddle ? <Text style={paragraph}>{afterMiddle}</Text> : null}
+            </>
+          ) : (
+            <Text style={paragraph}>{bodyContent}</Text>
+          )}
+          {imagePlacement === 'bottom' && imageBlock}
           <Hr style={hr} />
           <Text style={footer}>
             You received this email because you subscribe to {workspaceName} on clikd:.

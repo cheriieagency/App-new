@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import sql from '@/app/api/utils/sql';
 import {
+  applyMergeTags,
   createBroadcast,
   getMockEmailCrmPayload,
   listEmailSubscribers,
@@ -10,15 +11,15 @@ import {
   type SubscriberSource,
 } from '@/lib/mock-email-crm';
 import { resendEnv } from '@/lib/config/env';
+import { buildCommunityAccessUrl } from '@/lib/community-access-email';
 import { ensureEmailCrmSchema, trackBroadcastMessages } from '@/lib/email/crm-persist';
 import { resendMissingResponse, sendEmail } from '@/lib/email/send';
 import { buildUnsubscribeUrl } from '@/lib/email/unsubscribe';
-import { BroadcastEmail } from '@/lib/email/templates/BroadcastEmail';
 import {
-  isCreatorRole,
-  normalizePlatformRole,
-  PLATFORM_ROLE_COOKIE,
-} from '@/lib/platform-role';
+  BroadcastEmail,
+  type BroadcastImagePlacement,
+} from '@/lib/email/templates/BroadcastEmail';
+import { ensurePublicHttpsMediaUrl } from '@/lib/supabase/storage';
 import { getSiteUrl } from '@/lib/site';
 import { requireFeature } from '@/lib/plan-guard';
 
@@ -33,25 +34,14 @@ type SendPayload = {
   /** When true, only send to the signed-in admin (live delivery smoke test). */
   test?: boolean;
   imageUrl?: string | null;
+  imagePlacement?: BroadcastImagePlacement;
 };
 
-async function requireWorkspaceAdmin() {
+async function requireEmailSession() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
-
-  const jar = await cookies();
-  const role = normalizePlatformRole(jar.get(PLATFORM_ROLE_COOKIE)?.value);
-  if (!isCreatorRole(role)) {
-    return {
-      error: Response.json(
-        { error: 'Forbidden — workspace admin / creator role required' },
-        { status: 403 }
-      ),
-    };
-  }
-
   return { session };
 }
 
@@ -99,7 +89,6 @@ async function loadWorkspaceSubscribers(
         `;
 
     if (!Array.isArray(rows) || rows.length === 0) {
-      // Empty real list — do not invent seed recipients for live sends.
       return [];
     }
 
@@ -123,28 +112,47 @@ async function loadWorkspaceSubscribers(
   }
 }
 
+async function resolveCommunityName(communityId?: number): Promise<string> {
+  if (!communityId || !process.env.DATABASE_URL?.trim()) {
+    return 'your community';
+  }
+  try {
+    const rows = await sql`
+      SELECT name FROM communities WHERE id = ${communityId} LIMIT 1
+    `;
+    const name = rows?.[0]?.name;
+    return name ? String(name) : 'your community';
+  } catch {
+    return 'your community';
+  }
+}
+
 /**
  * POST /api/admin/email/send
- * Authenticated workspace admin → Resend broadcast or test email.
+ * Authenticated creator session → Resend broadcast or test email.
  */
 export async function POST(request: Request) {
-  const authResult = await requireWorkspaceAdmin();
+  const authResult = await requireEmailSession();
   if ('error' in authResult && authResult.error) return authResult.error;
   const session = authResult.session!;
-
-  // Full broadcasts require Creator+.
-  const broadcastGate = await requireFeature('emailBroadcasts', request.headers);
-  if (broadcastGate) return broadcastGate;
-
-  if (!resendEnv.apiKey()) {
-    return resendMissingResponse();
-  }
 
   let body: SendPayload = {};
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const isTest = Boolean(body.test);
+
+  // Test emails are always allowed; full broadcasts require Creator+.
+  if (!isTest) {
+    const broadcastGate = await requireFeature('emailBroadcasts', request.headers);
+    if (broadcastGate) return broadcastGate;
+  }
+
+  if (!resendEnv.apiKey()) {
+    return resendMissingResponse();
   }
 
   const subject = String(body.subject ?? '').trim();
@@ -158,23 +166,53 @@ export async function POST(request: Request) {
       : undefined;
   const scopedCommunityId =
     communityId != null && !Number.isNaN(communityId) ? communityId : undefined;
-  const isTest = Boolean(body.test);
-  const imageUrl =
-    typeof body.imageUrl === 'string' && body.imageUrl.trim() ? body.imageUrl.trim() : null;
+  const imagePlacementRaw = String(body.imagePlacement ?? 'top').toLowerCase();
+  const imagePlacement: BroadcastImagePlacement =
+    imagePlacementRaw === 'middle' || imagePlacementRaw === 'bottom'
+      ? imagePlacementRaw
+      : 'top';
+  let imageUrl =
+    typeof body.imageUrl === 'string' && body.imageUrl.trim()
+      ? body.imageUrl.trim()
+      : null;
 
   if (!subject || !bodyContent) {
     return Response.json({ error: 'subject and bodyContent are required' }, { status: 400 });
   }
 
+  if (imageUrl) {
+    try {
+      imageUrl = await ensurePublicHttpsMediaUrl(imageUrl);
+    } catch (error) {
+      return Response.json(
+        {
+          error: 'invalid_image_url',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Image must be a public HTTPS URL (upload again)',
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   const origin = getSiteUrl();
   const adminEmail = (session.user.email || '').toLowerCase().trim();
   const adminName = session.user.name || 'Creator';
+  const communityName = await resolveCommunityName(scopedCommunityId);
+  const communityUrl = scopedCommunityId
+    ? buildCommunityAccessUrl(scopedCommunityId, origin)
+    : `${origin}/communities`;
 
   let recipients: { email: string; name: string }[] = [];
 
   if (isTest) {
     if (!adminEmail) {
-      return Response.json({ error: 'Admin account has no email for test delivery' }, { status: 400 });
+      return Response.json(
+        { error: 'Admin account has no email for test delivery' },
+        { status: 400 }
+      );
     }
     recipients = [{ email: adminEmail, name: adminName }];
   } else {
@@ -187,7 +225,6 @@ export async function POST(request: Request) {
       .map((s) => ({ email: s.email.toLowerCase().trim(), name: s.name }))
       .filter((s) => Boolean(s.email));
 
-    // Deduplicate by email
     const seen = new Set<string>();
     recipients = recipients.filter((r) => {
       if (seen.has(r.email)) return false;
@@ -198,49 +235,64 @@ export async function POST(request: Request) {
 
   if (recipients.length === 0) {
     return Response.json(
-      { error: 'No recipients found for this workspace / filter' },
+      {
+        error: 'no_recipients',
+        message:
+          'No subscribers match this audience filter. Import contacts or sync community members first.',
+      },
       { status: 400 }
     );
   }
 
   const results: { email: string; ok: boolean; id?: string; error?: string }[] = [];
 
-  // Sequential send keeps Resend rate limits happy for demos; batch later if needed.
   for (const recipient of recipients) {
-    const unsubscribeUrl = buildUnsubscribeUrl(recipient.email, origin);
-    const firstName = recipient.name.trim().split(/\s+/)[0] || recipient.email.split('@')[0];
+    const firstName =
+      recipient.name.trim().split(/\s+/)[0] || recipient.email.split('@')[0];
+    const mergeCtx = {
+      name: recipient.name || firstName,
+      email: recipient.email,
+      community: communityName,
+      communityUrl,
+    };
+    const personalizedBody = applyMergeTags(bodyContent, firstName, mergeCtx);
+    const personalizedSubject = applyMergeTags(subject, firstName, mergeCtx);
 
     const result = await sendEmail({
       to: recipient.email,
-      subject: isTest ? `[TEST] ${subject}` : subject,
+      subject: isTest ? `[TEST] ${personalizedSubject}` : personalizedSubject,
       unsubscribeEmail: recipient.email,
       tags: [
         { name: 'category', value: isTest ? 'crm_test' : 'crm_broadcast' },
         {
           name: 'workspace',
-          // Resend tags: ASCII letters, numbers, underscores, dashes only.
           value: workspaceId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 40) || 'default',
         },
       ],
       react: React.createElement(BroadcastEmail, {
-        subject,
-        bodyContent,
-        firstName,
+        subject: personalizedSubject,
+        bodyContent: personalizedBody,
         imageUrl,
-        unsubscribeUrl,
-        workspaceName: 'clikd:',
+        imagePlacement,
+        unsubscribeUrl: buildUnsubscribeUrl(recipient.email, origin),
+        workspaceName: communityName,
       }),
     });
 
     if (result.ok) {
       results.push({ email: recipient.email, ok: true, id: result.id });
     } else {
-      results.push({ email: recipient.email, ok: false, error: result.error });
+      const detail =
+        result.error === 'missing_env' && result.missingEnv?.length
+          ? `Missing env: ${result.missingEnv.join(', ')}`
+          : result.error;
+      results.push({ email: recipient.email, ok: false, error: detail });
     }
   }
 
   const sentCount = results.filter((r) => r.ok).length;
   const failedCount = results.length - sentCount;
+  const firstError = results.find((r) => !r.ok)?.error;
 
   const broadcast = createBroadcast({
     subject,
@@ -286,8 +338,25 @@ export async function POST(request: Request) {
     }
   }
 
+  if (sentCount === 0) {
+    return Response.json(
+      {
+        success: false,
+        test: isTest,
+        workspaceId,
+        recipientFilter,
+        sent: 0,
+        failed: failedCount,
+        results,
+        error: firstError || 'send_failed',
+        message: firstError || 'Email delivery failed. Check RESEND_API_KEY and RESEND_FROM_EMAIL.',
+      },
+      { status: 502 }
+    );
+  }
+
   return Response.json({
-    success: sentCount > 0,
+    success: true,
     test: isTest,
     workspaceId,
     recipientFilter,
@@ -296,7 +365,6 @@ export async function POST(request: Request) {
     results: isTest ? results : results.slice(0, 20),
     broadcast,
     demo: !process.env.DATABASE_URL?.trim(),
-    // silence unused mock helper in some builds
     audiences: getMockEmailCrmPayload().audiences.length,
   });
 }

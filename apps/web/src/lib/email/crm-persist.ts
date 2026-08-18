@@ -589,7 +589,6 @@ export async function fireEmailAutomations(
         react: React.createElement(BroadcastEmail, {
           subject,
           bodyContent: body,
-          firstName,
           unsubscribeUrl: buildUnsubscribeUrl(email, origin),
           workspaceName: input.communityName,
         }),

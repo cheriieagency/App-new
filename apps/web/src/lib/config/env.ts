@@ -208,8 +208,18 @@ export const databaseEnv = {
 export const resendEnv = {
   /** Resend secret — https://resend.com/api-keys */
   apiKey: () => readEnv('RESEND_API_KEY'),
-  /** Verified sender, e.g. "clikd: <hello@clikd.app>" */
-  from: () => readEnv('RESEND_FROM_EMAIL') ?? 'clikd: <onboarding@resend.dev>',
+  /** Verified sender, e.g. "clikd <hello@clikd.app>" */
+  from: () => {
+    const raw =
+      readEnv('RESEND_FROM_EMAIL') ??
+      readEnv('NEXT_PUBLIC_FROM_EMAIL') ??
+      'clikd <onboarding@resend.dev>';
+    const trimmed = raw.trim();
+    if (trimmed.includes('<') && trimmed.includes('>')) return trimmed;
+    const emailMatch = trimmed.match(/<?([^\s<>]+@[^\s<>]+)>?/);
+    if (emailMatch?.[1]) return `clikd <${emailMatch[1]}>`;
+    return trimmed;
+  },
   /** Optional shared secret for POST /api/webhooks/resend */
   webhookSecret: () => readEnv('RESEND_WEBHOOK_SECRET'),
   requiredKeys: ['RESEND_API_KEY'] as const,

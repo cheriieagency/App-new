@@ -37,6 +37,7 @@ import { useLocale } from '@/lib/locale-context';
 import { t, tf } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import useUpload from '@/utils/useUpload';
 import EmailBodyToolbar from '@/components/admin/EmailBodyToolbar';
 import type {
@@ -57,6 +58,38 @@ import { PlanLockBadge } from '@/components/common/FeatureGate';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { toast } from 'sonner';
+
+function isValidContactEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+/** Parse pasted lines (email, name,email, or tab-separated). */
+function parseContactPaste(text: string): Array<{ name: string; email: string }> {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.includes('\t')
+        ? line.split('\t').map((part) => part.trim())
+        : line.includes(',')
+          ? line.split(',').map((part) => part.trim())
+          : [line];
+      if (parts.length >= 2) {
+        const [first, second] = parts;
+        if (first.includes('@')) {
+          return { name: second || '', email: first };
+        }
+        return { name: first || '', email: second };
+      }
+      return { name: '', email: parts[0] ?? '' };
+    })
+    .filter((row) => isValidContactEmail(row.email))
+    .map((row) => ({
+      name: row.name,
+      email: row.email.trim().toLowerCase(),
+    }));
+}
 
 type EmailResponse = {
   total_subscribers: number;
@@ -229,8 +262,7 @@ export default function EmailAdminPanel() {
 
   const handleImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      setFlash('Only image files are supported');
-      setTimeout(() => setFlash(''), 2000);
+      toast.error('Only image files are supported');
       return;
     }
     const result = await upload({ file });
@@ -238,7 +270,9 @@ export default function EmailAdminPanel() {
       setImageUrl(result.url);
       return;
     }
-    setImageUrl(URL.createObjectURL(file));
+    toast.error(
+      'Image upload failed. Email images must use a public HTTPS URL — try again or paste an image URL.'
+    );
   };
 
   const onFileDrop = (e: React.DragEvent) => {
@@ -260,6 +294,11 @@ export default function EmailAdminPanel() {
 
   const sendMutation = useMutation({
     mutationFn: async (action: 'send' | 'test') => {
+      if (imageUrl?.startsWith('blob:')) {
+        throw new Error(
+          'Image is not uploaded yet. Add a public HTTPS image before sending.'
+        );
+      }
       const r = await fetch('/api/admin/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -271,17 +310,38 @@ export default function EmailAdminPanel() {
           recipientFilter: audience,
           test: action === 'test',
           imageUrl,
+          imagePlacement,
         }),
       });
-      const data = await r.json().catch(() => ({}));
+      const data = (await r.json().catch(() => ({}))) as {
+        message?: string;
+        error?: string;
+        missing?: string[];
+        missingEnv?: string[];
+        success?: boolean;
+        sent?: number;
+        failed?: number;
+        results?: Array<{ error?: string }>;
+      };
       if (!r.ok) {
         const msg =
-          typeof data.message === 'string'
-            ? data.message
-            : typeof data.error === 'string'
-              ? data.error
-              : 'Failed to send';
+          data.message ||
+          (data.error === 'missing_env' && data.missing?.length
+            ? `Missing: ${data.missing.join(', ')}`
+            : null) ||
+          (data.error === 'UPGRADE_REQUIRED'
+            ? 'Broadcasts require the Creator plan. Use Send test email to verify delivery.'
+            : null) ||
+          (typeof data.error === 'string' ? data.error : null) ||
+          'Failed to send';
         throw new Error(msg);
+      }
+      if (data.success === false) {
+        throw new Error(
+          data.message ||
+            data.results?.find((x) => x.error)?.error ||
+            'Email delivery failed'
+        );
       }
       return data;
     },
@@ -393,13 +453,63 @@ export default function EmailAdminPanel() {
     setImportOpen(true);
   };
 
+  const manualContactsReady = useMemo(
+    () =>
+      manualRows
+        .map((row) => ({
+          name: row.name.trim(),
+          email: row.email.trim().toLowerCase(),
+        }))
+        .filter((row) => isValidContactEmail(row.email)),
+    [manualRows]
+  );
+
+  const updateManualRow = (
+    index: number,
+    patch: Partial<{ name: string; email: string }>
+  ) => {
+    setManualRows((rows) =>
+      rows.map((row, i) => (i === index ? { ...row, ...patch } : row))
+    );
+  };
+
+  const removeManualRow = (index: number) => {
+    setManualRows((rows) =>
+      rows.length <= 1
+        ? [{ name: '', email: '' }]
+        : rows.filter((_, i) => i !== index)
+    );
+  };
+
+  const addManualRow = () => {
+    setManualRows((rows) => [...rows, { name: '', email: '' }]);
+  };
+
+  const handleManualEmailPaste = (index: number, text: string) => {
+    const parsed = parseContactPaste(text);
+    if (parsed.length <= 1) return false;
+    setManualRows((rows) => {
+      const next = [...rows];
+      parsed.forEach((contact, offset) => {
+        const target = index + offset;
+        if (target < next.length) next[target] = contact;
+        else next.push(contact);
+      });
+      return next;
+    });
+    toast.success(
+      `Added ${parsed.length} contact${parsed.length === 1 ? '' : 's'} from paste`
+    );
+    return true;
+  };
+
   const submitManualImport = () => {
-    const contacts = manualRows
-      .map((row) => ({
-        name: row.name.trim(),
-        email: row.email.trim().toLowerCase(),
-      }))
-      .filter((row) => row.email);
+    const seen = new Set<string>();
+    const contacts = manualContactsReady.filter((row) => {
+      if (seen.has(row.email)) return false;
+      seen.add(row.email);
+      return true;
+    });
     if (!contacts.length) {
       toast.error(t('toastAddEmailAddress', locale));
       return;
@@ -612,7 +722,20 @@ export default function EmailAdminPanel() {
     URL.revokeObjectURL(url);
   };
 
-  const canSend = Boolean(subject.trim() && body.trim()) && !sendMutation.isPending;
+  const canSend =
+    Boolean(subject.trim() && body.trim()) &&
+    !sendMutation.isPending &&
+    data?.email_provider_ready !== false;
+
+  const audienceRecipientCount = useMemo(() => {
+    if (!subscribers.length) return 0;
+    if (audience === 'all') return subscribers.length;
+    return subscribers.filter(
+      (s) =>
+        s.source === audience ||
+        s.tags.some((t) => t.toLowerCase().includes(audience.toLowerCase()))
+    ).length;
+  }, [subscribers, audience]);
 
   const stats = useMemo(
     () => [
@@ -1579,62 +1702,152 @@ export default function EmailAdminPanel() {
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
               {importTab === 'manual' ? (
                 <>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Enter name + email for each contact. Leave name blank to use
-                    the part before @.
-                  </p>
-                  <div className="space-y-2">
-                    {manualRows.map((row, index) => (
-                      <div
-                        key={`manual-row-${index}`}
-                        className="flex flex-col sm:flex-row gap-2"
-                      >
-                        <Input
-                          value={row.name}
-                          onChange={(e) => {
-                            const next = [...manualRows];
-                            next[index] = { ...next[index], name: e.target.value };
-                            setManualRows(next);
-                          }}
-                          placeholder="Name"
-                          className="h-11 min-h-[44px] rounded-xl"
-                        />
-                        <Input
-                          value={row.email}
-                          onChange={(e) => {
-                            const next = [...manualRows];
-                            next[index] = { ...next[index], email: e.target.value };
-                            setManualRows(next);
-                          }}
-                          placeholder="email@example.com"
-                          type="email"
-                          className="h-11 min-h-[44px] rounded-xl flex-1"
-                        />
-                        {manualRows.length > 1 ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setManualRows(manualRows.filter((_, i) => i !== index))
-                            }
-                            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 inline-flex items-center justify-center"
-                            aria-label="Remove row"
-                          >
-                            <X size={16} />
-                          </button>
-                        ) : null}
-                      </div>
-                    ))}
+                  <div className="rounded-2xl border border-[#E9D5FF]/80 bg-[#FAFAFA] px-4 py-3 space-y-2">
+                    <p className="text-sm font-semibold text-slate-800">
+                      Add contacts one by one
+                    </p>
+                    <ol className="text-xs text-slate-500 font-medium space-y-1 list-decimal list-inside">
+                      <li>
+                        <span className="text-slate-600">Email</span> is required
+                      </li>
+                      <li>
+                        <span className="text-slate-600">Name</span> is optional — we
+                        use the part before @ if left blank
+                      </li>
+                      <li>
+                        Paste multiple lines into email to bulk-add (one per line)
+                      </li>
+                    </ol>
                   </div>
+
+                  <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_44px] gap-2 px-1">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                      Name
+                    </p>
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                      Email <span className="text-[#F472B6]">*</span>
+                    </p>
+                    <span className="sr-only">Remove</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {manualRows.map((row, index) => {
+                      const emailInvalid =
+                        row.email.trim().length > 0 &&
+                        !isValidContactEmail(row.email);
+                      const nameId = `import-name-${index}`;
+                      const emailId = `import-email-${index}`;
+                      return (
+                        <div
+                          key={`manual-row-${index}`}
+                          className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                        >
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                              Contact {index + 1}
+                            </p>
+                            {manualRows.length > 1 ? (
+                              <button
+                                type="button"
+                                onClick={() => removeManualRow(index)}
+                                className="h-9 min-h-[36px] px-2 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 inline-flex items-center gap-1"
+                              >
+                                <X size={14} />
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-3">
+                            <div className="space-y-1.5">
+                              <Label
+                                htmlFor={nameId}
+                                className="text-xs font-medium text-slate-600 sm:sr-only"
+                              >
+                                Name <span className="text-slate-400">(optional)</span>
+                              </Label>
+                              <Input
+                                id={nameId}
+                                value={row.name}
+                                onChange={(e) =>
+                                  updateManualRow(index, { name: e.target.value })
+                                }
+                                placeholder="First name"
+                                autoComplete="name"
+                                className="h-11 min-h-[44px] rounded-xl"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label
+                                htmlFor={emailId}
+                                className="text-xs font-medium text-slate-600 sm:sr-only"
+                              >
+                                Email <span className="text-[#F472B6]">*</span>
+                              </Label>
+                              <Input
+                                id={emailId}
+                                value={row.email}
+                                onChange={(e) =>
+                                  updateManualRow(index, { email: e.target.value })
+                                }
+                                onPaste={(e) => {
+                                  const text = e.clipboardData.getData('text');
+                                  if (handleManualEmailPaste(index, text)) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (
+                                    e.key === 'Enter' &&
+                                    isValidContactEmail(row.email)
+                                  ) {
+                                    e.preventDefault();
+                                    if (index === manualRows.length - 1) {
+                                      addManualRow();
+                                    }
+                                  }
+                                }}
+                                placeholder="name@company.com"
+                                type="email"
+                                inputMode="email"
+                                autoComplete="email"
+                                aria-invalid={emailInvalid}
+                                className={`h-11 min-h-[44px] rounded-xl ${
+                                  emailInvalid
+                                    ? 'border-rose-300 focus-visible:ring-rose-200'
+                                    : ''
+                                }`}
+                              />
+                              {emailInvalid ? (
+                                <p className="text-[11px] font-medium text-rose-600">
+                                  Enter a valid email address
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() =>
-                      setManualRows([...manualRows, { name: '', email: '' }])
-                    }
-                    className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-semibold text-[#2B2568] hover:bg-[#E9D5FF]/40"
+                    onClick={addManualRow}
+                    className="w-full min-h-[48px] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 hover:border-[#F472B6]/40 hover:bg-[#F472B6]/5 inline-flex items-center justify-center gap-2 text-sm font-semibold text-[#2B2568] transition-colors"
                   >
-                    <Plus size={14} />
-                    Add another
+                    <Plus size={16} className="text-[#F472B6]" />
+                    Add another contact
                   </button>
+
+                  {manualContactsReady.length > 0 ? (
+                    <p className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+                      {manualContactsReady.length} contact
+                      {manualContactsReady.length === 1 ? '' : 's'} ready to import
+                    </p>
+                  ) : (
+                    <p className="text-xs font-medium text-slate-400 text-center">
+                      Add at least one valid email to continue
+                    </p>
+                  )}
                 </>
               ) : (
                 <>
@@ -1698,29 +1911,63 @@ export default function EmailAdminPanel() {
               )}
             </div>
 
-            <div className="px-5 py-4 border-t border-zinc-100 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setImportOpen(false)}
-                className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={importListMutation.isPending}
-                onClick={() =>
-                  importTab === 'manual' ? submitManualImport() : submitCsvImport()
-                }
-                className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white text-xs font-semibold disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                {importListMutation.isPending ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Upload size={14} />
-                )}
-                Import contacts
-              </button>
+            <div className="px-5 py-4 border-t border-zinc-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              {importTab === 'manual' ? (
+                <p className="text-xs font-medium text-slate-500">
+                  {manualContactsReady.length > 0
+                    ? `${manualContactsReady.length} valid email${
+                        manualContactsReady.length === 1 ? '' : 's'
+                      }`
+                    : 'Email required for each contact'}
+                </p>
+              ) : (
+                <p className="text-xs font-medium text-slate-500">
+                  {csvPreview.length > 0
+                    ? `${csvPreview.length} contact${
+                        csvPreview.length === 1 ? '' : 's'
+                      } in CSV`
+                    : 'Upload a CSV to preview contacts'}
+                </p>
+              )}
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setImportOpen(false)}
+                  className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    importListMutation.isPending ||
+                    (importTab === 'manual'
+                      ? manualContactsReady.length === 0
+                      : csvPreview.length === 0)
+                  }
+                  onClick={() =>
+                    importTab === 'manual' ? submitManualImport() : submitCsvImport()
+                  }
+                  className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white text-xs font-semibold disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  {importListMutation.isPending ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Upload size={14} />
+                  )}
+                  {importTab === 'manual'
+                    ? manualContactsReady.length > 0
+                      ? `Import ${manualContactsReady.length} contact${
+                          manualContactsReady.length === 1 ? '' : 's'
+                        }`
+                      : 'Import contacts'
+                    : csvPreview.length > 0
+                      ? `Import ${csvPreview.length} contact${
+                          csvPreview.length === 1 ? '' : 's'
+                        }`
+                      : 'Import contacts'}
+                </button>
+              </div>
             </div>
           </div>
         </>
@@ -1779,6 +2026,13 @@ export default function EmailAdminPanel() {
                     </option>
                   ))}
                 </select>
+                <p className="mt-1.5 text-xs font-medium text-slate-500">
+                  {audienceRecipientCount > 0
+                    ? `${audienceRecipientCount} subscriber${
+                        audienceRecipientCount === 1 ? '' : 's'
+                      } match this audience`
+                    : 'No subscribers match — import contacts or sync community members'}
+                </p>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5 gap-2">
@@ -1991,18 +2245,19 @@ export default function EmailAdminPanel() {
 
             <div className="px-5 py-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-2">
               {!canBroadcast && (
-                <div className="w-full mb-1">
+                <div className="w-full mb-1 sm:mb-0 sm:flex-1">
                   <PlanLockBadge minPlan="creator" />
                   <p className="text-xs text-slate-500 font-medium mt-1">
-                    Broadcasts available on Creator Plan
+                    Full broadcasts need Creator plan — test email still works below
                   </p>
                 </div>
               )}
               <button
                 type="button"
-                disabled={!canSend || !canBroadcast}
+                disabled={!canSend}
                 onClick={() => sendMutation.mutate('test')}
                 className="flex-1 h-11 min-h-[44px] rounded-xl border border-zinc-200 text-sm font-extrabold text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                title="Sends only to your account email"
               >
                 {sendMutation.isPending ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -2013,7 +2268,11 @@ export default function EmailAdminPanel() {
               </button>
               <button
                 type="button"
-                disabled={!canSend || !canBroadcast}
+                disabled={
+                  !canSend ||
+                  !canBroadcast ||
+                  (audienceRecipientCount === 0 && !sendMutation.isPending)
+                }
                 onClick={() => {
                   if (!canBroadcast) {
                     requestUpgrade('creator');
