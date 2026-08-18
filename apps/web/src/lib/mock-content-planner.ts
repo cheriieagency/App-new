@@ -16,7 +16,7 @@ export type SocialPlatform =
 export type ContentTone = 'inspirerande' | 'professionell' | 'saljig' | 'casual';
 
 /** Legacy status used by older admin composer. */
-export type PlannerPostStatus = 'draft' | 'scheduled' | 'published';
+export type PlannerPostStatus = 'draft' | 'scheduled' | 'published' | 'failed';
 
 /** Trello-style workflow columns. */
 export type WorkflowStatus =
@@ -24,7 +24,8 @@ export type WorkflowStatus =
   | 'IN_PROGRESS'
   | 'READY'
   | 'SCHEDULED'
-  | 'PUBLISHED';
+  | 'PUBLISHED'
+  | 'FAILED';
 
 export type MediaKind = 'image' | 'video' | 'carousel';
 
@@ -102,6 +103,8 @@ export type PlannerPost = {
   comments: PlannerComment[];
   created_at: string;
   created_by: string;
+  /** Last publish error message when workflow is FAILED. */
+  error_log?: string | null;
   /** Session user that owns this planner post (isolation). */
   owner_user_id?: string;
 };
@@ -445,17 +448,26 @@ export const WORKFLOW_COLUMNS: {
     color: '#10B981',
     badge: 'bg-emerald-50 text-emerald-700',
   },
+  {
+    key: 'FAILED',
+    label: 'Failed',
+    emoji: '⚠️',
+    color: '#EF4444',
+    badge: 'bg-red-50 text-red-700',
+  },
 ];
 
 export function workflowToLegacy(workflow: WorkflowStatus): PlannerPostStatus {
   if (workflow === 'PUBLISHED') return 'published';
   if (workflow === 'SCHEDULED') return 'scheduled';
+  if (workflow === 'FAILED') return 'failed';
   return 'draft';
 }
 
 export function legacyToWorkflow(status: PlannerPostStatus): WorkflowStatus {
   if (status === 'published') return 'PUBLISHED';
   if (status === 'scheduled') return 'SCHEDULED';
+  if (status === 'failed') return 'FAILED';
   return 'IDEA';
 }
 

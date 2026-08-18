@@ -7,6 +7,7 @@ import {
   Lightbulb,
   PenLine,
   Rocket,
+  TriangleAlert,
 } from 'lucide-react';
 import {
   WORKFLOW_COLUMNS,
@@ -25,6 +26,7 @@ const WORKFLOW_LABEL_KEYS: Record<WorkflowStatus, TranslationKey> = {
   READY: 'workflowReview',
   SCHEDULED: 'workflowScheduled',
   PUBLISHED: 'workflowPublished',
+  FAILED: 'workflowFailed',
 };
 
 const COLUMN_ICON: Record<
@@ -54,6 +56,10 @@ const COLUMN_ICON: Record<
     Icon: Rocket,
     wrap: 'bg-cyan-50 text-cyan-600 border border-cyan-200/80',
   },
+  FAILED: {
+    Icon: TriangleAlert,
+    wrap: 'bg-red-50 text-red-600 border border-red-200/80',
+  },
 };
 
 const COLUMN_BADGE: Record<WorkflowStatus, string> = {
@@ -62,6 +68,7 @@ const COLUMN_BADGE: Record<WorkflowStatus, string> = {
   READY: 'bg-purple-50 text-purple-700 border-purple-200/70',
   SCHEDULED: 'bg-emerald-50 text-emerald-700 border-emerald-200/70',
   PUBLISHED: 'bg-cyan-50 text-cyan-700 border-cyan-200/70',
+  FAILED: 'bg-red-50 text-red-700 border-red-200/70',
 };
 
 function formatShortDate(iso: string | null, locale: string) {

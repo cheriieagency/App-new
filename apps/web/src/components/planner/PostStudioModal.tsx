@@ -58,6 +58,7 @@ import {
   FacebookIcon,
   InstagramIcon,
   LinkedInIcon,
+  PinterestIcon,
   TikTokIcon,
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
@@ -97,6 +98,7 @@ const WORKFLOW_LABEL_KEYS: Record<WorkflowStatus, TranslationKey> = {
   READY: 'workflowReview',
   SCHEDULED: 'workflowScheduled',
   PUBLISHED: 'workflowPublished',
+  FAILED: 'workflowFailed',
 };
 
 const EMOJIS = ['🔥', '✨', '🙌', '💡', '🚀', '❤️', '👍', '🎯', '✅', '😊'];
@@ -111,6 +113,7 @@ const PLATFORM_OPTIONS: {
   { key: 'tiktok', label: 'TikTok', Icon: TikTokIcon },
   { key: 'linkedin', label: 'LinkedIn', Icon: LinkedInIcon },
   { key: 'youtube', label: 'YouTube', Icon: YouTubeIcon },
+  { key: 'pinterest', label: 'Pinterest', Icon: PinterestIcon },
 ];
 
 const PROJECT_COLORS = [
@@ -402,7 +405,7 @@ export default function PostStudioModal({
     try {
       const nextWorkflow: WorkflowStatus =
         mode === 'post'
-          ? 'PUBLISHED'
+          ? 'READY'
           : mode === 'schedule'
             ? 'SCHEDULED'
             : 'IDEA';
@@ -420,11 +423,9 @@ export default function PostStudioModal({
           platforms,
           workflow: nextWorkflow,
           status:
-            mode === 'post'
-              ? 'published'
-              : mode === 'schedule'
-                ? 'scheduled'
-                : 'draft',
+            mode === 'schedule'
+              ? 'scheduled'
+              : 'draft',
           project,
           campaigns: campaignIds,
           assignees,
@@ -434,12 +435,10 @@ export default function PostStudioModal({
           scheduled_at:
             mode === 'schedule' && scheduledAt
               ? new Date(scheduledAt).toISOString()
-              : mode === 'post'
-                ? new Date().toISOString()
-                : scheduledAt
-                  ? new Date(scheduledAt).toISOString()
-                  : null,
-          published_at: mode === 'post' ? new Date().toISOString() : null,
+              : scheduledAt
+                ? new Date(scheduledAt).toISOString()
+                : null,
+          published_at: null,
           actor: 'Ebba',
           workspaceId,
         }),
@@ -449,6 +448,7 @@ export default function PostStudioModal({
         post?: { id?: string };
       };
       if (savedJson.post?.id) setWorkingPostId(savedJson.post.id);
+      const postId = savedJson.post?.id || post?.id || workingPostId || undefined;
 
       if (mode === 'post') {
         const primaryMedia =
@@ -470,6 +470,7 @@ export default function PostStudioModal({
           },
           credentials: 'include',
           body: JSON.stringify({
+            postId,
             workspaceId,
             platforms: platforms.filter((p) => connectedPlatforms.has(p)),
             caption,
@@ -485,16 +486,17 @@ export default function PostStudioModal({
           ok?: boolean;
           message?: string;
           error?: string;
+          error_log?: string;
           results?: Array<{ platform: string; ok: boolean; error?: string }>;
         };
         if (!publishRes.ok || !publishJson.ok) {
           const detail =
+            publishJson.error_log ||
             publishJson.error ||
             publishJson.results?.find((x) => !x.ok)?.error ||
             publishJson.message ||
             t('toastPublishFailed', locale);
           toast.error(detail);
-          // Keep planner row as published attempt; don't close silently.
           onSaved();
           void queryClient.invalidateQueries({ queryKey: ['planner-campaign'] });
           return;

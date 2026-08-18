@@ -18,7 +18,7 @@ import type {
 } from '@/lib/mock-content-planner';
 
 let schemaReady: Promise<void> | null = null;
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -91,6 +91,17 @@ export async function ensurePlannerPostsSchema(): Promise<void> {
       CREATE UNIQUE INDEX IF NOT EXISTS planner_posts_share_token_uidx
         ON public.planner_posts (share_token)
         WHERE share_token IS NOT NULL AND share_token <> ''
+    `);
+    await safeAlter('planner_posts_error_log', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS error_log text
+    `);
+    await safeAlter('planner_posts_scheduled_auto_idx', () => sql`
+      CREATE INDEX IF NOT EXISTS planner_posts_scheduled_auto_idx
+        ON public.planner_posts (scheduled_at)
+        WHERE workflow = 'SCHEDULED'
+          AND auto_post = true
+          AND scheduled_at IS NOT NULL
     `);
 
     schemaVersionApplied = SCHEMA_VERSION;
@@ -186,6 +197,10 @@ function rowToPost(row: Record<string, unknown>): PlannerPost {
     }),
     created_at: String(row.created_at ?? new Date().toISOString()),
     created_by: String(row.created_by ?? ''),
+    error_log:
+      typeof row.error_log === 'string' && row.error_log.trim()
+        ? row.error_log
+        : null,
     owner_user_id: String(row.user_id ?? ''),
   };
 }
@@ -235,12 +250,14 @@ function newId(prefix: string) {
 function workflowFromStatus(status: PlannerPostStatus): WorkflowStatus {
   if (status === 'published') return 'PUBLISHED';
   if (status === 'scheduled') return 'SCHEDULED';
+  if (status === 'failed') return 'FAILED';
   return 'IDEA';
 }
 
 function statusFromWorkflow(workflow: WorkflowStatus): PlannerPostStatus {
   if (workflow === 'PUBLISHED') return 'published';
   if (workflow === 'SCHEDULED') return 'scheduled';
+  if (workflow === 'FAILED') return 'failed';
   return 'draft';
 }
 
@@ -515,4 +532,59 @@ export async function addDurablePlannerComment(input: {
     WHERE id = ${input.id} AND user_id = ${input.userId}
   `;
   return comment;
+}
+
+/** Set planner post workflow after a publish attempt (success → PUBLISHED, failure → FAILED). */
+export async function markPlannerPostPublishOutcome(input: {
+  postId: string;
+  userId: string;
+  success: boolean;
+  errorLog: string | null;
+  activityText: string;
+}): Promise<void> {
+  if (!process.env.DATABASE_URL?.trim()) return;
+  await ensurePlannerPostsSchema();
+
+  const existing = await getDurablePlannerPost({
+    id: input.postId,
+    userId: input.userId,
+  });
+  if (!existing) return;
+
+  const now = new Date().toISOString();
+  const activity = [
+    ...existing.activity,
+    {
+      id: newId('act'),
+      text: input.activityText,
+      created_at: now,
+      visibility: 'private' as const,
+    },
+  ].slice(-40);
+
+  if (input.success) {
+    await sql`
+      UPDATE public.planner_posts
+      SET
+        workflow = 'PUBLISHED',
+        status = 'published',
+        published_at = ${now},
+        error_log = NULL,
+        activity = ${JSON.stringify(activity)},
+        updated_at = ${now}
+      WHERE id = ${input.postId} AND user_id = ${input.userId}
+    `;
+    return;
+  }
+
+  await sql`
+    UPDATE public.planner_posts
+    SET
+      workflow = 'FAILED',
+      status = 'failed',
+      error_log = ${input.errorLog},
+      activity = ${JSON.stringify(activity)},
+      updated_at = ${now}
+    WHERE id = ${input.postId} AND user_id = ${input.userId}
+  `;
 }

@@ -159,6 +159,7 @@ export type ExtraKey =
   | 'workflowReview'
   | 'workflowScheduled'
   | 'workflowPublished'
+  | 'workflowFailed'
   | 'statusConnected'
   | 'statusNotConnected'
   | 'disconnect'
@@ -1371,6 +1372,7 @@ export const EXTRA_EN: ExtraDict = {
   workflowReview: 'Review',
   workflowScheduled: 'Scheduled',
   workflowPublished: 'Published',
+  workflowFailed: 'Failed',
   statusConnected: 'Connected',
   statusNotConnected: 'Not connected',
   disconnect: 'Disconnect',
@@ -2592,6 +2594,7 @@ export const EXTRA_SV: ExtraDict = {
   workflowReview: 'Granskning',
   workflowScheduled: 'Schemalagt',
   workflowPublished: 'Publicerat',
+  workflowFailed: 'Misslyckades',
   statusConnected: 'Ansluten',
   statusNotConnected: 'Ej ansluten',
   disconnect: 'Koppla från',
@@ -3727,6 +3730,7 @@ export const EXTRA_NO: ExtraDict = {
   workflowReview: 'Gjennomgang',
   workflowScheduled: 'Planlagt',
   workflowPublished: 'Publisert',
+  workflowFailed: 'Mislyktes',
   statusConnected: 'Tilkoblet',
   statusNotConnected: 'Ikke tilkoblet',
   disconnect: 'Koble fra',
@@ -3872,6 +3876,7 @@ export const EXTRA_DA: ExtraDict = {
   workflowReview: 'Gennemgang',
   workflowScheduled: 'Planlagt',
   workflowPublished: 'Udgivet',
+  workflowFailed: 'Mislykkedes',
   statusConnected: 'Forbundet',
   statusNotConnected: 'Ikke forbundet',
   disconnect: 'Frakobl',
@@ -4104,6 +4109,7 @@ export const EXTRA_FI: ExtraDict = {
   workflowReview: 'Tarkistus',
   workflowScheduled: 'Ajastettu',
   workflowPublished: 'Julkaistu',
+  workflowFailed: 'Epäonnistui',
   statusConnected: 'Yhdistetty',
   statusNotConnected: 'Ei yhdistetty',
   disconnect: 'Katkaise',
