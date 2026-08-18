@@ -80,7 +80,23 @@ export const tiktokEnv = {
     readEnv('TIKTOK_CLIENT_KEY') || readEnv('TIKTOK_CLIENT_ID'),
   /** process.env.TIKTOK_CLIENT_SECRET — Login Kit client secret */
   clientSecret: () => readEnv('TIKTOK_CLIENT_SECRET'),
+  /** process.env.TIKTOK_BUSINESS_APP_ID — Marketing / Business API app id */
+  businessAppId: () =>
+    readEnv('TIKTOK_BUSINESS_APP_ID') || readEnv('TIKTOK_APP_ID'),
+  /** process.env.TIKTOK_BUSINESS_SECRET — Marketing / Business API secret */
+  businessSecret: () =>
+    readEnv('TIKTOK_BUSINESS_SECRET') || readEnv('TIKTOK_APP_SECRET'),
+  /** True when Business Messaging credentials are configured. */
+  hasBusinessCredentials: () =>
+    Boolean(
+      (readEnv('TIKTOK_BUSINESS_APP_ID') || readEnv('TIKTOK_APP_ID')) &&
+        (readEnv('TIKTOK_BUSINESS_SECRET') || readEnv('TIKTOK_APP_SECRET'))
+    ),
   requiredKeys: ['TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET'] as const,
+  businessRequiredKeys: [
+    'TIKTOK_BUSINESS_APP_ID',
+    'TIKTOK_BUSINESS_SECRET',
+  ] as const,
 };
 
 // ---------------------------------------------------------------------------

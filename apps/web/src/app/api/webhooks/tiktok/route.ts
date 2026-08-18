@@ -14,6 +14,7 @@ import {
   ingestTikTokIncomingMessage,
   resolveTikTokAccountByOpenId,
 } from '@/lib/tiktok/inbox-persist';
+import sql from '@/app/api/utils/sql';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -108,15 +109,39 @@ export async function POST(request: Request) {
 
       const events = extractTikTokImEvents(payload);
       for (const im of events) {
-        const account =
+        let account =
           (im.businessOpenId
             ? await resolveTikTokAccountByOpenId(im.businessOpenId)
             : null) ||
           (await resolveTikTokAccountByOpenId(im.senderOpenId));
 
+        // Also resolve workspace via tiktok_tokens (Business OAuth).
+        if (!account?.workspaceId && process.env.DATABASE_URL?.trim()) {
+          const openId = im.businessOpenId || im.senderOpenId;
+          if (openId) {
+            const rows = await sql`
+              SELECT workspace_id, user_id
+              FROM public.tiktok_tokens
+              WHERE open_id = ${openId}
+              ORDER BY updated_at DESC
+              LIMIT 1
+            `;
+            const row = rows?.[0] as
+              | { workspace_id?: string; user_id?: string }
+              | undefined;
+            if (row?.workspace_id) {
+              account = {
+                workspaceId: String(row.workspace_id),
+                userId: String(row.user_id || ''),
+                accessToken: '',
+              };
+            }
+          }
+        }
+
         if (!account?.workspaceId) {
           console.warn(
-            '[webhooks/tiktok] no social_accounts match for open_id',
+            '[webhooks/tiktok] no social_accounts/tiktok_tokens match for open_id',
             im.businessOpenId || im.senderOpenId
           );
           continue;

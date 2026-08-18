@@ -43,7 +43,7 @@ const SOCIAL_ICONS = {
 const LOGIN_PATH: Partial<Record<SocialPlatform, string>> = {
   instagram: '/api/auth/meta/login?target=instagram',
   facebook: '/api/auth/meta/login?target=facebook',
-  tiktok: '/api/auth/tiktok/login?force=true',
+  tiktok: '/api/auth/tiktok?force=true',
   youtube: '/api/auth/youtube/login',
   linkedin: '/api/auth/linkedin/login',
   pinterest: '/api/auth/pinterest/login',

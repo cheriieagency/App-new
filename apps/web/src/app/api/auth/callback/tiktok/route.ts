@@ -1,12 +1,17 @@
 /**
  * GET /api/auth/callback/tiktok
- * TikTok OAuth callback → extract code/state → exchange at
- * https://open.tiktokapis.com/v2/oauth/token/ → redirect to settings or inbox.
+ * Handles both:
+ *  - TikTok Business OAuth (`auth_code` → Business token API → tiktok_tokens)
+ *  - Login Kit (`code` + PKCE → open.tiktokapis.com → social_accounts + tiktok_tokens)
  */
 
 import { NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
+import {
+  TIKTOK_BUSINESS_FLOW_COOKIE,
+  exchangeTikTokBusinessAuthCode,
+} from '@/lib/tiktok/business-oauth';
 import {
   TIKTOK_CODE_VERIFIER_COOKIE,
   TIKTOK_OAUTH_STATE_COOKIE,
@@ -16,6 +21,7 @@ import {
   getTikTokCallbackUrl,
   getTikTokSuccessRedirectPath,
 } from '@/lib/tiktok/oauth';
+import { upsertTikTokToken } from '@/lib/tiktok/tokens-persist';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
@@ -32,12 +38,16 @@ function clearOAuthCookies(res: NextResponse) {
   res.cookies.set(TIKTOK_OAUTH_STATE_COOKIE, '', clear);
   res.cookies.set(TIKTOK_CODE_VERIFIER_COOKIE, '', clear);
   res.cookies.set(TIKTOK_RETURN_TO_COOKIE, '', clear);
+  res.cookies.set(TIKTOK_BUSINESS_FLOW_COOKIE, '', clear);
 }
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  // Query params from TikTok redirect (URLSearchParams already decodes once).
-  const code = url.searchParams.get('code')?.trim() || null;
+  // Business Portal returns `auth_code`; Login Kit returns `code`.
+  const authCode =
+    url.searchParams.get('auth_code')?.trim() ||
+    url.searchParams.get('code')?.trim() ||
+    null;
   const state = url.searchParams.get('state')?.trim() || null;
   const oauthError =
     url.searchParams.get('error') ||
@@ -49,6 +59,10 @@ export async function GET(request: Request) {
   const jar = await cookies();
   const returnTo = jar.get(TIKTOK_RETURN_TO_COOKIE)?.value || 'settings';
   const successPath = getTikTokSuccessRedirectPath(returnTo);
+  const flowHint = jar.get(TIKTOK_BUSINESS_FLOW_COOKIE)?.value || '';
+  const isBusinessFlow =
+    flowHint === 'business' ||
+    Boolean(url.searchParams.get('auth_code')?.trim());
 
   const fail = (reason: string, detail?: string | null) => {
     const dest = new URL(successPath, origin);
@@ -68,14 +82,11 @@ export async function GET(request: Request) {
   if (oauthError) {
     return fail(String(oauthError), oauthErrorDesc);
   }
-  if (!code) return fail('missing_code');
+  if (!authCode) return fail('missing_code');
   if (!state) return fail('missing_state');
 
   const expected = jar.get(TIKTOK_OAUTH_STATE_COOKIE)?.value;
   if (!expected || state !== expected) return fail('invalid_state');
-
-  const codeVerifier = jar.get(TIKTOK_CODE_VERIFIER_COOKIE)?.value?.trim();
-  if (!codeVerifier) return fail('missing_code_verifier');
 
   const workspaceId = resolveOAuthWorkspaceId({
     state,
@@ -101,36 +112,85 @@ export async function GET(request: Request) {
   if (!ownedWorkspaceId) return fail('workspace_create_failed');
 
   try {
-    // Exchange authorization code → access_token (same redirect_uri as authorize).
-    const callbackUrl = getTikTokCallbackUrl(origin);
-    console.info('[tiktok/callback] exchanging code', {
-      redirect_uri: callbackUrl,
-      has_code: Boolean(code),
-      has_state: Boolean(state),
-    });
+    if (isBusinessFlow) {
+      console.info('[tiktok/callback] business token exchange', {
+        redirect_uri: getTikTokCallbackUrl(origin),
+      });
 
-    const tokens = await exchangeTikTokCode(code, origin, codeVerifier);
-    const profile = await fetchTikTokUserInfo(tokens.access_token);
-    const openId = profile.open_id || tokens.open_id;
-    if (!openId) return fail('tiktok_missing_open_id');
+      const tokens = await exchangeTikTokBusinessAuthCode(authCode);
+      const openId =
+        tokens.open_id ||
+        tokens.advertiser_ids?.[0] ||
+        `biz_${userId.slice(0, 8)}`;
 
-    const handle = profile.display_name
-      ? `@${profile.display_name.replace(/^@/, '')}`
-      : null;
+      await upsertTikTokToken({
+        workspaceId: ownedWorkspaceId,
+        userId,
+        openId,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token ?? null,
+        advertiserIds: tokens.advertiser_ids ?? [],
+        scope: tokens.scope,
+        tokenSource: 'business',
+        expiresIn: tokens.expires_in ?? 24 * 60 * 60,
+      });
 
-    await upsertOAuthSocialAccount({
-      userId,
-      platform: 'tiktok',
-      externalId: openId,
-      handle,
-      displayName: profile.display_name,
-      avatarUrl: profile.avatar_url,
-      followersCount: profile.follower_count,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token ?? null,
-      expiresIn: tokens.expires_in ?? null,
-      workspaceId: ownedWorkspaceId,
-    });
+      await upsertOAuthSocialAccount({
+        userId,
+        platform: 'tiktok',
+        externalId: openId,
+        handle: '@tiktok_business',
+        displayName: 'TikTok Business',
+        avatarUrl: null,
+        followersCount: null,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token ?? null,
+        expiresIn: tokens.expires_in ?? 24 * 60 * 60,
+        workspaceId: ownedWorkspaceId,
+      });
+    } else {
+      const codeVerifier = jar.get(TIKTOK_CODE_VERIFIER_COOKIE)?.value?.trim();
+      if (!codeVerifier) return fail('missing_code_verifier');
+
+      console.info('[tiktok/callback] login kit exchange', {
+        redirect_uri: getTikTokCallbackUrl(origin),
+      });
+
+      const tokens = await exchangeTikTokCode(authCode, origin, codeVerifier);
+      const profile = await fetchTikTokUserInfo(tokens.access_token);
+      const openId = profile.open_id || tokens.open_id;
+      if (!openId) return fail('tiktok_missing_open_id');
+
+      const handle = profile.display_name
+        ? `@${profile.display_name.replace(/^@/, '')}`
+        : null;
+
+      await upsertTikTokToken({
+        workspaceId: ownedWorkspaceId,
+        userId,
+        openId,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token ?? null,
+        advertiserIds: [],
+        scope: tokens.scope ?? null,
+        tokenSource: 'login_kit',
+        expiresIn: tokens.expires_in ?? null,
+      });
+
+      await upsertOAuthSocialAccount({
+        userId,
+        platform: 'tiktok',
+        externalId: openId,
+        handle,
+        displayName: profile.display_name,
+        avatarUrl: profile.avatar_url,
+        followersCount: profile.follower_count,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token ?? null,
+        expiresIn: tokens.expires_in ?? null,
+        workspaceId: ownedWorkspaceId,
+      });
+    }
 
     const dest = new URL(successPath, origin);
     dest.searchParams.set('success', 'tiktok_connected');

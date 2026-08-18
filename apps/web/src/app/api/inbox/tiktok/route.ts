@@ -1,13 +1,15 @@
 /**
  * GET  /api/inbox/tiktok — list TikTok DM threads for the active workspace
- * POST /api/inbox/tiktok/send — alias handled by sibling send route
+ * Falls back to mock threads when TIKTOK_BUSINESS_SECRET is not configured
+ * (UI testing / automation preview).
  */
 
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { requireFeature } from '@/lib/plan-guard';
 import { listTikTokInboxThreads } from '@/lib/tiktok/inbox-persist';
-import { cookies } from 'next/headers';
+import { getMockTikTokInboxThreads } from '@/lib/tiktok/mock-inbox';
+import { isTikTokBusinessMockMode } from '@/lib/tiktok/business-oauth';
 import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
@@ -38,14 +40,47 @@ export async function GET(request: Request) {
     );
   }
 
+  const mockMode = isTikTokBusinessMockMode();
+
   try {
     const threads = await listTikTokInboxThreads({
       workspaceId,
       userId: session.user.id,
     });
-    return Response.json({ ok: true, threads, demo: false });
+
+    // Prefer real DB conversations; seed mock UI when Business secret unset.
+    if (threads.length > 0) {
+      return Response.json({
+        ok: true,
+        threads,
+        demo: false,
+        mock: false,
+      });
+    }
+
+    if (mockMode) {
+      return Response.json({
+        ok: true,
+        threads: getMockTikTokInboxThreads(),
+        demo: true,
+        mock: true,
+        message:
+          'TikTok Business secret not configured — showing mock inbox for UI testing.',
+      });
+    }
+
+    return Response.json({ ok: true, threads: [], demo: false, mock: false });
   } catch (error) {
     console.error('[GET /api/inbox/tiktok]', error);
+    if (mockMode) {
+      return Response.json({
+        ok: true,
+        threads: getMockTikTokInboxThreads(),
+        demo: true,
+        mock: true,
+        message: 'Inbox list failed — serving mock TikTok threads.',
+      });
+    }
     return Response.json(
       {
         error: 'list_failed',

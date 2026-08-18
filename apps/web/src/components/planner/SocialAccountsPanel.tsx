@@ -685,8 +685,8 @@ export default function SocialAccountsPanel({
 
   const tiktokLoginUrl = (force = true) => {
     const path = force
-      ? '/api/auth/tiktok/login?force=true'
-      : '/api/auth/tiktok/login';
+      ? '/api/auth/tiktok?force=true'
+      : '/api/auth/tiktok';
     return withWorkspaceQuery(path, activeWorkspaceId);
   };
 

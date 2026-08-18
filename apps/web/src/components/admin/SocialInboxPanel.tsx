@@ -123,14 +123,16 @@ export default function SocialInboxPanel() {
   const queryClient = useQueryClient();
   const { activeWorkspace } = useWorkspace();
   const { hasInstagram, hasTikTok, accounts, isLoading } = useConnectedSocials();
-  const hasAnyInboxChannel = hasInstagram || hasTikTok;
-
   const { data: metaSync, isFetching, isError, error } = useMetaSync(hasInstagram);
   const {
     data: tiktokInbox,
     isFetching: tiktokFetching,
     refetch: refetchTikTok,
-  } = useTikTokInbox(hasTikTok);
+  } = useTikTokInbox(true);
+  const tiktokMock = Boolean(tiktokInbox?.mock || tiktokInbox?.demo);
+  const hasTikTokInbox =
+    hasTikTok || tiktokMock || (tiktokInbox?.threads?.length ?? 0) > 0;
+  const hasAnyInboxChannel = hasInstagram || hasTikTokInbox;
 
   const [localThreads, setLocalThreads] = useState<DmThread[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -159,11 +161,11 @@ export default function SocialInboxPanel() {
 
   useEffect(() => {
     if (platformFilter === 'instagram' && !hasInstagram) {
-      setPlatformFilter(hasTikTok ? 'tiktok' : 'all');
-    } else if (platformFilter === 'tiktok' && !hasTikTok) {
+      setPlatformFilter(hasTikTokInbox ? 'tiktok' : 'all');
+    } else if (platformFilter === 'tiktok' && !hasTikTokInbox) {
       setPlatformFilter(hasInstagram ? 'instagram' : 'all');
     }
-  }, [hasInstagram, hasTikTok, platformFilter]);
+  }, [hasInstagram, hasTikTokInbox, platformFilter]);
 
   useEffect(() => {
     if (platformFilter === 'tiktok' && channelFilter === 'comment') {
@@ -237,7 +239,7 @@ export default function SocialInboxPanel() {
   }, [channelScopedThreads, searchQuery]);
 
   const showCommentFilter = platformFilter !== 'tiktok';
-  const showPlatformSwitcher = hasInstagram && hasTikTok;
+  const showPlatformSwitcher = hasInstagram && hasTikTokInbox;
 
   useEffect(() => {
     setLocalThreads(null);
@@ -271,10 +273,11 @@ export default function SocialInboxPanel() {
   ]);
 
   const tiktokHandle = useMemo(() => {
-    if (!hasTikTok) return null;
+    if (!hasTikTokInbox) return null;
+    if (tiktokMock && !hasTikTok) return '@tiktok (demo)';
     const tt = accounts.find((a) => a.platform === 'tiktok');
     return formatHandle(tt?.handle || tt?.display_name) || '@tiktok';
-  }, [hasTikTok, accounts]);
+  }, [hasTikTokInbox, hasTikTok, tiktokMock, accounts]);
 
   const handleBadge = useMemo(() => {
     if (platformFilter === 'instagram') return instagramHandle;
@@ -312,7 +315,7 @@ export default function SocialInboxPanel() {
           })
         );
       }
-      if (hasTikTok) {
+      if (hasTikTok || tiktokMock) {
         jobs.push(refetchTikTok());
       }
       const results = await Promise.all(jobs);
@@ -335,13 +338,13 @@ export default function SocialInboxPanel() {
           } else {
             toast.success(
               `Synced IG ${dms} DM${dms === 1 ? '' : 's'} · ${comments} comment${comments === 1 ? '' : 's'}${
-                hasTikTok ? ' · TikTok refreshed' : ''
+                hasTikTokInbox ? ' · TikTok refreshed' : ''
               }`
             );
           }
         }
-      } else if (hasTikTok) {
-        toast.success('TikTok inbox refreshed');
+      } else if (hasTikTokInbox) {
+        toast.success(tiktokMock ? 'Demo TikTok inbox refreshed' : 'TikTok inbox refreshed');
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Refresh failed');
@@ -640,11 +643,29 @@ export default function SocialInboxPanel() {
         </div>
       ) : null}
 
+      {mainTab === 'inbox' && tiktokMock ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-700 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <p className="min-w-0">
+            TikTok Business credentials not configured — showing demo DMs for UI
+            testing. Set{' '}
+            <span className="font-mono text-[11px]">TIKTOK_BUSINESS_SECRET</span>{' '}
+            for live messaging.
+          </p>
+          <a
+            href={`/api/auth/tiktok?returnTo=inbox&workspaceId=${encodeURIComponent(activeWorkspace.id || '')}`}
+            className="inline-flex items-center justify-center gap-1.5 h-10 min-h-[40px] px-4 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap"
+          >
+            <TikTokIcon size={12} />
+            Connect TikTok
+          </a>
+        </div>
+      ) : null}
+
       {mainTab === 'inbox' ? (
         <>
           {/* Single horizontal filter bar */}
           <div className="flex flex-col xl:flex-row xl:items-center gap-2.5 xl:gap-3">
-            {showPlatformSwitcher || hasInstagram || hasTikTok ? (
+            {showPlatformSwitcher || hasInstagram || hasTikTokInbox ? (
               <div
                 className="inline-flex items-center p-1 rounded-xl bg-slate-100/90 border border-slate-200/60 self-start"
                 role="tablist"
@@ -666,8 +687,8 @@ export default function SocialInboxPanel() {
                     },
                     {
                       key: 'tiktok' as const,
-                      label: 'TikTok',
-                      show: hasTikTok,
+                      label: tiktokMock ? 'TikTok (Demo)' : 'TikTok',
+                      show: hasTikTokInbox,
                       icon: TikTokIcon,
                     },
                   ] as const

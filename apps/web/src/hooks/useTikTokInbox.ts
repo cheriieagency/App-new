@@ -48,11 +48,18 @@ export function useTikTokInbox(enabled: boolean) {
         threads?: TikTokInboxThreadDto[];
         message?: string;
         error?: string;
+        demo?: boolean;
+        mock?: boolean;
       };
       if (!r.ok) {
         throw new Error(json.message || json.error || 'Failed to load TikTok inbox');
       }
-      return { threads: json.threads ?? [] };
+      return {
+        threads: json.threads ?? [],
+        demo: Boolean(json.demo),
+        mock: Boolean(json.mock),
+        message: json.message || null,
+      };
     },
     staleTime: 15_000,
     refetchOnWindowFocus: true,
