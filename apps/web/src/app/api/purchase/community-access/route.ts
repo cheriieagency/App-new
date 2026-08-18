@@ -1,11 +1,13 @@
 import sql from '@/app/api/utils/sql';
 import {
   buildCommunityAccessEmail,
+  buildCommunityAccessUrl,
 } from '@/lib/community-access-email';
 import { listManagedCommunities } from '@/lib/mock-community-admin';
 import {
   fireEmailAutomations,
   persistSubscriber,
+  recordPersistedCommunityEmailSend,
 } from '@/lib/email/crm-persist';
 import { sendCommunityAccessInvite } from '@/lib/mock-email-crm';
 import { sendCommunityWelcomeEmail, sendOrderReceiptEmail } from '@/lib/email/transactional';
@@ -45,15 +47,28 @@ export async function POST(request: Request) {
       request.headers.get('origin') ||
       getSiteUrl();
 
-    // Demo CRM ledger (always) + resolve community creator for durable CRM.
-    const result = sendCommunityAccessInvite({
-      buyerName,
-      buyerEmail,
-      productTitle,
-      communityId,
-      communityName,
-      origin,
-    });
+    const communityUrl = buildCommunityAccessUrl(communityId, origin);
+    const result = process.env.DATABASE_URL?.trim()
+      ? {
+          communityUrl,
+          preview: buildCommunityAccessEmail({
+            buyerName,
+            buyerEmail,
+            productTitle,
+            communityId,
+            communityName,
+            origin,
+          }).body,
+          broadcast: { id: null },
+        }
+      : sendCommunityAccessInvite({
+          buyerName,
+          buyerEmail,
+          productTitle,
+          communityId,
+          communityName,
+          origin,
+        });
 
     let creatorId: string | null = null;
     if (process.env.DATABASE_URL?.trim()) {
@@ -115,6 +130,20 @@ export async function POST(request: Request) {
             communityName,
             origin,
           });
+
+    if (creatorId && automationSent === 0 && welcome.ok) {
+      await recordPersistedCommunityEmailSend({
+        creatorId,
+        communityId,
+        communityName,
+        kind: 'purchase_access',
+        subject: composed.subject,
+        recipientName: buyerName,
+        recipientEmail: buyerEmail,
+        resendId: welcome.id,
+        productTitle,
+      });
+    }
 
     let receipt: Awaited<ReturnType<typeof sendOrderReceiptEmail>> | null = null;
     if (Number.isFinite(amountSek) && amountSek > 0) {

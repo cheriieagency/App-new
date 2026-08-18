@@ -177,10 +177,13 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('[GET /api/admin/email]', error);
-    return Response.json({
-      ...(await emptyEmailCrmPayload(session.user.id, cid)),
-      error: 'load_failed',
-    });
+    return Response.json(
+      {
+        ...(await emptyEmailCrmPayload(session.user.id, cid)),
+        error: 'load_failed',
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -339,6 +342,14 @@ export async function POST(request: Request) {
 
     if (action === 'import_subscribers') {
       const rawContacts = Array.isArray(body.contacts) ? body.contacts : [];
+      const parsedCommunityId = Number(body.community_id);
+      const communityId =
+        body.community_id != null &&
+        body.community_id !== '' &&
+        Number.isFinite(parsedCommunityId) &&
+        parsedCommunityId > 0
+          ? parsedCommunityId
+          : null;
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       let imported = 0;
       let skipped = 0;
@@ -364,7 +375,7 @@ export async function POST(request: Request) {
           email,
           name,
           source: 'imported_list',
-          communityId: null,
+          communityId,
           tags: ['Imported List'],
         });
         if (ok) imported += 1;
@@ -413,7 +424,7 @@ export async function POST(request: Request) {
         ? (body.tags as string[])
         : undefined;
 
-      await persistSubscriber({
+      const persisted = await persistSubscriber({
         creatorId,
         email,
         name,
@@ -424,17 +435,43 @@ export async function POST(request: Request) {
         tags,
       });
 
-      const subscriber = syncSubscriber({
-        email,
-        name,
+      if (!persisted) {
+        return Response.json(
+          {
+            error: 'sync_failed',
+            message: 'Failed to save subscriber to Email CRM',
+          },
+          { status: 500 }
+        );
+      }
+
+      const subscriberPayload = {
+        id: `${creatorId}:${email}`,
         user_id: userId,
+        name,
+        email,
         image,
         source,
+        source_label: source,
+        tags: tags ?? [],
         community_id: communityId,
-        extra_tags: tags,
-      });
+        subscribed_at: new Date().toISOString(),
+      };
 
-      return Response.json({ success: true, subscriber, demo: !process.env.DATABASE_URL?.trim() });
+      if (!process.env.DATABASE_URL?.trim()) {
+        const subscriber = syncSubscriber({
+          email,
+          name,
+          user_id: userId,
+          image,
+          source,
+          community_id: communityId,
+          extra_tags: tags,
+        });
+        return Response.json({ success: true, subscriber, demo: true });
+      }
+
+      return Response.json({ success: true, subscriber: subscriberPayload, demo: false });
     }
 
     if (action === 'send' || action === 'test') {
@@ -465,7 +502,7 @@ export async function POST(request: Request) {
           await sql`
             INSERT INTO email_broadcasts (
               creator_id, subject, body, audience, audience_label,
-              recipient_count, open_rate, click_rate, status
+              recipient_count, open_rate, click_rate, status, image_url
             )
             VALUES (
               ${session.user.id},
@@ -476,7 +513,8 @@ export async function POST(request: Request) {
               ${broadcast.recipient_count},
               ${broadcast.open_rate},
               ${broadcast.click_rate},
-              'sent'
+              'sent',
+              ${image_url}
             )
           `;
         } catch (e) {

@@ -27,7 +27,7 @@ import * as React from 'react';
 
 let schemaReady: Promise<void> | null = null;
 /** Bump when new CRM tables/columns are added so hot servers re-heal. */
-const EMAIL_CRM_SCHEMA_VERSION = 2;
+const EMAIL_CRM_SCHEMA_VERSION = 3;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -213,10 +213,18 @@ export async function ensureEmailCrmSchema(): Promise<void> {
         subject         text NOT NULL,
         recipient_name  text NOT NULL,
         recipient_email text NOT NULL,
+        product_title   text,
         resend_id       text,
         sent_at         timestamptz NOT NULL DEFAULT now()
       )
     `;
+    await safeAlter('email_automation_sends.product_title', () =>
+      sql`ALTER TABLE email_automation_sends ADD COLUMN IF NOT EXISTS product_title text`
+    );
+    await safeAlter('email_automation_sends_creator_idx', () => sql`
+      CREATE INDEX IF NOT EXISTS email_automation_sends_creator_idx
+        ON email_automation_sends (creator_id, sent_at DESC)
+    `);
 
     schemaVersionApplied = EMAIL_CRM_SCHEMA_VERSION;
   })().catch((error) => {
@@ -278,7 +286,7 @@ export async function listPersistedAutomations(input: {
     return ((rows as Array<Record<string, unknown>>) || []).map(mapAutomationRow);
   } catch (error) {
     console.warn('[email/crm] list automations failed', error);
-    return listEmailAutomations({ community_id: input.communityId });
+    return [];
   }
 }
 
@@ -345,7 +353,19 @@ export async function upsertPersistedAutomation(
     SELECT * FROM email_automations WHERE id = ${id} AND creator_id = ${creatorId} LIMIT 1
   `;
   if (Array.isArray(rows) && rows[0]) return mapAutomationRow(rows[0] as Record<string, unknown>);
-  return upsertMockAutomation(input);
+  return {
+    id,
+    name,
+    description,
+    trigger,
+    trigger_label: triggerLabel(trigger),
+    subject,
+    body,
+    status,
+    sent_count: 0,
+    last_sent_at: null,
+    community_id: communityId,
+  };
 }
 
 export async function setPersistedAutomationStatus(
@@ -423,7 +443,7 @@ export async function listPersistedCommunityEmails(input: {
       sent_at: String(r.sent_at ?? ''),
     }));
   } catch {
-    return listCommunityAutomationEmails({ community_id: input.communityId });
+    return [];
   }
 }
 
@@ -441,17 +461,18 @@ export async function persistSubscriber(input: {
   const email = input.email.trim().toLowerCase();
   if (!email) return false;
 
-  syncSubscriber({
-    email,
-    name: input.name,
-    user_id: input.userId,
-    image: input.image,
-    source: input.source,
-    community_id: input.communityId,
-    extra_tags: input.tags,
-  });
-
-  if (!process.env.DATABASE_URL?.trim()) return true;
+  if (!process.env.DATABASE_URL?.trim()) {
+    syncSubscriber({
+      email,
+      name: input.name,
+      user_id: input.userId,
+      image: input.image,
+      source: input.source,
+      community_id: input.communityId,
+      extra_tags: input.tags,
+    });
+    return true;
+  }
   try {
     await ensureEmailCrmSchema();
     const tags = input.tags?.length ? input.tags : [];
@@ -524,9 +545,7 @@ export async function fireEmailAutomations(
       );
     } catch (error) {
       console.warn('[email/crm] load automations for fire failed', error);
-      automations = listEmailAutomations({ community_id: input.communityId }).filter(
-        (a) => a.status === 'active' && a.trigger === input.trigger
-      );
+      automations = [];
     }
   } else {
     automations = listEmailAutomations({ community_id: input.communityId }).filter(
@@ -623,6 +642,56 @@ export async function fireEmailAutomations(
   }
 
   return { sent, skipped: automations.length - sent };
+}
+
+/** Persist a community-related email send so Email CRM history survives reloads. */
+export async function recordPersistedCommunityEmailSend(input: {
+  creatorId: string;
+  communityId: number;
+  communityName: string;
+  kind: 'purchase_access' | 'member_auto';
+  subject: string;
+  recipientName: string;
+  recipientEmail: string;
+  resendId?: string | null;
+  productTitle?: string | null;
+}): Promise<boolean> {
+  const recipientEmail = input.recipientEmail.trim().toLowerCase();
+  if (!recipientEmail) return false;
+
+  if (!process.env.DATABASE_URL?.trim()) {
+    logCommunityAutomationEmail({
+      community_id: input.communityId,
+      community_name: input.communityName,
+      kind: input.kind,
+      kind_label:
+        input.kind === 'purchase_access' ? 'Purchase access' : 'Automation',
+      subject: input.subject,
+      recipient_name: input.recipientName,
+      recipient_email: recipientEmail,
+      product_title: input.productTitle ?? null,
+    });
+    return true;
+  }
+
+  try {
+    await ensureEmailCrmSchema();
+    await sql`
+      INSERT INTO email_automation_sends (
+        automation_id, creator_id, community_id, community_name,
+        kind, subject, recipient_name, recipient_email, product_title, resend_id
+      )
+      VALUES (
+        NULL, ${input.creatorId}, ${input.communityId}, ${input.communityName},
+        ${input.kind}, ${input.subject}, ${input.recipientName},
+        ${recipientEmail}, ${input.productTitle ?? null}, ${input.resendId ?? null}
+      )
+    `;
+    return true;
+  } catch (error) {
+    console.warn('[email/crm] recordPersistedCommunityEmailSend failed', error);
+    return false;
+  }
 }
 
 /** Store Resend message ids for a broadcast so webhooks can update open/click rates. */

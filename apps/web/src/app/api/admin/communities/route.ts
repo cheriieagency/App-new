@@ -185,13 +185,18 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('[GET /api/admin/communities]', error);
-    return Response.json({
-      communities: [],
-      community: null,
-      workspace_id: workspaceId,
-      demo: true,
-      error: 'list_failed',
-    });
+    return Response.json(
+      {
+        communities: [],
+        community: null,
+        workspace_id: workspaceId,
+        demo: false,
+        error: 'list_failed',
+        message:
+          error instanceof Error ? error.message : 'Failed to load communities',
+      },
+      { status: 500 }
+    );
   }
 }
 

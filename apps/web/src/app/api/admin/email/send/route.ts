@@ -86,7 +86,7 @@ async function loadWorkspaceSubscribers(
           SELECT id, user_id, name, email, image, source, tags, community_id, subscribed_at
           FROM email_subscribers
           WHERE creator_id = ${creatorId}
-            AND community_id = ${communityId}
+            AND (community_id = ${communityId} OR community_id IS NULL)
           ORDER BY subscribed_at DESC
           LIMIT 2000
         `
@@ -255,7 +255,7 @@ export async function POST(request: Request) {
       const inserted = await sql`
         INSERT INTO email_broadcasts (
           creator_id, subject, body, audience, audience_label,
-          recipient_count, open_rate, click_rate, status
+          recipient_count, open_rate, click_rate, status, image_url
         )
         VALUES (
           ${session.user.id},
@@ -266,7 +266,8 @@ export async function POST(request: Request) {
           ${sentCount},
           ${0},
           ${0},
-          'sent'
+          'sent',
+          ${imageUrl}
         )
         RETURNING id
       `;

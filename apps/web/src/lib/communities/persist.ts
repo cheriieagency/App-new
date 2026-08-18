@@ -213,5 +213,16 @@ export async function persistCommunityToDatabase(
     }
   }
 
+  // Final verification: if the row still is not workspace-bound, fail loudly so
+  // the admin UI shows a real create error instead of a misleading empty state.
+  const finalWorkspace = String(community.workspace_id ?? '').trim();
+  if (finalWorkspace !== workspaceId) {
+    return {
+      ok: false,
+      error: 'Community saved without workspace binding',
+      status: 500,
+    };
+  }
+
   return { ok: true, community };
 }

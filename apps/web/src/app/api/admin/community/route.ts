@@ -29,7 +29,8 @@ export async function GET(request: Request) {
   const session = await requireSession();
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { searchParams } = new URL(request.url);
+  const url = new URL(request.url);
+  const { searchParams } = url;
   const requestedId = searchParams.get('community_id');
   const communityId = requestedId ? Number(requestedId) : undefined;
 
@@ -56,6 +57,28 @@ export async function GET(request: Request) {
 
   try {
     await ensureCommunitiesSchema();
+    const jar = await cookies();
+    const hdrs = await headers();
+    const preferred =
+      url.searchParams.get('workspaceId')?.trim() ||
+      hdrs.get('x-workspace-id')?.trim() ||
+      hdrs.get('x-active-workspace-id')?.trim() ||
+      jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+      jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+      null;
+
+    const access = await resolveStrictUserWorkspace({
+      userId: session.user.id,
+      preferredWorkspaceId: preferred,
+      email: session.user.email,
+    });
+    if (!access.ok) {
+      return Response.json(
+        { error: access.error || 'workspace_forbidden' },
+        { status: access.status === 400 ? 400 : 403 }
+      );
+    }
+    const workspaceId = access.workspaceId;
 
     // Prefer the requested community (workspace-bound) so admin never falls to mock.
     let communities: Record<string, unknown>[] = [];
@@ -66,6 +89,20 @@ export async function GET(request: Request) {
                workspace_id, avatar_url, cover_url, is_free, monthly_price_sek
         FROM communities
         WHERE id = ${communityId}
+          AND workspace_id = ${workspaceId}
+          AND (
+            workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id::text = ${session.user.id}
+            )
+            OR creator_id::text = ${session.user.id}
+            OR user_id::text = ${session.user.id}
+            OR EXISTS (
+              SELECT 1 FROM community_memberships cm
+              WHERE cm.community_id = communities.id
+                AND cm.user_id::text = ${session.user.id}
+                AND cm.role IN ('owner', 'moderator')
+            )
+          )
         LIMIT 1
       `;
       if (Array.isArray(byId) && byId[0]) {
@@ -79,11 +116,18 @@ export async function GET(request: Request) {
                member_count, COALESCE(is_published, true) AS is_published,
                workspace_id, avatar_url, cover_url, is_free, monthly_price_sek
         FROM communities
-        WHERE creator_id = ${session.user.id}
-           OR id IN (
-             SELECT community_id FROM community_memberships
-             WHERE user_id = ${session.user.id} AND role IN ('owner', 'moderator')
-           )
+        WHERE workspace_id = ${workspaceId}
+          AND (
+            workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id::text = ${session.user.id}
+            )
+            OR creator_id::text = ${session.user.id}
+            OR user_id::text = ${session.user.id}
+            OR id IN (
+              SELECT community_id FROM community_memberships
+              WHERE user_id::text = ${session.user.id} AND role IN ('owner', 'moderator')
+            )
+          )
         ORDER BY name ASC
       `;
       communities = (Array.isArray(owned) ? owned : []) as Record<string, unknown>[];
@@ -202,11 +246,13 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('[GET /api/admin/community]', error);
-    // Keep UI usable but never pretend seed mock is production data.
-    return Response.json({
-      ...emptyPayload(null),
-      error: 'load_failed',
-    });
+    return Response.json(
+      {
+        ...emptyPayload(null),
+        error: 'load_failed',
+      },
+      { status: 500 }
+    );
   }
 }
 

@@ -50,8 +50,6 @@ import {
   AUTOMATION_TRIGGER_OPTIONS,
   AUDIENCE_OPTIONS,
   getBroadcastAnalytics,
-  listCommunityAutomationEmails,
-  listEmailAutomations,
 } from '@/lib/mock-email-crm';
 import { useSubscription } from '@/components/common/useSubscription';
 import UpgradeModal from '@/components/common/UpgradeModal';
@@ -347,6 +345,7 @@ export default function EmailAdminPanel() {
         body: JSON.stringify({
           action: 'import_subscribers',
           contacts,
+          community_id: workspaceCommunityId,
         }),
       });
       const payload = await r.json().catch(() => ({}));
@@ -446,19 +445,11 @@ export default function EmailAdminPanel() {
 
   const subscribers = data?.subscribers ?? [];
   const broadcasts = data?.broadcasts ?? [];
-  // Community-scoped automations + sent emails (fallback if API omits them).
-  const automations = useMemo(() => {
-    if (data?.automations) return data.automations;
-    return listEmailAutomations(
-      workspaceCommunityId ? { community_id: workspaceCommunityId } : undefined
-    );
-  }, [data?.automations, workspaceCommunityId]);
-  const communityEmails = useMemo(() => {
-    if (data?.community_emails) return data.community_emails;
-    return listCommunityAutomationEmails(
-      workspaceCommunityId ? { community_id: workspaceCommunityId } : undefined
-    );
-  }, [data?.community_emails, workspaceCommunityId]);
+  const automations = useMemo(() => data?.automations ?? [], [data?.automations]);
+  const communityEmails = useMemo(
+    () => data?.community_emails ?? [],
+    [data?.community_emails]
+  );
   const tags = data?.tags ?? ['all'];
   const analytics = analyticsBroadcast
     ? getBroadcastAnalytics(analyticsBroadcast)
