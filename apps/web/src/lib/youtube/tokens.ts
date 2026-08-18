@@ -17,8 +17,12 @@ export async function getYouTubeAccessTokenForWorkspace(input: {
     SELECT access_token, refresh_token, expires_at
     FROM public.social_accounts
     WHERE user_id = ${input.userId}
-      AND workspace_id = ${input.workspaceId}
       AND platform = 'youtube'
+      AND (
+        workspace_id = ${input.workspaceId}
+        OR workspace_id IS NULL
+      )
+    ORDER BY CASE WHEN workspace_id = ${input.workspaceId} THEN 0 ELSE 1 END
     LIMIT 1
   `;
 
@@ -46,8 +50,11 @@ export async function getYouTubeAccessTokenForWorkspace(input: {
           expires_at = ${newExpiry},
           updated_at = now()
         WHERE user_id = ${input.userId}
-          AND workspace_id = ${input.workspaceId}
           AND platform = 'youtube'
+          AND (
+            workspace_id = ${input.workspaceId}
+            OR workspace_id IS NULL
+          )
       `;
     } catch (error) {
       console.warn('[youtube/tokens] refresh failed', error);

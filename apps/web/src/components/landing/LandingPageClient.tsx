@@ -9,8 +9,8 @@ import { authClient } from '@/lib/auth-client';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { ComparisonSection } from '@/components/landing/ComparisonSection';
-import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { PlatformSuiteSection } from '@/components/landing/PlatformSuiteSection';
+import { PlatformShowcaseSection } from '@/components/landing/PlatformShowcaseSection';
 import { RoiCalculator } from '@/components/landing/RoiCalculator';
 import { ShowcaseSection } from '@/components/landing/ShowcaseSection';
 import { FaqSection } from '@/components/landing/FaqSection';
@@ -115,7 +115,7 @@ export function LandingPageClient() {
       />
       <HeroSection />
       <PlatformSuiteSection />
-      <FeaturesSection />
+      <PlatformShowcaseSection />
       <ComparisonSection />
       <PricingSection />
       <ShowcaseSection

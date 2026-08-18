@@ -10,7 +10,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Crown, Users } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
-import { formatAuthError } from '@/lib/auth-error';
+import { formatAuthError, isUnverifiedEmailError, VERIFY_EMAIL_BEFORE_LOGIN } from '@/lib/auth-error';
 import { SocialSignInButtons } from '@/components/SocialSignInButtons';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
 import {
@@ -31,6 +31,7 @@ import {
 import { persistPlatformRole } from '@/lib/use-platform-role';
 import { homeForRole, type PlatformRole } from '@/lib/platform-role';
 import { isDualAccessEmail } from '@/lib/platform-role';
+import { toast } from 'sonner';
 
 type Role = 'member' | 'creator';
 
@@ -92,7 +93,12 @@ export function LoginModal({
       });
 
       if (signInError) {
-        setError(formatAuthError(signInError, t('signInFailed', locale)));
+        if (isUnverifiedEmailError(signInError)) {
+          toast.warning(VERIFY_EMAIL_BEFORE_LOGIN);
+          setError(VERIFY_EMAIL_BEFORE_LOGIN);
+        } else {
+          setError(formatAuthError(signInError, t('signInFailed', locale)));
+        }
         setLoading(false);
         return;
       }
@@ -111,7 +117,12 @@ export function LoginModal({
         window.location.href = home || homeForRole(platformRole);
       }
     } catch (err) {
-      setError(formatAuthError(err, t('signInFailed', locale)));
+      if (isUnverifiedEmailError(err)) {
+        toast.warning(VERIFY_EMAIL_BEFORE_LOGIN);
+        setError(VERIFY_EMAIL_BEFORE_LOGIN);
+      } else {
+        setError(formatAuthError(err, t('signInFailed', locale)));
+      }
       setLoading(false);
     }
   };
@@ -187,6 +198,16 @@ export function LoginModal({
                 className="min-h-11 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all placeholder:text-zinc-300"
               />
             </label>
+
+            <div className="flex items-center justify-end -mt-1">
+              <Link
+                href="/forgot-password"
+                className="text-xs font-bold text-[var(--nc-coral)] hover:opacity-80 min-h-[44px] inline-flex items-center"
+                onClick={() => onOpenChange(false)}
+              >
+                Forgot password?
+              </Link>
+            </div>
 
             <label className="inline-flex items-center gap-2 min-h-11 text-sm font-bold text-zinc-600 cursor-pointer">
               <input

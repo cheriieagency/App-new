@@ -69,6 +69,7 @@ import PostAnalyticsDetailModal, {
 } from '@/components/admin/analytics/PostAnalyticsDetailModal';
 import MonthlyReportEngine from '@/components/admin/analytics/MonthlyReportEngine';
 import OptimizedImage from '@/components/ui/OptimizedImage';
+import { isIsoInRange } from '@/lib/analytics/period';
 
 const PLATFORM_LABEL: Record<string, string> = {
   instagram: 'Instagram',
@@ -111,10 +112,7 @@ function isTimestampInRange(
   from: string,
   to: string
 ): boolean {
-  if (!iso) return false;
-  const day = String(iso).slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
-  return day >= from && day <= to;
+  return isIsoInRange(iso, from, to);
 }
 
 function rangeFromPreset(preset: Exclude<DateRangePreset, 'custom'>): AnalyticsDateRange {
@@ -232,6 +230,7 @@ const EMPTY_ENGAGEMENT = {
   shares: 0,
   saves: 0,
   engagementRate: 0,
+  erDelta: null as number | null,
 };
 
 /** Dual-line performance chart — solid revenue + dashed visitors, pink end highlight. */
@@ -330,12 +329,6 @@ export default function LaterAnalyticsPanel() {
   const { data: metaSync, refetch: refetchMetaSync } = useMetaSync(
     hasInstagram || hasConnectedSocials
   );
-  // Workspace-scoped analytics — aggregates every connected API for this brand.
-  const {
-    data: analyticsApi,
-    refetch: refetchAnalytics,
-    dataUpdatedAt: analyticsUpdatedAt,
-  } = useAnalytics(hasConnectedSocials || socialsLoading === false);
   const [sub, setSub] = useState<AnalyticsSubTab>(() => {
     if (typeof window === 'undefined') return 'analytics';
     return (
@@ -344,6 +337,16 @@ export default function LaterAnalyticsPanel() {
     );
   });
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
+  // Workspace-scoped analytics — aggregates every connected API for this brand.
+  const {
+    data: analyticsApi,
+    refetch: refetchAnalytics,
+    dataUpdatedAt: analyticsUpdatedAt,
+    isPending: analyticsPending,
+  } = useAnalytics(hasConnectedSocials || socialsLoading === false, {
+    from: dateRange.from,
+    to: dateRange.to,
+  });
   const [rangeOpen, setRangeOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(dateRange.from);
   const [draftTo, setDraftTo] = useState(dateRange.to);
@@ -664,35 +667,47 @@ export default function LaterAnalyticsPanel() {
       return { ...EMPTY_ENGAGEMENT };
     }
 
-    // KPIs always follow the selected date range (content published in-range).
-    let likes = 0;
-    let comments = 0;
-    let shares = 0;
-    let views = 0;
+    // Posts published in-range (TikTok views / likes fallback).
+    let mediaLikes = 0;
+    let mediaComments = 0;
+    let mediaShares = 0;
+    let mediaViews = 0;
     for (const item of rangedMedia) {
-      likes += Number(item.like_count) || 0;
-      comments += Number(item.comments_count) || 0;
-      shares += Number(item.shares_count) || 0;
-      views += Number(item.view_count) || 0;
+      mediaLikes += Number(item.like_count) || 0;
+      mediaComments += Number(item.comments_count) || 0;
+      mediaShares += Number(item.shares_count) || 0;
+      mediaViews += Number(item.view_count) || 0;
     }
 
-    const impressions = Math.max(views, likes + comments + shares);
-    const reach = Math.max(views, impressions);
+    // Account insights for the selected dates — includes views of older content.
+    const api = analyticsApi?.metrics;
+    const likes = (Number(api?.likes) || 0) > 0 ? Number(api?.likes) : mediaLikes;
+    const comments =
+      (Number(api?.comments) || 0) > 0 ? Number(api?.comments) : mediaComments;
+    const shares = (Number(api?.shares) || 0) > 0 ? Number(api?.shares) : mediaShares;
+    const saves = Number(api?.saves) || 0;
+    const views =
+      (Number(api?.impressions) || 0) > 0 ? Number(api?.impressions) : mediaViews;
+    const reach = (Number(api?.reach) || 0) > 0 ? Number(api?.reach) : views;
     const followers = totalFollowers || igProfile.followers || 0;
-    const engagementTotal = likes + comments + shares;
+    const engagementTotal = likes + comments + shares + saves;
+    const engagementRate =
+      typeof api?.engagement_rate === 'number' && api.engagement_rate > 0
+        ? api.engagement_rate
+        : reach > 0
+          ? Math.round((engagementTotal / reach) * 1000) / 10
+          : 0;
     return {
       reach,
-      views: impressions,
+      views,
       followers,
       followersDelta: 0,
       likes,
       comments,
       shares,
-      saves: 0,
-      engagementRate:
-        reach > 0
-          ? Math.round((engagementTotal / reach) * 1000) / 10
-          : 0,
+      saves,
+      engagementRate,
+      erDelta: null as number | null,
     };
   }, [
     analyticsApi?.metrics,
@@ -1267,6 +1282,7 @@ export default function LaterAnalyticsPanel() {
           workspaceName={activeWorkspace.name}
           rangeLabel={formatRangeLabel(dateRange, locale)}
           engagement={engagement}
+          loading={analyticsPending}
         />
       )}
 
@@ -1539,11 +1555,13 @@ function AnalyticsOverviewTab({
   workspaceName,
   rangeLabel,
   engagement,
+  loading = false,
 }: {
   locale: Locale;
   workspaceName: string;
   rangeLabel: string;
   engagement: typeof EMPTY_ENGAGEMENT;
+  loading?: boolean;
 }) {
   const data = engagement;
   const totalEngagement = data.likes + data.comments + data.shares + data.saves;
@@ -1627,9 +1645,16 @@ function AnalyticsOverviewTab({
                 </p>
                 <Icon size={14} className="text-slate-300" aria-hidden />
               </div>
-              <p className="mt-3 font-clikd-wordmark font-extrabold text-[26px] sm:text-[28px] leading-none text-slate-900 tracking-tight tabular-nums">
-                {m.value}
-              </p>
+              {loading && m.key !== 'followers' ? (
+                <div
+                  className="mt-3 h-8 w-24 rounded-lg bg-slate-100 animate-pulse"
+                  aria-hidden
+                />
+              ) : (
+                <p className="mt-3 font-clikd-wordmark font-extrabold text-[26px] sm:text-[28px] leading-none text-slate-900 tracking-tight tabular-nums">
+                  {m.value}
+                </p>
+              )}
               <p className="mt-3 text-xs font-bold tabular-nums text-emerald-600">{m.delta}</p>
             </div>
           );
@@ -1648,14 +1673,31 @@ function AnalyticsOverviewTab({
             })}
           </p>
           <div className="mt-6 flex items-end gap-2">
-            <p className="font-clikd-wordmark font-extrabold text-5xl sm:text-6xl leading-none text-slate-900 tabular-nums tracking-tight">
-              {data.engagementRate}
-            </p>
-            <span className="text-2xl font-extrabold text-slate-400 mb-1">%</span>
+            {loading ? (
+              <div
+                className="h-14 w-28 rounded-xl bg-slate-100 animate-pulse"
+                aria-hidden
+              />
+            ) : (
+              <>
+                <p className="font-clikd-wordmark font-extrabold text-5xl sm:text-6xl leading-none text-slate-900 tabular-nums tracking-tight">
+                  {data.engagementRate}
+                </p>
+                <span className="text-2xl font-extrabold text-slate-400 mb-1">%</span>
+              </>
+            )}
           </div>
-          <p className="mt-3 text-xs font-semibold text-emerald-600">
-            {t('engagementRateTrend', locale)}
-          </p>
+          {typeof data.erDelta === 'number' ? (
+            <p
+              className={`mt-3 text-xs font-semibold ${
+                data.erDelta >= 0 ? 'text-emerald-600' : 'text-rose-500'
+              }`}
+            >
+              {tf('engagementRateTrend', locale, {
+                delta: `${data.erDelta > 0 ? '+' : ''}${data.erDelta}%`,
+              })}
+            </p>
+          ) : null}
           <div className="mt-5 h-2 rounded-full bg-slate-100 overflow-hidden">
             <div
               className="h-full rounded-full bg-[#F472B6]"

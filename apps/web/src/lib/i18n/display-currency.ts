@@ -12,9 +12,11 @@ export const COMPARISON_AMOUNTS_SEK = {
   bio: 990,
   community: 990,
   planner: 250,
-  total: 2230,
+  email: 350,
+  ads: 200,
+  total: 2780,
   clikd: 199,
-  yearlySavings: 20_000,
+  yearlySavings: 30_000,
 } as const;
 
 const NUMBER_LOCALES: Record<LocaleCode, string> = {
@@ -81,9 +83,10 @@ export function getComparisonPrices(locale: LocaleCode) {
       approx: true,
     }),
     planner: formatPerMonth(COMPARISON_AMOUNTS_SEK.planner, locale, { approx: true }),
+    email: formatPerMonth(COMPARISON_AMOUNTS_SEK.email, locale, { approx: true }),
+    ads: formatPerMonth(COMPARISON_AMOUNTS_SEK.ads, locale, { approx: true }),
     total: formatPerMonth(COMPARISON_AMOUNTS_SEK.total, locale, {
       approx: true,
-      plus: true,
     }),
     clikd: formatDisplayMoney(COMPARISON_AMOUNTS_SEK.clikd, locale),
     yearlySavings: formatDisplayMoney(COMPARISON_AMOUNTS_SEK.yearlySavings, locale),

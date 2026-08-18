@@ -68,8 +68,12 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     });
 
     if (error) {
+      const detail =
+        error.message ||
+        (typeof error.name === 'string' ? error.name : '') ||
+        'resend_error';
       console.error('[email] Resend error', error);
-      return { ok: false, error: error.message || 'resend_error' };
+      return { ok: false, error: detail };
     }
 
     return { ok: true, id: data?.id ?? 'sent' };

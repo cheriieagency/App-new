@@ -13,8 +13,6 @@ import {
 } from '@/lib/email/crm-persist';
 import {
   AUDIENCE_OPTIONS,
-  applyMergeTags,
-  createBroadcast,
   getMockEmailCrmPayload,
   syncSubscriber,
   type EmailAutomationTrigger,
@@ -53,7 +51,9 @@ async function emptyEmailCrmPayload(creatorId: string, cid?: number) {
 
 export async function GET(request: Request) {
   const session = await requireSession();
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const { searchParams } = new URL(request.url);
   const tag = searchParams.get('tag') ?? undefined;
@@ -189,7 +189,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const session = await requireSession();
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
     const body = await request.json();
@@ -475,59 +477,15 @@ export async function POST(request: Request) {
     }
 
     if (action === 'send' || action === 'test') {
-      const subject = String(body.subject ?? '').trim();
-      const emailBody = String(body.body ?? '').trim();
-      const audience = String(body.audience ?? 'all');
-      const image_url =
-        typeof body.image_url === 'string' && body.image_url.trim()
-          ? body.image_url.trim()
-          : null;
-      if (!subject || !emailBody) {
-        return Response.json({ error: 'subject and body required' }, { status: 400 });
-      }
-
-      const firstName = (session.user.name || 'Ebba').split(' ')[0];
-      const preview = applyMergeTags(emailBody, firstName);
-
-      const broadcast = createBroadcast({
-        subject,
-        body: emailBody,
-        audience,
-        image_url,
-        status: action === 'test' ? 'test' : 'sent',
-      });
-
-      if (process.env.DATABASE_URL?.trim() && action === 'send') {
-        try {
-          await sql`
-            INSERT INTO email_broadcasts (
-              creator_id, subject, body, audience, audience_label,
-              recipient_count, open_rate, click_rate, status, image_url
-            )
-            VALUES (
-              ${session.user.id},
-              ${broadcast.subject},
-              ${broadcast.body},
-              ${broadcast.audience},
-              ${broadcast.audience_label},
-              ${broadcast.recipient_count},
-              ${broadcast.open_rate},
-              ${broadcast.click_rate},
-              'sent',
-              ${image_url}
-            )
-          `;
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
-      return Response.json({
-        success: true,
-        broadcast,
-        preview,
-        demo: !process.env.DATABASE_URL?.trim(),
-      });
+      // Legacy no-op path used to return success without calling Resend.
+      return Response.json(
+        {
+          error: 'use_send_endpoint',
+          message:
+            'Use POST /api/admin/email/send — this route no longer pretends to send mail.',
+        },
+        { status: 410 }
+      );
     }
 
     return Response.json({ error: 'Unknown action' }, { status: 400 });

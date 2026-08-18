@@ -10,7 +10,7 @@ function scrollToId(id: string) {
 }
 
 const PRODUCT_LINKS: { labelKey: TranslationKey; id: string }[] = [
-  { labelKey: 'navFeatures', id: 'features' },
+  { labelKey: 'navFeatures', id: 'creator-admin' },
   { labelKey: 'navPricing', id: 'pricing' },
   { labelKey: 'navCommunities', id: 'communities' },
   { labelKey: 'roiEyebrow', id: 'roi' },

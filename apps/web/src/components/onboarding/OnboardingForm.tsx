@@ -16,9 +16,10 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
-import { formatAuthError } from '@/lib/auth-error';
+import { formatAuthError, ACCOUNT_CREATED_VERIFY_EMAIL } from '@/lib/auth-error';
 import { persistPlatformRole } from '@/lib/use-platform-role';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
+import { toast } from 'sonner';
 
 const ROLES: {
   id: string;
@@ -84,6 +85,7 @@ export default function OnboardingForm() {
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [verifyPending, setVerifyPending] = useState(false);
 
   // Unauthenticated users start on account creation (step 0).
   useEffect(() => {
@@ -146,6 +148,7 @@ export default function OnboardingForm() {
         password,
         name: trimmedName,
         workspaceName: trimmedWorkspace,
+        callbackURL: '/account/signin?verified=1',
       } as Parameters<typeof authClient.signUp.email>[0] & {
         workspaceName: string;
       });
@@ -162,9 +165,15 @@ export default function OnboardingForm() {
       } catch {
         /* ignore */
       }
-      if (!brandName.trim()) setBrandName(trimmedWorkspace);
-      await persistPlatformRole('creator');
-      setStep(1);
+      try {
+        await authClient.signOut();
+      } catch {
+        /* ignore */
+      }
+      toast.success(ACCOUNT_CREATED_VERIFY_EMAIL);
+      setVerifyPending(true);
+      setLoading(false);
+      return;
     } catch (err) {
       setError(formatAuthError(err, 'Could not create account'));
     } finally {
@@ -255,12 +264,18 @@ export default function OnboardingForm() {
           </span>
         </div>
         <h1 className="font-outfit font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">
-          {step === 0 ? 'Create your account' : 'Welcome — let’s set up your studio'}
+          {verifyPending
+            ? 'Check your email'
+            : step === 0
+              ? 'Create your account'
+              : 'Welcome — let’s set up your studio'}
         </h1>
         <p className="mt-2 text-sm text-slate-500 font-medium">
-          {step === 0
-            ? 'Then a quick 3-step questionnaire so we can tailor clikd: for you.'
-            : 'Takes about a minute. You can change this later in Settings.'}
+          {verifyPending
+            ? ACCOUNT_CREATED_VERIFY_EMAIL
+            : step === 0
+              ? 'Then a quick 3-step questionnaire so we can tailor clikd: for you.'
+              : 'Takes about a minute. You can change this later in Settings.'}
         </p>
       </div>
 
@@ -310,7 +325,21 @@ export default function OnboardingForm() {
         )}
 
         {/* Step 0 — account */}
-        {step === 0 && (
+        {step === 0 && verifyPending && (
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-slate-600 leading-relaxed">
+              {ACCOUNT_CREATED_VERIFY_EMAIL}
+            </p>
+            <Link
+              href="/account/signin?callbackUrl=/onboarding"
+              className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-sm"
+            >
+              Go to sign in
+            </Link>
+          </div>
+        )}
+
+        {step === 0 && !verifyPending && (
           <form onSubmit={createAccount} className="space-y-4">
             <label className="block">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">

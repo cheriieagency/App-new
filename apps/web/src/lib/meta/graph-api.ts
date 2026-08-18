@@ -4,6 +4,10 @@
  */
 
 import { toVerifiedPublishMediaUrl } from '@/lib/media/proxy-url';
+import {
+  defaultAnalyticsRange,
+  rangeToUnix,
+} from '@/lib/analytics/period';
 
 const GRAPH_BASE = 'https://graph.facebook.com/v19.0';
 /** Status polling uses v20 — required for reliable status_code on containers. */
@@ -324,54 +328,192 @@ export type InstagramInsights = {
   reach?: number;
   profile_views?: number;
   follower_count?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  saves?: number;
   raw: unknown;
 };
 
+type GraphInsightRow = {
+  name?: string;
+  values?: Array<{ value?: number }>;
+  total_value?: { value?: number };
+};
+
+/** Prefer Meta `total_value`, otherwise SUM every daily bucket (not only the last day). */
+function readInsightNumber(row: GraphInsightRow): number {
+  const total = row.total_value?.value;
+  if (typeof total === 'number' && Number.isFinite(total)) return total;
+  return (row.values ?? []).reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+}
+
+async function igInsightsQuery(
+  igUserId: string,
+  accessToken: string,
+  params: Record<string, string>
+): Promise<GraphInsightRow[]> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(igUserId)}/insights`);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  url.searchParams.set('access_token', accessToken);
+  const data = await graphJson<{ data?: GraphInsightRow[] }>(url.toString());
+  return data.data ?? [];
+}
+
+function mergeIgInsightRow(out: InstagramInsights, row: GraphInsightRow) {
+  const value = readInsightNumber(row);
+  if (!row.name || !Number.isFinite(value)) return;
+  if (row.name === 'views' || row.name === 'impressions') {
+    out.impressions = Math.max(out.impressions ?? 0, value);
+  }
+  if (row.name === 'reach') out.reach = Math.max(out.reach ?? 0, value);
+  if (row.name === 'profile_views' || row.name === 'profile_links_taps') {
+    out.profile_views = Math.max(out.profile_views ?? 0, value);
+  }
+  if (row.name === 'likes') out.likes = Math.max(out.likes ?? 0, value);
+  if (row.name === 'comments') out.comments = Math.max(out.comments ?? 0, value);
+  if (row.name === 'shares') out.shares = Math.max(out.shares ?? 0, value);
+  if (row.name === 'saves' || row.name === 'saved') {
+    out.saves = Math.max(out.saves ?? 0, value);
+  }
+  if (row.name === 'follower_count') out.follower_count = value;
+}
+
 /**
- * Fetch Instagram Business account insights (impressions, reach, profile_views).
+ * Instagram account insights for a calendar window (reach + views of ALL content,
+ * not only posts published in-range). `views` requires metric_type=total_value.
  */
 export async function fetchInstagramInsights(
   igUserId: string,
-  accessToken: string
+  accessToken: string,
+  range?: { from: string; to: string }
 ): Promise<InstagramInsights> {
-  // Meta deprecated account "impressions" — use currently allowed day metrics.
-  const metricSets = [
-    'reach,profile_views,views',
-    'reach,profile_views',
-    'reach,follower_count',
+  const { from, to } = range ?? defaultAnalyticsRange();
+  const { since, until } = rangeToUnix(from, to);
+  const sinceUntil = { since: String(since), until: String(until) };
+  const out: InstagramInsights = { raw: null };
+  const rawChunks: unknown[] = [];
+
+  const queries: Array<Record<string, string>> = [
+    { metric: 'views', period: 'day', metric_type: 'total_value', ...sinceUntil },
+    { metric: 'reach', period: 'day', metric_type: 'total_value', ...sinceUntil },
+    {
+      metric: 'likes,comments,shares,saves,total_interactions,accounts_engaged',
+      period: 'day',
+      metric_type: 'total_value',
+      ...sinceUntil,
+    },
+    { metric: 'reach', period: 'day', ...sinceUntil },
+    { metric: 'profile_views', period: 'day', metric_type: 'total_value', ...sinceUntil },
+    { metric: 'reach,views,profile_views', period: 'day', ...sinceUntil },
   ];
 
+  const results = await Promise.allSettled(
+    queries.map((params) => igInsightsQuery(igUserId, accessToken, params))
+  );
+
   let lastError: unknown = null;
-  for (const metric of metricSets) {
-    try {
-      const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(igUserId)}/insights`);
-      url.searchParams.set('metric', metric);
-      url.searchParams.set('period', 'day');
-      url.searchParams.set('access_token', accessToken);
-
-      const data = await graphJson<{
-        data?: Array<{ name: string; values?: Array<{ value: number }> }>;
-      }>(url.toString());
-
-      const out: InstagramInsights = { raw: data };
-      for (const row of data.data ?? []) {
-        const value = row.values?.[row.values.length - 1]?.value;
-        if (typeof value !== 'number') continue;
-        if (row.name === 'impressions' || row.name === 'views') {
-          out.impressions = value;
-        }
-        if (row.name === 'reach') out.reach = value;
-        if (row.name === 'profile_views') out.profile_views = value;
-      }
-      return out;
-    } catch (error) {
-      lastError = error;
+  let anyOk = false;
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      lastError = result.reason;
+      continue;
     }
+    anyOk = true;
+    rawChunks.push(result.value);
+    for (const row of result.value) mergeIgInsightRow(out, row);
   }
+
+  out.raw = rawChunks;
+  if (anyOk) return out;
 
   throw lastError instanceof Error
     ? lastError
     : new Error('Instagram insights unavailable');
+}
+
+export type FacebookPageInsights = {
+  reach: number;
+  impressions: number;
+  engaged: number;
+  raw: unknown;
+};
+
+async function fbPageInsightsQuery(
+  pageId: string,
+  pageAccessToken: string,
+  metric: string,
+  since: string,
+  until: string
+): Promise<GraphInsightRow[]> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(pageId)}/insights`);
+  url.searchParams.set('metric', metric);
+  url.searchParams.set('period', 'day');
+  url.searchParams.set('since', since);
+  url.searchParams.set('until', until);
+  url.searchParams.set('access_token', pageAccessToken);
+  const data = await graphJson<{ data?: GraphInsightRow[] }>(url.toString());
+  return data.data ?? [];
+}
+
+/** Facebook Page reach / impressions for the selected calendar window. */
+export async function fetchFacebookPageInsights(
+  pageId: string,
+  pageAccessToken: string,
+  range?: { from: string; to: string }
+): Promise<FacebookPageInsights> {
+  const { from, to } = range ?? defaultAnalyticsRange();
+  const { since, until } = rangeToUnix(from, to);
+  const sinceS = String(since);
+  const untilS = String(until);
+  const metricSets = [
+    'page_impressions_unique,page_impressions,page_post_engagements',
+    'page_posts_impressions_unique,page_posts_impressions',
+    'page_impressions',
+  ];
+
+  const out: FacebookPageInsights = {
+    reach: 0,
+    impressions: 0,
+    engaged: 0,
+    raw: null,
+  };
+  const rawChunks: unknown[] = [];
+  const results = await Promise.allSettled(
+    metricSets.map((metric) =>
+      fbPageInsightsQuery(pageId, pageAccessToken, metric, sinceS, untilS)
+    )
+  );
+
+  for (const result of results) {
+    if (result.status === 'rejected') continue;
+    rawChunks.push(result.value);
+    for (const row of result.value) {
+      const value = readInsightNumber(row);
+      if (!row.name || value <= 0) continue;
+      if (
+        row.name === 'page_impressions_unique' ||
+        row.name === 'page_posts_impressions_unique'
+      ) {
+        out.reach = Math.max(out.reach, value);
+      }
+      if (
+        row.name === 'page_impressions' ||
+        row.name === 'page_posts_impressions'
+      ) {
+        out.impressions = Math.max(out.impressions, value);
+      }
+      if (row.name === 'page_post_engagements') {
+        out.engaged = Math.max(out.engaged, value);
+      }
+    }
+  }
+
+  if (out.reach <= 0 && out.impressions > 0) out.reach = out.impressions;
+  out.raw = rawChunks;
+  return out;
 }
 
 export type DemoBreakdownRow = { key: string; label: string; value: number; pct: number };
@@ -758,11 +900,12 @@ export type InstagramMediaItem = {
   timestamp?: string;
   like_count?: number;
   comments_count?: number;
-  /** Nested insights when requested (impressions / reach). */
+  /** Nested insights when requested (views / reach). */
   insights?: {
     data?: Array<{
       name?: string;
       values?: Array<{ value?: number }>;
+      total_value?: { value?: number };
     }>;
   };
   /** Flattened from insights when available. */
@@ -774,7 +917,10 @@ function flattenIgInsights(item: InstagramMediaItem): InstagramMediaItem {
   let impressions = 0;
   let reach = 0;
   for (const metric of item.insights?.data ?? []) {
-    const value = Number(metric.values?.[0]?.value) || 0;
+    const value =
+      Number(metric.total_value?.value) ||
+      Number(metric.values?.[0]?.value) ||
+      0;
     if (
       metric.name === 'impressions' ||
       metric.name === 'views' ||
@@ -782,10 +928,7 @@ function flattenIgInsights(item: InstagramMediaItem): InstagramMediaItem {
     ) {
       impressions = Math.max(impressions, value);
     }
-    if (metric.name === 'reach') reach = value;
-    if (metric.name === 'total_interactions' && impressions <= 0) {
-      /* keep for ER soft-fallback via likes/comments */
-    }
+    if (metric.name === 'reach') reach = Math.max(reach, value);
   }
   return { ...item, impressions, reach };
 }
@@ -796,11 +939,12 @@ export async function fetchInstagramMedia(
   accessToken: string,
   limit = 50
 ): Promise<InstagramMediaItem[]> {
-  // Media insights: `plays` is invalid for many media types — prefer views.
+  // `impressions` is deprecated on IG media and rejects the whole nested field.
   const insightFieldAttempts = [
-    'insights.metric(impressions,reach,views,total_interactions)',
-    'insights.metric(impressions,reach,total_interactions)',
-    'insights.metric(impressions,reach)',
+    'insights.metric(views,reach,total_interactions,saved,shares)',
+    'insights.metric(views,reach,total_interactions)',
+    'insights.metric(views,reach)',
+    'insights.metric(reach)',
   ];
   const basic =
     'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count';
@@ -1102,7 +1246,7 @@ const FB_POST_FIELDS_WITH_INSIGHTS = [
   'likes.summary(true)',
   'comments.summary(true)',
   'attachments{media_type,type,media}',
-  'insights.metric(post_impressions_unique)',
+  'insights.metric(post_impressions)',
 ].join(',');
 
 const FB_POST_FIELDS_BASIC = [

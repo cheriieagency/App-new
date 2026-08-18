@@ -70,6 +70,36 @@ function collectFromUnknown(error: unknown, into: string[], depth = 0): void {
   collectFromUnknown(e.cause, into, depth + 1);
 }
 
+const UNVERIFIED_PATTERNS = [
+  'email not confirmed',
+  'email not verified',
+  'email_not_verified',
+  'email_not_confirmed',
+  'not verified',
+  'confirm your email',
+];
+
+/** True when the IdP rejected sign-in because the inbox is unverified. */
+export function isUnverifiedEmailError(error: unknown): boolean {
+  const parts: string[] = [];
+  collectFromUnknown(error, parts);
+  const blob = parts.join(' ').toLowerCase();
+  if (UNVERIFIED_PATTERNS.some((p) => blob.includes(p))) return true;
+  if (typeof error === 'object' && error && 'code' in error) {
+    const code = String((error as { code?: unknown }).code || '').toLowerCase();
+    if (code === 'email_not_verified' || code === 'email_not_confirmed') {
+      return true;
+    }
+  }
+  return false;
+}
+
+export const VERIFY_EMAIL_BEFORE_LOGIN =
+  'You must verify your email before logging in. Please check your inbox.';
+
+export const ACCOUNT_CREATED_VERIFY_EMAIL =
+  'Account created! Please check your email to verify your account before logging in.';
+
 /** Build a detailed auth error string for UI display. */
 export function formatAuthError(error: unknown, fallback: string): string {
   const parts: string[] = [];

@@ -26,7 +26,7 @@ import { adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useLanguage } from '@/lib/locale-context';
-import { localeTag, t, tf } from '@/lib/i18n';
+import { localeTag, t, tf, type Locale, type TranslationKey } from '@/lib/i18n';
 
 type AutomationRule = {
   /** UUID string from public.dm_automations — never coerce with Number(). */
@@ -101,27 +101,27 @@ type LiveDiagnosticResult = {
 
 const CHECKLIST_ROWS: Array<{
   key: keyof LiveDiagnosticResult['checklist'];
-  label: string;
+  labelKey: TranslationKey;
   stepIds: string[];
 }> = [
   {
     key: 'instagramTokenValid',
-    label: 'Instagram Token Valid',
+    labelKey: 'dmCheckToken',
     stepIds: ['TOKEN_CHECK', 'TOKEN_VALIDITY'],
   },
   {
     key: 'metaWebhooksSubscribed',
-    label: 'Meta Webhooks Subscribed (comments, messages)',
+    labelKey: 'dmCheckWebhooks',
     stepIds: ['WEBHOOK_SUBSCRIPTION'],
   },
   {
     key: 'activeRulesFound',
-    label: 'Active Automation Rules Found in Database',
+    labelKey: 'dmCheckRules',
     stepIds: ['AUTOMATION_RULES'],
   },
   {
     key: 'privateReplyPayloadOk',
-    label: 'Private Reply Graph API Payload Formatted Correctly',
+    labelKey: 'dmCheckPayload',
     stepIds: ['PRIVATE_REPLY_PAYLOAD'],
   },
 ];
@@ -142,25 +142,29 @@ function isValidInstagramCommentIdClient(raw: string): boolean {
   return /^\d{10,}$/.test(id);
 }
 
-function formatCommentAge(createdTime: string | null): string {
-  if (!createdTime) return 'nyss';
+function formatCommentAge(createdTime: string | null, locale: Locale): string {
+  if (!createdTime) return t('dmJustNow', locale);
   const ts = Date.parse(createdTime);
-  if (!Number.isFinite(ts)) return 'nyss';
+  if (!Number.isFinite(ts)) return t('dmJustNow', locale);
   const mins = Math.max(0, Math.round((Date.now() - ts) / 60_000));
-  if (mins < 1) return 'nyss';
-  if (mins < 60) return `${mins} min sedan`;
+  if (mins < 1) return t('dmJustNow', locale);
+  if (mins < 60) return tf('dmMinsAgo', locale, { n: mins });
   const hours = Math.round(mins / 60);
-  if (hours < 48) return `${hours} h sedan`;
+  if (hours < 48) return tf('dmHoursAgo', locale, { n: hours });
   const days = Math.round(hours / 24);
-  return `${days} d sedan`;
+  return tf('dmDaysAgo', locale, { n: days });
 }
 
-function formatCommentOption(c: RecentIgComment): string {
-  const user = c.username ? `@${c.username.replace(/^@/, '')}` : '@okänd';
+function formatCommentOption(c: RecentIgComment, locale: Locale): string {
+  const user = c.username
+    ? `@${c.username.replace(/^@/, '')}`
+    : t('dmUnknownUser', locale);
   const text = (c.text || '').replace(/\s+/g, ' ').trim();
   const preview =
-    text.length > 48 ? `${text.slice(0, 48).trimEnd()}…` : text || '(tom)';
-  return `${user}: "${preview}" (${formatCommentAge(c.createdTime)})`;
+    text.length > 48
+      ? `${text.slice(0, 48).trimEnd()}…`
+      : text || t('dmEmptyComment', locale);
+  return `${user}: "${preview}" (${formatCommentAge(c.createdTime, locale)})`;
 }
 
 type FormState = {
@@ -178,12 +182,11 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   title: '',
   triggerKeywords: '',
-  dmMessageText:
-    'Hej! Tack för din kommentar. Här är direktlänken till min nya Masterclass:',
-  ctaButtonLabel: 'Öppna storefront',
+  dmMessageText: '',
+  ctaButtonLabel: '',
   ctaButtonUrl: '',
   replyToCommentPublicly: true,
-  publicCommentText: 'Kolla din DM!',
+  publicCommentText: '',
   isActive: true,
 };
 
@@ -649,9 +652,7 @@ export default function DMAutomationPanel() {
       // Only forward a numeric Instagram comment id — never keywords.
       const commentId = isValidInstagramCommentIdClient(raw) ? raw : undefined;
       if (raw && !commentId) {
-        throw new Error(
-          'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.'
-        );
+        throw new Error(t('dmInvalidCommentId', locale));
       }
       const res = await fetch('/api/admin/inbox/automations/test-live', {
         method: 'POST',
@@ -770,6 +771,9 @@ export default function DMAutomationPanel() {
   const openCreate = () => {
     setForm({
       ...EMPTY_FORM,
+      dmMessageText: t('dmDefaultMessage', locale),
+      ctaButtonLabel: t('dmDefaultCta', locale),
+      publicCommentText: t('dmDefaultPublicReply', locale),
       ctaButtonUrl: storefrontDefault,
     });
     setModalOpen(true);
@@ -781,10 +785,10 @@ export default function DMAutomationPanel() {
       title: rule.title,
       triggerKeywords: rule.triggerKeywords.join(', '),
       dmMessageText: rule.dmMessageText,
-      ctaButtonLabel: rule.ctaButtonLabel || 'Öppna storefront',
+      ctaButtonLabel: rule.ctaButtonLabel || t('dmDefaultCta', locale),
       ctaButtonUrl: rule.ctaButtonUrl || storefrontDefault,
       replyToCommentPublicly: rule.replyToCommentPublicly,
-      publicCommentText: rule.publicCommentText || 'Kolla din DM!',
+      publicCommentText: rule.publicCommentText || t('dmDefaultPublicReply', locale),
       isActive: rule.isActive,
     });
     setModalOpen(true);
@@ -792,22 +796,26 @@ export default function DMAutomationPanel() {
 
   const kpiCards = [
     {
-      label: 'Active Triggers',
-      value: `${kpis.activeTriggers} Rules`,
+      label: t('dmKpiActiveTriggers', locale),
+      value: tf('dmKpiRules', locale, { n: kpis.activeTriggers }),
       icon: Zap,
     },
     {
-      label: 'DMs Sent This Month',
-      value: `${kpis.dmsSentThisMonth.toLocaleString(tag)} DMs`,
+      label: t('dmKpiDmsSent', locale),
+      value: tf('dmKpiDms', locale, {
+        n: kpis.dmsSentThisMonth.toLocaleString(tag),
+      }),
       icon: MessageSquarePlus,
     },
     {
-      label: 'Storefront Clicks',
-      value: `${kpis.storefrontClicks.toLocaleString(tag)} Clicks`,
+      label: t('dmKpiStorefrontClicks', locale),
+      value: tf('dmKpiClicks', locale, {
+        n: kpis.storefrontClicks.toLocaleString(tag),
+      }),
       icon: MousePointerClick,
     },
     {
-      label: 'Conversion Rate',
+      label: t('dmKpiConversion', locale),
       value: `${kpis.conversionRate.toLocaleString(tag, { maximumFractionDigits: 1 })}%`,
       icon: Percent,
     },
@@ -818,15 +826,15 @@ export default function DMAutomationPanel() {
       {isError ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <p>
-            Could not load automations:{' '}
-            {error instanceof Error ? error.message : 'Unknown error'}
+            {t('dmLoadFailed', locale)}{' '}
+            {error instanceof Error ? error.message : t('dmUnknownError', locale)}
           </p>
           <button
             type="button"
             onClick={() => void refetch()}
             className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold"
           >
-            Retry
+            {t('dmRetry', locale)}
           </button>
         </div>
       ) : null}
@@ -851,10 +859,10 @@ export default function DMAutomationPanel() {
         <div className="px-5 sm:px-7 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
-              Comment-to-DM Automations
+              {t('dmTitle', locale)}
             </h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              When someone comments a keyword, Clikd sends your DM + storefront link.
+              {t('dmSub', locale)}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -869,7 +877,7 @@ export default function DMAutomationPanel() {
               ) : (
                 <RefreshCw size={16} />
               )}
-              🔄 Re-sync Meta Webhooks
+              {t('dmResyncWebhooks', locale)}
             </button>
             <button
               type="button"
@@ -877,7 +885,7 @@ export default function DMAutomationPanel() {
               className="h-11 min-h-[44px] px-4 rounded-xl bg-[#F472B6] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:opacity-90 shadow-sm shadow-[#F472B6]/25"
             >
               <Plus size={16} />
-              + Skapa ny regel
+              {t('dmCreateRule', locale)}
             </button>
           </div>
         </div>
@@ -891,7 +899,7 @@ export default function DMAutomationPanel() {
             aria-expanded={devToolsOpen}
           >
             <span aria-hidden>🛠️</span>
-            Utvecklarverktyg & Diagnostik (Valfritt)
+            {t('dmDevTools', locale)}
             <span className="text-slate-400 font-mono">
               {devToolsOpen ? '▾' : '▸'}
             </span>
@@ -911,7 +919,7 @@ export default function DMAutomationPanel() {
                   ) : (
                     <Search size={16} />
                   )}
-                  🔍 Kör Live Felsökning
+                  {t('dmRunLiveDebug', locale)}
                 </button>
                 <button
                   type="button"
@@ -924,7 +932,7 @@ export default function DMAutomationPanel() {
                   ) : (
                     <Zap size={16} />
                   )}
-                  Test automation
+                  {t('dmTestAutomation', locale)}
                 </button>
                 <button
                   type="button"
@@ -937,7 +945,7 @@ export default function DMAutomationPanel() {
                   ) : (
                     <RefreshCw size={16} />
                   )}
-                  🔄 Hämta senaste kommentarer
+                  {t('dmFetchComments', locale)}
                 </button>
               </div>
 
@@ -949,7 +957,7 @@ export default function DMAutomationPanel() {
 
               <label className="block min-w-0">
                 <span className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Välj senaste Instagram-kommentar
+                  {t('dmSelectRecentComment', locale)}
                 </span>
                 <select
                   value={liveCommentId}
@@ -964,12 +972,12 @@ export default function DMAutomationPanel() {
                 >
                   <option value="">
                     {recentComments.length === 0
-                      ? 'Hämta kommentarer först…'
-                      : 'Välj en kommentar…'}
+                      ? t('dmFetchCommentsFirst', locale)
+                      : t('dmPickComment', locale)}
                   </option>
                   {recentComments.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {formatCommentOption(c)}
+                      {formatCommentOption(c, locale)}
                     </option>
                   ))}
                 </select>
@@ -978,7 +986,7 @@ export default function DMAutomationPanel() {
               <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                 <label className="flex-1 min-w-0">
                   <span className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Instagram Comment ID (valfritt för live-DM test)
+                    {t('dmCommentIdLabel', locale)}
                   </span>
                   <input
                     type="text"
@@ -989,7 +997,7 @@ export default function DMAutomationPanel() {
                       setLiveCommentId(e.target.value);
                       setSelectedCommentText('');
                     }}
-                    placeholder="t.ex. 17912345678901234"
+                    placeholder={t('dmCommentIdPlaceholder', locale)}
                     className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25"
                   />
                 </label>
@@ -998,9 +1006,7 @@ export default function DMAutomationPanel() {
                   onClick={() => {
                     const id = liveCommentId.trim();
                     if (!id || !isValidInstagramCommentIdClient(id)) {
-                      toast.error(
-                        'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.'
-                      );
+                      toast.error(t('dmInvalidCommentId', locale));
                       return;
                     }
                     liveDiagnosticMutation.mutate({
@@ -1019,7 +1025,7 @@ export default function DMAutomationPanel() {
                   ) : (
                     <Zap size={16} />
                   )}
-                  Kör Live Test-DM
+                  {t('dmRunLiveTestDm', locale)}
                 </button>
               </div>
 
@@ -1028,12 +1034,12 @@ export default function DMAutomationPanel() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div>
                       <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
-                        Live Comment-to-DM Diagnostic
+                        {t('dmDiagnosticTitle', locale)}
                       </p>
                       <p className="text-sm font-bold text-slate-900 mt-1">
                         {liveDiagnostic.ok
-                          ? 'All checks passed'
-                          : 'Issues found — see checklist + Meta errors below'}
+                          ? t('dmAllChecksPassed', locale)
+                          : t('dmIssuesFound', locale)}
                       </p>
                       {liveDiagnostic.note ? (
                         <p className="text-xs text-slate-500 mt-1">
@@ -1047,7 +1053,7 @@ export default function DMAutomationPanel() {
                       className="h-9 min-h-[36px] px-3 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 inline-flex items-center gap-1 self-start"
                     >
                       <X size={14} />
-                      Dismiss
+                      {t('dmDismiss', locale)}
                     </button>
                   </div>
 
@@ -1084,7 +1090,7 @@ export default function DMAutomationPanel() {
                           )}
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-extrabold text-slate-900">
-                              {ok ? '✓' : '✗'} {row.label}
+                              {ok ? '✓' : '✗'} {t(row.labelKey, locale)}
                             </p>
                             {failed?.message ? (
                               <p className="text-xs text-slate-600 mt-1 font-medium">
@@ -1098,7 +1104,7 @@ export default function DMAutomationPanel() {
                             ) : null}
                             {!ok && failed?.fix ? (
                               <p className="text-xs text-[#2B2568] mt-1.5 font-semibold">
-                                Fix: {failed.fix}
+                                {t('dmFixPrefix', locale)} {failed.fix}
                               </p>
                             ) : null}
                           </div>
@@ -1116,7 +1122,7 @@ export default function DMAutomationPanel() {
                       }`}
                     >
                       <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
-                        Live Private Reply Result
+                        {t('dmLiveReplyResult', locale)}
                       </p>
                       <p className="text-sm font-extrabold text-slate-900 mt-1">
                         {liveDiagnostic.livePrivateReply.ok ? '✓' : '✗'} HTTP{' '}
@@ -1168,9 +1174,9 @@ export default function DMAutomationPanel() {
           <div className="p-6">
             <AdminEmptyState
               icon={Zap}
-              headline="No automation rules yet"
-              description="Create a keyword trigger so Instagram comments auto-send a DM with your Clikd storefront link."
-              ctaLabel="+ Create Comment-to-DM Rule"
+              headline={t('dmEmptyHeadline', locale)}
+              description={t('dmEmptyDesc', locale)}
+              ctaLabel={t('dmEmptyCta', locale)}
               onCta={openCreate}
             />
           </div>
@@ -1193,7 +1199,7 @@ export default function DMAutomationPanel() {
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >
-                      {rule.isActive ? 'Active' : 'Paused'}
+                      {rule.isActive ? t('dmActive', locale) : t('dmPaused', locale)}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -1210,7 +1216,10 @@ export default function DMAutomationPanel() {
                     {rule.dmMessageText}
                   </p>
                   <p className="text-[11px] text-slate-400 font-mono">
-                    {rule.totalDmsSent} DMs sent · {rule.storefrontClicks} clicks
+                    {tf('dmDmsSentClicks', locale, {
+                      dms: rule.totalDmsSent,
+                      clicks: rule.storefrontClicks,
+                    })}
                   </p>
                 </div>
 
@@ -1220,7 +1229,9 @@ export default function DMAutomationPanel() {
                     role="switch"
                     aria-checked={rule.isActive}
                     aria-label={
-                      rule.isActive ? 'Pause automation' : 'Activate automation'
+                      rule.isActive
+                        ? t('dmPauseAria', locale)
+                        : t('dmActivateAria', locale)
                     }
                     disabled={
                       toggleMutation.isPending &&
@@ -1242,18 +1253,18 @@ export default function DMAutomationPanel() {
                     onClick={() => openEdit(rule)}
                     className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-slate-200 bg-white text-slate-700 inline-flex items-center justify-center gap-1.5 text-xs font-bold"
                   >
-                    <Pencil size={14} /> Edit
+                    <Pencil size={14} /> {t('dmEdit', locale)}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm('Delete this automation rule?')) {
+                      if (confirm(t('dmDeleteConfirm', locale))) {
                         deleteMutation.mutate(String(rule.id));
                       }
                     }}
                     className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-rose-100 bg-rose-50 text-rose-700 inline-flex items-center justify-center gap-1.5 text-xs font-bold"
                   >
-                    <Trash2 size={14} /> Delete
+                    <Trash2 size={14} /> {t('dmDelete', locale)}
                   </button>
                 </div>
               </li>
@@ -1266,7 +1277,7 @@ export default function DMAutomationPanel() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <button
             type="button"
-            aria-label="Close"
+            aria-label={t('dmClose', locale)}
             className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
             onClick={() => !saveMutation.isPending && setModalOpen(false)}
           />
@@ -1278,10 +1289,10 @@ export default function DMAutomationPanel() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
-                  Comment-to-DM
+                  {t('dmModalEyebrow', locale)}
                 </p>
                 <h3 className="font-clikd-wordmark font-extrabold text-xl text-slate-900 mt-1">
-                  {form.id ? 'Edit rule' : 'Create Comment-to-DM Rule'}
+                  {form.id ? t('dmEditRule', locale) : t('dmCreateRuleTitle', locale)}
                 </h3>
               </div>
               <button
@@ -1294,18 +1305,18 @@ export default function DMAutomationPanel() {
             </div>
 
             <label className="block space-y-1.5">
-              <span className="text-xs font-bold text-slate-600">Title</span>
+              <span className="text-xs font-bold text-slate-600">{t('dmFieldTitle', locale)}</span>
               <input
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                placeholder="Masterclass keyword"
+                placeholder={t('dmTitlePlaceholder', locale)}
                 className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
               />
             </label>
 
             <label className="block space-y-1.5">
               <span className="text-xs font-bold text-slate-600">
-                Trigger Keywords (comma-separated)
+                {t('dmFieldKeywords', locale)}
               </span>
               <input
                 value={form.triggerKeywords}
@@ -1318,7 +1329,7 @@ export default function DMAutomationPanel() {
             </label>
 
             <label className="block space-y-1.5">
-              <span className="text-xs font-bold text-slate-600">Direct Message</span>
+              <span className="text-xs font-bold text-slate-600">{t('dmFieldDm', locale)}</span>
               <textarea
                 value={form.dmMessageText}
                 onChange={(e) =>
@@ -1331,7 +1342,7 @@ export default function DMAutomationPanel() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block space-y-1.5">
-                <span className="text-xs font-bold text-slate-600">Button Label</span>
+                <span className="text-xs font-bold text-slate-600">{t('dmFieldButton', locale)}</span>
                 <input
                   value={form.ctaButtonLabel}
                   onChange={(e) =>
@@ -1342,7 +1353,7 @@ export default function DMAutomationPanel() {
               </label>
               <label className="block space-y-1.5 sm:col-span-1">
                 <span className="text-xs font-bold text-slate-600">
-                  Clikd Storefront Link
+                  {t('dmFieldStorefront', locale)}
                 </span>
                 <input
                   value={form.ctaButtonUrl}
@@ -1369,7 +1380,7 @@ export default function DMAutomationPanel() {
                   className="mt-1 h-4 w-4 rounded border-slate-300"
                 />
                 <span className="text-sm font-semibold text-slate-800">
-                  Publicera även automatiskt kommentarsvar
+                  {t('dmPublicReplyToggle', locale)}
                 </span>
               </label>
               {form.replyToCommentPublicly ? (
@@ -1381,7 +1392,7 @@ export default function DMAutomationPanel() {
                       publicCommentText: e.target.value,
                     }))
                   }
-                  placeholder="Kolla din DM!"
+                  placeholder={t('dmDefaultPublicReply', locale)}
                   className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm"
                 />
               ) : null}
@@ -1398,7 +1409,7 @@ export default function DMAutomationPanel() {
               ) : (
                 <Plus size={16} />
               )}
-              {form.id ? 'Save changes' : 'Create rule'}
+              {form.id ? t('dmSaveChanges', locale) : t('dmCreateRuleBtn', locale)}
             </button>
           </div>
         </div>

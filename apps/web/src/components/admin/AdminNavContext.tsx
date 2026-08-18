@@ -101,11 +101,11 @@ function writeUrl(
     if (!window.location.pathname.startsWith('/admin')) return;
     // Dedicated routes — never leave the user on /admin?tab=ads|calendar (empty shell).
     if (tab === 'ads') {
-      window.location.assign('/ads');
+      queueMicrotask(() => window.location.assign('/ads'));
       return;
     }
     if (tab === 'calendar') {
-      window.location.assign('/planner');
+      queueMicrotask(() => window.location.assign('/planner'));
       return;
     }
 
@@ -126,7 +126,12 @@ function writeUrl(
     } else {
       url.searchParams.delete('folder');
     }
-    window.history.replaceState({}, '', url.toString());
+    const href = url.toString();
+    if (href === window.location.href) return;
+    // replaceState during React render updates Next.js Router — always defer.
+    queueMicrotask(() => {
+      window.history.replaceState({}, '', href);
+    });
   } catch {
     /* ignore */
   }
@@ -168,17 +173,19 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 
   const setSection = useCallback((s: AdminSection) => {
     setSectionState(s);
-    setActiveCampaignIdState((prevCampaign) => {
-      const nextCampaign = s === 'projects' ? prevCampaign : null;
-      setActiveMediaFolderIdState((prevFolder) => {
-        const nextFolder = s === 'media' ? prevFolder : null;
-        writeUrl(s, { campaignId: nextCampaign, folderId: nextFolder });
-        return nextFolder;
-      });
-      return nextCampaign;
-    });
+    // Keep campaign/folder only on their own tabs — never nest setState updaters
+    // (React 19 runs those during render and history.replaceState then errors).
+    setActiveCampaignIdState((prev) => (s === 'projects' ? prev : null));
+    setActiveMediaFolderIdState((prev) => (s === 'media' ? prev : null));
     if (s !== 'projects') setCreateProjectOpenState(false);
     if (s !== 'media') setCreateMediaFolderOpenState(false);
+    queueMicrotask(() => {
+      const params = new URLSearchParams(window.location.search);
+      writeUrl(s, {
+        campaignId: s === 'projects' ? params.get('campaign') : null,
+        folderId: s === 'media' ? params.get('folder') : null,
+      });
+    });
   }, []);
 
   const setActiveCampaignId = useCallback((id: string | null) => {
@@ -194,9 +201,9 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
     setCreateProjectOpenState(open);
     if (open) {
       setSectionState('projects');
-      setActiveCampaignIdState((prev) => {
-        writeUrl('projects', { campaignId: prev, folderId: null, create: true });
-        return prev;
+      queueMicrotask(() => {
+        const campaign = new URLSearchParams(window.location.search).get('campaign');
+        writeUrl('projects', { campaignId: campaign, folderId: null, create: true });
       });
     } else {
       writeUrl('projects', {
@@ -220,9 +227,9 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
     setCreateMediaFolderOpenState(open);
     if (open) {
       setSectionState('media');
-      setActiveMediaFolderIdState((prev) => {
-        writeUrl('media', { campaignId: null, folderId: prev });
-        return prev;
+      queueMicrotask(() => {
+        const folder = new URLSearchParams(window.location.search).get('folder');
+        writeUrl('media', { campaignId: null, folderId: folder });
       });
     }
   }, []);

@@ -149,18 +149,31 @@ export const pinterestEnv = {
   requiredKeys: ['PINTEREST_APP_ID', 'PINTEREST_APP_SECRET'] as const,
 };
 
+function originOf(value?: string | null): string {
+  const raw = value?.trim();
+  if (!raw) return '';
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return '';
+  }
+}
+
 /**
- * Public app origin for OAuth redirect_uri builders.
- * Prefers NEXTAUTH_URL (Auth.js) → BETTER_AUTH_URL → NEXT_PUBLIC_APP_URL,
- * then the request origin, then production clikd:.
+ * Public app origin for OAuth redirect_uri builders and absolute links.
+ * Prefer the live request host so localhost Connect does not bounce to
+ * production when NEXTAUTH_URL is https://clikd.app.
  */
 export function appBaseUrl(requestOrigin?: string | null): string {
+  const request = originOf(requestOrigin);
+  if (request) return request;
+
   const fromEnv =
-    readEnv('NEXTAUTH_URL') ||
     readEnv('BETTER_AUTH_URL') ||
-    readEnv('NEXT_PUBLIC_APP_URL');
-  const candidate =
-    fromEnv || requestOrigin?.trim() || 'https://clikd.app';
+    readEnv('NEXT_PUBLIC_APP_URL') ||
+    readEnv('NEXT_PUBLIC_SITE_URL') ||
+    readEnv('NEXTAUTH_URL');
+  const candidate = fromEnv || 'https://clikd.app';
   try {
     return new URL(candidate).origin;
   } catch {

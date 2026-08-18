@@ -17,7 +17,7 @@ import { useSearchParams } from 'next/navigation';
 import { type FormEvent, Suspense, useEffect, useState } from 'react';
 import { SocialSignInButtons } from '@/components/SocialSignInButtons';
 import { authClient } from '@/lib/auth-client';
-import { formatAuthError } from '@/lib/auth-error';
+import { formatAuthError, isUnverifiedEmailError, VERIFY_EMAIL_BEFORE_LOGIN } from '@/lib/auth-error';
 import { isDemoAuthUiEnabled } from '@/lib/auth-env';
 import Link from 'next/link';
 import { Users, Crown } from 'lucide-react';
@@ -31,13 +31,13 @@ import {
   saveRememberedAuth,
 } from '@/lib/remember-auth';
 import { persistPlatformRole } from '@/lib/use-platform-role';
+import { toast } from 'sonner';
 
 type Role = 'member' | 'creator';
 
 function SignInForm() {
   const searchParams = useSearchParams();
   const { locale } = useLanguage();
-  void searchParams; // keep useSearchParams for platform callbackUrl contract
   const [role, setRole] = useState<Role>('member');
   const callbackUrl = role === 'creator' ? '/admin' : '/dashboard';
   const [email, setEmail] = useState('');
@@ -56,6 +56,14 @@ function SignInForm() {
     setRememberMe(true);
   }, []);
 
+  useEffect(() => {
+    if (searchParams.get('verified') === '1') {
+      toast.success('Email verified. You can sign in now.');
+    }
+    const err = searchParams.get('error');
+    if (err) setError(err);
+  }, [searchParams]);
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -68,7 +76,12 @@ function SignInForm() {
       });
 
       if (signInError) {
-        setError(formatAuthError(signInError, 'Sign in failed'));
+        if (isUnverifiedEmailError(signInError)) {
+          toast.warning(VERIFY_EMAIL_BEFORE_LOGIN);
+          setError(VERIFY_EMAIL_BEFORE_LOGIN);
+        } else {
+          setError(formatAuthError(signInError, 'Sign in failed'));
+        }
         setLoading(false);
         return;
       }
@@ -88,7 +101,12 @@ function SignInForm() {
         console.warn('signin: window is undefined; cannot redirect to callbackUrl');
       }
     } catch (err) {
-      setError(formatAuthError(err, 'Sign in failed'));
+      if (isUnverifiedEmailError(err)) {
+        toast.warning(VERIFY_EMAIL_BEFORE_LOGIN);
+        setError(VERIFY_EMAIL_BEFORE_LOGIN);
+      } else {
+        setError(formatAuthError(err, 'Sign in failed'));
+      }
       setLoading(false);
     }
   };
@@ -180,6 +198,15 @@ function SignInForm() {
               className="rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff] transition-all placeholder:text-zinc-300"
             />
           </label>
+
+          <div className="flex items-center justify-end -mt-1">
+            <Link
+              href="/forgot-password"
+              className="text-xs font-bold text-[var(--nc-coral)] hover:opacity-80 min-h-[44px] inline-flex items-center"
+            >
+              Forgot password?
+            </Link>
+          </div>
 
           <label className="inline-flex items-center gap-2.5 min-h-[44px] text-sm font-bold text-zinc-600 cursor-pointer select-none">
             <input

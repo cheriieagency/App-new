@@ -21,6 +21,8 @@ import {
   fetchMultiPlatformMedia,
   type AnalyticsMediaItem,
 } from '@/lib/analytics/media';
+import { isIsoInRange, parseAnalyticsRange } from '@/lib/analytics/period';
+import { fetchWorkspacePeriodInsights } from '@/lib/analytics/period-insights';
 
 const PLATFORMS = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'] as const;
 
@@ -147,6 +149,11 @@ export async function GET(request: Request) {
       return Response.json(onboardingFallback('no_social_accounts', workspaceId));
     }
 
+    const range = parseAnalyticsRange(
+      url.searchParams.get('from'),
+      url.searchParams.get('to')
+    );
+
     let snapshot = getMetaSyncSnapshot(session.user.id);
     const hasIg = connected.some((a) => a.platform === 'instagram');
 
@@ -166,11 +173,22 @@ export async function GET(request: Request) {
       0
     );
 
-    const insights = snapshot?.insights ?? {
+    let insights: {
+      reach: number;
+      impressions: number;
+      likes: number;
+      comments: number;
+      shares?: number;
+      saves?: number;
+      followers: number;
+      profile_views: number;
+    } = snapshot?.insights ?? {
       reach: 0,
       impressions: 0,
       likes: 0,
       comments: 0,
+      shares: 0,
+      saves: 0,
       followers:
         connected.find((a) => a.platform === 'instagram')?.follower_count ?? 0,
       profile_views: 0,
@@ -249,7 +267,7 @@ export async function GET(request: Request) {
     > | null;
 
     if (workspaceId) {
-      const [mediaResult, demoResult] = await Promise.all([
+      const [mediaResult, demoResult, periodResult] = await Promise.all([
         fetchMultiPlatformMedia({
           userId: session.user.id,
           workspaceId,
@@ -265,26 +283,59 @@ export async function GET(request: Request) {
           console.warn('[Analytics API] multi-platform demographics failed', error);
           return null;
         }),
+        fetchWorkspacePeriodInsights({
+          userId: session.user.id,
+          workspaceId,
+          from: range.from,
+          to: range.to,
+        }).catch((error) => {
+          console.warn('[Analytics API] period insights failed', error);
+          return null;
+        }),
       ]);
       if (mediaResult) media = mediaResult;
       demographics =
         demoResult ??
         ((snapshot?.demographics as typeof demographics) ?? null);
+      if (periodResult) {
+        insights = {
+          reach: periodResult.reach,
+          impressions: periodResult.impressions,
+          likes: periodResult.likes,
+          comments: periodResult.comments,
+          shares: periodResult.shares,
+          saves: periodResult.saves,
+          followers:
+            connected.find((a) => a.platform === 'instagram')?.follower_count ??
+            insights.followers ??
+            0,
+          profile_views: periodResult.profile_views,
+        };
+      }
     }
 
     const hashtags = extractHashtags(media);
 
-    // Prefer Meta insights when present; otherwise roll up IG + FB + TikTok media.
-    const mediaTotals = aggregateMediaMetrics(media);
-    const likes = Math.max(insights.likes || 0, mediaTotals.likes);
-    const comments = Math.max(insights.comments || 0, mediaTotals.comments);
-    const impressions = Math.max(
-      insights.impressions || 0,
-      mediaTotals.views,
-      mediaTotals.likes + mediaTotals.comments + mediaTotals.shares
+    // Account insights = activity during the range (incl. older content).
+    // Media rollup = posts published in-range (TikTok views / IG likes fallback).
+    const rangedMedia = media.filter((item) =>
+      isIsoInRange(item.timestamp, range.from, range.to)
     );
-    const reach = Math.max(insights.reach || 0, mediaTotals.views, impressions);
-    const engagementTotal = likes + comments + mediaTotals.shares;
+    const mediaTotals = aggregateMediaMetrics(rangedMedia);
+    const likes =
+      (insights.likes || 0) > 0 ? insights.likes : mediaTotals.likes;
+    const comments =
+      (insights.comments || 0) > 0 ? insights.comments : mediaTotals.comments;
+    const shares =
+      (insights.shares || 0) > 0 ? insights.shares! : mediaTotals.shares;
+    const saves = insights.saves || 0;
+    const impressions =
+      (insights.impressions || 0) > 0
+        ? insights.impressions
+        : mediaTotals.views;
+    const reach =
+      (insights.reach || 0) > 0 ? insights.reach : impressions;
+    const engagementTotal = likes + comments + shares + saves;
     const engagementRate =
       reach > 0
         ? Math.round((engagementTotal / reach) * 1000) / 10
@@ -295,7 +346,8 @@ export async function GET(request: Request) {
       impressions,
       likes,
       comments,
-      shares: mediaTotals.shares,
+      shares,
+      saves,
       followers: totalFollowers,
       profile_views: insights.profile_views || 0,
       engagement_rate: engagementRate,
@@ -307,6 +359,7 @@ export async function GET(request: Request) {
       source: snapshot ? 'workspace_meta_sync' : 'workspace_social_accounts',
       connected: true,
       workspace_id: workspaceId,
+      range,
       accounts: connected.map((a) => ({
         platform: a.platform,
         handle: a.handle,
@@ -324,6 +377,8 @@ export async function GET(request: Request) {
         impressions: metrics.impressions,
         likes: metrics.likes,
         comments: metrics.comments,
+        shares: metrics.shares,
+        saves: metrics.saves,
         engagement_rate: metrics.engagement_rate,
       },
       insights,

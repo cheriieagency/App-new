@@ -23,6 +23,7 @@ import { verifyPassword } from 'better-auth/crypto';
 import { bearer } from 'better-auth/plugins';
 import ws from 'ws';
 import { shouldUseDemoAuth } from '@/lib/auth-env';
+import { sendAuthLinkEmail } from '@/lib/email/auth-mail';
 
 neonConfig.webSocketConstructor = ws;
 
@@ -139,9 +140,35 @@ export const auth = betterAuth({
   socialProviders,
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false,
+    // Require a verified inbox when Resend can actually deliver the link.
+    requireEmailVerification: Boolean(process.env.RESEND_API_KEY?.trim()) && !demoAuth,
+    autoSignIn: false,
     password: {
       verify: verifyCompatiblePassword,
+    },
+    sendResetPassword: async ({ user, url }) => {
+      await sendAuthLinkEmail({
+        to: user.email,
+        heading: 'Reset your clikd: password',
+        body: 'Tap the button below to choose a new password. This link expires soon.',
+        actionUrl: url,
+        actionLabel: 'Set new password',
+        tag: 'reset',
+      });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: false,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendAuthLinkEmail({
+        to: user.email,
+        heading: 'Verify your clikd: email',
+        body: 'Confirm this address to finish creating your account, then sign in.',
+        actionUrl: url,
+        actionLabel: 'Verify email',
+        tag: 'verify',
+      });
     },
   },
   hooks: {

@@ -58,6 +58,16 @@ import { PlanLockBadge } from '@/components/common/FeatureGate';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { toast } from 'sonner';
+import {
+  defaultImageInsertIndex,
+  deriveImagePlacement,
+  insertEmailImageToken,
+  moveEmailImageToken,
+  splitBodyAroundImage,
+  stripEmailImageToken,
+  textareaCaretTop,
+  textareaIndexFromPoint,
+} from '@/lib/email/image-token';
 
 function isValidContactEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -118,8 +128,6 @@ function sourceBadgeClass(source: string) {
   return 'bg-zinc-100 text-zinc-600';
 }
 
-type ImagePlacement = 'top' | 'middle' | 'bottom';
-
 function formatDate(iso: string, locale: string) {
   try {
     return new Date(iso).toLocaleDateString(
@@ -141,15 +149,17 @@ function EmailPreview({
   subject,
   body,
   imageUrl,
-  imagePlacement,
 }: {
   subject: string;
   body: string;
   imageUrl: string | null;
-  imagePlacement: ImagePlacement;
 }) {
   const previewBody = body.replace(/\{first_name\}/gi, 'Emma') || 'Ditt meddelande…';
-  const [before, after] = splitBodyForMiddle(previewBody);
+  const marker = splitBodyAroundImage(previewBody);
+  const placement = deriveImagePlacement(previewBody);
+  const [beforeMiddle, afterMiddle] = splitBodyForMiddle(
+    stripEmailImageToken(previewBody)
+  );
 
   const ImageBlock = imageUrl ? (
     <div className="my-3 rounded-lg overflow-hidden border border-zinc-100">
@@ -157,12 +167,51 @@ function EmailPreview({
     </div>
   ) : null;
 
+  const bodyBlocks =
+    imageUrl && marker.hasMarker ? (
+      <>
+        {marker.before.trim() ? (
+          <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
+            {marker.before}
+          </p>
+        ) : null}
+        {ImageBlock}
+        {marker.after.trim() ? (
+          <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
+            {marker.after}
+          </p>
+        ) : null}
+      </>
+    ) : (
+      <>
+        {placement === 'top' && ImageBlock}
+        {(placement === 'middle' || placement === 'inline') && ImageBlock ? (
+          <>
+            <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
+              {beforeMiddle}
+            </p>
+            {ImageBlock}
+            {afterMiddle ? (
+              <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed mt-3">
+                {afterMiddle}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
+            {stripEmailImageToken(previewBody)}
+          </p>
+        )}
+        {placement === 'bottom' && ImageBlock}
+      </>
+    );
+
   return (
     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 overflow-hidden">
       <div className="px-3 py-2 border-b border-zinc-200 bg-white flex items-center gap-2">
         <Eye size={12} className="text-zinc-400" />
         <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-          Preview
+          Preview — as the recipient sees it
         </p>
       </div>
       <div className="p-4 bg-white m-2 rounded-xl shadow-sm">
@@ -171,18 +220,82 @@ function EmailPreview({
           {subject.trim() || '(No subject)'}
         </p>
         <div className="h-px bg-zinc-100 mb-3" />
-        {imagePlacement === 'top' && ImageBlock}
-        <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
-          {imagePlacement === 'middle' ? before : previewBody}
-        </p>
-        {imagePlacement === 'middle' && ImageBlock}
-        {imagePlacement === 'middle' && after && (
-          <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed mt-3">
-            {after}
-          </p>
-        )}
-        {imagePlacement === 'bottom' && ImageBlock}
+        {bodyBlocks}
       </div>
+    </div>
+  );
+}
+
+function DroppableBodyField({
+  value,
+  onChange,
+  textareaRef,
+  placeholder,
+  minHeightClass,
+  zone,
+  dropCaret,
+  onCaretDrag,
+  onPlace,
+  onFileDrop,
+  onFocus,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  placeholder?: string;
+  minHeightClass: string;
+  zone: 'before' | 'after' | 'full';
+  dropCaret: { zone: string; index: number; top: number } | null;
+  onCaretDrag: (
+    zone: 'before' | 'after' | 'full',
+    index: number,
+    top: number
+  ) => void;
+  onPlace: (zone: 'before' | 'after' | 'full', index: number) => void;
+  onFileDrop: (e: React.DragEvent, insertAt?: number) => void;
+  onFocus: () => void;
+}) {
+  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    const isImage = e.dataTransfer.types.includes('application/x-email-image');
+    const isFile = e.dataTransfer.types.includes('Files');
+    if (!isImage && !isFile) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const ta = e.currentTarget;
+    const index = textareaIndexFromPoint(ta, e.clientX, e.clientY);
+    onCaretDrag(zone, index, textareaCaretTop(ta, index));
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ta = e.currentTarget;
+    const index = textareaIndexFromPoint(ta, e.clientX, e.clientY);
+    if (e.dataTransfer.types.includes('application/x-email-image')) {
+      onPlace(zone, index);
+      return;
+    }
+    onFileDrop(e, index);
+  };
+
+  return (
+    <div className="relative">
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        className={`w-full ${minHeightClass} rounded-xl resize-y text-sm border border-zinc-100 bg-zinc-50/50 px-3 py-2.5 text-[#2c3340] placeholder:text-zinc-400 focus:outline-none focus:border-[var(--nc-coral)]`}
+        placeholder={placeholder}
+      />
+      {dropCaret?.zone === zone && (
+        <div
+          className="pointer-events-none absolute left-3 right-3 h-0.5 rounded-full bg-[#F472B6] shadow-[0_0_0_3px_rgba(244,114,182,0.28)] z-10"
+          style={{ top: Math.max(10, dropCaret.top + 4) }}
+        />
+      )}
     </div>
   );
 }
@@ -215,9 +328,15 @@ export default function EmailAdminPanel() {
   );
   const [audience, setAudience] = useState('all');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imagePlacement, setImagePlacement] = useState<ImagePlacement>('middle');
   const [fileDragOver, setFileDragOver] = useState(false);
-  const [slotDragOver, setSlotDragOver] = useState<ImagePlacement | null>(null);
+  const [dropCaret, setDropCaret] = useState<{
+    zone: 'before' | 'after' | 'full';
+    index: number;
+    top: number;
+  } | null>(null);
+  const [focusedZone, setFocusedZone] = useState<'before' | 'after' | 'full'>(
+    'full'
+  );
   const [flash, setFlash] = useState('');
   const [upload, { loading: uploading }] = useUpload();
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -225,6 +344,8 @@ export default function EmailAdminPanel() {
   const autoBodyRef = useRef<HTMLTextAreaElement>(null);
   const autoSubjectRef = useRef<HTMLInputElement>(null);
   const broadcastBodyRef = useRef<HTMLTextAreaElement>(null);
+  const bodyAfterRef = useRef<HTMLTextAreaElement>(null);
+  const pendingInsertRef = useRef<number | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importTab, setImportTab] = useState<'manual' | 'csv'>('manual');
   const [manualRows, setManualRows] = useState<Array<{ name: string; email: string }>>([
@@ -260,7 +381,7 @@ export default function EmailAdminPanel() {
     },
   });
 
-  const handleImageFile = async (file: File) => {
+  const handleImageFile = async (file: File, insertAt?: number) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Only image files are supported');
       return;
@@ -268,6 +389,16 @@ export default function EmailAdminPanel() {
     const result = await upload({ file });
     if (result.url) {
       setImageUrl(result.url);
+      setBody((prev) => {
+        if (/\{image\}/i.test(prev)) return prev;
+        const idx =
+          insertAt ??
+          pendingInsertRef.current ??
+          broadcastBodyRef.current?.selectionStart ??
+          defaultImageInsertIndex(prev);
+        pendingInsertRef.current = null;
+        return insertEmailImageToken(prev, idx);
+      });
       return;
     }
     toast.error(
@@ -275,21 +406,33 @@ export default function EmailAdminPanel() {
     );
   };
 
-  const onFileDrop = (e: React.DragEvent) => {
+  const isInternalImageDrag = (e: React.DragEvent) =>
+    e.dataTransfer.types.includes('application/x-email-image');
+
+  const placeImageAt = (zone: 'before' | 'after' | 'full', localIndex: number) => {
+    const { before, after } = splitBodyAroundImage(body);
+    if (zone === 'full') {
+      setBody(insertEmailImageToken(body, localIndex));
+    } else {
+      const globalIndex =
+        zone === 'before' ? localIndex : before.length + localIndex;
+      setBody(insertEmailImageToken(before + after, globalIndex));
+    }
+    setDropCaret(null);
+  };
+
+  const onFileDrop = (e: React.DragEvent, insertAt?: number) => {
     e.preventDefault();
     e.stopPropagation();
     setFileDragOver(false);
-    // Ignore internal image reposition drops.
-    if (e.dataTransfer.types.includes('application/x-email-image')) return;
+    setDropCaret(null);
+    if (isInternalImageDrag(e)) return;
     const file = e.dataTransfer.files?.[0];
-    if (file) void handleImageFile(file);
+    if (file) void handleImageFile(file, insertAt);
   };
 
   const moveImage = (dir: -1 | 1) => {
-    const order: ImagePlacement[] = ['top', 'middle', 'bottom'];
-    const idx = order.indexOf(imagePlacement);
-    const next = order[Math.max(0, Math.min(order.length - 1, idx + dir))];
-    setImagePlacement(next);
+    setBody((prev) => moveEmailImageToken(prev, dir));
   };
 
   const sendMutation = useMutation({
@@ -310,7 +453,7 @@ export default function EmailAdminPanel() {
           recipientFilter: audience,
           test: action === 'test',
           imageUrl,
-          imagePlacement,
+          imagePlacement: deriveImagePlacement(body),
         }),
       });
       const data = (await r.json().catch(() => ({}))) as {
@@ -345,20 +488,29 @@ export default function EmailAdminPanel() {
       }
       return data;
     },
-    onSuccess: (_res, action) => {
+    onSuccess: (res, action) => {
       queryClient.invalidateQueries({ queryKey: ['admin-email'] });
-      setFlash(action === 'test' ? 'Provmejl skickat!' : 'Utskick skickat!');
+      const sent = Number(res?.sent ?? 0);
+      const okMsg =
+        action === 'test'
+          ? 'Test email sent to your account inbox'
+          : sent > 0
+            ? `Broadcast sent to ${sent} subscriber${sent === 1 ? '' : 's'}`
+            : 'Utskick skickat!';
+      setFlash(okMsg);
+      toast.success(okMsg);
       setTimeout(() => setFlash(''), 2500);
       if (action === 'send') {
         setComposerOpen(false);
         setSubject('');
         setImageUrl(null);
-        setImagePlacement('middle');
+        setBody((prev) => stripEmailImageToken(prev));
       }
     },
     onError: (err) => {
       const msg = err instanceof Error ? err.message : 'Send failed';
       setFlash(msg);
+      toast.error(msg);
       setTimeout(() => setFlash(''), 4500);
     },
   });
@@ -2042,7 +2194,18 @@ export default function EmailAdminPanel() {
                   <button
                     type="button"
                     disabled={uploading}
-                    onClick={() => imageInputRef.current?.click()}
+                    onClick={() => {
+                      const { before } = splitBodyAroundImage(body);
+                      if (focusedZone === 'after' && bodyAfterRef.current) {
+                        pendingInsertRef.current =
+                          before.length +
+                          (bodyAfterRef.current.selectionStart ?? 0);
+                      } else {
+                        pendingInsertRef.current =
+                          broadcastBodyRef.current?.selectionStart ?? null;
+                      }
+                      imageInputRef.current?.click();
+                    }}
                     className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-extrabold text-zinc-500 hover:text-[var(--nc-coral)] hover:bg-[#f2eeff] transition-colors disabled:opacity-50"
                   >
                     {uploading ? (
@@ -2066,7 +2229,7 @@ export default function EmailAdminPanel() {
                   }}
                 />
 
-                {/* Layout builder: text + movable image slots */}
+                {/* Body editor: drop the image into the text at a caret */}
                 <div
                   className={`rounded-xl border p-2 space-y-2 transition-colors ${
                     fileDragOver
@@ -2080,145 +2243,191 @@ export default function EmailAdminPanel() {
                     }
                   }}
                   onDragOver={(e) => {
-                    e.preventDefault();
+                    if (
+                      e.dataTransfer.types.includes('Files') ||
+                      isInternalImageDrag(e)
+                    ) {
+                      e.preventDefault();
+                    }
                     if (e.dataTransfer.types.includes('Files')) setFileDragOver(true);
                   }}
                   onDragLeave={(e) => {
                     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
                     setFileDragOver(false);
+                    setDropCaret(null);
                   }}
-                  onDrop={onFileDrop}
+                  onDrop={(e) => onFileDrop(e)}
                 >
-                  {(['top', 'middle', 'bottom'] as ImagePlacement[]).map((slot, i) => (
-                    <div key={slot}>
-                      {/* Drop slot for repositioning the image */}
+                  {(() => {
+                    const parts = splitBodyAroundImage(body);
+                    const showSplit = Boolean(imageUrl && parts.hasMarker);
+                    const toolbarRef =
+                      showSplit && focusedZone === 'after'
+                        ? bodyAfterRef
+                        : broadcastBodyRef;
+                    const toolbarValue = showSplit
+                      ? focusedZone === 'after'
+                        ? parts.after
+                        : parts.before
+                      : body;
+                    const onToolbarChange = (next: string) => {
+                      if (!showSplit) {
+                        setBody(next);
+                        return;
+                      }
+                      if (focusedZone === 'after') {
+                        setBody(`${parts.before}{image}${next}`);
+                      } else {
+                        setBody(`${next}{image}${parts.after}`);
+                      }
+                    };
+
+                    const imageBlock = imageUrl ? (
                       <div
-                        onDragOver={(e) => {
-                          if (!e.dataTransfer.types.includes('application/x-email-image'))
-                            return;
-                          e.preventDefault();
-                          setSlotDragOver(slot);
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('application/x-email-image', '1');
+                          e.dataTransfer.effectAllowed = 'move';
                         }}
-                        onDragLeave={() => setSlotDragOver((s) => (s === slot ? null : s))}
-                        onDrop={(e) => {
-                          if (!e.dataTransfer.types.includes('application/x-email-image'))
-                            return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setImagePlacement(slot);
-                          setSlotDragOver(null);
-                        }}
-                        className={`rounded-lg transition-all ${
-                          slotDragOver === slot
-                            ? 'min-h-[52px] border-2 border-dashed border-[var(--nc-coral)] bg-[#f2eeff] flex items-center justify-center mb-2'
-                            : imageUrl && imagePlacement !== slot
-                              ? 'min-h-[10px] mb-1'
-                              : ''
-                        }`}
+                        onDragEnd={() => setDropCaret(null)}
+                        className="relative group rounded-xl overflow-hidden border border-[#ffe0d4] bg-[#f2eeff] cursor-grab active:cursor-grabbing"
                       >
-                        {slotDragOver === slot && (
-                          <p className="text-[10px] font-black text-[var(--nc-coral)]">
-                            Drop image here
-                          </p>
-                        )}
-                      </div>
-
-                      {imageUrl && imagePlacement === slot && (
-                        <div
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('application/x-email-image', '1');
-                            e.dataTransfer.effectAllowed = 'move';
-                          }}
-                          className="relative group rounded-xl overflow-hidden border border-[#ffe0d4] bg-[#f2eeff] mb-2 cursor-grab active:cursor-grabbing"
-                        >
-                          <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
-                            <span className="h-8 min-h-[32px] px-2 rounded-lg bg-black/50 text-white text-[10px] font-black inline-flex items-center gap-1">
-                              <GripVertical size={12} /> Dra
-                            </span>
-                          </div>
-                          <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
-                            <button
-                              type="button"
-                              disabled={imagePlacement === 'top'}
-                              onClick={() => moveImage(-1)}
-                              className="h-10 w-10 min-h-[44px] min-w-[44px] rounded-xl bg-black/55 text-white flex items-center justify-center hover:bg-black/70 disabled:opacity-30"
-                              title="Flytta upp"
-                            >
-                              <ArrowUp size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={imagePlacement === 'bottom'}
-                              onClick={() => moveImage(1)}
-                              className="h-10 w-10 min-h-[44px] min-w-[44px] rounded-xl bg-black/55 text-white flex items-center justify-center hover:bg-black/70 disabled:opacity-30"
-                              title="Flytta ner"
-                            >
-                              <ArrowDown size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setImageUrl(null)}
-                              className="h-10 w-10 min-h-[44px] min-w-[44px] rounded-xl bg-black/55 text-white flex items-center justify-center hover:bg-black/70"
-                              title="Ta bort bild"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                          <img
-                            src={imageUrl}
-                            alt="E-postbild"
-                            className="w-full max-h-44 object-cover"
-                            draggable={false}
-                          />
-                          <p className="px-3 py-2 text-[10px] font-bold text-[#6b5bb8]">
-                            {slot === 'top'
-                              ? 'Image at top of email'
-                              : slot === 'middle'
-                                ? 'Image mid-email (after first paragraph)'
-                                : 'Image at bottom of email'}
-                          </p>
+                        <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
+                          <span className="h-8 min-h-[32px] px-2 rounded-lg bg-black/50 text-white text-[10px] font-black inline-flex items-center gap-1">
+                            <GripVertical size={12} /> Dra in i texten
+                          </span>
                         </div>
-                      )}
+                        <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moveImage(-1)}
+                            className="h-10 w-10 min-h-[44px] min-w-[44px] rounded-xl bg-black/55 text-white flex items-center justify-center hover:bg-black/70"
+                            title="Flytta upp"
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveImage(1)}
+                            className="h-10 w-10 min-h-[44px] min-w-[44px] rounded-xl bg-black/55 text-white flex items-center justify-center hover:bg-black/70"
+                            title="Flytta ner"
+                          >
+                            <ArrowDown size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImageUrl(null);
+                              setBody((prev) => stripEmailImageToken(prev));
+                            }}
+                            className="h-10 w-10 min-h-[44px] min-w-[44px] rounded-xl bg-black/55 text-white flex items-center justify-center hover:bg-black/70"
+                            title="Ta bort bild"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <img
+                          src={imageUrl}
+                          alt="E-postbild"
+                          className="w-full max-h-44 object-cover"
+                          draggable={false}
+                        />
+                        <p className="px-3 py-2 text-[10px] font-bold text-[#6b5bb8]">
+                          Drop this into the text above or below — recipients see it in the same place.
+                        </p>
+                      </div>
+                    ) : null;
 
-                      {/* Text editor only once, after top slot / before middle content conceptually */}
-                      {i === 0 && (
-                        <>
-                          <textarea
-                            ref={broadcastBodyRef}
-                            value={body}
-                            onChange={(e) => setBody(e.target.value)}
-                            className="w-full min-h-[160px] rounded-xl resize-none text-sm border border-zinc-100 bg-zinc-50/50 px-3 py-2.5 text-[#2c3340] placeholder:text-zinc-400 focus:outline-none focus:border-[var(--nc-coral)]"
-                            placeholder={t('emailBodyPlaceholder', locale)}
-                          />
-                          <EmailBodyToolbar
-                            targetRef={broadcastBodyRef}
-                            value={body}
-                            onChange={setBody}
-                            mode="full"
-                          />
-                        </>
-                      )}
-                    </div>
-                  ))}
-
-                  {!imageUrl && (
-                    <button
-                      type="button"
-                      disabled={uploading}
-                      onClick={() => imageInputRef.current?.click()}
-                      className="w-full min-h-[72px] rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 hover:border-[var(--nc-coral)] hover:bg-[#f2eeff]/40 flex flex-col items-center justify-center gap-1.5 text-zinc-400 transition-colors disabled:opacity-50"
-                    >
-                      {uploading ? (
-                        <Loader2 size={18} className="animate-spin" />
-                      ) : (
-                        <Upload size={18} />
-                      )}
-                      <span className="text-[11px] font-extrabold">
-                        Drag &amp; drop an image, or click to choose
-                      </span>
-                    </button>
-                  )}
+                    return (
+                      <>
+                        {showSplit ? (
+                          <>
+                            <DroppableBodyField
+                              value={parts.before}
+                              onChange={(next) =>
+                                setBody(`${next}{image}${parts.after}`)
+                              }
+                              textareaRef={broadcastBodyRef}
+                              placeholder="Text before the image…"
+                              minHeightClass="min-h-[88px]"
+                              zone="before"
+                              dropCaret={dropCaret}
+                              onCaretDrag={(zone, index, top) =>
+                                setDropCaret({ zone, index, top })
+                              }
+                              onPlace={placeImageAt}
+                              onFileDrop={onFileDrop}
+                              onFocus={() => setFocusedZone('before')}
+                            />
+                            {imageBlock}
+                            <DroppableBodyField
+                              value={parts.after}
+                              onChange={(next) =>
+                                setBody(`${parts.before}{image}${next}`)
+                              }
+                              textareaRef={bodyAfterRef}
+                              placeholder="Text after the image…"
+                              minHeightClass="min-h-[88px]"
+                              zone="after"
+                              dropCaret={dropCaret}
+                              onCaretDrag={(zone, index, top) =>
+                                setDropCaret({ zone, index, top })
+                              }
+                              onPlace={placeImageAt}
+                              onFileDrop={onFileDrop}
+                              onFocus={() => setFocusedZone('after')}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <DroppableBodyField
+                              value={body}
+                              onChange={setBody}
+                              textareaRef={broadcastBodyRef}
+                              placeholder={t('emailBodyPlaceholder', locale)}
+                              minHeightClass="min-h-[160px]"
+                              zone="full"
+                              dropCaret={dropCaret}
+                              onCaretDrag={(zone, index, top) =>
+                                setDropCaret({ zone, index, top })
+                              }
+                              onPlace={placeImageAt}
+                              onFileDrop={onFileDrop}
+                              onFocus={() => setFocusedZone('full')}
+                            />
+                            {imageBlock}
+                          </>
+                        )}
+                        <EmailBodyToolbar
+                          targetRef={toolbarRef}
+                          value={toolbarValue}
+                          onChange={onToolbarChange}
+                          mode="full"
+                        />
+                        {!imageUrl && (
+                          <button
+                            type="button"
+                            disabled={uploading}
+                            onClick={() => {
+                              pendingInsertRef.current =
+                                broadcastBodyRef.current?.selectionStart ?? null;
+                              imageInputRef.current?.click();
+                            }}
+                            className="w-full min-h-[72px] rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 hover:border-[var(--nc-coral)] hover:bg-[#f2eeff]/40 flex flex-col items-center justify-center gap-1.5 text-zinc-400 transition-colors disabled:opacity-50"
+                          >
+                            {uploading ? (
+                              <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                              <Upload size={18} />
+                            )}
+                            <span className="text-[11px] font-extrabold">
+                              Drag an image into the text, or click to choose
+                            </span>
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -2227,7 +2436,6 @@ export default function EmailAdminPanel() {
                 subject={subject}
                 body={body}
                 imageUrl={imageUrl}
-                imagePlacement={imagePlacement}
               />
 
               {flash && (
@@ -2243,7 +2451,18 @@ export default function EmailAdminPanel() {
               )}
             </div>
 
-            <div className="px-5 py-4 border-t border-zinc-100 flex flex-col sm:flex-row gap-2">
+            <div className="px-5 py-4 border-t border-zinc-100 flex flex-col gap-2">
+              {!subject.trim() && (
+                <p className="text-xs text-amber-700 font-medium">
+                  Add a subject line to send a test or broadcast.
+                </p>
+              )}
+              {canSend && audienceRecipientCount === 0 && (
+                <p className="text-xs text-amber-700 font-medium">
+                  No subscribers match this audience. Import a list or sync members first.
+                </p>
+              )}
+              <div className="flex flex-col sm:flex-row gap-2">
               {!canBroadcast && (
                 <div className="w-full mb-1 sm:mb-0 sm:flex-1">
                   <PlanLockBadge minPlan="creator" />
@@ -2289,6 +2508,7 @@ export default function EmailAdminPanel() {
                 )}
                 {t('sendBroadcastNow', locale)}
               </button>
+              </div>
             </div>
           </div>
         </>

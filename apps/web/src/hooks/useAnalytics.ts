@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { NC_WORKSPACE_STORAGE_KEY } from '@/lib/mock-workspace-profiles';
@@ -67,6 +67,8 @@ export type AnalyticsApiResponse = {
     impressions: number;
     likes: number;
     comments: number;
+    shares?: number;
+    saves?: number;
     followers: number;
     profile_views?: number;
     engagement_rate: number;
@@ -79,6 +81,8 @@ export type AnalyticsApiResponse = {
     impressions: number;
     likes: number;
     comments: number;
+    shares?: number;
+    saves?: number;
     engagement_rate: number;
   };
   by_platform?: Record<string, AnalyticsPlatformSlice>;
@@ -121,17 +125,23 @@ function readStoredWorkspaceId(): string | null {
 }
 
 /** Hydrates /api/analytics for the ACTIVE workspace (live, auto-refresh). */
-export function useAnalytics(enabled = true) {
+export function useAnalytics(
+  enabled = true,
+  range?: { from?: string; to?: string } | null
+) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const workspaceCtx = useWorkspaceOptional();
   const workspaceId =
     workspaceCtx?.activeWorkspaceId || readStoredWorkspaceId() || null;
+  const from = range?.from?.trim() || '';
+  const to = range?.to?.trim() || '';
 
   const query = useQuery<AnalyticsApiResponse>({
-    queryKey: ['analytics', workspaceId ?? 'none', pathname ?? ''],
+    queryKey: ['analytics', workspaceId ?? 'none', pathname ?? '', from, to],
     enabled: enabled && Boolean(workspaceId),
     ...LIVE_ANALYTICS_QUERY,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const ws = workspaceId || readStoredWorkspaceId();
       if (!ws) {
@@ -146,6 +156,8 @@ export function useAnalytics(enabled = true) {
       }
       const params = new URLSearchParams();
       params.set('workspaceId', ws);
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
       params.set('_', String(Date.now()));
       const r = await fetch(`/api/analytics?${params}`, {
         headers: {

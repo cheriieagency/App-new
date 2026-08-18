@@ -357,6 +357,28 @@ export async function listLiveSocialAccountsForUser(input: {
   try {
     const workspaceId = input.workspaceId?.trim() || null;
 
+    // Legacy YouTube/LinkedIn rows were stored with workspace_id NULL, so they
+    // vanished from Settings → Integrations after workspaces became required.
+    if (workspaceId) {
+      try {
+        await sql`
+          UPDATE public.social_accounts AS s
+          SET workspace_id = ${workspaceId}, updated_at = now()
+          WHERE s.user_id::text = ${userId}
+            AND s.workspace_id IS NULL
+            AND NOT EXISTS (
+              SELECT 1
+              FROM public.social_accounts x
+              WHERE x.user_id::text = ${userId}
+                AND x.workspace_id::text = ${workspaceId}
+                AND x.platform = s.platform
+            )
+        `;
+      } catch (error) {
+        console.warn('[social/persist] orphan workspace bind skipped', error);
+      }
+    }
+
     let rows: unknown = null;
     if (workspaceId) {
       try {

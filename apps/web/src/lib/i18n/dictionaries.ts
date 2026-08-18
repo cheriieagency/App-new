@@ -89,23 +89,37 @@ export type NestedDict = {
     optionTable: string;
     fragmentedTitle: string;
     winnerTitle: string;
+    appsCount: string;
+    stackHeadline: string;
+    stackSub: string;
     toolBio: string;
     toolBioSub: string;
     toolCommunity: string;
     toolCommunitySub: string;
     toolPlanner: string;
     toolPlannerSub: string;
-    toolDm: string;
-    toolDmSub: string;
+    toolEmail: string;
+    toolEmailSub: string;
+    toolAds: string;
+    toolAdsSub: string;
     extraTime: string;
+    totalCostLabel: string;
+    winnerHeadline: string;
+    winnerSub: string;
+    startingFrom: string;
+    usdApprox: string;
     pillarCheckout: string;
     pillarCheckoutBody: string;
-    pillarBio: string;
-    pillarBioBody: string;
     pillarPlanner: string;
     pillarPlannerBody: string;
-    pillarDm: string;
-    pillarDmBody: string;
+    pillarBio: string;
+    pillarBioBody: string;
+    pillarCommunity: string;
+    pillarCommunityBody: string;
+    pillarEmail: string;
+    pillarEmailBody: string;
+    pillarAds: string;
+    pillarAdsBody: string;
     cta: string;
     saveBanner: string;
   };
@@ -299,31 +313,47 @@ export const DICT_EN: NestedDict = {
   comparison: {
     eyebrow: '⚡ WHY CHOOSE CLIKD:',
     headline: 'Stop Juggling Multiple Subscriptions',
-    sub: 'One unified studio replacing 4+ separate subscriptions, complex logins, and hidden transaction fees.',
+    sub: 'One unified studio replacing 5+ separate subscriptions, complex logins, and hidden transaction fees.',
     mockupView: 'Mockup view:',
     optionBento: 'Option A: Bento Cards',
     optionTable: 'Option B: Comparison Table',
     fragmentedTitle: 'Fragmented Tool Stack',
     winnerTitle: 'All-in-One Winner',
-    toolBio: 'Link in Bio & Store',
-    toolBioSub: 'Separate bio link + storefront tools',
+    appsCount: '5 Separate Subscriptions',
+    stackHeadline: 'Stacking 5+ Disconnected Tools',
+    stackSub:
+      'Scattered customer data, double-entry administration, manual approvals, and heavy monthly subscription overhead.',
+    toolBio: 'Bio Storefront & Links',
+    toolBioSub: 'Dedicated bio link & store apps',
     toolCommunity: 'Community & Courses',
-    toolCommunitySub: 'Separate community + course platforms',
-    toolPlanner: 'Social Content Planner',
-    toolPlannerSub: 'Separate scheduling apps',
-    toolDm: 'DM Automation',
-    toolDmSub: 'Separate inbox bots & comment tools',
+    toolCommunitySub: 'Separate community platforms',
+    toolPlanner: 'Social Planner & Auto-Post',
+    toolPlannerSub: 'Standalone scheduling apps',
+    toolEmail: 'Email CRM & Broadcasts',
+    toolEmailSub: 'External email marketing software',
+    toolAds: 'Meta Ads & DM Bots',
+    toolAdsSub: 'Third-party inbox bots & ad tools',
     extraTime: 'Extra Time',
-    pillarCheckout: '1-Tap Mobile Checkout',
-    pillarCheckoutBody: 'Convert mobile visitors in 10s with BankID, cards & Apple Pay.',
-    pillarBio: 'Link in Bio & Digital Store',
-    pillarBioBody: 'Sell e-books, courses & coaching with luxury theme presets.',
-    pillarPlanner: 'Social Planner & Social Sets',
-    pillarPlannerBody: 'Monthly calendar, Kanban board & multi-channel post scheduler.',
-    pillarDm: 'DM Automation & Social Inbox',
-    pillarDmBody:
-      'Auto-reply to comments and DMs, route leads, and manage conversations in one inbox.',
-    cta: 'Get started free',
+    totalCostLabel: 'Total Estimated Cost:',
+    winnerHeadline: 'One Unified Platform. Zero Friction.',
+    winnerSub:
+      'Publish videos directly, monetize your bio link, host gamified communities, send email broadcasts, and launch Meta Ad campaigns — all in one studio.',
+    startingFrom: 'Starting from',
+    usdApprox: '(~$19/mo)',
+    pillarCheckout: '1-Tap Swish & Card Checkout',
+    pillarCheckoutBody: 'Instant 10s mobile checkout via BankID, card, and Stripe Express.',
+    pillarPlanner: 'Direct Auto-Posting & Planner',
+    pillarPlannerBody:
+      'Direct publishing to TikTok, IG Reels & FB with zero manual draft hassles.',
+    pillarBio: 'Bio Storefront & Digital Products',
+    pillarBioBody: 'Sell e-books, courses & coaching with luxury preset themes and 0% fee option.',
+    pillarCommunity: 'Gamified Community & Courses',
+    pillarCommunityBody: 'Discussion feeds, classroom modules, live events & XP leaderboards.',
+    pillarEmail: 'Email CRM & Resend Broadcasts',
+    pillarEmailBody: 'Subscriber CRM, automated email sequences, tags & 99.8% inbox rate.',
+    pillarAds: 'Meta Ads Manager & ROAS',
+    pillarAdsBody: 'Launch FB & IG ad campaigns directly with real-time ROAS tracking.',
+    cta: 'Start Your Free Studio',
     saveBanner:
       'Save over {amount} / year and 15+ hours a week by consolidating your creator stack into Clikd.',
   },
@@ -522,31 +552,47 @@ export const DICT_SV: NestedDict = {
   comparison: {
     eyebrow: '⚡ VARFÖR CLIKD:',
     headline: 'Sluta jonglera flera abonnemang',
-    sub: 'En samlad studio som ersätter 4+ separata abonnemang, krångliga inloggningar och dolda avgifter.',
+    sub: 'En samlad studio som ersätter 5+ separata abonnemang, krångliga inloggningar och dolda avgifter.',
     mockupView: 'Mockup-vy:',
     optionBento: 'Alternativ A: Bento-kort',
     optionTable: 'Alternativ B: Jämförelsetabell',
     fragmentedTitle: 'Fragmenterad verktygsstack',
     winnerTitle: 'Allt-i-ett-vinnaren',
-    toolBio: 'Link in Bio & butik',
-    toolBioSub: 'Separata bio-länk- och butiksverktyg',
+    appsCount: '5 separata abonnemang',
+    stackHeadline: '5+ frånkopplade verktyg',
+    stackSub:
+      'Utspridd kunddata, dubbel admin, manuella godkännanden och tunga månadsabonnemang.',
+    toolBio: 'Bio-storefront & länkar',
+    toolBioSub: 'Egna bio-länk- och butiksappar',
     toolCommunity: 'Community & kurser',
-    toolCommunitySub: 'Separata community- och kursplattformar',
-    toolPlanner: 'Social content planner',
-    toolPlannerSub: 'Separata schemaläggningsappar',
-    toolDm: 'DM-automation',
-    toolDmSub: 'Separata inbox-bots & kommentarsverktyg',
+    toolCommunitySub: 'Separata community-plattformar',
+    toolPlanner: 'Social planner & auto-post',
+    toolPlannerSub: 'Fristående schemaläggningsappar',
+    toolEmail: 'E-post CRM & utskick',
+    toolEmailSub: 'Extern e-postmarknadsföring',
+    toolAds: 'Meta Ads & DM-bots',
+    toolAdsSub: 'Tredjeparts inbox-bots & annonsverktyg',
     extraTime: 'Extra tid',
-    pillarCheckout: '1-trycks mobilcheckout',
-    pillarCheckoutBody: 'Konvertera mobila besökare på 10s med BankID, kort & Apple Pay.',
-    pillarBio: 'Link in Bio & digital butik',
-    pillarBioBody: 'Sälj e-böcker, kurser & coaching med lyxiga temapreset.',
-    pillarPlanner: 'Social planner & Social Sets',
-    pillarPlannerBody: 'Månadskalender, Kanban & flerkalender-schemaläggare.',
-    pillarDm: 'DM-automation & Social Inbox',
-    pillarDmBody:
-      'Autosvar på kommentarer och DM:ar, leda leads och hantera konversationer i en inbox.',
-    cta: 'Kom igång gratis',
+    totalCostLabel: 'Uppskattad totalkostnad:',
+    winnerHeadline: 'En plattform. Noll friktion.',
+    winnerSub:
+      'Publicera videor direkt, tjäna på din bio-länk, hosta gamifierade communities, skicka e-postutskick och kör Meta-kampanjer — i en studio.',
+    startingFrom: 'Från',
+    usdApprox: '(~$19/mån)',
+    pillarCheckout: '1-trycks Swish- & kortcheckout',
+    pillarCheckoutBody: 'Mobilcheckout på 10s via BankID, kort och Stripe Express.',
+    pillarPlanner: 'Direkt auto-post & planner',
+    pillarPlannerBody:
+      'Publicera direkt till TikTok, IG Reels & FB — inga manuella utkast.',
+    pillarBio: 'Bio-storefront & digitala produkter',
+    pillarBioBody: 'Sälj e-böcker, kurser & coaching med lyxiga teman och 0 % avgift.',
+    pillarCommunity: 'Gamifierad community & kurser',
+    pillarCommunityBody: 'Diskussionsflöden, classroom, live-event och XP-leaderboards.',
+    pillarEmail: 'E-post CRM & Resend-utskick',
+    pillarEmailBody: 'Prenumerant-CRM, automatiska sekvenser, taggar & 99,8 % inbox.',
+    pillarAds: 'Meta Ads Manager & ROAS',
+    pillarAdsBody: 'Kör FB- & IG-kampanjer direkt med ROAS i realtid.',
+    cta: 'Starta din gratis studio',
     saveBanner:
       'Spara över {amount} / år och 15+ timmar i veckan genom att samla din creator-stack i Clikd.',
   },
@@ -732,7 +778,7 @@ export const DICT_NO: NestedDict = {
     ...DICT_SV.comparison,
     eyebrow: '⚡ HVORFOR CLIKD:',
     headline: 'Slutt å sjonglere flere abonnementer',
-    sub: 'Ett samlet studio som erstatter 4+ separate abonnementer, kronglete innlogginger og skjulte gebyrer.',
+    sub: 'Ett samlet studio som erstatter 5+ separate abonnementer, kronglete innlogginger og skjulte gebyrer.',
     cta: 'Kom i gang gratis',
     saveBanner:
       'Spar over {amount} / år og 15+ timer i uken ved å samle creator-stacken din i Clikd.',
@@ -840,7 +886,7 @@ export const DICT_DA: NestedDict = {
     ...DICT_SV.comparison,
     eyebrow: '⚡ HVORFOR CLIKD:',
     headline: 'Stop med at jonglere flere abonnementer',
-    sub: 'Ét samlet studio der erstatter 4+ separate abonnementer, komplekse logins og skjulte gebyrer.',
+    sub: 'Ét samlet studio der erstatter 5+ separate abonnementer, komplekse logins og skjulte gebyrer.',
     cta: 'Kom i gang gratis',
     saveBanner:
       'Spar over {amount} / år og 15+ timer om ugen ved at samle din creator-stack i Clikd.',
@@ -965,31 +1011,46 @@ export const DICT_FI: NestedDict = {
   comparison: {
     eyebrow: '⚡ MIKSI CLIKD:',
     headline: 'Lopeta useiden tilausten jongleeraaminen',
-    sub: 'Yksi yhtenäinen studio, joka korvaa 4+ erillistä tilausta, monimutkaiset kirjautumiset ja piilotetut maksut.',
+    sub: 'Yksi yhtenäinen studio, joka korvaa 5+ erillistä tilausta, monimutkaiset kirjautumiset ja piilotetut maksut.',
     mockupView: 'Mockup-näkymä:',
     optionBento: 'Vaihtoehto A: Bento-kortit',
     optionTable: 'Vaihtoehto B: Vertailutaulukko',
     fragmentedTitle: 'Hajanainen työkalupino',
     winnerTitle: 'Kaikki yhdessä -voittaja',
-    toolBio: 'Link in Bio & kauppa',
+    appsCount: '5 erillistä tilausta',
+    stackHeadline: '5+ irrallista työkalua',
+    stackSub:
+      'Hajanainen asiakasdata, kaksinkertainen hallinta, manuaaliset hyväksynnät ja kallis kuukausipino.',
+    toolBio: 'Bio-storefront & linkit',
     toolBioSub: 'Erilliset bio-linkki- ja kauppatoiminnot',
     toolCommunity: 'Yhteisö & kurssit',
-    toolCommunitySub: 'Erilliset yhteisö- ja kurssialustat',
-    toolPlanner: 'Some-sisällön planner',
+    toolCommunitySub: 'Erilliset yhteisöalustat',
+    toolPlanner: 'Some-planner & auto-post',
     toolPlannerSub: 'Erilliset aikataulutussovellukset',
-    toolDm: 'DM-automaatio',
-    toolDmSub: 'Erilliset inbox-botit & kommenttityökalut',
+    toolEmail: 'Sähköposti-CRM & lähetykset',
+    toolEmailSub: 'Ulkoinen sähköpostimarkkinointi',
+    toolAds: 'Meta Ads & DM-botit',
+    toolAdsSub: 'Kolmannen osapuolen inbox-botit & mainostyökalut',
     extraTime: 'Lisäaikaa',
-    pillarCheckout: '1-napin mobiili-checkout',
-    pillarCheckoutBody: 'Konvertoi mobiilivieraat 10s:ssä BankID:llä, korteilla & Apple Paylla.',
-    pillarBio: 'Link in Bio & digikauppa',
-    pillarBioBody: 'Myy e-kirjoja, kursseja & coachingia luksus-teemoilla.',
-    pillarPlanner: 'Some-planner & Social Sets',
-    pillarPlannerBody: 'Kuukausikalenteri, Kanban & monikanava-aikataulutus.',
-    pillarDm: 'DM-automaatio & Social Inbox',
-    pillarDmBody:
-      'Autovastaukset kommentteihin ja DM:iin, liidien ohjaus ja keskustelut yhdessä inboxissa.',
-    cta: 'Aloita ilmaiseksi',
+    totalCostLabel: 'Arvioitu kokonaiskustannus:',
+    winnerHeadline: 'Yksi alusta. Nolla kitkaa.',
+    winnerSub:
+      'Julkaise videot suoraan, myy bio-linkillä, hostaa gamified-yhteisöjä, lähetä sähköposteja ja aja Meta-kampanjoita — yhdessä studiossa.',
+    startingFrom: 'Alkaen',
+    usdApprox: '(~$19/kk)',
+    pillarCheckout: '1-napin Swish- & korttimaksu',
+    pillarCheckoutBody: 'Mobiilimaksu 10s:ssä BankID:llä, kortilla ja Stripe Expressillä.',
+    pillarPlanner: 'Suora auto-post & planner',
+    pillarPlannerBody: 'Julkaise suoraan TikTokiin, IG Reelisiin & FB:hen ilman luonnoksia.',
+    pillarBio: 'Bio-storefront & digituotteet',
+    pillarBioBody: 'Myy e-kirjoja, kursseja & coachingia luksusteemoilla ja 0 % kululla.',
+    pillarCommunity: 'Gamified-yhteisö & kurssit',
+    pillarCommunityBody: 'Keskustelufeed, classroom, live-eventit ja XP-leaderboardit.',
+    pillarEmail: 'Sähköposti-CRM & Resend',
+    pillarEmailBody: 'Tilaaja-CRM, automaatiot, tagit & 99,8 % inbox-osuus.',
+    pillarAds: 'Meta Ads Manager & ROAS',
+    pillarAdsBody: 'Aja FB- & IG-kampanjoita suoraan reaaliaikaisella ROAS:lla.',
+    cta: 'Aloita ilmainen studio',
     saveBanner:
       'Säästä yli {amount} / vuodessa ja 15+ tuntia viikossa yhdistämällä creator-stackisi Clikdiin.',
   },

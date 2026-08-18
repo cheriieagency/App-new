@@ -91,6 +91,44 @@ export type ExtraKey =
   | 'suiteCommunitySummary'
   | 'suiteEmailTitle'
   | 'suiteEmailSummary'
+  | 'suiteTrustCreators'
+  | 'suiteTrustBankId'
+  | 'suiteTrustOwnership'
+  | 'suiteTrustPayouts'
+  | 'suiteTrustApis'
+  | 'suitePublishTitle'
+  | 'suitePublishSummary'
+  | 'suitePublishBadge'
+  | 'suiteTikTokDirect'
+  | 'suiteInstagramReel'
+  | 'suiteDirectApiStatus'
+  | 'suiteEmailFooterVerified'
+  | 'suiteEmailInboxRate'
+  | 'suiteInboxTrigger'
+  | 'suiteBioCheckout'
+  | 'suiteCommunityXp'
+  | 'suiteAdsNew'
+  | 'suiteAdsTitle'
+  | 'suiteAdsSummary'
+  | 'suiteAdsFooter'
+  | 'suiteReportsTitle'
+  | 'suiteReportsSummary'
+  | 'suiteReportsReach'
+  | 'suiteReportsViews'
+  | 'suiteReportsFollowers'
+  | 'suiteReportsFooter'
+  | 'suiteOwnershipBadge'
+  | 'suiteOwnershipHeadline'
+  | 'suiteOwnershipSub'
+  | 'suiteCtaStudio'
+  | 'suiteGuaranteeExportTitle'
+  | 'suiteGuaranteeExportBody'
+  | 'suiteGuaranteeStripeTitle'
+  | 'suiteGuaranteeStripeBody'
+  | 'suiteGuaranteeMigrationTitle'
+  | 'suiteGuaranteeMigrationBody'
+  | 'suiteGuaranteePricingTitle'
+  | 'suiteGuaranteePricingBody'
   | 'roiEyebrow'
   | 'roiHeadline'
   | 'roiSub'
@@ -1096,6 +1134,102 @@ export type ExtraKey =
   | 'toastNoRecentIgComments'
   | 'toastFetchedIgComments'
   | 'toastFetchCommentsFailed'
+  | 'inboxTabAutomations'
+  | 'inboxSync'
+  | 'inboxSyncIssue'
+  | 'inboxDmNeedPerms'
+  | 'inboxReconnectIg'
+  | 'inboxAll'
+  | 'inboxTikTokDemo'
+  | 'inboxAllMessages'
+  | 'inboxDms'
+  | 'inboxComments'
+  | 'inboxSearchConversations'
+  | 'inboxSyncing'
+  | 'inboxNoMatches'
+  | 'inboxNoDms'
+  | 'inboxNoComments'
+  | 'inboxEmpty'
+  | 'inboxTryAnotherSearch'
+  | 'inboxTapSync'
+  | 'inboxComment'
+  | 'inboxProfile'
+  | 'inboxNoMessagesInThread'
+  | 'inboxMediaSoon'
+  | 'inboxAttachMedia'
+  | 'inboxAiQuickReply'
+  | 'inboxReplyTikTok'
+  | 'inboxWriteReply'
+  | 'inboxReplyComment'
+  | 'inboxSelectConversation'
+  | 'dmKpiActiveTriggers'
+  | 'dmKpiRules'
+  | 'dmKpiDmsSent'
+  | 'dmKpiDms'
+  | 'dmKpiStorefrontClicks'
+  | 'dmKpiClicks'
+  | 'dmKpiConversion'
+  | 'dmTitle'
+  | 'dmSub'
+  | 'dmResyncWebhooks'
+  | 'dmCreateRule'
+  | 'dmDevTools'
+  | 'dmRunLiveDebug'
+  | 'dmTestAutomation'
+  | 'dmFetchComments'
+  | 'dmSelectRecentComment'
+  | 'dmFetchCommentsFirst'
+  | 'dmPickComment'
+  | 'dmCommentIdLabel'
+  | 'dmCommentIdPlaceholder'
+  | 'dmRunLiveTestDm'
+  | 'dmDiagnosticTitle'
+  | 'dmAllChecksPassed'
+  | 'dmIssuesFound'
+  | 'dmDismiss'
+  | 'dmCheckToken'
+  | 'dmCheckWebhooks'
+  | 'dmCheckRules'
+  | 'dmCheckPayload'
+  | 'dmFixPrefix'
+  | 'dmLiveReplyResult'
+  | 'dmEmptyHeadline'
+  | 'dmEmptyDesc'
+  | 'dmEmptyCta'
+  | 'dmActive'
+  | 'dmPaused'
+  | 'dmPauseAria'
+  | 'dmActivateAria'
+  | 'dmEdit'
+  | 'dmDelete'
+  | 'dmDeleteConfirm'
+  | 'dmDmsSentClicks'
+  | 'dmRetry'
+  | 'dmLoadFailed'
+  | 'dmUnknownError'
+  | 'dmClose'
+  | 'dmModalEyebrow'
+  | 'dmEditRule'
+  | 'dmCreateRuleTitle'
+  | 'dmFieldTitle'
+  | 'dmTitlePlaceholder'
+  | 'dmFieldKeywords'
+  | 'dmFieldDm'
+  | 'dmFieldButton'
+  | 'dmFieldStorefront'
+  | 'dmPublicReplyToggle'
+  | 'dmSaveChanges'
+  | 'dmCreateRuleBtn'
+  | 'dmJustNow'
+  | 'dmMinsAgo'
+  | 'dmHoursAgo'
+  | 'dmDaysAgo'
+  | 'dmUnknownUser'
+  | 'dmEmptyComment'
+  | 'dmInvalidCommentId'
+  | 'dmDefaultMessage'
+  | 'dmDefaultCta'
+  | 'dmDefaultPublicReply'
   | 'toastUpdateProjectLinkFailed'
   | 'toastUploadedFromDevice'
   | 'toastMovedToFolder'
@@ -1273,11 +1407,11 @@ export const EXTRA_EN: ExtraDict = {
   suiteEyebrow: 'Creator Admin',
   suiteHeadline: 'Your complete creator command center',
   suiteSub:
-    'Everything you need after login: social planning, bio link storefront, inbox, advanced analytics, community, and email CRM — in one unified dashboard.',
+    'Replace 5 fragmented subscriptions with one unified studio. Direct publishing APIs, bio storefronts, community, and email CRM — backed by 100% data ownership.',
   suitePlannerTitle: 'Calendar & Planner',
   suitePlannerSummary:
     'Schedule and auto-post content across your multi-brand Social Set profiles with Kanban & Calendar views.',
-  suiteBioTitle: 'Bio Link Builder',
+  suiteBioTitle: 'Bio Link Storefront',
   suiteBioSummary:
     'Custom themes, UTM tracking, digital products, and 1-tap mobile checkout flow.',
   suiteAnalyticsTitle: 'In-depth Analytics',
@@ -1292,12 +1426,55 @@ export const EXTRA_EN: ExtraDict = {
   suiteInboxTitle: 'Unified Social Inbox',
   suiteInboxSummary:
     'Manage DMs and comments across Instagram and TikTok profiles seamlessly from a single workspace.',
-  suiteCommunityTitle: 'Community & Members',
+  suiteCommunityTitle: 'Community & Courses',
   suiteCommunitySummary:
     'Member feeds, moderation tools, classroom courses, storefront, live events, and XP leaderboards.',
   suiteEmailTitle: 'Email CRM & Broadcasts',
   suiteEmailSummary:
-    'Subscriber directory, automated email broadcasts, tags, and engagement analytics for every brand workspace.',
+    'Subscriber directory, automated email broadcasts, tags, and engagement tracking built on custom Resend infrastructure.',
+  suiteTrustCreators: 'Trusted by 500+ Nordic Creators & Agencies',
+  suiteTrustBankId: 'BankID & Stripe Verified',
+  suiteTrustOwnership: '100% Data Ownership',
+  suiteTrustPayouts: 'Instant Bank Payouts',
+  suiteTrustApis: 'Official Meta & TikTok APIs',
+  suitePublishTitle: 'Automated Multi-Platform Auto-Posting',
+  suitePublishSummary:
+    'Schedule and publish videos directly to TikTok, Instagram Reels, and Facebook in seconds. Integrated OAuth scopes ensure zero manual draft approvals or push notification hassles.',
+  suitePublishBadge: 'Direct Publishing API',
+  suiteTikTokDirect: 'TikTok Direct Post Active',
+  suiteInstagramReel: 'Instagram Auto-Reel',
+  suiteDirectApiStatus: '100% Direct API Status ✓',
+  suiteEmailFooterVerified: 'Resend Verified',
+  suiteEmailInboxRate: '99.8% Inbox Guarantee',
+  suiteInboxTrigger: 'Auto Comment-to-DM Trigger',
+  suiteBioCheckout: '1-Tap Swish & Card Checkout',
+  suiteCommunityXp: 'Gamified Member Hub & XP',
+  suiteAdsNew: 'NEW',
+  suiteAdsTitle: 'Meta Ads Manager & ROAS',
+  suiteAdsSummary:
+    'Launch Facebook & Instagram ad campaigns directly from your studio with real-time ROAS tracking and conversion attribution.',
+  suiteAdsFooter: 'Real-time Campaign ROAS',
+  suiteReportsTitle: 'In-depth Analytics & Revenue Reports',
+  suiteReportsSummary:
+    'Reach, video views, impressions, audience growth, Linkin.bio performance, and total Swish & card sales reports unified in one view.',
+  suiteReportsReach: 'Reach: 94.2K',
+  suiteReportsViews: 'Views: 186.4K',
+  suiteReportsFollowers: '+842 Followers',
+  suiteReportsFooter: 'Full Cross-Platform Reports',
+  suiteOwnershipBadge: '100% DATA OWNERSHIP & ZERO LOCK-IN GUARANTEE',
+  suiteOwnershipHeadline:
+    'You own your business. Export your members, courses, and sales anytime.',
+  suiteOwnershipSub:
+    'Never worry about platform lock-in. 1-click CSV/JSON downloads for all member directories, transaction logs, and email contact lists.',
+  suiteCtaStudio: 'Start Your Free Studio →',
+  suiteGuaranteeExportTitle: '1-Click Full Export',
+  suiteGuaranteeExportBody: 'Download all CSV/JSON data with zero restrictions anytime.',
+  suiteGuaranteeStripeTitle: 'Stripe Connect Express',
+  suiteGuaranteeStripeBody: 'Direct payouts to your bank account with BankID security.',
+  suiteGuaranteeMigrationTitle: 'White-Glove Migration',
+  suiteGuaranteeMigrationBody: 'Free 1:1 support moving active members from Skool or Stan Store.',
+  suiteGuaranteePricingTitle: 'Transparent Pricing',
+  suiteGuaranteePricingBody: '0% or low platform fees with no surprise hidden charges.',
   roiEyebrow: 'ROI Calculator',
   roiHeadline: 'Estimate your monthly revenue from your community',
   roiSub: 'Adjust the sliders. 1–3% conversion is realistic for an engaged creator audience.',
@@ -1454,7 +1631,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   pillarEngageP2: 'Paid memberships',
   pillarEngageP3: 'Live streams',
   mostPopular: 'Most Popular',
-  whyChooseUsSub: 'One unified OS replacing 4+ separate subscriptions, complex logins, and hidden fees.',
+  whyChooseUsSub: 'One unified OS replacing 5+ separate subscriptions, complex logins, and hidden fees.',
   fragmentedStack: 'Fragmented Tool Stack',
   fragmentedStackSub: 'Multiple single-feature apps',
   allInOneWinner: 'All-in-One Winner',
@@ -2037,7 +2214,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
     "The broadcast hasn't started yet — keep this link bookmarked.",
   publishOrSave: 'Publish / Save',
   allTeamWorkspaces: 'All team workspaces',
-  emailBodyPlaceholder: 'Write your email… Drop an image, then move it up/down.',
+  emailBodyPlaceholder: 'Write your email… Drop an image into the text where it should appear.',
   socialSpaces: 'Social Spaces',
   linkGoogleCalendar: 'Link Google Calendar',
   calendarFilter: 'Filter',
@@ -2119,7 +2296,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   engagementSummarySub: 'Likes, comments, shares and saves across all content',
   totalEngagement: 'Total engagement',
   engagementRateHint: 'Average engagement rate for {name} · {range}',
-  engagementRateTrend: '+0.4% vs previous period',
+  engagementRateTrend: '{delta} vs previous period',
   engagementRateFormula: 'Engagement ÷ reach × 100',
   pctOfEngagement: '{n}% of engagement',
   dateRange1Week: '1 week',
@@ -2321,6 +2498,106 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   toastNoRecentIgComments: 'No recent Instagram comments found.',
   toastFetchedIgComments: 'Fetched {count} comment(s) from Instagram.',
   toastFetchCommentsFailed: 'Could not fetch comments',
+  inboxTabAutomations: 'Automations',
+  inboxSync: 'Sync',
+  inboxSyncIssue:
+    'Instagram sync issue: {error}. Try Sync, or reconnect under Settings → Socials.',
+  inboxDmNeedPerms: 'Instagram DMs need messaging permissions',
+  inboxReconnectIg: 'Reconnect Instagram',
+  inboxAll: 'All',
+  inboxTikTokDemo: 'TikTok (Demo)',
+  inboxAllMessages: 'All Messages',
+  inboxDms: 'DMs',
+  inboxComments: 'Comments',
+  inboxSearchConversations: 'Search conversations…',
+  inboxSyncing: 'Syncing…',
+  inboxNoMatches: 'No matches',
+  inboxNoDms: 'No DMs yet',
+  inboxNoComments: 'No comments yet',
+  inboxEmpty: 'Inbox is empty',
+  inboxTryAnotherSearch: 'Try another search term.',
+  inboxTapSync: 'Tap Sync to refresh connected inboxes.',
+  inboxComment: 'Comment',
+  inboxProfile: 'Profile',
+  inboxNoMessagesInThread: 'No messages in this thread yet',
+  inboxMediaSoon: 'Media replies coming soon',
+  inboxAttachMedia: 'Attach media',
+  inboxAiQuickReply: 'AI quick reply',
+  inboxReplyTikTok: 'Reply on TikTok…',
+  inboxWriteReply: 'Write a reply…',
+  inboxReplyComment: 'Reply to comment…',
+  inboxSelectConversation: 'Select a conversation',
+  dmKpiActiveTriggers: 'Active Triggers',
+  dmKpiRules: '{n} Rules',
+  dmKpiDmsSent: 'DMs Sent This Month',
+  dmKpiDms: '{n} DMs',
+  dmKpiStorefrontClicks: 'Storefront Clicks',
+  dmKpiClicks: '{n} Clicks',
+  dmKpiConversion: 'Conversion Rate',
+  dmTitle: 'Comment-to-DM Automations',
+  dmSub: 'When someone comments a keyword, Clikd sends your DM + storefront link.',
+  dmResyncWebhooks: 'Re-sync Meta Webhooks',
+  dmCreateRule: 'Create new rule',
+  dmDevTools: 'Developer tools & diagnostics (optional)',
+  dmRunLiveDebug: 'Run live diagnostic',
+  dmTestAutomation: 'Test automation',
+  dmFetchComments: 'Fetch latest comments',
+  dmSelectRecentComment: 'Select a recent Instagram comment',
+  dmFetchCommentsFirst: 'Fetch comments first…',
+  dmPickComment: 'Choose a comment…',
+  dmCommentIdLabel: 'Instagram Comment ID (optional for live DM test)',
+  dmCommentIdPlaceholder: 'e.g. 17912345678901234',
+  dmRunLiveTestDm: 'Run live test DM',
+  dmDiagnosticTitle: 'Live Comment-to-DM Diagnostic',
+  dmAllChecksPassed: 'All checks passed',
+  dmIssuesFound: 'Issues found — see checklist + Meta errors below',
+  dmDismiss: 'Dismiss',
+  dmCheckToken: 'Instagram token valid',
+  dmCheckWebhooks: 'Meta webhooks subscribed (comments, messages)',
+  dmCheckRules: 'Active automation rules found in database',
+  dmCheckPayload: 'Private reply Graph API payload formatted correctly',
+  dmFixPrefix: 'Fix:',
+  dmLiveReplyResult: 'Live Private Reply Result',
+  dmEmptyHeadline: 'No automation rules yet',
+  dmEmptyDesc:
+    'Create a keyword trigger so Instagram comments auto-send a DM with your Clikd storefront link.',
+  dmEmptyCta: 'Create Comment-to-DM rule',
+  dmActive: 'Active',
+  dmPaused: 'Paused',
+  dmPauseAria: 'Pause automation',
+  dmActivateAria: 'Activate automation',
+  dmEdit: 'Edit',
+  dmDelete: 'Delete',
+  dmDeleteConfirm: 'Delete this automation rule?',
+  dmDmsSentClicks: '{dms} DMs sent · {clicks} clicks',
+  dmRetry: 'Retry',
+  dmLoadFailed: 'Could not load automations:',
+  dmUnknownError: 'Unknown error',
+  dmClose: 'Close',
+  dmModalEyebrow: 'Comment-to-DM',
+  dmEditRule: 'Edit rule',
+  dmCreateRuleTitle: 'Create Comment-to-DM rule',
+  dmFieldTitle: 'Title',
+  dmTitlePlaceholder: 'Masterclass keyword',
+  dmFieldKeywords: 'Trigger keywords (comma-separated)',
+  dmFieldDm: 'Direct message',
+  dmFieldButton: 'Button label',
+  dmFieldStorefront: 'Clikd storefront link',
+  dmPublicReplyToggle: 'Also post an automatic public comment reply',
+  dmSaveChanges: 'Save changes',
+  dmCreateRuleBtn: 'Create rule',
+  dmJustNow: 'just now',
+  dmMinsAgo: '{n} min ago',
+  dmHoursAgo: '{n} h ago',
+  dmDaysAgo: '{n} d ago',
+  dmUnknownUser: '@unknown',
+  dmEmptyComment: '(empty)',
+  dmInvalidCommentId:
+    'Please enter a valid numeric Instagram Comment ID to send a live test Private Reply.',
+  dmDefaultMessage:
+    'Hi! Thanks for your comment. Here is the direct link to my new Masterclass:',
+  dmDefaultCta: 'Open storefront',
+  dmDefaultPublicReply: 'Check your DMs!',
   toastUpdateProjectLinkFailed: 'Could not update project link',
   toastUploadedFromDevice: 'Uploaded from your device',
   toastMovedToFolder: 'Moved to {dest}',
@@ -2499,7 +2776,7 @@ export const EXTRA_SV: ExtraDict = {
   suiteEyebrow: 'Creator Admin',
   suiteHeadline: 'Din kompletta Creator Command Center',
   suiteSub:
-    'Allt du behöver efter inloggning: social planering, bio-länkbutik, inbox, avancerad analytics, community och e-post-CRM — i en samlad dashboard.',
+    'Byt ut fem splittrade abonnemang mot en samlad studio. Direktpublicering, bio-storefront, community och e-post-CRM — med 100 % dataägande.',
   suitePlannerTitle: 'Kalender & Planner',
   suitePlannerSummary:
     'Schemalägg och auto-posta innehåll över dina Social Set-profiler med Kanban- och kalendervy.',
@@ -2518,12 +2795,55 @@ export const EXTRA_SV: ExtraDict = {
   suiteInboxTitle: 'Unified Social Inbox',
   suiteInboxSummary:
     'Hantera DM:ar och kommentarer över Instagram och TikTok från ett enda workspace.',
-  suiteCommunityTitle: 'Community & Members',
+  suiteCommunityTitle: 'Community & kurser',
   suiteCommunitySummary:
     'Medlemsflöden, moderation, kurser, storefront, live-event och XP-leaderboards.',
   suiteEmailTitle: 'E-post CRM & Broadcasts',
   suiteEmailSummary:
-    'Prenumerantdirectory, automatiska utskick, taggar och engagemangsanalytics per varumärke.',
+    'Prenumerantkatalog, automatiska utskick, taggar och engagemangsspårning på Resend.',
+  suiteTrustCreators: 'Betrodd av 500+ nordiska kreatörer & byråer',
+  suiteTrustBankId: 'BankID & Stripe-verifierad',
+  suiteTrustOwnership: '100 % dataägande',
+  suiteTrustPayouts: 'Direktutbetalning till bank',
+  suiteTrustApis: 'Officiella Meta- & TikTok-API:er',
+  suitePublishTitle: 'Automatisk publicering på flera plattformar',
+  suitePublishSummary:
+    'Schemalägg och publicera videor direkt till TikTok, Instagram Reels och Facebook på sekunder. Inbyggda OAuth-scopes — inga manuella utkast eller push-godkännanden.',
+  suitePublishBadge: 'Direct Publishing API',
+  suiteTikTokDirect: 'TikTok Direct Post aktiv',
+  suiteInstagramReel: 'Instagram Auto-Reel',
+  suiteDirectApiStatus: '100 % Direct API Status ✓',
+  suiteEmailFooterVerified: 'Resend-verifierad',
+  suiteEmailInboxRate: '99,8 % inbox-garanti',
+  suiteInboxTrigger: 'Auto kommentar-till-DM',
+  suiteBioCheckout: '1-trycks Swish- & kortcheckout',
+  suiteCommunityXp: 'Gamifierad medlemsyta & XP',
+  suiteAdsNew: 'NYTT',
+  suiteAdsTitle: 'Meta Ads Manager & ROAS',
+  suiteAdsSummary:
+    'Lansera Facebook- och Instagram-kampanjer direkt från studion med realtids-ROAS och konverteringsattribution.',
+  suiteAdsFooter: 'Kampanj-ROAS i realtid',
+  suiteReportsTitle: 'Djupgående analytics & intäktsrapporter',
+  suiteReportsSummary:
+    'Räckvidd, videovisningar, impressions, publikväxt, Linkin.bio och total Swish- & kortförsäljning — samlat i en vy.',
+  suiteReportsReach: 'Räckvidd: 94,2K',
+  suiteReportsViews: 'Visningar: 186,4K',
+  suiteReportsFollowers: '+842 följare',
+  suiteReportsFooter: 'Fullständiga cross-platform-rapporter',
+  suiteOwnershipBadge: '100 % DATAÄGANDE & INGEN INLÅSNING',
+  suiteOwnershipHeadline:
+    'Du äger din business. Exportera medlemmar, kurser och försäljning när som helst.',
+  suiteOwnershipSub:
+    'Ingen plattformsinlåsning. 1-klicks CSV/JSON för medlemslistor, transaktioner och e-postkontakter.',
+  suiteCtaStudio: 'Starta din gratis studio →',
+  suiteGuaranteeExportTitle: '1-klicks full export',
+  suiteGuaranteeExportBody: 'Ladda ner all CSV/JSON-data utan begränsningar, när som helst.',
+  suiteGuaranteeStripeTitle: 'Stripe Connect Express',
+  suiteGuaranteeStripeBody: 'Direktutbetalning till ditt bankkonto med BankID.',
+  suiteGuaranteeMigrationTitle: 'White-glove-migrering',
+  suiteGuaranteeMigrationBody: 'Gratis 1:1-stöd när du flyttar aktiva medlemmar från Skool eller Stan Store.',
+  suiteGuaranteePricingTitle: 'Transparent prissättning',
+  suiteGuaranteePricingBody: '0 % eller låg plattformsavgift — inga dolda kostnader.',
   roiEyebrow: 'ROI-kalkylator',
   roiHeadline: 'Uppskatta din månadsintäkt från din community',
   roiSub: 'Justera reglagen. 1–3% konvertering är realistiskt för en engagerad publik.',
@@ -2679,7 +2999,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   pillarEngageP2: 'Betalda medlemskap',
   pillarEngageP3: 'Live streams',
   mostPopular: 'Mest populär',
-  whyChooseUsSub: 'Ett enhetligt OS som ersätter 4+ separata abonnemang, krångliga inloggningar och dolda avgifter.',
+  whyChooseUsSub: 'Ett enhetligt OS som ersätter 5+ separata abonnemang, krångliga inloggningar och dolda avgifter.',
   fragmentedStack: 'Fragmenterad verktygsstack',
   fragmentedStackSub: 'Flera enfunktionella appar',
   allInOneWinner: 'Allt-i-ett-vinnare',
@@ -3262,7 +3582,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
     'Sändningen har inte startat ännu — behåll länken bokmärkt.',
   publishOrSave: 'Publicera / Spara',
   allTeamWorkspaces: 'Alla team-ytor',
-  emailBodyPlaceholder: 'Skriv ditt mejl… Dra in en bild, sedan flytta den upp/ner.',
+  emailBodyPlaceholder: 'Skriv ditt mejl… Dra in en bild i texten där den ska synas.',
   socialSpaces: 'Social Spaces',
   linkGoogleCalendar: 'Koppla Google Calendar',
   calendarFilter: 'Filter',
@@ -3344,7 +3664,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   engagementSummarySub: 'Gillamarkeringar, kommentarer, delningar och sparningar för allt content',
   totalEngagement: 'Totalt engagement',
   engagementRateHint: 'Genomsnittlig engagement rate för {name} · {range}',
-  engagementRateTrend: '+0,4% jämfört med föregående period',
+  engagementRateTrend: '{delta} jämfört med föregående period',
   engagementRateFormula: 'Engagement ÷ räckvidd × 100',
   pctOfEngagement: '{n}% av engagement',
   dateRange1Week: '1 vecka',
@@ -3546,6 +3866,106 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   toastNoRecentIgComments: 'Inga senaste kommentarer hittades på Instagram.',
   toastFetchedIgComments: 'Hämtade {count} kommentar(er) från Instagram.',
   toastFetchCommentsFailed: 'Kunde inte hämta kommentarer',
+  inboxTabAutomations: 'Automationer',
+  inboxSync: 'Synka',
+  inboxSyncIssue:
+    'Instagram-synkfel: {error}. Prova Synka, eller koppla om under Inställningar → Socials.',
+  inboxDmNeedPerms: 'Instagram-DM kräver meddelandebehörighet',
+  inboxReconnectIg: 'Koppla om Instagram',
+  inboxAll: 'Alla',
+  inboxTikTokDemo: 'TikTok (Demo)',
+  inboxAllMessages: 'Alla meddelanden',
+  inboxDms: 'DM:ar',
+  inboxComments: 'Kommentarer',
+  inboxSearchConversations: 'Sök konversationer…',
+  inboxSyncing: 'Synkar…',
+  inboxNoMatches: 'Inga träffar',
+  inboxNoDms: 'Inga DM:ar ännu',
+  inboxNoComments: 'Inga kommentarer ännu',
+  inboxEmpty: 'Inkorgen är tom',
+  inboxTryAnotherSearch: 'Prova ett annat sökord.',
+  inboxTapSync: 'Tryck Synka för att uppdatera anslutna inkorgar.',
+  inboxComment: 'Kommentar',
+  inboxProfile: 'Profil',
+  inboxNoMessagesInThread: 'Inga meddelanden i den här tråden ännu',
+  inboxMediaSoon: 'Mediasvar kommer snart',
+  inboxAttachMedia: 'Bifoga media',
+  inboxAiQuickReply: 'AI-snabbsvar',
+  inboxReplyTikTok: 'Svara på TikTok…',
+  inboxWriteReply: 'Skriv ett svar…',
+  inboxReplyComment: 'Svara på kommentaren…',
+  inboxSelectConversation: 'Välj en konversation',
+  dmKpiActiveTriggers: 'Aktiva triggers',
+  dmKpiRules: '{n} regler',
+  dmKpiDmsSent: 'DM:ar skickade denna månad',
+  dmKpiDms: '{n} DM:ar',
+  dmKpiStorefrontClicks: 'Storefront-klick',
+  dmKpiClicks: '{n} klick',
+  dmKpiConversion: 'Konverteringsgrad',
+  dmTitle: 'Kommentar-till-DM-automationer',
+  dmSub: 'När någon kommenterar ett nyckelord skickar clikd: ditt DM + storefront-länk.',
+  dmResyncWebhooks: 'Synka om Meta-webhooks',
+  dmCreateRule: 'Skapa ny regel',
+  dmDevTools: 'Utvecklarverktyg & diagnostik (valfritt)',
+  dmRunLiveDebug: 'Kör live-felsökning',
+  dmTestAutomation: 'Testa automation',
+  dmFetchComments: 'Hämta senaste kommentarer',
+  dmSelectRecentComment: 'Välj senaste Instagram-kommentar',
+  dmFetchCommentsFirst: 'Hämta kommentarer först…',
+  dmPickComment: 'Välj en kommentar…',
+  dmCommentIdLabel: 'Instagram Comment ID (valfritt för live-DM-test)',
+  dmCommentIdPlaceholder: 't.ex. 17912345678901234',
+  dmRunLiveTestDm: 'Kör live test-DM',
+  dmDiagnosticTitle: 'Live-diagnostik för kommentar-till-DM',
+  dmAllChecksPassed: 'Alla kontroller godkända',
+  dmIssuesFound: 'Problem hittades — se checklistan och Meta-fel nedan',
+  dmDismiss: 'Stäng',
+  dmCheckToken: 'Giltig Instagram-token',
+  dmCheckWebhooks: 'Meta-webhooks prenumererade (kommentarer, meddelanden)',
+  dmCheckRules: 'Aktiva automationsregler hittades i databasen',
+  dmCheckPayload: 'Private Reply Graph API-payload formaterad korrekt',
+  dmFixPrefix: 'Åtgärd:',
+  dmLiveReplyResult: 'Resultat för live Private Reply',
+  dmEmptyHeadline: 'Inga automationsregler ännu',
+  dmEmptyDesc:
+    'Skapa en nyckelords-trigger så att Instagram-kommentarer automatiskt skickar ett DM med din clikd:-storefront-länk.',
+  dmEmptyCta: 'Skapa kommentar-till-DM-regel',
+  dmActive: 'Aktiv',
+  dmPaused: 'Pausad',
+  dmPauseAria: 'Pausa automation',
+  dmActivateAria: 'Aktivera automation',
+  dmEdit: 'Redigera',
+  dmDelete: 'Ta bort',
+  dmDeleteConfirm: 'Ta bort den här automationsregeln?',
+  dmDmsSentClicks: '{dms} DM:ar skickade · {clicks} klick',
+  dmRetry: 'Försök igen',
+  dmLoadFailed: 'Kunde inte ladda automationer:',
+  dmUnknownError: 'Okänt fel',
+  dmClose: 'Stäng',
+  dmModalEyebrow: 'Kommentar-till-DM',
+  dmEditRule: 'Redigera regel',
+  dmCreateRuleTitle: 'Skapa kommentar-till-DM-regel',
+  dmFieldTitle: 'Titel',
+  dmTitlePlaceholder: 'Nyckelord för masterclass',
+  dmFieldKeywords: 'Trigger-nyckelord (kommaseparerade)',
+  dmFieldDm: 'Direktmeddelande',
+  dmFieldButton: 'Knapptext',
+  dmFieldStorefront: 'clikd: storefront-länk',
+  dmPublicReplyToggle: 'Publicera även automatiskt kommentarsvar',
+  dmSaveChanges: 'Spara ändringar',
+  dmCreateRuleBtn: 'Skapa regel',
+  dmJustNow: 'nyss',
+  dmMinsAgo: '{n} min sedan',
+  dmHoursAgo: '{n} h sedan',
+  dmDaysAgo: '{n} d sedan',
+  dmUnknownUser: '@okänd',
+  dmEmptyComment: '(tom)',
+  dmInvalidCommentId:
+    'Ange ett giltigt numeriskt Instagram Comment ID för att skicka ett live-test av Private Reply.',
+  dmDefaultMessage:
+    'Hej! Tack för din kommentar. Här är direktlänken till min nya Masterclass:',
+  dmDefaultCta: 'Öppna storefront',
+  dmDefaultPublicReply: 'Kolla din DM!',
   toastUpdateProjectLinkFailed: 'Kunde inte uppdatera projektlänk',
   toastUploadedFromDevice: 'Uppladdat från din enhet',
   toastMovedToFolder: 'Flyttad till {dest}',
@@ -3705,7 +4125,7 @@ export const EXTRA_NO: ExtraDict = {
   suiteEyebrow: 'Creator Admin',
   suiteHeadline: 'Ditt komplette Creator Command Center',
   suiteSub:
-    'Alt du trenger etter innlogging: social planlegging, bio-lenkebutikk, innboks, avansert analytics, community og e-post-CRM — i ett samlet dashboard.',
+    'Bytt ut fem fragmenterte abonnement med ett samlet studio. Direkte publisering, bio-storefront, community og e-post-CRM — med 100 % dataeierskap.',
   faqEyebrow: 'FAQ',
   faqHeadline: 'Vanlige spørsmål',
   faqSub: 'Betalinger, bio, social tagging, MVA og migrering av medlemmer.',
@@ -3854,7 +4274,7 @@ export const EXTRA_DA: ExtraDict = {
     'Creator Admin til social, bio og analytics — plus community, events, e-mail og nordisk checkout.',
   suiteHeadline: 'Dit komplette Creator Command Center',
   suiteSub:
-    'Alt du behøver efter login: social planlægning, bio-linkbutik, indbakke, avanceret analytics, community og e-mail-CRM — i ét samlet dashboard.',
+    'Erstat fem fragmenterede abonnementer med ét samlet studio. Direkte publicering, bio-storefront, community og e-mail-CRM — med 100 % dataejerskab.',
   faqHeadline: 'Ofte stillede spørgsmål',
   faqSub: 'Betalinger, bio, social tagging, moms og migrering af medlemmer.',
   searchCommunitiesHeading: 'Søg communities',
@@ -4017,7 +4437,7 @@ export const EXTRA_FI: ExtraDict = {
   suiteEyebrow: 'Creator Admin',
   suiteHeadline: 'Täydellinen Creator Command Center',
   suiteSub:
-    'Kaikki tarvitsemasi kirjautumisen jälkeen: some-suunnittelu, bio-linkkikauppa, inbox, analytics, yhteisö ja sähköposti-CRM — yhdessä dashboardissa.',
+    'Korvaa viisi hajanaista tilausta yhdellä studiolla. Suora julkaisu, bio-kauppa, yhteisö ja sähköposti-CRM — 100 % datan omistajuudella.',
   suitePlannerTitle: 'Kalenteri & Planner',
   suitePlannerSummary:
     'Aikatauluta ja auto-julkaise sisältöä Social Set -profiileihisi Kanban- ja kalenterinäkymällä.',
@@ -4377,7 +4797,7 @@ navFeatures: 'Ominaisuudet',
     'Lähetys ei ole vielä alkanut — pidä tämä linkki kirjanmerkeissä.',
   publishOrSave: 'Julkaise / Tallenna',
   allTeamWorkspaces: 'Kaikki tiimitilat',
-  emailBodyPlaceholder: 'Kirjoita sähköposti… Pudota kuva ja siirrä sitä ylös/alas.',
+  emailBodyPlaceholder: 'Kirjoita sähköposti… Vedä kuva tekstiin siihen kohtaan, johon sen kuuluu tulla.',
   socialSpaces: 'Social Spaces',
   linkGoogleCalendar: 'Yhdistä Google Calendar',
   calendarFilter: 'Suodata',
@@ -4459,7 +4879,7 @@ navFeatures: 'Ominaisuudet',
   engagementSummarySub: 'Tykkäykset, kommentit, jaot ja tallennukset kaikesta sisällöstä',
   totalEngagement: 'Engagement yhteensä',
   engagementRateHint: 'Keskimääräinen engagement rate tilalle {name} · {range}',
-  engagementRateTrend: '+0,4 % edelliseen jaksoon verrattuna',
+  engagementRateTrend: '{delta} edelliseen jaksoon verrattuna',
   engagementRateFormula: 'Engagement ÷ kattavuus × 100',
   pctOfEngagement: '{n} % engagementista',
   dateRange1Week: '1 viikko',

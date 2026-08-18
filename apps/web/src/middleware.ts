@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // --- Role split (admin vs member) on platform hosts ---
-  if (pathname.startsWith('/account/')) {
+  if (pathname.startsWith('/account/') || pathname === '/forgot-password' || pathname === '/update-password') {
     return NextResponse.next();
   }
 

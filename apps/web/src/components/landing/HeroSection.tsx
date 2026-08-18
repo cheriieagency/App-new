@@ -486,7 +486,7 @@ export function HeroSection() {
               type="button"
               onClick={() =>
                 document
-                  .getElementById('features')
+                  .getElementById('creator-admin')
                   ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }
               className="inline-flex items-center justify-center min-h-[48px] bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs px-7 py-4 rounded-2xl transition-all"

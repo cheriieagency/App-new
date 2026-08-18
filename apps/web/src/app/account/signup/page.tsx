@@ -19,7 +19,7 @@ import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { SocialSignInButtons } from "@/components/SocialSignInButtons";
 import { authClient } from "@/lib/auth-client";
 import { isDemoAuthUiEnabled } from "@/lib/auth-env";
-import { formatAuthError } from "@/lib/auth-error";
+import { formatAuthError, ACCOUNT_CREATED_VERIFY_EMAIL } from "@/lib/auth-error";
 import { useLanguage } from "@/lib/locale-context";
 import { t } from "@/lib/i18n";
 import {
@@ -28,8 +28,8 @@ import {
 	loadRememberedAuth,
 	saveRememberedAuth,
 } from "@/lib/remember-auth";
-import { persistPlatformRole } from "@/lib/use-platform-role";
 import type { PlatformRole } from "@/lib/platform-role";
+import { toast } from "sonner";
 
 function SignUpForm() {
 	const searchParams = useSearchParams();
@@ -46,6 +46,7 @@ function SignUpForm() {
 	const [rememberMe, setRememberMe] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
+	const [created, setCreated] = useState(false);
 	const demoMode = isDemoAuthUiEnabled();
 
 	// Prefill email/password when Remember Me was used previously.
@@ -81,6 +82,7 @@ function SignUpForm() {
 				password,
 				name: "",
 				workspaceName: trimmedWorkspace,
+				callbackURL: "/account/signin?verified=1",
 			} as Parameters<typeof authClient.signUp.email>[0] & {
 				workspaceName: string;
 			});
@@ -108,21 +110,15 @@ function SignUpForm() {
 				/* ignore */
 			}
 
-			const home = await persistPlatformRole(role);
-
-			// Creators complete the onboarding questionnaire before admin.
-			const next =
-				role === 'creator'
-					? '/onboarding'
-					: home || callbackUrl;
-
-			if (typeof window !== 'undefined') {
-				window.location.href = next;
-			} else {
-				console.warn(
-					"signup: window is undefined; cannot redirect to callbackUrl",
-				);
+			try {
+				await authClient.signOut();
+			} catch {
+				/* ignore */
 			}
+
+			toast.success(ACCOUNT_CREATED_VERIFY_EMAIL);
+			setCreated(true);
+			setLoading(false);
 		} catch (err) {
 			setError(formatAuthError(err, "Sign up failed"));
 			setLoading(false);
@@ -131,6 +127,22 @@ function SignUpForm() {
 
 	return (
 		<main className="nc-app nc-app-shell flex min-h-screen w-full items-center justify-center p-4 relative z-10">
+			{created ? (
+				<div className="nc-glass flex w-full max-w-[400px] flex-col gap-4 rounded-[1.5rem] p-7 relative z-10">
+					<h1 className="font-display text-2xl font-extrabold text-[#2c3340]">
+						Check your email
+					</h1>
+					<p className="text-sm font-medium text-zinc-600 leading-relaxed">
+						{ACCOUNT_CREATED_VERIFY_EMAIL}
+					</p>
+					<a
+						href={`/account/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+						className="rounded-full bg-[var(--nc-coral)] p-3 text-center text-[16px] font-extrabold text-white hover:opacity-90 transition-all"
+					>
+						{t('signInHere', locale)}
+					</a>
+				</div>
+			) : (
 			<form
 				onSubmit={(e) => {
 					void onSubmit(e);
@@ -220,6 +232,7 @@ function SignUpForm() {
 					{t('alreadyHaveAccount', locale)} {t('signInHere', locale)}
 				</a>
 			</form>
+			)}
 		</main>
 	);
 }

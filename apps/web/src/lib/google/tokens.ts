@@ -36,8 +36,12 @@ export async function getGoogleAccessTokenForWorkspace(input: {
       workspace_id
     FROM public.social_accounts
     WHERE user_id = ${input.userId}
-      AND workspace_id = ${input.workspaceId}
       AND platform = 'google'
+      AND (
+        workspace_id = ${input.workspaceId}
+        OR workspace_id IS NULL
+      )
+    ORDER BY CASE WHEN workspace_id = ${input.workspaceId} THEN 0 ELSE 1 END
     LIMIT 1
   `;
 
@@ -65,8 +69,11 @@ export async function getGoogleAccessTokenForWorkspace(input: {
           expires_at = ${newExpiry},
           updated_at = now()
         WHERE user_id = ${input.userId}
-          AND workspace_id = ${input.workspaceId}
           AND platform = 'google'
+          AND (
+            workspace_id = ${input.workspaceId}
+            OR workspace_id IS NULL
+          )
       `;
     } catch (error) {
       console.warn('[google/tokens] refresh failed', error);

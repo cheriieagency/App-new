@@ -98,7 +98,7 @@ export function LandingHeader({ isLoggedIn, user = null }: LandingHeaderProps) {
         >
           <button
             type="button"
-            onClick={() => scrollToId('features')}
+            onClick={() => scrollToId('creator-admin')}
             className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-3"
           >
             {t('nav.features')}

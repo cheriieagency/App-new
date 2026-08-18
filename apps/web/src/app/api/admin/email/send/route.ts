@@ -13,6 +13,7 @@ import {
 import { resendEnv } from '@/lib/config/env';
 import { buildCommunityAccessUrl } from '@/lib/community-access-email';
 import { ensureEmailCrmSchema, trackBroadcastMessages } from '@/lib/email/crm-persist';
+import { stripEmailImageToken } from '@/lib/email/image-token';
 import { resendMissingResponse, sendEmail } from '@/lib/email/send';
 import { buildUnsubscribeUrl } from '@/lib/email/unsubscribe';
 import {
@@ -156,7 +157,7 @@ export async function POST(request: Request) {
   }
 
   const subject = String(body.subject ?? '').trim();
-  const bodyContent = String(body.bodyContent ?? '').trim();
+  let bodyContent = String(body.bodyContent ?? '').trim();
   const recipientFilter = String(body.recipientFilter ?? 'all').trim() || 'all';
   const workspaceId = String(body.workspaceId ?? 'default').trim();
   const communityIdRaw = body.communityId;
@@ -168,13 +169,19 @@ export async function POST(request: Request) {
     communityId != null && !Number.isNaN(communityId) ? communityId : undefined;
   const imagePlacementRaw = String(body.imagePlacement ?? 'top').toLowerCase();
   const imagePlacement: BroadcastImagePlacement =
-    imagePlacementRaw === 'middle' || imagePlacementRaw === 'bottom'
+    imagePlacementRaw === 'middle' ||
+    imagePlacementRaw === 'bottom' ||
+    imagePlacementRaw === 'inline'
       ? imagePlacementRaw
       : 'top';
   let imageUrl =
     typeof body.imageUrl === 'string' && body.imageUrl.trim()
       ? body.imageUrl.trim()
       : null;
+
+  if (!imageUrl) {
+    bodyContent = stripEmailImageToken(bodyContent).trim();
+  }
 
   if (!subject || !bodyContent) {
     return Response.json({ error: 'subject and bodyContent are required' }, { status: 400 });

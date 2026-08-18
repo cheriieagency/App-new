@@ -27,7 +27,7 @@ import {
   TikTokIcon,
 } from '@/components/icons/SocialBrandIcons';
 import { useLocale } from '@/lib/locale-context';
-import { t } from '@/lib/i18n';
+import { t, tf } from '@/lib/i18n';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import { refreshMetaSync, useMetaSync } from '@/hooks/useMetaSync';
 import { useTikTokInbox } from '@/hooks/useTikTokInbox';
@@ -551,7 +551,7 @@ export default function SocialInboxPanel() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-none text-slate-900 tracking-tight">
-            Inbox
+            {t('socialInboxTitle', locale)}
           </h1>
           {handleBadge ? (
             <span className="inline-flex items-center h-8 px-2.5 rounded-full bg-slate-100 text-slate-600 text-xs font-mono font-semibold truncate max-w-[200px]">
@@ -563,8 +563,8 @@ export default function SocialInboxPanel() {
           <div className="flex items-center p-0.5 rounded-xl bg-slate-100/80">
             {(
               [
-                { key: 'inbox' as const, label: 'Inbox', icon: Inbox },
-                { key: 'automations' as const, label: 'Automations', icon: Zap },
+                { key: 'inbox' as const, label: t('socialInboxTitle', locale), icon: Inbox },
+                { key: 'automations' as const, label: t('inboxTabAutomations', locale), icon: Zap },
               ] as const
             ).map(({ key, label, icon: Icon }) => {
               const on = mainTab === key;
@@ -610,7 +610,7 @@ export default function SocialInboxPanel() {
               ) : (
                 <RefreshCw size={13} />
               )}
-              Sync
+              {t('inboxSync', locale)}
             </button>
           ) : null}
         </div>
@@ -620,15 +620,14 @@ export default function SocialInboxPanel() {
 
       {mainTab === 'inbox' && syncError && hasInstagram ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900">
-          Instagram sync issue: {syncError}. Try Sync, or reconnect under Settings
-          → Socials.
+          {tf('inboxSyncIssue', locale, { error: syncError })}
         </div>
       ) : null}
 
       {mainTab === 'inbox' && dmPermissionIssue ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-950 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <p className="min-w-0">
-            Instagram DMs need messaging permissions
+            {t('inboxDmNeedPerms', locale)}
             {inboxStatus?.missing_scopes?.length
               ? ` (${inboxStatus.missing_scopes.join(', ')})`
               : ''}
@@ -638,7 +637,7 @@ export default function SocialInboxPanel() {
             href={reconnectHref}
             className="inline-flex items-center justify-center h-10 min-h-[40px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-bold whitespace-nowrap"
           >
-            Reconnect Instagram
+            {t('inboxReconnectIg', locale)}
           </a>
         </div>
       ) : null}
@@ -651,13 +650,13 @@ export default function SocialInboxPanel() {
               <div
                 className="inline-flex items-center p-1 rounded-xl bg-slate-100/90 border border-slate-200/60 self-start"
                 role="tablist"
-                aria-label="Platform"
+                aria-label={t('socialInboxTitle', locale)}
               >
                 {(
                   [
                     {
                       key: 'all' as const,
-                      label: 'All',
+                      label: t('inboxAll', locale),
                       show: showPlatformSwitcher,
                       icon: null,
                     },
@@ -669,7 +668,7 @@ export default function SocialInboxPanel() {
                     },
                     {
                       key: 'tiktok' as const,
-                      label: tiktokMock ? 'TikTok (Demo)' : 'TikTok',
+                      label: tiktokMock ? t('inboxTikTokDemo', locale) : 'TikTok',
                       show: hasTikTokInbox,
                       icon: TikTokIcon,
                     },
@@ -703,11 +702,11 @@ export default function SocialInboxPanel() {
             <div className="inline-flex flex-wrap items-center gap-1.5 self-start">
               {(
                 [
-                  { key: 'all' as const, label: 'All Messages', show: true },
-                  { key: 'dm' as const, label: 'DMs', show: true },
+                  { key: 'all' as const, label: t('inboxAllMessages', locale), show: true },
+                  { key: 'dm' as const, label: t('inboxDms', locale), show: true },
                   {
                     key: 'comment' as const,
-                    label: 'Comments',
+                    label: t('inboxComments', locale),
                     show: showCommentFilter,
                   },
                 ] as const
@@ -741,7 +740,7 @@ export default function SocialInboxPanel() {
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search conversations…"
+                placeholder={t('inboxSearchConversations', locale)}
                 className="w-full h-9 min-h-[36px] pl-9 pr-3 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/12 focus:border-slate-300"
               />
             </div>
@@ -759,24 +758,24 @@ export default function SocialInboxPanel() {
                       size={20}
                       className="mx-auto mb-2 animate-spin opacity-50"
                     />
-                    <p className="text-sm font-medium">Syncing…</p>
+                    <p className="text-sm font-medium">{t('inboxSyncing', locale)}</p>
                   </div>
                 ) : threads.length === 0 ? (
                   <div className="py-20 text-center text-slate-400 px-6 space-y-1.5">
                     <Inbox size={24} className="mx-auto mb-2 opacity-35" />
                     <p className="text-sm font-semibold text-slate-500">
                       {searchQuery.trim()
-                        ? 'No matches'
+                        ? t('inboxNoMatches', locale)
                         : channelFilter === 'dm'
-                          ? 'No DMs yet'
+                          ? t('inboxNoDms', locale)
                           : channelFilter === 'comment'
-                            ? 'No comments yet'
-                            : 'Inbox is empty'}
+                            ? t('inboxNoComments', locale)
+                            : t('inboxEmpty', locale)}
                     </p>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
                       {searchQuery.trim()
-                        ? 'Try another search term.'
-                        : 'Tap Sync to refresh connected inboxes.'}
+                        ? t('inboxTryAnotherSearch', locale)
+                        : t('inboxTapSync', locale)}
                     </p>
                   </div>
                 ) : (
@@ -885,7 +884,7 @@ export default function SocialInboxPanel() {
                       <p className="text-[12px] text-slate-400 font-mono truncate mt-0.5">
                         {formatHandle(active.handle) || active.handle}
                         <span className="text-slate-300 mx-1.5">·</span>
-                        {active.channel === 'dm' ? 'DM' : 'Comment'}
+                        {active.channel === 'dm' ? t('inboxDms', locale) : t('inboxComment', locale)}
                       </p>
                     </div>
                     <a
@@ -894,7 +893,7 @@ export default function SocialInboxPanel() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 flex-shrink-0"
                     >
-                      Profile
+                      {t('inboxProfile', locale)}
                       <ExternalLink size={12} />
                     </a>
                   </div>
@@ -902,7 +901,7 @@ export default function SocialInboxPanel() {
                   <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-3">
                     {active.messages.length === 0 ? (
                       <p className="text-sm text-slate-400 text-center py-12">
-                        No messages in this thread yet
+                        {t('inboxNoMessagesInThread', locale)}
                       </p>
                     ) : (
                       active.messages.map((msg) => {
@@ -946,7 +945,7 @@ export default function SocialInboxPanel() {
                         accept="image/*,video/*"
                         className="hidden"
                         onChange={() => {
-                          toast.message('Media replies coming soon');
+                          toast.message(t('inboxMediaSoon', locale));
                           if (fileInputRef.current) fileInputRef.current.value = '';
                         }}
                       />
@@ -954,8 +953,8 @@ export default function SocialInboxPanel() {
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         className="h-10 w-10 min-h-[40px] rounded-xl text-slate-500 hover:text-slate-800 hover:bg-white inline-flex items-center justify-center flex-shrink-0"
-                        aria-label="Attach media"
-                        title="Attach media"
+                        aria-label={t('inboxAttachMedia', locale)}
+                        title={t('inboxAttachMedia', locale)}
                       >
                         <Paperclip size={16} />
                       </button>
@@ -964,8 +963,8 @@ export default function SocialInboxPanel() {
                         onClick={() => void onAiQuickReply()}
                         disabled={aiLoading || !active}
                         className="h-10 w-10 min-h-[40px] rounded-xl text-slate-500 hover:text-[#2B2568] hover:bg-white inline-flex items-center justify-center flex-shrink-0 disabled:opacity-40"
-                        aria-label="AI quick reply"
-                        title="AI quick reply"
+                        aria-label={t('inboxAiQuickReply', locale)}
+                        title={t('inboxAiQuickReply', locale)}
                       >
                         {aiLoading ? (
                           <Loader2 size={16} className="animate-spin" />
@@ -978,10 +977,10 @@ export default function SocialInboxPanel() {
                         onChange={(e) => setDraft(e.target.value)}
                         placeholder={
                           isTikTokThread(active)
-                            ? 'Reply on TikTok…'
+                            ? t('inboxReplyTikTok', locale)
                             : active.channel === 'dm'
-                              ? 'Write a reply…'
-                              : 'Reply to comment…'
+                              ? t('inboxWriteReply', locale)
+                              : t('inboxReplyComment', locale)
                         }
                         className="flex-1 min-w-0 h-10 bg-transparent px-2 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
                       />
@@ -1005,7 +1004,7 @@ export default function SocialInboxPanel() {
                   <div>
                     <Inbox size={26} className="mx-auto mb-2 opacity-35" />
                     <p className="text-sm font-semibold text-slate-500">
-                      Select a conversation
+                      {t('inboxSelectConversation', locale)}
                     </p>
                   </div>
                 </div>

@@ -12,8 +12,9 @@ import {
   Section,
   Text,
 } from '@react-email/components';
+import { splitBodyAroundImage } from '@/lib/email/image-token';
 
-export type BroadcastImagePlacement = 'top' | 'middle' | 'bottom';
+export type BroadcastImagePlacement = 'top' | 'middle' | 'bottom' | 'inline';
 
 export type BroadcastEmailProps = {
   subject: string;
@@ -42,6 +43,7 @@ export function BroadcastEmail({
   unsubscribeUrl,
   workspaceName = 'clikd:',
 }: BroadcastEmailProps) {
+  const marker = splitBodyAroundImage(bodyContent);
   const [beforeMiddle, afterMiddle] = splitBodyForMiddle(bodyContent);
   const imageBlock = imageUrl ? (
     <Section style={{ margin: '16px 0' }}>
@@ -54,6 +56,31 @@ export function BroadcastEmail({
     </Section>
   ) : null;
 
+  const bodyBlocks =
+    imageUrl && marker.hasMarker ? (
+      <>
+        {marker.before.trim() ? (
+          <Text style={paragraph}>{marker.before}</Text>
+        ) : null}
+        {imageBlock}
+        {marker.after.trim() ? (
+          <Text style={paragraph}>{marker.after}</Text>
+        ) : null}
+      </>
+    ) : imagePlacement === 'middle' || imagePlacement === 'inline' ? (
+      <>
+        {beforeMiddle ? <Text style={paragraph}>{beforeMiddle}</Text> : null}
+        {imageBlock}
+        {afterMiddle ? <Text style={paragraph}>{afterMiddle}</Text> : null}
+      </>
+    ) : (
+      <>
+        {imagePlacement === 'top' && imageBlock}
+        <Text style={paragraph}>{bodyContent}</Text>
+        {imagePlacement === 'bottom' && imageBlock}
+      </>
+    );
+
   return (
     <Html>
       <Head />
@@ -64,17 +91,7 @@ export function BroadcastEmail({
             clikd<span style={{ color: '#F472B6' }}>:</span>
           </Text>
           <Heading style={h1}>{subject}</Heading>
-          {imagePlacement === 'top' && imageBlock}
-          {imagePlacement === 'middle' ? (
-            <>
-              {beforeMiddle ? <Text style={paragraph}>{beforeMiddle}</Text> : null}
-              {imageBlock}
-              {afterMiddle ? <Text style={paragraph}>{afterMiddle}</Text> : null}
-            </>
-          ) : (
-            <Text style={paragraph}>{bodyContent}</Text>
-          )}
-          {imagePlacement === 'bottom' && imageBlock}
+          {bodyBlocks}
           <Hr style={hr} />
           <Text style={footer}>
             You received this email because you subscribe to {workspaceName} on clikd:.
