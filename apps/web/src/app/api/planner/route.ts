@@ -210,6 +210,7 @@ export async function POST(request: Request) {
     const media_items = Array.isArray(body.media_items)
       ? (body.media_items as PlannerMediaItem[]).slice(0, 10)
       : undefined;
+    const primaryMedia = media_items?.find((m) => m.url) || null;
 
     const youtube =
       body.youtube === null
@@ -243,8 +244,18 @@ export async function POST(request: Request) {
             : status === 'published' || workflow === 'PUBLISHED'
               ? new Date().toISOString()
               : undefined,
-      media_url: body.media_url ?? undefined,
-      media_type: body.media_type ?? undefined,
+      media_url:
+        typeof body.media_url === 'string'
+          ? body.media_url
+          : primaryMedia?.url ?? undefined,
+      media_type:
+        body.media_type === 'video' || body.media_type === 'image'
+          ? body.media_type
+          : primaryMedia?.type === 'video'
+            ? 'video'
+            : primaryMedia
+              ? 'image'
+              : undefined,
       media_items,
       youtube,
       idea_title:

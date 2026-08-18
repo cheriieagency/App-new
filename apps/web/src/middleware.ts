@@ -32,9 +32,9 @@ function isPlatformHost(host: string): boolean {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // ── Public webhooks: FIRST exit — before any auth / CSRF / role logic ──
+  // ── Public webhooks + media proxy: FIRST exit — before any auth / CSRF / role logic ──
   // TikTok, Meta, Stripe, Resend must never receive 401/403 from middleware.
-  if (pathname.startsWith('/api/webhooks')) {
+  if (pathname.startsWith('/api/webhooks') || pathname.startsWith('/api/media')) {
     return NextResponse.next();
   }
 

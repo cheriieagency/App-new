@@ -27,6 +27,7 @@ type PublishBody = {
   youtube?: unknown;
   pinterestBoardId?: unknown;
   link?: unknown;
+  extraImageUrls?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -95,6 +96,9 @@ export async function POST(request: Request) {
         body.mediaUrl || body.imageUrl || body.videoUrl || ''
       ),
       mediaType: String(body.mediaType || ''),
+      extraImageUrls: Array.isArray(body.extraImageUrls)
+        ? body.extraImageUrls.map((u) => String(u)).filter(Boolean)
+        : [],
       youtube:
         body.youtube && typeof body.youtube === 'object'
           ? (body.youtube as YoutubeMeta)

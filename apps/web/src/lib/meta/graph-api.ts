@@ -3,6 +3,8 @@
  * Uses Graph API v19.0.
  */
 
+import { toVerifiedPublishMediaUrl } from '@/lib/media/proxy-url';
+
 const GRAPH_BASE = 'https://graph.facebook.com/v19.0';
 /** Status polling uses v20 — required for reliable status_code on containers. */
 const GRAPH_STATUS_BASE = 'https://graph.facebook.com/v20.0';
@@ -209,7 +211,7 @@ export async function publishInstagramPost(
   caption: string,
   mediaKind?: InstagramMediaKind
 ): Promise<PublishResult> {
-  const mediaUrl = imageUrl.trim();
+  const mediaUrl = toVerifiedPublishMediaUrl(imageUrl.trim());
   if (!mediaUrl) {
     throw new Error('Failed to create media container: media URL is empty');
   }
@@ -304,8 +306,9 @@ export async function publishFacebookPagePost(
   imageUrl: string,
   caption: string
 ): Promise<PublishResult> {
+  const mediaUrl = toVerifiedPublishMediaUrl(imageUrl.trim());
   const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(pageId)}/photos`);
-  url.searchParams.set('url', imageUrl);
+  url.searchParams.set('url', mediaUrl);
   url.searchParams.set('caption', caption);
   url.searchParams.set('access_token', pageAccessToken);
 

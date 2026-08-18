@@ -5,7 +5,7 @@
  *
  * Note: TikTok Login Kit is a custom OAuth flow (not a NextAuth/Auth.js
  * provider). Callback must match exactly:
- *   `${NEXTAUTH_URL|BETTER_AUTH_URL|NEXT_PUBLIC_APP_URL}/api/auth/callback/tiktok`
+ *   `${requestOrigin|TIKTOK_REDIRECT_URI}/api/auth/callback/tiktok`
  */
 
 import { createHash, randomBytes } from 'crypto';
@@ -17,37 +17,46 @@ export const TIKTOK_CODE_VERIFIER_COOKIE = 'tiktok_code_verifier';
 /** Optional post-OAuth landing: `settings` | `inbox`. */
 export const TIKTOK_RETURN_TO_COOKIE = 'clikd_tiktok_return_to';
 
-/** Display + Content Posting scopes requested at authorize time. */
+/**
+ * Display + Content Posting scopes requested at authorize time.
+ * `video.publish` is required for Direct Post (Post Studio publish/schedule).
+ * `video.upload` only sends drafts to the creator inbox.
+ */
 export const TIKTOK_OAUTH_SCOPES = [
   'user.info.basic',
   'user.info.stats',
   'video.list',
+  'video.publish',
   'video.upload',
 ] as const;
 
+function originOf(value?: string | null): string {
+  const raw = value?.trim();
+  if (!raw) return '';
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Public origin for TikTok redirect_uri.
- * Prefer NEXTAUTH_URL (Auth.js convention) → BETTER_AUTH_URL → NEXT_PUBLIC_APP_URL
- * so authorize + token exchange always share the same registered callback.
+ * Prefer the request host (the callback that is actually running) so local
+ * Connect TikTok does not bounce to production when NEXTAUTH_URL is clikd.app.
+ * Optional TIKTOK_REDIRECT_URI overrides when the portal uses a fixed URI.
  */
 export function getTikTokOAuthBaseUrl(requestOrigin?: string | null): string {
-  const fromNextAuth = process.env.NEXTAUTH_URL?.trim();
-  const fromBetterAuth = process.env.BETTER_AUTH_URL?.trim();
-  const fromPublic = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  const candidate =
-    fromNextAuth ||
-    fromBetterAuth ||
-    fromPublic ||
-    requestOrigin?.trim() ||
-    '';
-  if (candidate) {
-    try {
-      return new URL(candidate).origin;
-    } catch {
-      /* fall through */
-    }
-  }
-  return appBaseUrl(requestOrigin);
+  const explicit = originOf(process.env.TIKTOK_REDIRECT_URI);
+  if (explicit) return explicit;
+
+  const request = originOf(requestOrigin);
+  if (request) return request;
+
+  const fromBetterAuth = originOf(process.env.BETTER_AUTH_URL);
+  const fromPublic = originOf(process.env.NEXT_PUBLIC_APP_URL);
+  const fromNextAuth = originOf(process.env.NEXTAUTH_URL);
+  return fromBetterAuth || fromPublic || fromNextAuth || appBaseUrl(requestOrigin);
 }
 
 /**
@@ -255,7 +264,7 @@ export async function refreshTikTokAccessToken(
 
 /**
  * Return a usable TikTok access token — refresh + persist when near expiry.
- * Falls back to the stored access token if refresh is unavailable.
+ * Throws (do not publish with a stale token) when refresh is required and fails.
  */
 export async function ensureFreshTikTokAccessToken(input: {
   userId: string;
@@ -269,42 +278,38 @@ export async function ensureFreshTikTokAccessToken(input: {
 
   const refreshToken = input.refreshToken?.trim() || null;
   const expiresMs = input.expiresAt ? new Date(input.expiresAt).getTime() : NaN;
-  // Refresh 2 minutes before expiry when we have a refresh_token.
-  const needsRefresh =
-    Boolean(refreshToken) &&
-    Number.isFinite(expiresMs) &&
-    expiresMs <= Date.now() + 120_000;
+  const expiredOrUnknown =
+    !Number.isFinite(expiresMs) || expiresMs <= Date.now() + 120_000;
 
-  if (!needsRefresh || !refreshToken) return accessToken;
+  if (!expiredOrUnknown) return accessToken;
+
+  if (!refreshToken) {
+    if (Number.isFinite(expiresMs) && expiresMs <= Date.now()) {
+      throw new Error('TikTok session expired — reconnect under Settings → Socials');
+    }
+    return accessToken;
+  }
 
   try {
     const tokens = await refreshTikTokAccessToken(refreshToken);
-    const expiresAt =
-      typeof tokens.expires_in === 'number' && tokens.expires_in > 0
-        ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-        : null;
-
-    // Persist refreshed tokens for the workspace TikTok row.
-    try {
-      const sql = (await import('@/app/api/utils/sql')).default;
-      await sql`
-        UPDATE social_accounts
-        SET access_token = ${tokens.access_token},
-            refresh_token = ${tokens.refresh_token ?? refreshToken},
-            expires_at = ${expiresAt},
-            updated_at = now()
-        WHERE user_id::text = ${input.userId}
-          AND workspace_id::text = ${input.workspaceId}
-          AND platform = 'tiktok'
-      `;
-    } catch (persistError) {
-      console.warn('[tiktok] refreshed token persist failed', persistError);
-    }
-
+    const { persistRefreshedTikTokTokens } = await import(
+      '@/lib/tiktok/tokens-persist'
+    );
+    await persistRefreshedTikTokTokens({
+      userId: input.userId,
+      workspaceId: input.workspaceId,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token ?? refreshToken,
+      expiresIn: tokens.expires_in ?? null,
+    });
     return tokens.access_token;
   } catch (error) {
-    console.warn('[tiktok] token refresh failed — using stored access token', error);
-    return accessToken;
+    console.warn('[tiktok] token refresh failed', error);
+    throw new Error(
+      error instanceof Error
+        ? `TikTok session expired — reconnect under Settings → Socials (${error.message})`
+        : 'TikTok session expired — reconnect under Settings → Socials'
+    );
   }
 }
 

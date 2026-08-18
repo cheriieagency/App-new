@@ -408,6 +408,7 @@ export async function upsertDurablePlannerPost(
       ${now}
     )
     ON CONFLICT (id) DO UPDATE SET
+      workspace_id = COALESCE(EXCLUDED.workspace_id, public.planner_posts.workspace_id),
       title = EXCLUDED.title,
       caption = EXCLUDED.caption,
       hashtags = EXCLUDED.hashtags,

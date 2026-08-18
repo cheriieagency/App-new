@@ -61,6 +61,10 @@ async function runCron() {
       primaryMedia?.type ||
       (post.media_type === 'video' ? 'video' : 'image');
 
+    const extraImageUrls = post.media_items
+      .filter((m) => m.url && m.type !== 'video' && m.url !== mediaUrl)
+      .map((m) => m.url);
+
     try {
       const outcome = await publishAndFinalizePlannerPost({
         userId: post.user_id,
@@ -72,6 +76,7 @@ async function runCron() {
         title: post.title,
         mediaUrl,
         mediaType,
+        extraImageUrls,
         youtube: post.youtube,
       });
 

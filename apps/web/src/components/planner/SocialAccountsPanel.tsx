@@ -70,6 +70,7 @@ const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
     'user.info.basic',
     'user.info.stats',
     'video.list',
+    'video.publish',
     'video.upload',
   ],
   youtube: [

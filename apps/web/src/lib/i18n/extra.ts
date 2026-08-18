@@ -988,6 +988,9 @@ export type ExtraKey =
   // Planner / workspace create
   | 'toastPickScheduleFirst'
   | 'toastConnectIgFbSettings'
+  | 'toastConnectSocialSettings'
+  | 'toastCaptionRequired'
+  | 'toastTikTokNeedsMedia'
   | 'toastPostedSuccess'
   | 'toastSavedScheduled'
   | 'studioActions'
@@ -2205,12 +2208,15 @@ landingHeroLine1: 'The All-in-One Creator Engine',
     'Connect Instagram and Facebook separately, or link both in one Meta Suite login.',
   resyncMetaWebhooks: 'Re-sync Meta Webhooks',
   connectTikTokTitle: 'Connect TikTok Account',
-  connectTikTokSub: 'Link TikTok for Display API analytics and Content Posting.',
+  connectTikTokSub: 'Link TikTok for Content Posting. Reconnect after this update so video.publish is granted.',
   demoModeSimulatedTitle: 'Demo Mode — simulated OAuth',
   demoModeSimulatedSub:
     'Turn Demo Mode off to use live Instagram, Facebook, TikTok, YouTube, LinkedIn, and Pinterest connections.',
   toastPickScheduleFirst: 'Pick a schedule date & time first',
-  toastConnectIgFbSettings: 'Connect Instagram or Facebook under Settings → Socials first',
+  toastConnectIgFbSettings: 'Connect Instagram, Facebook, or TikTok under Settings → Socials first',
+  toastConnectSocialSettings: 'Connect the selected platforms under Settings → Socials first',
+  toastCaptionRequired: 'Add a caption before saving or publishing',
+  toastTikTokNeedsMedia: 'TikTok needs a photo or video. Upload media before publishing or scheduling.',
   toastPostedSuccess: 'Posted',
   toastSavedScheduled: 'Saved & scheduled',
   studioActions: 'Actions',
@@ -3427,12 +3433,15 @@ landingHeroLine1: 'The All-in-One Creator Engine',
     'Koppla Instagram och Facebook separat, eller båda via en Meta Suite-inloggning.',
   resyncMetaWebhooks: 'Synka om Meta-webhooks',
   connectTikTokTitle: 'Koppla TikTok-konto',
-  connectTikTokSub: 'Länka TikTok för Display API-analys och Content Posting.',
+  connectTikTokSub: 'Länka TikTok för Content Posting. Koppla om kontot efter denna uppdatering så att video.publish beviljas.',
   demoModeSimulatedTitle: 'Demoläge — simulerad OAuth',
   demoModeSimulatedSub:
     'Stäng demoläge för att använda live Instagram, Facebook, TikTok, YouTube, LinkedIn och Pinterest.',
   toastPickScheduleFirst: 'Välj datum och tid först',
-  toastConnectIgFbSettings: 'Koppla Instagram eller Facebook under Inställningar → Socials först',
+  toastConnectIgFbSettings: 'Koppla Instagram, Facebook eller TikTok under Inställningar → Socials först',
+  toastConnectSocialSettings: 'Koppla de valda plattformarna under Inställningar → Socials först',
+  toastCaptionRequired: 'Lägg till en bildtext innan du sparar eller publicerar',
+  toastTikTokNeedsMedia: 'TikTok kräver foto eller video. Ladda upp media innan du publicerar eller schemalägger.',
   toastPostedSuccess: 'Publicerat',
   toastSavedScheduled: 'Sparat & schemalagt',
   studioActions: 'Åtgärder',
@@ -4667,12 +4676,15 @@ navFeatures: 'Ominaisuudet',
     'Yhdistä Instagram ja Facebook erikseen tai molemmat yhdellä Meta Suite -kirjautumisella.',
   resyncMetaWebhooks: 'Synkronoi Meta-webhookit uudelleen',
   connectTikTokTitle: 'Yhdistä TikTok-tili',
-  connectTikTokSub: 'Linkitä TikTok Display API -analytiikkaan ja Content Postingiin.',
+  connectTikTokSub: 'Linkitä TikTok Content Postingiin. Yhdistä tili uudelleen tämän päivityksen jälkeen, jotta video.publish myönnetään.',
   demoModeSimulatedTitle: 'Demotila — simuloitu OAuth',
   demoModeSimulatedSub:
     'Poista demotila käytöstä live-Instagram-, Facebook-, TikTok-, YouTube-, LinkedIn- ja Pinterest-yhteyksiä varten.',
   toastPickScheduleFirst: 'Valitse ensin päivämäärä ja aika',
-  toastConnectIgFbSettings: 'Yhdistä Instagram tai Facebook kohdassa Asetukset → Socials ensin',
+  toastConnectIgFbSettings: 'Yhdistä Instagram, Facebook tai TikTok kohdassa Asetukset → Socials ensin',
+  toastConnectSocialSettings: 'Yhdistä valitut alustat kohdassa Asetukset → Socials ensin',
+  toastCaptionRequired: 'Lisää kuvateksti ennen tallennusta tai julkaisua',
+  toastTikTokNeedsMedia: 'TikTok vaatii kuvan tai videon. Lataa media ennen julkaisua tai ajastusta.',
   toastPostedSuccess: 'Julkaistu',
   toastSavedScheduled: 'Tallennettu & ajastettu',
   studioActions: 'Toiminnot',

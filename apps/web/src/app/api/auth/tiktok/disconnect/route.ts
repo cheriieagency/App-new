@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { deleteSocialAccountRow } from '@/lib/social/persist';
+import { deleteTikTokTokenForWorkspace } from '@/lib/tiktok/tokens-persist';
 import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
@@ -60,6 +61,17 @@ export async function POST(request: Request) {
       workspaceId,
       preferWorkspaceScoped: Boolean(workspaceId),
     });
+
+    if (workspaceId) {
+      try {
+        await deleteTikTokTokenForWorkspace({
+          workspaceId,
+          userId: session.user.id,
+        });
+      } catch (tokenError) {
+        console.warn('[tiktok/disconnect] tiktok_tokens delete skipped', tokenError);
+      }
+    }
 
     // Already disconnected is success for the UI.
     if (!result.deleted) {

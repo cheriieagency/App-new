@@ -384,7 +384,22 @@ export default function PostStudioModal({
   const save = async (
     mode: 'draft' | 'schedule' | 'post'
   ) => {
-    if (!caption.trim() || platforms.length === 0 || saving) return;
+    if (saving) return;
+    if (platforms.length === 0) {
+      toast.error('Select at least one platform');
+      return;
+    }
+    if (!caption.trim()) {
+      toast.error(t('toastCaptionRequired', locale));
+      return;
+    }
+
+    const tiktokSelected = platforms.includes('tiktok');
+    const hasMedia = mediaItems.some((m) => Boolean(m.url));
+    if (tiktokSelected && (mode === 'post' || mode === 'schedule') && !hasMedia) {
+      toast.error(t('toastTikTokNeedsMedia', locale));
+      return;
+    }
 
     if (mode === 'schedule' && !scheduledAt) {
       toast.error(t('toastPickScheduleFirst', locale));
@@ -396,7 +411,7 @@ export default function PostStudioModal({
         connectedPlatforms.has(p)
       );
       if (liveTargets.length === 0) {
-        toast.error(t('toastConnectIgFbSettings', locale));
+        toast.error(t('toastConnectSocialSettings', locale));
         return;
       }
     }
@@ -431,6 +446,8 @@ export default function PostStudioModal({
           assignees,
           subtasks,
           media_items: mediaItems,
+          media_url: mediaItems.find((m) => m.url)?.url || null,
+          media_type: mediaItems.find((m) => m.url)?.type || null,
           auto_post: mode === 'schedule' ? true : autoPost,
           scheduled_at:
             mode === 'schedule' && scheduledAt
@@ -457,6 +474,9 @@ export default function PostStudioModal({
           null;
         const mediaUrl = primaryMedia?.url || '';
         const mediaType = primaryMedia?.type || 'image';
+        const extraImageUrls = mediaItems
+          .filter((m) => m.url && m.type !== 'video' && m.url !== mediaUrl)
+          .map((m) => m.url);
         const publishRes = await fetch('/api/planner/publish', {
           method: 'POST',
           headers: {
@@ -478,6 +498,7 @@ export default function PostStudioModal({
             title: derivedTitle,
             mediaUrl,
             mediaType,
+            extraImageUrls,
             imageUrl: mediaType === 'image' ? mediaUrl : undefined,
             videoUrl: mediaType === 'video' ? mediaUrl : undefined,
           }),

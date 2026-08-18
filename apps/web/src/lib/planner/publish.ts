@@ -42,6 +42,7 @@ export type PublishPlannerPostInput = {
   title?: string;
   mediaUrl?: string;
   mediaType?: string;
+  extraImageUrls?: string[];
   youtube?: YoutubeMeta | null;
   pinterestBoardId?: string;
   link?: string;
@@ -92,6 +93,51 @@ async function loadAccount(
         ? (row.meta as Record<string, unknown>)
         : {},
   };
+}
+
+/** Login Kit tokens can Direct Post; Business Marketing tokens cannot. */
+async function loadTikTokPublishToken(
+  userId: string,
+  workspaceId: string
+): Promise<{
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAt: string | null;
+} | null> {
+  const stored = await getTikTokTokenForWorkspace({ workspaceId, userId });
+  const social = await getTikTokAccessTokenForWorkspace({ workspaceId, userId });
+
+  const usable = (token?: string | null) =>
+    Boolean(token?.trim()) && !token!.startsWith('mock_');
+
+  if (
+    stored?.token_source === 'login_kit' &&
+    usable(stored.access_token)
+  ) {
+    return {
+      accessToken: stored.access_token,
+      refreshToken: stored.refresh_token,
+      expiresAt: stored.expires_at,
+    };
+  }
+
+  if (usable(social?.accessToken)) {
+    return {
+      accessToken: social!.accessToken,
+      refreshToken: social!.refreshToken,
+      expiresAt: social!.expiresAt,
+    };
+  }
+
+  if (stored && stored.token_source !== 'business' && usable(stored.access_token)) {
+    return {
+      accessToken: stored.access_token,
+      refreshToken: stored.refresh_token,
+      expiresAt: stored.expires_at,
+    };
+  }
+
+  return null;
 }
 
 async function publishFacebookFeed(
@@ -299,7 +345,60 @@ export async function publishPlannerPost(
         continue;
       }
 
-      if (!['instagram', 'facebook', 'tiktok'].includes(platform)) {
+      if (platform === 'tiktok') {
+        if (!publicMediaUrl) {
+          results.push({
+            platform,
+            ok: false,
+            error:
+              'TikTok requires media. Add a photo or video with a public HTTPS URL.',
+          });
+          continue;
+        }
+
+        const tokenRow = await loadTikTokPublishToken(
+          input.userId,
+          input.workspaceId
+        );
+        if (!tokenRow) {
+          results.push({
+            platform,
+            ok: false,
+            error:
+              'No connected TikTok account with Content Posting. Connect TikTok under Settings → Socials (Login Kit with video.publish). Business Marketing tokens cannot publish organic posts.',
+          });
+          continue;
+        }
+
+        const accessToken = await ensureFreshTikTokAccessToken({
+          userId: input.userId,
+          workspaceId: input.workspaceId,
+          accessToken: tokenRow.accessToken,
+          refreshToken: tokenRow.refreshToken,
+          expiresAt: tokenRow.expiresAt,
+        });
+
+        const extraImageUrls: string[] = [];
+        for (const extra of input.extraImageUrls || []) {
+          try {
+            extraImageUrls.push(await ensurePublicHttpsMediaUrl(extra));
+          } catch {
+            /* skip non-public extras */
+          }
+        }
+
+        const published = await publishTikTokPost({
+          accessToken,
+          mediaUrl: publicMediaUrl,
+          caption: fullCaption || title,
+          kind: mediaKind,
+          extraImageUrls,
+        });
+        results.push({ platform, ok: true, id: published.id });
+        continue;
+      }
+
+      if (!['instagram', 'facebook'].includes(platform)) {
         results.push({
           platform,
           ok: false,
@@ -354,60 +453,6 @@ export async function publishPlannerPost(
           fullCaption || title,
           mediaKind
         );
-        results.push({ platform, ok: true, id: published.id });
-        continue;
-      }
-
-      if (platform === 'tiktok') {
-        if (!publicMediaUrl) {
-          results.push({
-            platform,
-            ok: false,
-            error:
-              'TikTok requires media. Add a photo or video with a public HTTPS URL.',
-          });
-          continue;
-        }
-
-        const bizToken = await getTikTokTokenForWorkspace({
-          workspaceId: input.workspaceId,
-          userId: input.userId,
-        });
-        const socialToken = await getTikTokAccessTokenForWorkspace({
-          workspaceId: input.workspaceId,
-          userId: input.userId,
-        });
-        const tokenRow = bizToken?.access_token
-          ? {
-              accessToken: bizToken.access_token,
-              refreshToken: bizToken.refresh_token,
-              expiresAt: bizToken.expires_at,
-            }
-          : socialToken;
-
-        if (!tokenRow?.accessToken || tokenRow.accessToken.startsWith('mock_')) {
-          results.push({
-            platform,
-            ok: false,
-            error: 'Connect TikTok with Content Posting permissions first.',
-          });
-          continue;
-        }
-
-        const accessToken = await ensureFreshTikTokAccessToken({
-          userId: input.userId,
-          workspaceId: input.workspaceId,
-          accessToken: tokenRow.accessToken,
-          refreshToken: tokenRow.refreshToken,
-          expiresAt: tokenRow.expiresAt,
-        });
-
-        const published = await publishTikTokPost({
-          accessToken,
-          mediaUrl: publicMediaUrl,
-          caption: fullCaption || title,
-          kind: mediaKind,
-        });
         results.push({ platform, ok: true, id: published.id });
         continue;
       }
@@ -496,6 +541,9 @@ export async function publishPlannerPostById(input: {
   const mediaType =
     primaryMedia?.type ||
     (post.media_type === 'video' ? 'video' : 'image');
+  const extraImageUrls = post.media_items
+    .filter((m) => m.url && m.type !== 'video' && m.url !== mediaUrl)
+    .map((m) => m.url);
 
   return publishPlannerPost({
     userId: input.userId,
@@ -510,6 +558,7 @@ export async function publishPlannerPostById(input: {
     title: post.title,
     mediaUrl,
     mediaType,
+    extraImageUrls,
     youtube: post.youtube ?? null,
   });
 }

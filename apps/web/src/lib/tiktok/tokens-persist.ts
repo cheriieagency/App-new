@@ -116,6 +116,65 @@ export async function upsertTikTokToken(input: {
   return mapTokenRow(row);
 }
 
+/** Write refreshed Login Kit tokens to both `tiktok_tokens` and `social_accounts`. */
+export async function persistRefreshedTikTokTokens(input: {
+  userId: string;
+  workspaceId: string;
+  accessToken: string;
+  refreshToken?: string | null;
+  expiresIn?: number | null;
+}): Promise<void> {
+  if (!process.env.DATABASE_URL?.trim()) return;
+  await ensureTikTokTokensSchema();
+
+  const expiresAt =
+    typeof input.expiresIn === 'number' && input.expiresIn > 0
+      ? new Date(Date.now() + input.expiresIn * 1000).toISOString()
+      : null;
+
+  try {
+    await sql`
+      UPDATE public.tiktok_tokens
+      SET access_token = ${input.accessToken},
+          refresh_token = COALESCE(${input.refreshToken ?? null}, refresh_token),
+          expires_at = ${expiresAt},
+          updated_at = now()
+      WHERE workspace_id = ${input.workspaceId}
+        AND user_id = ${input.userId}
+    `;
+  } catch (error) {
+    console.warn('[tiktok] tiktok_tokens refresh persist failed', error);
+  }
+
+  try {
+    await sql`
+      UPDATE public.social_accounts
+      SET access_token = ${input.accessToken},
+          refresh_token = COALESCE(${input.refreshToken ?? null}, refresh_token),
+          expires_at = ${expiresAt},
+          updated_at = now()
+      WHERE user_id::text = ${input.userId}
+        AND workspace_id::text = ${input.workspaceId}
+        AND platform = 'tiktok'
+    `;
+  } catch (error) {
+    console.warn('[tiktok] social_accounts refresh persist failed', error);
+  }
+}
+
+export async function deleteTikTokTokenForWorkspace(input: {
+  workspaceId: string;
+  userId: string;
+}): Promise<void> {
+  if (!process.env.DATABASE_URL?.trim()) return;
+  await ensureTikTokTokensSchema();
+  await sql`
+    DELETE FROM public.tiktok_tokens
+    WHERE workspace_id = ${input.workspaceId}
+      AND user_id = ${input.userId}
+  `;
+}
+
 export async function getTikTokTokenForWorkspace(input: {
   workspaceId: string;
   userId?: string | null;
