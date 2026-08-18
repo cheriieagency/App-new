@@ -643,24 +643,6 @@ export default function SocialInboxPanel() {
         </div>
       ) : null}
 
-      {mainTab === 'inbox' && tiktokMock ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-700 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-          <p className="min-w-0">
-            TikTok Business credentials not configured — showing demo DMs for UI
-            testing. Set{' '}
-            <span className="font-mono text-[11px]">TIKTOK_BUSINESS_SECRET</span>{' '}
-            for live messaging.
-          </p>
-          <a
-            href={`/api/auth/tiktok?returnTo=inbox&workspaceId=${encodeURIComponent(activeWorkspace.id || '')}`}
-            className="inline-flex items-center justify-center gap-1.5 h-10 min-h-[40px] px-4 rounded-xl bg-slate-900 text-white text-xs font-bold whitespace-nowrap"
-          >
-            <TikTokIcon size={12} />
-            Connect TikTok
-          </a>
-        </div>
-      ) : null}
-
       {mainTab === 'inbox' ? (
         <>
           {/* Single horizontal filter bar */}

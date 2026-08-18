@@ -112,7 +112,15 @@ export default function CarouselMediaUploader({
       for (const file of picked) {
         const isVideo = file.type.startsWith('video/');
         const result = await upload({ file });
-        const url = result.url || URL.createObjectURL(file);
+        if (result.error) {
+          toast.error(result.error);
+          continue;
+        }
+        const url = result.url?.trim();
+        if (!url) {
+          toast.error(t('toastUploadFailed', locale));
+          continue;
+        }
         next.push({
           id: nextMediaId(),
           url,
@@ -121,7 +129,7 @@ export default function CarouselMediaUploader({
       }
       appendItems(next);
     },
-    [appendItems, atCap, room, upload]
+    [appendItems, atCap, room, upload, locale]
   );
 
   const addFromLibrary = () => {

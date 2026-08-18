@@ -451,10 +451,12 @@ export default function PostStudioModal({
       if (savedJson.post?.id) setWorkingPostId(savedJson.post.id);
 
       if (mode === 'post') {
-        const imageUrl =
-          mediaItems.find((m) => m.type === 'image' && m.url)?.url ||
-          mediaItems.find((m) => m.url)?.url ||
-          '';
+        const primaryMedia =
+          mediaItems.find((m) => m.url) ||
+          mediaItems.find((m) => m.type === 'image' && m.url) ||
+          null;
+        const mediaUrl = primaryMedia?.url || '';
+        const mediaType = primaryMedia?.type || 'image';
         const publishRes = await fetch('/api/planner/publish', {
           method: 'POST',
           headers: {
@@ -473,7 +475,10 @@ export default function PostStudioModal({
             caption,
             hashtags,
             title: derivedTitle,
-            imageUrl,
+            mediaUrl,
+            mediaType,
+            imageUrl: mediaType === 'image' ? mediaUrl : undefined,
+            videoUrl: mediaType === 'video' ? mediaUrl : undefined,
           }),
         });
         const publishJson = (await publishRes.json().catch(() => ({}))) as {

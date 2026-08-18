@@ -82,3 +82,141 @@ export async function uploadToSupabaseStorage(input: {
   }
   return { url, path, bucket };
 }
+
+/** Signed URL lifetime — long enough for IG/TikTok video processing. */
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
+
+export type ParsedStorageObject = {
+  bucket: string;
+  path: string;
+};
+
+/** True when the URL is HTTPS and not a local/dev host. */
+export function isPublicHttpsUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw.trim());
+    if (url.protocol !== 'https:') return false;
+    const host = url.hostname.toLowerCase();
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host.endsWith('.local') ||
+      host.endsWith('.localhost')
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Parse a Supabase Storage object URL (public or signed) into bucket + path.
+ */
+export function parseSupabaseStorageUrl(raw: string): ParsedStorageObject | null {
+  try {
+    const url = new URL(raw.trim());
+    const match = url.pathname.match(
+      /\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/(.+)$/
+    );
+    if (!match) return null;
+    const bucket = decodeURIComponent(match[1]);
+    const path = decodeURIComponent(match[2]);
+    if (!bucket || !path) return null;
+    return { bucket, path };
+  } catch {
+    return null;
+  }
+}
+
+function looksLikeStoragePath(raw: string): boolean {
+  const value = raw.trim().replace(/^\/+/, '');
+  if (!value || value.includes('://')) return false;
+  return /^[a-zA-Z0-9._/-]+$/.test(value);
+}
+
+/**
+ * Resolve bucket/path to a public HTTPS URL, falling back to a long-lived signed URL.
+ */
+export async function publicOrSignedUrlFromStoragePath(
+  path: string,
+  bucket?: string
+): Promise<string | null> {
+  if (!isSupabaseAdminConfigured()) return null;
+  const resolvedBucket =
+    (bucket || supabaseEnv.storageBucket()).trim() || 'media';
+  const objectPath = path.replace(/^\/+/, '');
+  if (!objectPath) return null;
+
+  const admin = getSupabaseAdmin();
+  const { data: publicData } = admin.storage
+    .from(resolvedBucket)
+    .getPublicUrl(objectPath);
+  const publicUrl = publicData.publicUrl?.trim() || '';
+  if (isPublicHttpsUrl(publicUrl)) {
+    return publicUrl;
+  }
+
+  const { data: signed, error } = await admin.storage
+    .from(resolvedBucket)
+    .createSignedUrl(objectPath, SIGNED_URL_TTL_SECONDS);
+  if (error || !signed?.signedUrl) {
+    console.warn('[supabase/storage] createSignedUrl failed', error?.message);
+    return publicUrl.startsWith('https://') ? publicUrl : null;
+  }
+  return signed.signedUrl;
+}
+
+/**
+ * Guarantee Instagram/TikTok receive a fully-qualified public HTTPS media URL.
+ * Rejects blob:, data:, localhost, and relative paths unless they map to Storage.
+ */
+export async function ensurePublicHttpsMediaUrl(raw: string): Promise<string> {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) {
+    throw new Error('Media URL is empty — upload a file before publishing.');
+  }
+  if (trimmed.startsWith('blob:')) {
+    throw new Error(
+      'Media is a local blob URL. Re-upload the file so it gets a public HTTPS address.'
+    );
+  }
+  if (trimmed.startsWith('data:')) {
+    throw new Error(
+      'Media is an inline data URL. Instagram/TikTok require a public HTTPS file — re-upload to storage.'
+    );
+  }
+
+  if (!/^https?:\/\//i.test(trimmed) && looksLikeStoragePath(trimmed)) {
+    const fromPath = await publicOrSignedUrlFromStoragePath(trimmed);
+    if (fromPath) return fromPath;
+    throw new Error(
+      `Could not resolve storage path to a public HTTPS URL: ${trimmed.slice(0, 80)}`
+    );
+  }
+
+  if (/^http:\/\//i.test(trimmed)) {
+    throw new Error(
+      'Media URL must be HTTPS (not HTTP) for Instagram/TikTok to fetch it.'
+    );
+  }
+
+  if (!isPublicHttpsUrl(trimmed)) {
+    throw new Error(
+      'Media URL is not a publicly accessible HTTPS address (localhost or invalid).'
+    );
+  }
+
+  const stored = parseSupabaseStorageUrl(trimmed);
+  if (stored) {
+    const ensured = await publicOrSignedUrlFromStoragePath(
+      stored.path,
+      stored.bucket
+    );
+    if (ensured) return ensured;
+  }
+
+  return trimmed;
+}

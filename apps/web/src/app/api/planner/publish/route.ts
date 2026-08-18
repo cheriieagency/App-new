@@ -1,7 +1,9 @@
 /**
  * POST /api/planner/publish
  * Publish a planner post to connected social accounts for the active workspace.
- * Supports Instagram (image) + Facebook Page (photo or text feed).
+ * Instagram: image + video/reels (container → poll → publish).
+ * TikTok: photo + video via PULL_FROM_URL.
+ * Facebook Page: photo or text feed.
  */
 
 import { cookies, headers } from 'next/headers';
@@ -15,7 +17,13 @@ import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace'
 import {
   publishFacebookPagePost,
   publishInstagramPost,
+  type InstagramMediaKind,
 } from '@/lib/meta/graph-api';
+import { ensurePublicHttpsMediaUrl } from '@/lib/supabase/storage';
+import { ensureFreshTikTokAccessToken } from '@/lib/tiktok/oauth';
+import { getTikTokAccessTokenForWorkspace } from '@/lib/tiktok/inbox-persist';
+import { getTikTokTokenForWorkspace } from '@/lib/tiktok/tokens-persist';
+import { publishTikTokPost } from '@/lib/tiktok/publish';
 
 type PublishBody = {
   workspaceId?: unknown;
@@ -23,6 +31,9 @@ type PublishBody = {
   caption?: unknown;
   hashtags?: unknown;
   imageUrl?: unknown;
+  mediaUrl?: unknown;
+  videoUrl?: unknown;
+  mediaType?: unknown;
   title?: unknown;
 };
 
@@ -45,7 +56,6 @@ async function loadAccount(
   meta: Record<string, unknown>;
 } | null> {
   if (!process.env.DATABASE_URL?.trim()) return null;
-  // Strict: never fall back to another user's tokens on the same workspace_id.
   const rows = await sql`
     SELECT platform_user_id, page_id, access_token, meta, user_id
     FROM public.social_accounts
@@ -90,6 +100,15 @@ async function publishFacebookFeed(
     throw new Error(data.error?.message || `Facebook feed failed (${res.status})`);
   }
   return { id: data.id };
+}
+
+function inferMediaKind(
+  rawUrl: string,
+  mediaTypeRaw: string
+): InstagramMediaKind {
+  if (mediaTypeRaw === 'video') return 'video';
+  if (mediaTypeRaw === 'image') return 'image';
+  return /\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(rawUrl) ? 'video' : 'image';
 }
 
 export async function POST(request: Request) {
@@ -144,20 +163,36 @@ export async function POST(request: Request) {
     const caption = String(body.caption || '').trim();
     const hashtags = String(body.hashtags || '').trim();
     const fullCaption = [caption, hashtags].filter(Boolean).join('\n\n');
-    const imageUrl = String(body.imageUrl || '').trim();
     const title = String(body.title || '').trim();
+    const rawMediaUrl = String(
+      body.mediaUrl || body.imageUrl || body.videoUrl || ''
+    ).trim();
+    const mediaTypeRaw = String(body.mediaType || '').toLowerCase();
 
-    if (!fullCaption && !imageUrl) {
+    if (!fullCaption && !rawMediaUrl) {
       return Response.json(
         { error: 'Caption or media is required to publish' },
         { status: 400 }
       );
     }
 
+    let publicMediaUrl = '';
+    let mediaKind: InstagramMediaKind = 'image';
+    if (rawMediaUrl) {
+      try {
+        publicMediaUrl = await ensurePublicHttpsMediaUrl(rawMediaUrl);
+        mediaKind = inferMediaKind(publicMediaUrl, mediaTypeRaw);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Invalid media URL';
+        return Response.json({ error: message, ok: false }, { status: 400 });
+      }
+    }
+
     const results: PlatformResult[] = [];
 
     for (const platform of platforms) {
-      if (!['instagram', 'facebook'].includes(platform)) {
+      if (!['instagram', 'facebook', 'tiktok'].includes(platform)) {
         results.push({
           platform,
           ok: false,
@@ -188,12 +223,12 @@ export async function POST(request: Request) {
           account.access_token;
 
         if (platform === 'instagram') {
-          if (!imageUrl || !/^https:\/\//i.test(imageUrl)) {
+          if (!publicMediaUrl) {
             results.push({
               platform,
               ok: false,
               error:
-                'Instagram requires a public HTTPS image. Add media, then Post again.',
+                'Instagram requires media. Add a photo or video with a public HTTPS URL, then Post again.',
             });
             continue;
           }
@@ -209,9 +244,64 @@ export async function POST(request: Request) {
           const published = await publishInstagramPost(
             igId,
             pageToken,
-            imageUrl,
-            fullCaption || title
+            publicMediaUrl,
+            fullCaption || title,
+            mediaKind
           );
+          results.push({ platform, ok: true, id: published.id });
+          continue;
+        }
+
+        if (platform === 'tiktok') {
+          if (!publicMediaUrl) {
+            results.push({
+              platform,
+              ok: false,
+              error:
+                'TikTok requires media. Add a photo or video with a public HTTPS URL, then Post again.',
+            });
+            continue;
+          }
+
+          const bizToken = await getTikTokTokenForWorkspace({
+            workspaceId: access.workspaceId,
+            userId,
+          });
+          const socialToken = await getTikTokAccessTokenForWorkspace({
+            workspaceId: access.workspaceId,
+            userId,
+          });
+          const tokenRow = bizToken?.access_token
+            ? {
+                accessToken: bizToken.access_token,
+                refreshToken: bizToken.refresh_token,
+                expiresAt: bizToken.expires_at,
+              }
+            : socialToken;
+
+          if (!tokenRow?.accessToken || tokenRow.accessToken.startsWith('mock_')) {
+            results.push({
+              platform,
+              ok: false,
+              error: 'Connect TikTok with Content Posting permissions first.',
+            });
+            continue;
+          }
+
+          const accessToken = await ensureFreshTikTokAccessToken({
+            userId,
+            workspaceId: access.workspaceId,
+            accessToken: tokenRow.accessToken,
+            refreshToken: tokenRow.refreshToken,
+            expiresAt: tokenRow.expiresAt,
+          });
+
+          const published = await publishTikTokPost({
+            accessToken,
+            mediaUrl: publicMediaUrl,
+            caption: fullCaption || title,
+            kind: mediaKind,
+          });
           results.push({ platform, ok: true, id: published.id });
           continue;
         }
@@ -227,11 +317,11 @@ export async function POST(request: Request) {
           continue;
         }
 
-        if (imageUrl && /^https:\/\//i.test(imageUrl)) {
+        if (publicMediaUrl) {
           const published = await publishFacebookPagePost(
             pageId,
             pageToken,
-            imageUrl,
+            publicMediaUrl,
             fullCaption || title
           );
           results.push({ platform, ok: true, id: published.id });
@@ -244,6 +334,7 @@ export async function POST(request: Request) {
           results.push({ platform, ok: true, id: published.id });
         }
       } catch (error) {
+        console.error(`[planner/publish] ${platform} failed`, error);
         results.push({
           platform,
           ok: false,

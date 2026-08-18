@@ -22,44 +22,244 @@ export type PublishResult = {
   containerId?: string;
 };
 
+export type InstagramMediaKind = 'image' | 'video';
+
+type GraphErrorBody = {
+  error?: {
+    message?: string;
+    type?: string;
+    code?: number;
+    error_subcode?: number;
+    fbtrace_id?: string;
+  };
+};
+
+type GraphContainerBody = GraphErrorBody & {
+  id?: string;
+  creation_id?: string;
+  publish_id?: string;
+  status_code?: string;
+  status?: string;
+};
+
+function headersToRecord(headers: Headers): Record<string, string> {
+  const out: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    out[key] = value;
+  });
+  return out;
+}
+
+function graphErrorMessage(data: GraphErrorBody, status: number): string {
+  const err = data.error;
+  if (!err?.message) return `Graph API error (${status})`;
+  const extra = [
+    err.code != null ? `code ${err.code}` : null,
+    err.error_subcode != null ? `subcode ${err.error_subcode}` : null,
+    err.fbtrace_id ? `trace ${err.fbtrace_id}` : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  return extra ? `${err.message} (${extra})` : err.message;
+}
+
+function extractContainerId(data: GraphContainerBody): string | null {
+  const raw = data.id || data.creation_id || data.publish_id;
+  const id = typeof raw === 'string' ? raw.trim() : '';
+  return id || null;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function looksLikeVideoUrl(url: string, kind?: InstagramMediaKind): boolean {
+  if (kind === 'video') return true;
+  if (kind === 'image') return false;
+  return /\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(url);
+}
+
 /**
- * Publish an image post to an Instagram Business account.
- * 1) Create media container → 2) Publish container.
- * `imageUrl` must be a public HTTPS URL (e.g. Supabase Storage).
+ * POST/GET Graph with full diagnostics — never treat a missing container id as success.
+ */
+async function graphPublishRequest(
+  url: string,
+  init: RequestInit | undefined,
+  step: string
+): Promise<{ data: GraphContainerBody; headers: Record<string, string>; status: number }> {
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch (error) {
+    console.error(`[meta/${step}] network failure`, {
+      url: url.split('?')[0],
+      error: error instanceof Error ? error.message : error,
+    });
+    throw new Error(
+      `Failed to ${step}: network error (${error instanceof Error ? error.message : 'fetch failed'})`
+    );
+  }
+
+  const responseHeaders = headersToRecord(res.headers);
+  const rawText = await res.text();
+  let data: GraphContainerBody = {};
+  try {
+    data = rawText ? (JSON.parse(rawText) as GraphContainerBody) : {};
+  } catch {
+    data = { error: { message: rawText.slice(0, 400) || `Non-JSON Graph response (${res.status})` } };
+  }
+
+  if (!res.ok || data.error) {
+    console.error(`[meta/${step}] Graph API failed`, {
+      url: url.split('?')[0],
+      status: res.status,
+      payload: init?.body ? String(init.body).slice(0, 800) : null,
+      responseHeaders,
+      responseBody: data,
+    });
+    throw new Error(`Failed to ${step}: ${graphErrorMessage(data, res.status)}`);
+  }
+
+  return { data, headers: responseHeaders, status: res.status };
+}
+
+/**
+ * Poll Instagram media container until FINISHED/READY (videos/reels).
+ * Max 5 attempts × 3s delay.
+ */
+async function waitForInstagramContainerReady(
+  containerId: string,
+  accessToken: string
+): Promise<void> {
+  const maxAttempts = 5;
+  const delayMs = 3000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(containerId)}`);
+    url.searchParams.set('fields', 'status_code,status,id');
+    url.searchParams.set('access_token', accessToken);
+
+    const { data } = await graphPublishRequest(url.toString(), { method: 'GET' }, 'container status');
+    const status = String(data.status_code || data.status || '')
+      .trim()
+      .toUpperCase();
+
+    if (status === 'FINISHED' || status === 'READY' || status === 'PUBLISHED') {
+      return;
+    }
+    if (status === 'ERROR' || status === 'EXPIRED') {
+      throw new Error(
+        `Failed to create media container: Instagram status ${status} for ${containerId}`
+      );
+    }
+
+    if (attempt < maxAttempts) {
+      await sleep(delayMs);
+    }
+  }
+
+  throw new Error(
+    `Instagram media container ${containerId} was not FINISHED after ${maxAttempts} status checks. Wait and retry.`
+  );
+}
+
+/**
+ * Publish an image or video/reel to an Instagram Business account.
+ * 1) Create media container → 2) Poll status for video → 3) media_publish.
+ * `mediaUrl` must be a public HTTPS URL (e.g. Supabase Storage).
  */
 export async function publishInstagramPost(
   igUserId: string,
   accessToken: string,
   imageUrl: string,
-  caption: string
+  caption: string,
+  mediaKind?: InstagramMediaKind
 ): Promise<PublishResult> {
-  const created = await graphJson<{ id: string }>(
-    `${GRAPH_BASE}/${encodeURIComponent(igUserId)}/media`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image_url: imageUrl,
-        caption,
-        access_token: accessToken,
-      }),
-    }
-  );
-  if (!created.id) throw new Error('Instagram media container missing id');
+  const mediaUrl = imageUrl.trim();
+  if (!mediaUrl) {
+    throw new Error('Failed to create media container: media URL is empty');
+  }
 
-  const published = await graphJson<{ id: string }>(
+  const isVideo = looksLikeVideoUrl(mediaUrl, mediaKind);
+  const payload: Record<string, string> = {
+    caption,
+    access_token: accessToken,
+  };
+  if (isVideo) {
+    payload.media_type = 'REELS';
+    payload.video_url = mediaUrl;
+  } else {
+    payload.image_url = mediaUrl;
+  }
+
+  let created: GraphContainerBody;
+  try {
+    const result = await graphPublishRequest(
+      `${GRAPH_BASE}/${encodeURIComponent(igUserId)}/media`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+      'create media container'
+    );
+    created = result.data;
+  } catch (error) {
+    console.error('[meta/create media container] threw', {
+      igUserId,
+      isVideo,
+      mediaUrl: mediaUrl.slice(0, 180),
+      error: error instanceof Error ? error.message : error,
+    });
+    throw error instanceof Error
+      ? error
+      : new Error('Failed to create media container: unknown error');
+  }
+
+  const containerId = extractContainerId(created);
+  if (!containerId) {
+    console.error('[meta/create media container] missing id', {
+      igUserId,
+      isVideo,
+      mediaUrl: mediaUrl.slice(0, 180),
+      payloadKeys: Object.keys(payload).filter((k) => k !== 'access_token'),
+      responseBody: created,
+    });
+    throw new Error(
+      'Failed to create media container: Instagram did not return id / creation_id / publish_id'
+    );
+  }
+
+  if (isVideo) {
+    await waitForInstagramContainerReady(containerId, accessToken);
+  }
+
+  const published = await graphPublishRequest(
     `${GRAPH_BASE}/${encodeURIComponent(igUserId)}/media_publish`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        creation_id: created.id,
+        creation_id: containerId,
         access_token: accessToken,
       }),
-    }
+    },
+    'media_publish'
   );
 
-  return { id: published.id, containerId: created.id };
+  const publishedId = extractContainerId(published.data);
+  if (!publishedId) {
+    console.error('[meta/media_publish] missing published id', {
+      containerId,
+      responseBody: published.data,
+      responseHeaders: published.headers,
+    });
+    throw new Error(
+      'Failed to publish Instagram media: media id not available after media_publish'
+    );
+  }
+
+  return { id: publishedId, containerId };
 }
 
 /**
