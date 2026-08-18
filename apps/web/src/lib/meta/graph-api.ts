@@ -121,7 +121,7 @@ async function graphPublishRequest(
       responseHeaders,
       responseBody: data,
     });
-    throw new Error(`Failed to ${step}: ${graphErrorMessage(data, res.status)}`);
+    throw new Error(`Instagram: ${graphErrorMessage(data, res.status)}`);
   }
 
   return { data, headers: responseHeaders, status: res.status };
@@ -213,7 +213,7 @@ export async function publishInstagramPost(
 ): Promise<PublishResult> {
   const mediaUrl = toVerifiedPublishMediaUrl(imageUrl.trim());
   if (!mediaUrl) {
-    throw new Error('Failed to create media container: media URL is empty');
+    throw new Error('Instagram: media URL is empty');
   }
 
   const isVideo = looksLikeVideoUrl(mediaUrl, mediaKind);
@@ -249,7 +249,7 @@ export async function publishInstagramPost(
     });
     throw error instanceof Error
       ? error
-      : new Error('Failed to create media container: unknown error');
+      : new Error('Instagram: unknown publish error');
   }
 
   const containerId = extractContainerId(created);
@@ -262,7 +262,7 @@ export async function publishInstagramPost(
       responseBody: created,
     });
     throw new Error(
-      'Failed to create media container: Instagram did not return id / creation_id / publish_id'
+      'Instagram did not return a media container id. Reconnect Instagram under Settings → Socials.'
     );
   }
 

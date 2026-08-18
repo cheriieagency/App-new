@@ -68,8 +68,7 @@ const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
   ],
   tiktok: [
     'user.info.basic',
-    'user.info.stats',
-    'video.list',
+    'user.info.profile',
     'video.publish',
     'video.upload',
   ],

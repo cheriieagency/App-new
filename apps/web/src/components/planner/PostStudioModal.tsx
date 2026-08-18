@@ -511,10 +511,17 @@ export default function PostStudioModal({
           results?: Array<{ platform: string; ok: boolean; error?: string }>;
         };
         if (!publishRes.ok || !publishJson.ok) {
+          const results = publishJson.results ?? [];
+          const tiktokFail = results.find(
+            (x) => x.platform === 'tiktok' && !x.ok
+          );
+          const otherFails = results.filter((x) => !x.ok && x.platform !== 'tiktok');
           const detail =
-            publishJson.error_log ||
+            tiktokFail?.error ||
+            otherFails
+              .map((x) => `${x.platform}: ${x.error}`)
+              .join('\n') ||
             publishJson.error ||
-            publishJson.results?.find((x) => !x.ok)?.error ||
             publishJson.message ||
             t('toastPublishFailed', locale);
           toast.error(detail);
@@ -809,6 +816,10 @@ export default function PostStudioModal({
       {/* Row 1 — Target platforms */}
       <div>
         <FieldLabel>Target platforms</FieldLabel>
+        <p className="text-[11px] text-slate-500 font-medium mb-2">
+          Posts go live on connected accounts for this workspace. Deselect
+          Instagram/Facebook if you only want TikTok.
+        </p>
         <div className="flex flex-wrap items-center gap-2.5">
           {PLATFORM_OPTIONS.map(({ key, label, Icon }) => {
             const active = platforms.includes(key);

@@ -202,6 +202,9 @@ async function queryCreatorInfo(accessToken: string): Promise<CreatorInfo | null
       stitchDisabled: Boolean(data.stitch_disabled),
     };
   } catch (error) {
+    if (error instanceof TikTokApiError && error.code === 'scope_not_authorized') {
+      throw error;
+    }
     console.warn('[tiktok] creator_info unavailable — Direct Post may be blocked', error);
     return null;
   }
@@ -553,7 +556,17 @@ export async function publishTikTokPost(input: {
     (input.kind !== 'image' &&
       /\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(sourceMediaUrl));
 
-  const creator = await queryCreatorInfo(accessToken);
+  let creator: CreatorInfo | null = null;
+  try {
+    creator = await queryCreatorInfo(accessToken);
+  } catch (error) {
+    if (error instanceof TikTokApiError && error.code === 'scope_not_authorized') {
+      if (!isVideo) throw new Error(TIKTOK_POSTING_SCOPE_HELP);
+      // Videos can still go to inbox with video.upload only.
+    } else {
+      throw error;
+    }
+  }
 
   if (isVideo) {
     return publishVideoViaFileUpload({

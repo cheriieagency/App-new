@@ -18,14 +18,13 @@ export const TIKTOK_CODE_VERIFIER_COOKIE = 'tiktok_code_verifier';
 export const TIKTOK_RETURN_TO_COOKIE = 'clikd_tiktok_return_to';
 
 /**
- * Display + Content Posting scopes requested at authorize time.
- * `video.publish` is required for Direct Post (Post Studio publish/schedule).
- * `video.upload` only sends drafts to the creator inbox.
+ * Login Kit + Content Posting scopes requested at authorize time.
+ * Exact list sent as `scope=` on https://www.tiktok.com/v2/auth/authorize/
+ * `video.publish` = Direct Post · `video.upload` = inbox drafts.
  */
 export const TIKTOK_OAUTH_SCOPES = [
   'user.info.basic',
-  'user.info.stats',
-  'video.list',
+  'user.info.profile',
   'video.publish',
   'video.upload',
 ] as const;
@@ -118,8 +117,6 @@ export function buildTikTokLoginUrl(
 
   const redirectUri = getTikTokCallbackUrl(requestOrigin);
 
-  // Official Login Kit params only — unsupported keys (prompt, disable_auto_login)
-  // can break authorize in the browser.
   // https://developers.tiktok.com/doc/login-kit-web
   const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
   authUrl.searchParams.set('client_key', clientKey);
@@ -129,7 +126,9 @@ export function buildTikTokLoginUrl(
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('code_challenge', codeChallenge);
   authUrl.searchParams.set('code_challenge_method', 'S256');
-  // Force consent / account UI (0 = skip for existing session, 1 = always show).
+  // Force the full consent screen so posting scopes are not reused from a cached grant.
+  authUrl.searchParams.set('prompt', 'consent');
+  // Force account picker (0 = skip for existing session, 1 = always show).
   if (options?.forceSelectAccount !== false) {
     authUrl.searchParams.set('disable_auto_auth', '1');
   }
