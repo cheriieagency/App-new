@@ -935,11 +935,20 @@ export default function PostStudioModal({
       </div>
 
       {/* Row 3 — Media */}
-      <CarouselMediaUploader
-        items={mediaItems}
-        onChange={setMediaItems}
-        compact
-      />
+      <div>
+        <FieldLabel>Media</FieldLabel>
+        {platforms.includes('tiktok') && !mediaItems.some((m) => m.url) ? (
+          <p className="mb-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+            TikTok cannot post caption-only. Upload a video (best) or a JPEG/WebP photo
+            before Publish.
+          </p>
+        ) : null}
+        <CarouselMediaUploader
+          items={mediaItems}
+          onChange={setMediaItems}
+          compact
+        />
+      </div>
 
       {/* Row 4 — Schedule & status */}
       <div>
@@ -1590,13 +1599,21 @@ export default function PostStudioModal({
                 className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold text-[#F472B6]"
                 disabled={
                   saving ||
-                  ![...platforms].some((p) => connectedPlatforms.has(p))
+                  ![...platforms].some((p) => connectedPlatforms.has(p)) ||
+                  (platforms.includes('tiktok') &&
+                    !mediaItems.some((m) => Boolean(m.url)))
                 }
                 onSelect={() => void save('post')}
               >
                 <Send size={14} />
                 {t('publishNow', locale)}
               </DropdownMenuItem>
+              {platforms.includes('tiktok') &&
+              !mediaItems.some((m) => Boolean(m.url)) ? (
+                <p className="px-2 py-1.5 text-[10px] text-amber-700 font-medium leading-snug">
+                  Add a video or photo to publish to TikTok.
+                </p>
+              ) : null}
               {platforms.some((p) => !connectedPlatforms.has(p)) ? (
                 <p className="px-2 py-1.5 text-[10px] text-slate-400 font-medium leading-snug">
                   Only connected channels will be posted. Connect others in

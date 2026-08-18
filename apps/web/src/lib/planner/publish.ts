@@ -30,6 +30,7 @@ export type PlatformPublishResult = {
   id?: string;
   error?: string;
   skipped?: boolean;
+  note?: string;
 };
 
 export type PublishPlannerPostInput = {
@@ -394,7 +395,14 @@ export async function publishPlannerPost(
           kind: mediaKind,
           extraImageUrls,
         });
-        results.push({ platform, ok: true, id: published.id });
+        results.push({
+          platform,
+          ok: true,
+          id: published.id,
+          note: published.inbox
+            ? 'Sent to TikTok inbox — open the TikTok app to finish posting. Direct Post needs a Private TikTok account (or an audited app).'
+            : undefined,
+        });
         continue;
       }
 
@@ -498,6 +506,7 @@ export async function publishPlannerPost(
   const failed = results.filter((r) => !r.ok && !r.skipped);
   const error_log = buildErrorLog(results);
   const allTargetsSucceeded = failed.length === 0 && published.length > 0;
+  const inboxNote = results.find((r) => r.note)?.note;
 
   return {
     ok: allTargetsSucceeded,
@@ -505,7 +514,8 @@ export async function publishPlannerPost(
     published_count: published.length,
     failed_count: failed.length,
     message: allTargetsSucceeded
-      ? `Published to ${published.map((r) => r.platform).join(', ')}`
+      ? inboxNote ||
+        `Published to ${published.map((r) => r.platform).join(', ')}`
       : failed[0]?.error || published.length > 0
         ? `Some platforms failed: ${failed.map((r) => r.platform).join(', ')}`
         : 'Nothing was published',

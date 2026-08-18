@@ -13,6 +13,8 @@ import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace'
 import { publishAndFinalizePlannerPost } from '@/lib/planner/publish';
 import type { YoutubeMeta } from '@/lib/mock-content-planner';
 
+export const maxDuration = 120;
+
 type PublishBody = {
   postId?: unknown;
   workspaceId?: unknown;
