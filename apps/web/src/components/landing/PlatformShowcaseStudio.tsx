@@ -135,7 +135,10 @@ function StudioSidebar({ tab }: { tab: ShowcaseTabId }) {
 
 function StudioTopbar({ search }: { search: string }) {
   return (
-    <div className="h-16 shrink-0 px-4 sm:px-8 flex items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
+    <div className="h-14 sm:h-16 shrink-0 px-4 sm:px-8 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
+      <div className="flex items-center gap-2.5 sm:hidden shrink-0">
+        <ClikdMark size={28} className="rounded-[9px] shadow-sm" />
+      </div>
       <div className="relative w-full max-w-md flex-1 hidden sm:block">
         <Search
           size={15}
@@ -355,7 +358,7 @@ function PlannerBody() {
           </p>
         </div>
         <div className="flex flex-col items-stretch sm:items-end gap-2">
-          <div className="flex gap-1.5 overflow-hidden">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5">
             {(
               [
                 { id: 'all', label: 'All platforms' },
@@ -385,15 +388,15 @@ function PlannerBody() {
         </div>
       </div>
       <div className={`${adminCardClass} overflow-hidden`}>
-        <div className="flex items-center gap-3 px-3 sm:px-4 py-3 border-b border-slate-200/80">
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 border-b border-slate-200/80 overflow-x-auto scrollbar-none">
           <span className="inline-flex h-9 px-3 rounded-lg border border-slate-200 bg-white text-[13px] font-medium text-slate-700">
             Today
           </span>
-          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-0.5">
+          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-0.5 shrink-0">
             {['Month', 'Week', 'Day', 'List'].map((m, i) => (
               <span
                 key={m}
-                className={`h-8 px-3 rounded-md text-[12px] font-medium ${
+                className={`h-8 px-2 sm:px-3 rounded-md text-[11px] sm:text-[12px] font-medium whitespace-nowrap ${
                   i === 0 ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600'
                 }`}
               >
@@ -401,10 +404,12 @@ function PlannerBody() {
               </span>
             ))}
           </div>
-          <div className="flex-1 flex items-center justify-center gap-2">
-            <ChevronLeft size={18} className="text-slate-400" />
-            <p className="text-[15px] font-semibold text-slate-900 tracking-tight">August 2026</p>
-            <ChevronRight size={18} className="text-slate-400" />
+          <div className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 min-w-[140px] shrink-0">
+            <ChevronLeft size={18} className="text-slate-400 shrink-0" />
+            <p className="text-[13px] sm:text-[15px] font-semibold text-slate-900 tracking-tight whitespace-nowrap">
+              August 2026
+            </p>
+            <ChevronRight size={18} className="text-slate-400 shrink-0" />
             <span className="hidden sm:inline-flex items-center h-7 px-2.5 rounded-full border border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-500 tabular-nums">
               {eventCount} events
             </span>
@@ -413,6 +418,8 @@ function PlannerBody() {
             <Filter size={14} strokeWidth={1.75} /> Filter
           </span>
         </div>
+        <div className="overflow-x-auto scrollbar-none -mx-px">
+          <div className="min-w-[640px]">
         <div className="grid grid-cols-7 border-b border-slate-100">
           {weekdays.map((d) => (
             <div
@@ -454,6 +461,8 @@ function PlannerBody() {
             </div>
           ))}
         </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -468,26 +477,26 @@ function BioBody() {
   ];
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between gap-3">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
             Bio builder · @clikd.app
           </p>
-          <h3 className="font-clikd-wordmark font-extrabold text-[26px] sm:text-[32px] text-slate-900 tracking-tight mt-1">
+          <h3 className="font-clikd-wordmark font-extrabold text-[22px] sm:text-[32px] text-slate-900 tracking-tight mt-1">
             Link in Bio
           </h3>
         </div>
-        <span className="h-11 px-4 rounded-xl bg-[#1a1848] text-white text-sm font-semibold inline-flex items-center">
+        <span className="h-11 px-4 rounded-xl bg-[#1a1848] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center shrink-0">
           Publish Changes
         </span>
       </div>
-      <div className="flex items-end gap-6 border-b border-slate-200/80">
+      <div className="flex items-end gap-4 sm:gap-6 border-b border-slate-200/80 overflow-x-auto scrollbar-none pb-px">
         {['Design & Theme', 'Blocks & Links', 'UTM Analytics', 'Settings'].map((t) => {
           const active = t === 'Design & Theme';
           return (
             <span
               key={t}
-              className={`pb-3 text-[13px] font-extrabold ${
+              className={`shrink-0 pb-3 text-[12px] sm:text-[13px] font-extrabold whitespace-nowrap ${
                 active ? 'text-slate-900 border-b-2 border-[#F472B6]' : 'text-slate-500'
               }`}
             >
@@ -496,8 +505,8 @@ function BioBody() {
           );
         })}
       </div>
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-7 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-7 space-y-4">
           <div className={`${adminCardClass} p-4 space-y-3`}>
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -567,8 +576,8 @@ function BioBody() {
             </div>
           </div>
         </div>
-        <div className="col-span-5 flex flex-col items-center justify-center">
-          <div className="w-[220px] rounded-[40px] border-[6px] border-slate-900 overflow-hidden bg-gradient-to-b from-[#2B2568] via-[#4F46E5] to-[#0F172A] text-white shadow-xl">
+        <div className="lg:col-span-5 flex flex-col items-center justify-center pt-2 lg:pt-0">
+          <div className="w-[200px] sm:w-[220px] rounded-[40px] border-[6px] border-slate-900 overflow-hidden bg-gradient-to-b from-[#2B2568] via-[#4F46E5] to-[#0F172A] text-white shadow-xl">
             <div className="relative px-4 pt-3 pb-5">
               {/* Status bar */}
               <div className="relative flex items-start justify-between text-[10px] font-mono text-white/70">
@@ -680,8 +689,8 @@ function AdsBody() {
   const spark = 'M0 42 C 28 38, 40 22, 70 26 S 110 48, 140 32 S 190 8, 240 14 S 280 36, 320 20';
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between gap-3">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
             Meta · Ads
           </p>
@@ -689,16 +698,16 @@ function AdsBody() {
             Ads Manager
           </h3>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="h-11 px-4 rounded-xl bg-[#F472B6] text-white text-sm font-semibold inline-flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <span className="h-11 px-3 sm:px-4 rounded-xl bg-[#F472B6] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 whitespace-nowrap">
             <Plus size={14} /> Create campaign
           </span>
-          <span className="h-11 px-4 rounded-xl bg-[#2B2568] text-white text-sm font-medium inline-flex items-center">
+          <span className="h-11 px-3 sm:px-4 rounded-xl bg-[#2B2568] text-white text-xs sm:text-sm font-medium inline-flex items-center whitespace-nowrap">
             Last 30 days
           </span>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { l: 'Spend', v: 'US$483', bar: '#F472B6' },
           { l: 'Conversions', v: '197', bar: '#1a1848' },
@@ -733,7 +742,8 @@ function AdsBody() {
           <path d={spark} fill="none" stroke="#F472B6" strokeWidth="2.2" />
         </svg>
       </div>
-      <div className={`${adminCardClass} overflow-hidden`}>
+      <div className={`${adminCardClass} overflow-x-auto scrollbar-none`}>
+        <div className="min-w-[520px]">
         <div className="grid grid-cols-12 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
           <span className="col-span-1">On</span>
           <span className="col-span-4">Campaign</span>
@@ -759,6 +769,7 @@ function AdsBody() {
             <span className="col-span-3 tabular-nums font-semibold text-slate-900">US${r[4]}</span>
           </div>
         ))}
+        </div>
       </div>
     </div>
   );
@@ -783,7 +794,7 @@ function CrmBody() {
           Email & CRM
         </h3>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { l: 'Total subscribers', v: '1,340' },
           { l: 'Average open rate', v: '48.2%' },
@@ -815,7 +826,7 @@ function CrmBody() {
             <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
               {m[2]}
             </span>
-            <span className="text-slate-400 tabular-nums w-14 text-right">{m[3]}</span>
+            <span className="hidden sm:inline text-slate-400 tabular-nums w-14 text-right">{m[3]}</span>
           </div>
         ))}
       </div>
@@ -833,16 +844,16 @@ function InboxBody() {
   ];
   return (
     <div className="space-y-3 h-full flex flex-col">
-      <div className="flex items-end justify-between">
-        <h3 className="font-clikd-wordmark font-extrabold text-[26px] sm:text-[32px] text-slate-900 tracking-tight">
-          Inbox <span className="text-slate-400 font-bold text-lg">@clikd.app</span>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <h3 className="font-clikd-wordmark font-extrabold text-[22px] sm:text-[32px] text-slate-900 tracking-tight min-w-0">
+          Inbox <span className="text-slate-400 font-bold text-base sm:text-lg">@clikd.app</span>
         </h3>
-        <span className="text-[11px] font-bold bg-[#1a1848] text-white px-3 h-8 rounded-lg inline-flex items-center">
+        <span className="text-[11px] font-bold bg-[#1a1848] text-white px-3 h-8 rounded-lg inline-flex items-center shrink-0 self-start sm:self-auto">
           All messages
         </span>
       </div>
-      <div className={`${adminCardClass} overflow-hidden grid grid-cols-12 min-h-[420px]`}>
-        <div className="col-span-4 border-r border-slate-100">
+      <div className={`${adminCardClass} overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-0 md:min-h-[420px]`}>
+        <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-slate-100 max-h-[280px] md:max-h-none overflow-y-auto">
           {threads.map((th) => (
             <div
               key={th.n}
@@ -877,7 +888,7 @@ function InboxBody() {
             </div>
           ))}
         </div>
-        <div className="col-span-8 p-4 flex flex-col">
+        <div className="md:col-span-8 p-4 flex flex-col min-h-[240px]">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Avatar letter="A" tone="bg-[#F472B6] text-white" />
             <div>
@@ -1004,10 +1015,10 @@ function MemberCommunityPreview() {
   ];
 
   return (
-    <div className="flex flex-col h-full min-h-[720px] sm:min-h-[860px] bg-[#FAFAFA]">
+    <div className="flex flex-col h-full min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] bg-[#FAFAFA]">
       <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 shrink-0">
         <div className="px-4 sm:px-6">
-          <div className="h-14 sm:h-16 flex items-center gap-3">
+          <div className="h-auto sm:h-16 py-3 sm:py-0 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-center gap-2 shrink-0 min-w-0">
               <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-white font-extrabold bg-[#2B2568]">
                 C
@@ -1015,7 +1026,7 @@ function MemberCommunityPreview() {
               <span className="text-sm font-extrabold text-slate-900 truncate">Clikd insiders</span>
               <ChevronDown size={14} className="text-slate-400 shrink-0" />
             </div>
-            <div className="flex-1 flex justify-center min-w-0">
+            <div className="hidden sm:flex flex-1 justify-center min-w-0">
               <div className="relative w-full max-w-md">
                 <Search
                   size={15}
@@ -1026,7 +1037,7 @@ function MemberCommunityPreview() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
               <span className="relative h-11 w-11 rounded-full bg-slate-100 inline-flex items-center justify-center text-slate-600">
                 <Bell size={16} />
                 <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#F472B6]" />
@@ -1034,7 +1045,7 @@ function MemberCommunityPreview() {
               <LevelRing letter="A" size={36} />
             </div>
           </div>
-          <nav className="flex items-center gap-1 -mb-px">
+          <nav className="flex items-center gap-1 -mb-px overflow-x-auto scrollbar-none pb-px">
             {(
               [
                 { label: 'Community', Icon: MessageSquare, on: true },
@@ -1045,7 +1056,7 @@ function MemberCommunityPreview() {
             ).map((tab) => (
               <span
                 key={tab.label}
-                className={`relative flex items-center gap-1.5 h-11 px-3.5 text-xs font-extrabold ${
+                className={`relative shrink-0 flex items-center gap-1.5 h-11 px-3.5 text-xs font-extrabold whitespace-nowrap ${
                   tab.on ? 'text-slate-900' : 'text-slate-400'
                 }`}
               >
@@ -1060,8 +1071,8 @@ function MemberCommunityPreview() {
         </div>
       </div>
 
-      <div className="flex-1 px-4 sm:px-6 py-5 grid grid-cols-12 gap-5 overflow-hidden">
-        <div className="col-span-8 space-y-3 min-w-0">
+      <div className="flex-1 px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5 overflow-x-hidden">
+        <div className="lg:col-span-8 space-y-3 min-w-0">
           <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-2xl w-fit">
             <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#F472B6] text-white shadow-sm">
               <MessageSquare size={13} /> Feed
@@ -1133,7 +1144,7 @@ function MemberCommunityPreview() {
           ))}
         </div>
 
-        <div className="col-span-4 space-y-4 min-w-0">
+        <div className="lg:col-span-4 space-y-4 min-w-0">
           <div className={`${adminCardClass} p-5`}>
             <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4">
               Your profile
@@ -1224,8 +1235,8 @@ function HomeBody() {
           Today’s focus, shortcuts, Kanban and latest activity — all in one place.
         </p>
       </div>
-      <div className="grid grid-cols-12 gap-3.5">
-        <div className="col-span-5 rounded-2xl bg-[#EDE9FE]/80 border border-[#DDD6FE] p-4 sm:p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+        <div className="lg:col-span-5 rounded-2xl bg-[#EDE9FE]/80 border border-[#DDD6FE] p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
               Today’s Focus & To-Do&apos;s
@@ -1260,7 +1271,7 @@ function HomeBody() {
             </div>
           ))}
         </div>
-        <div className="col-span-7 grid grid-cols-3 gap-3.5">
+        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           {[
             { t: 'Content Planner', s: '14 posts this week', accent: 'bg-[#E9D5FF]/70 text-[#2B2568]', Icon: CalendarDays },
             { t: 'Analytics & Revenue', s: '94.2K reach', accent: 'bg-emerald-50 text-[#10B981]', Icon: BarChart3 },
@@ -1277,7 +1288,7 @@ function HomeBody() {
             </div>
           ))}
         </div>
-        <div className={`col-span-7 ${adminCardClass} p-4 sm:p-5`}>
+        <div className={`lg:col-span-7 ${adminCardClass} p-4 sm:p-5`}>
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
               Kanban To-Do Board
@@ -1286,7 +1297,7 @@ function HomeBody() {
               <Plus size={14} strokeWidth={2.5} /> New task
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             {[
               { h: 'To Do / Ideas', dot: 'bg-amber-400', n: '2', items: [{ t: 'Script 5 hooks', a: 'EB' }, { t: 'Film B-roll', a: 'AS' }] },
               { h: 'In progress', dot: 'bg-indigo-500', n: '2', items: [{ t: 'August calendar', a: 'EB' }, { t: 'Meta retargeting', a: 'ML' }] },
@@ -1320,7 +1331,7 @@ function HomeBody() {
             ))}
           </div>
         </div>
-        <div className={`col-span-5 ${adminCardClass} p-4 sm:p-5`}>
+        <div className={`lg:col-span-5 ${adminCardClass} p-4 sm:p-5`}>
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
               Latest activity & alerts
@@ -1379,7 +1390,7 @@ export function PlatformShowcaseStudio({ tab }: { tab: ShowcaseTabId }) {
   if (tab === 'community') {
     return (
       <div
-        className="bg-[#FAFAFA] min-h-[720px] sm:min-h-[860px] text-left pointer-events-none select-none overflow-hidden"
+        className="bg-[#FAFAFA] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] text-left pointer-events-none select-none overflow-x-hidden"
         aria-hidden
       >
         <MemberCommunityPreview />
@@ -1389,13 +1400,13 @@ export function PlatformShowcaseStudio({ tab }: { tab: ShowcaseTabId }) {
 
   return (
     <div
-      className="bg-[#FAFAFA] min-h-[720px] sm:min-h-[860px] flex text-left pointer-events-none select-none overflow-hidden"
+      className="bg-[#FAFAFA] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] flex text-left pointer-events-none select-none overflow-x-hidden"
       aria-hidden
     >
       <StudioSidebar tab={tab} />
       <div className="flex-1 min-w-0 flex flex-col">
         <StudioTopbar search={SEARCH[tab]} />
-        <div className="flex-1 p-4 sm:p-6 overflow-hidden">
+        <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-x-hidden">
           {tab === 'planner' && <PlannerBody />}
           {tab === 'biostore' && <BioBody />}
           {tab === 'metaads' && <AdsBody />}

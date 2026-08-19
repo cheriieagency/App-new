@@ -49,14 +49,14 @@ export function PlatformShowcaseSection() {
   return (
     <section
       id="the-platform"
-      className="relative py-16 sm:py-24 overflow-hidden bg-[#FAFAFA]"
+      className="relative py-12 sm:py-16 lg:py-24 overflow-hidden bg-[#FAFAFA]"
       aria-labelledby="platform-showcase-heading"
     >
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
         <header className="text-center max-w-5xl mx-auto px-2 sm:px-4">
           <h2
             id="platform-showcase-heading"
-            className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
+            className="font-outfit font-bold text-3xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
           >
             {shouldSplitHeadline ? (
               <>
@@ -77,7 +77,7 @@ export function PlatformShowcaseSection() {
         <div
           role="tablist"
           aria-label={copy.headline}
-          className="flex items-center justify-center flex-wrap gap-2 text-xs font-semibold"
+          className="flex items-center justify-start sm:justify-center gap-2 text-xs font-semibold overflow-x-auto sm:overflow-visible flex-nowrap sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0 scrollbar-none"
         >
           {SHOWCASE_TABS.map((id, index) => {
             const selected = id === active;
@@ -92,7 +92,7 @@ export function PlatformShowcaseSection() {
                 tabIndex={selected ? 0 : -1}
                 onClick={() => setActive(id)}
                 onKeyDown={(event) => onTabKeyDown(event, index)}
-                className={`px-4 min-h-[44px] py-2.5 rounded-full border flex items-center gap-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                className={`shrink-0 px-3 sm:px-4 min-h-[44px] py-2.5 rounded-full border flex items-center gap-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   selected
                     ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-[0_4px_14px_rgba(15,23,42,0.15)]'
                     : 'border-zinc-200 text-zinc-600 hover:bg-white hover:text-[#0F172A] hover:border-slate-300'
@@ -114,7 +114,7 @@ export function PlatformShowcaseSection() {
           id={`${baseId}-panel`}
           role="tabpanel"
           aria-labelledby={`${baseId}-tab-${active}`}
-          className="rounded-3xl border border-zinc-200/90 shadow-xl overflow-hidden bg-white"
+          className="rounded-2xl sm:rounded-3xl border border-zinc-200/90 shadow-xl overflow-hidden bg-white"
         >
           <AnimatePresence mode="wait">
             <motion.div
