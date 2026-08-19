@@ -294,37 +294,78 @@ function TikTokPreview({
   items: PlannerMediaItem[];
 }) {
   const item = items.find((m) => m.type === 'video') ?? items[0];
+  const handle = `@${username.replace(/^@/, '')}`;
 
   return (
-    <div className="relative mx-auto w-[240px] aspect-[9/16] rounded-[1.75rem] overflow-hidden bg-black border-[3px] border-zinc-800 shadow-lg">
+    <div className="relative mx-auto w-[200px] aspect-[9/19.5] rounded-[2rem] overflow-hidden bg-black border-[3px] border-zinc-800 shadow-lg">
       <MediaSlide item={item} className="absolute inset-0 w-full h-full" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10" />
 
-      <div className="absolute right-2 bottom-28 flex flex-col items-center gap-4 text-white">
-        <div className="w-10 h-10 rounded-full bg-zinc-300 border-2 border-white" />
-        {[
-          { icon: Heart, label: '12.4K' },
-          { icon: MessageCircle, label: '842' },
-          { icon: Bookmark, label: '1.1K' },
-          { icon: Share2, label: 'Share' },
-        ].map(({ icon: Icon, label }) => (
-          <div key={label} className="flex flex-col items-center gap-0.5">
-            <Icon size={22} fill="white" />
-            <span className="text-[9px] font-bold">{label}</span>
+      {/* Status bar — notch area */}
+      <div className="absolute top-0 inset-x-0 h-8 flex items-center justify-center">
+        <div className="w-20 h-5 rounded-b-xl bg-black" />
+      </div>
+
+      {/* TikTok top bar: "Following | For You" tabs */}
+      <div className="absolute top-9 inset-x-0 flex items-center justify-center gap-3">
+        <span className="text-[10px] font-semibold text-white/50">Following</span>
+        <span className="text-[10px] font-extrabold text-white border-b-2 border-white pb-0.5">For You</span>
+      </div>
+
+      {/* Right action bar — compact, positioned lower */}
+      <div className="absolute right-2 bottom-14 flex flex-col items-center gap-2.5 text-white">
+        {/* Profile avatar with follow "+" badge */}
+        <div className="relative mb-0.5">
+          <div className="w-8 h-8 rounded-full bg-zinc-400 border-[1.5px] border-white overflow-hidden">
+            <div className="w-full h-full bg-gradient-to-br from-zinc-300 to-zinc-500" />
           </div>
-        ))}
-        <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/40 flex items-center justify-center mt-1">
-          <Music2 size={14} className="text-white" style={{ animation: 'spin 4s linear infinite' }} />
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#FE2C55] flex items-center justify-center">
+            <span className="text-[9px] font-black text-white leading-none">+</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center gap-0.5">
+          <Heart size={18} strokeWidth={2} />
+          <span className="text-[8px] font-bold">12.4K</span>
+        </div>
+
+        <div className="flex flex-col items-center gap-0.5">
+          <MessageCircle size={18} strokeWidth={2} />
+          <span className="text-[8px] font-bold">842</span>
+        </div>
+
+        <div className="flex flex-col items-center gap-0.5">
+          <Bookmark size={16} strokeWidth={2} />
+          <span className="text-[8px] font-bold">1.1K</span>
+        </div>
+
+        <div className="flex flex-col items-center gap-0.5">
+          <Share2 size={16} strokeWidth={2} />
+          <span className="text-[8px] font-bold">Share</span>
+        </div>
+
+        {/* Spinning music disc */}
+        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-zinc-900 via-zinc-700 to-zinc-900 border-[2px] border-zinc-600 flex items-center justify-center">
+          <div
+            className="w-3 h-3 rounded-full bg-zinc-400"
+            style={{ animation: 'spin 4s linear infinite' }}
+          />
         </div>
       </div>
 
-      <div className="absolute left-3 right-14 bottom-4 text-white">
-        <p className="text-sm font-extrabold mb-1">@{username.replace(/^@/, '')}</p>
-        <p className="text-[11px] font-medium leading-snug line-clamp-3 mb-2">{caption}</p>
-        <div className="flex items-center gap-1.5 text-[10px] font-bold opacity-90">
-          <Music2 size={11} />
-          <span className="truncate">Original ljud — {username}</span>
+      {/* Bottom left: handle, caption, sound ticker */}
+      <div className="absolute left-2.5 right-12 bottom-3 text-white">
+        <p className="text-[11px] font-extrabold mb-0.5 drop-shadow-sm">{handle}</p>
+        <p className="text-[10px] font-medium leading-snug line-clamp-2 mb-1.5 drop-shadow-sm">{caption}</p>
+        <div className="flex items-center gap-1 bg-white/10 rounded-full pl-1.5 pr-2.5 py-0.5 w-fit max-w-full">
+          <Music2 size={8} className="flex-shrink-0" />
+          <span className="text-[8px] font-semibold truncate">Original sound — {username.replace(/^@/, '')}</span>
         </div>
+      </div>
+
+      {/* Bottom nav bar — home indicator */}
+      <div className="absolute bottom-0 inset-x-0 h-5 flex items-center justify-center">
+        <div className="w-24 h-1 rounded-full bg-white/40" />
       </div>
     </div>
   );
@@ -523,6 +564,9 @@ function YouTubePreview({
   );
 }
 
+/** Per-platform handle map so each preview shows the connected account's real username. */
+export type PlatformHandles = Partial<Record<SocialPlatform, string>>;
+
 export default function FeedPreview({
   caption,
   mediaItems,
@@ -532,6 +576,7 @@ export default function FeedPreview({
   displayName = 'clikd:',
   brandAvatar = null,
   brandColor,
+  platformHandles,
 }: {
   caption: string;
   mediaItems: PlannerMediaItem[];
@@ -541,6 +586,8 @@ export default function FeedPreview({
   displayName?: string;
   brandAvatar?: string | null;
   brandColor?: string;
+  /** Per-platform handles from connected social accounts. Falls back to `username`. */
+  platformHandles?: PlatformHandles;
 }) {
   const tabs = useMemo(() => {
     const all: { key: PreviewTab; label: string }[] = [
@@ -584,7 +631,7 @@ export default function FeedPreview({
       <div className="min-h-[280px]">
         {active === 'instagram' && (
           <InstagramPreview
-            username={username}
+            username={platformHandles?.instagram || username}
             caption={caption}
             items={mediaItems}
             brandAvatar={brandAvatar}
@@ -593,7 +640,7 @@ export default function FeedPreview({
         )}
         {active === 'facebook' && (
           <FacebookPreview
-            username={username}
+            username={platformHandles?.facebook || username}
             caption={caption}
             items={mediaItems}
             brandAvatar={brandAvatar}
@@ -601,7 +648,7 @@ export default function FeedPreview({
           />
         )}
         {active === 'tiktok' && (
-          <TikTokPreview username={username} caption={caption} items={mediaItems} />
+          <TikTokPreview username={platformHandles?.tiktok || username} caption={caption} items={mediaItems} />
         )}
         {active === 'linkedin' && (
           <LinkedInPreview

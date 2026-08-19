@@ -53,7 +53,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import CarouselMediaUploader from '@/components/planner/CarouselMediaUploader';
-import FeedPreview from '@/components/planner/FeedPreview';
+import FeedPreview, { type PlatformHandles } from '@/components/planner/FeedPreview';
 import {
   FacebookIcon,
   InstagramIcon,
@@ -183,6 +183,15 @@ export default function PostStudioModal({
     }
     return set;
   }, [socialsData?.accounts]);
+
+  const platformHandles = useMemo<PlatformHandles>(() => {
+    const map: PlatformHandles = {};
+    for (const a of socialsData?.accounts || []) {
+      if (a.connected && a.handle) map[a.platform as keyof PlatformHandles] = a.handle;
+    }
+    return map;
+  }, [socialsData?.accounts]);
+
   const [sideTab, setSideTab] = useState<'preview' | 'team'>('preview');
   const [chatVisibility, setChatVisibility] = useState<'private' | 'public'>(
     'private'
@@ -1478,6 +1487,7 @@ export default function PostStudioModal({
               displayName={activeBrand?.name || project}
               brandAvatar={activeBrand?.avatar_url}
               brandColor={activeBrand?.color}
+              platformHandles={platformHandles}
             />
           </div>
         ) : (
@@ -1660,6 +1670,7 @@ export default function PostStudioModal({
                   displayName={activeBrand?.name || project}
                   brandAvatar={activeBrand?.avatar_url}
                   brandColor={activeBrand?.color}
+                  platformHandles={platformHandles}
                 />
               </div>
             )}
