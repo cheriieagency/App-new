@@ -186,9 +186,6 @@ export function WaitlistPageClient() {
               <p className="mt-3 font-outfit font-black text-3xl text-slate-900 tracking-tight">
                 VIP queue spot secured.
               </p>
-              <p className="mt-2 text-slate-600 font-display leading-relaxed">
-                Your queue spot: <span className="font-mono font-extrabold text-[#2B2568]">{formatQueueNumber(queueNumber)}</span>
-              </p>
               <p className="mt-3 text-sm text-slate-600 font-display leading-relaxed">
                 Check your inbox for your early access invite. If it doesn&apos;t arrive within a minute, check spam.
               </p>
