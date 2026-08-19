@@ -100,7 +100,7 @@ export function ShowcaseSection({
             </p>
             <h2
               id="communities-heading"
-              className="font-outfit text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight"
+              className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
             >
               {t('findNordicCommunity', locale)}{' '}
               <span className="text-[#F472B6]">{t('findNordicCommunityAccent', locale)}</span>

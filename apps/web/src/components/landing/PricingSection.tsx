@@ -44,7 +44,7 @@ export function PricingSection() {
           </p>
           <h2
             id="pricing-heading"
-            className="font-outfit font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight leading-tight"
+            className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
           >
             {t('pricingHeadline', locale)}{' '}
             <span className="text-[#F472B6]">{t('pricingHeadlineAccent', locale)}</span>

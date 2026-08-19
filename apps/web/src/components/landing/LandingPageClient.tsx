@@ -145,7 +145,7 @@ export function LandingPageClient() {
             <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
               {t('getStartedEyebrow', locale)}
             </p>
-            <h2 className="font-outfit font-extrabold text-3xl sm:text-4xl text-slate-900 mb-4 leading-tight tracking-tight">
+            <h2 className="font-outfit font-bold text-3xl sm:text-4xl text-slate-900 mb-4 leading-tight tracking-tight">
               {t('landingReadyHeadline', locale)}
             </h2>
             <p className="text-slate-600 mb-9 text-base sm:text-lg font-medium font-display leading-relaxed">

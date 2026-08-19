@@ -6,7 +6,7 @@
 
 export const CLIKD_QA_ACCOUNT = {
   email: 'hello@clikd.app',
-  password: 'Test1234!',
+  password: 'Tester1234!',
   name: 'Clikd QA',
 } as const;
 

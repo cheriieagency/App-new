@@ -51,14 +51,14 @@ export function PlatformShowcaseSection() {
       aria-labelledby="platform-showcase-heading"
     >
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
-        <header className="text-center max-w-2xl mx-auto">
+        <header className="text-center max-w-5xl mx-auto px-2 sm:px-4">
           <h2
             id="platform-showcase-heading"
-            className="font-outfit font-bold text-4xl sm:text-5xl text-slate-900 tracking-tight leading-tight"
+            className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
           >
             {copy.headline}
           </h2>
-          <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
+          <p className="mt-3 max-w-3xl mx-auto text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
             {copy.sub}
           </p>
         </header>

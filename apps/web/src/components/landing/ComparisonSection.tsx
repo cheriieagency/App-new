@@ -26,11 +26,11 @@ export function ComparisonSection() {
           </span>
           <h2
             id="why-choose-heading"
-            className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight font-grotesk leading-tight"
+            className="mt-5 font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
           >
             {t('comparison.headline')}
           </h2>
-          <p className="mt-4 text-slate-500 font-medium text-base sm:text-lg leading-relaxed font-display max-w-2xl mx-auto">
+          <p className="mt-4 text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display max-w-2xl mx-auto">
             {t('comparison.sub')}
           </p>
         </div>

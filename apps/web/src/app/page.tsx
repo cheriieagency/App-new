@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import { LandingPageClient } from '@/components/landing/LandingPageClient';
+import { WaitlistPageClient } from '@/components/landing/WaitlistPageClient';
 import { SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: 'clikd: — Build, Sell & Scale Community, Bio & Socials',
+  title: 'clikd: VIP Waitlist — Early Access',
   description:
-    'Nordisk all-in-one creator-plattform. Community, Bio Store, kurser, social planner och snabbcheckout — allt i en app.',
+    'Join the VIP waitlist for early access to clikd: your all-in-one studio for social planning, bio storefronts, community, ads and checkout.',
   alternates: {
     canonical: '/',
   },
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
 };
 
-/** Landing page — Clikd. brand system (Syren-Rosa, Midnight Periwinkle, Light Canvas). */
+/** Home route — VIP waitlist (Landing replaced, backup preserved). */
 export default function PlatformHome() {
-  return <LandingPageClient />;
+  return <WaitlistPageClient />;
 }

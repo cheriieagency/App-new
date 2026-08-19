@@ -42,7 +42,7 @@ import {
   YouTubeIcon,
 } from '@/components/icons/SocialBrandIcons';
 import { PlatformIcon } from '@/components/planner/PlatformBadge';
-import type { SocialPlatform } from '@/lib/mock-content-planner';
+import { PLATFORM_META, type SocialPlatform } from '@/lib/mock-content-planner';
 import type { ShowcaseTabId } from '@/lib/i18n/showcase-copy';
 
 const NAV_ROWS: Array<{
@@ -172,8 +172,18 @@ function PlannerChip({
   platforms: SocialPlatform[];
   status: string;
 }) {
+  const primary = platforms[0];
+  const meta = PLATFORM_META[primary];
+  const labelColor = primary === 'tiktok' ? '#0F172A' : meta.color;
+
   return (
-    <div className="w-full rounded-md bg-[#E9D5FF]/45 border border-[#E9D5FF]/80 px-1.5 py-1">
+    <div
+      className="w-full rounded-md border px-1.5 py-1"
+      style={{
+        background: `color-mix(in srgb, ${meta.color} 14%, white)`,
+        borderColor: `color-mix(in srgb, ${meta.color} 30%, white)`,
+      }}
+    >
       <div className="flex items-center gap-1 mb-0.5">
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status}`} />
         <div className="flex -space-x-1">
@@ -184,32 +194,143 @@ function PlannerChip({
           ))}
         </div>
       </div>
-      <p className="text-[11px] font-semibold text-slate-800 truncate leading-tight">{title}</p>
+      <p
+        className="text-[10px] font-semibold truncate leading-tight"
+        style={{ color: labelColor }}
+      >
+        {title}
+      </p>
     </div>
   );
 }
 
-function PlannerBody() {
-  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const PLANNER_PLATFORMS: SocialPlatform[] = [
+  'instagram',
+  'tiktok',
+  'facebook',
+  'linkedin',
+  'youtube',
+];
+
+const PLANNER_STATUSES = [
+  'bg-emerald-500',
+  'bg-sky-500',
+  'bg-violet-500',
+  'bg-indigo-500',
+  'bg-amber-400',
+] as const;
+
+const PLANNER_TITLES: Record<SocialPlatform, string[]> = {
+  instagram: [
+    'Summer drop carousel',
+    'Product flatlay',
+    'Q&A Stories',
+    'Member spotlight',
+    'Reel · hook test',
+    'Before / after',
+    'Bio link CTA',
+  ],
+  tiktok: [
+    '3 caption mistakes',
+    'Studio B-roll',
+    'Hook formula',
+    'Swish checkout demo',
+    'Trend remix',
+    'Day-in-the-life',
+    'Comment reply Reel',
+  ],
+  facebook: [
+    'Masterclass reminder',
+    'Waitlist close',
+    'Live event promo',
+    'Community poll',
+    'Testimonial post',
+    'Group cross-post',
+    'Event recap',
+  ],
+  linkedin: [
+    'Agency tips carousel',
+    'Case study thread',
+    'Hiring post',
+    'Creator economy take',
+    'Tool stack share',
+    'Client win',
+    'Nordic market note',
+  ],
+  youtube: [
+    'Studio tour Short',
+    'Tutorial upload',
+    'Podcast clip',
+    'Weekly vlog',
+    'How-to premiere',
+    'Community shoutout',
+    'B-roll drop',
+  ],
+  pinterest: ['Mood board pin', 'Template pack'],
+};
+
+/** One or more posts per day — every August day filled, platform-tinted chips. */
+function buildAugustPlannerPosts(): Record<
+  number,
+  Array<{ title: string; platforms: SocialPlatform[]; status: string }>
+> {
   const posts: Record<
     number,
     Array<{ title: string; platforms: SocialPlatform[]; status: string }>
-  > = {
-    3: [{ title: 'Summer drop teaser', platforms: ['instagram'], status: 'bg-emerald-500' }],
-    5: [{ title: '3 caption mistakes', platforms: ['tiktok'], status: 'bg-sky-500' }],
-    7: [{ title: 'Product flatlay', platforms: ['instagram', 'facebook'], status: 'bg-emerald-500' }],
-    10: [{ title: 'Masterclass reminder', platforms: ['facebook'], status: 'bg-sky-500' }],
-    12: [{ title: 'Studio B-roll', platforms: ['tiktok', 'youtube'], status: 'bg-violet-500' }],
-    14: [{ title: 'Agency tips carousel', platforms: ['linkedin'], status: 'bg-sky-500' }],
-    18: [
-      { title: 'Hook formula', platforms: ['tiktok'], status: 'bg-sky-500' },
-      { title: 'Swish checkout demo', platforms: ['tiktok'], status: 'bg-indigo-500' },
-      { title: 'Q&A live', platforms: ['instagram'], status: 'bg-amber-400' },
-    ],
-    21: [{ title: 'Carousel CTA', platforms: ['instagram'], status: 'bg-sky-500' }],
-    25: [{ title: 'Member win story', platforms: ['tiktok', 'instagram'], status: 'bg-sky-500' }],
-    28: [{ title: 'Waitlist close', platforms: ['facebook'], status: 'bg-amber-400' }],
-  };
+  > = {};
+
+  for (let day = 1; day <= 31; day++) {
+    const primary = PLANNER_PLATFORMS[(day - 1) % PLANNER_PLATFORMS.length];
+    const secondary = PLANNER_PLATFORMS[(day + 2) % PLANNER_PLATFORMS.length];
+    const titles = PLANNER_TITLES[primary];
+    const dayPosts: Array<{ title: string; platforms: SocialPlatform[]; status: string }> = [
+      {
+        title: titles[(day - 1) % titles.length],
+        platforms: [primary],
+        status: PLANNER_STATUSES[day % PLANNER_STATUSES.length],
+      },
+    ];
+
+    if (day % 4 === 0) {
+      const extra = PLANNER_TITLES[secondary];
+      dayPosts.push({
+        title: extra[day % extra.length],
+        platforms: [secondary],
+        status: PLANNER_STATUSES[(day + 1) % PLANNER_STATUSES.length],
+      });
+    }
+    if (day % 9 === 0) {
+      dayPosts.push({
+        title: 'Cross-post bundle',
+        platforms: ['instagram', 'tiktok'],
+        status: 'bg-sky-500',
+      });
+    }
+    if (day === 18) {
+      dayPosts.push(
+        {
+          title: 'Live Q&A promo',
+          platforms: ['instagram'],
+          status: 'bg-amber-400',
+        },
+        {
+          title: 'Waitlist broadcast',
+          platforms: ['facebook', 'linkedin'],
+          status: 'bg-indigo-500',
+        }
+      );
+    }
+
+    posts[day] = dayPosts;
+  }
+
+  return posts;
+}
+
+function PlannerBody() {
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const posts = buildAugustPlannerPosts();
+  const eventCount = Object.values(posts).reduce((sum, day) => sum + day.length, 0);
   const pad = 6;
   const cells: Array<number | null> = [
     ...Array.from({ length: pad }, () => null),
@@ -283,7 +404,7 @@ function PlannerBody() {
             <p className="text-[15px] font-semibold text-slate-900 tracking-tight">August 2026</p>
             <ChevronRight size={18} className="text-slate-400" />
             <span className="hidden sm:inline-flex items-center h-7 px-2.5 rounded-full border border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-500 tabular-nums">
-              14 events
+              {eventCount} events
             </span>
           </div>
           <span className="hidden lg:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-200 bg-white text-[13px] font-medium text-slate-700">
@@ -304,7 +425,7 @@ function PlannerBody() {
           {cells.map((day, i) => (
             <div
               key={i}
-              className="min-h-[104px] border-t border-r border-slate-100 p-1.5 last:border-r-0"
+              className="min-h-[118px] border-t border-r border-slate-100 p-1.5 last:border-r-0"
             >
               {day ? (
                 <>
@@ -316,9 +437,9 @@ function PlannerBody() {
                   >
                     {day}
                   </span>
-                  <div className="mt-1 space-y-1">
-                    {(posts[day] ?? []).slice(0, 2).map((p) => (
-                      <PlannerChip key={p.title} {...p} />
+                  <div className="mt-1 space-y-0.5">
+                    {(posts[day] ?? []).slice(0, 2).map((p, idx) => (
+                      <PlannerChip key={`${day}-${p.title}-${idx}`} {...p} />
                     ))}
                     {(posts[day]?.length ?? 0) > 2 ? (
                       <p className="text-[10px] font-medium text-slate-400 px-0.5">

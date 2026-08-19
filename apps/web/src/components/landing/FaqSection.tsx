@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Bolt,
   Briefcase,
   CalendarDays,
-  ChevronDown,
   Globe,
+  Minus,
+  Plus,
   Import,
   Receipt,
   Shield,
@@ -28,14 +29,6 @@ type FaqItemDef = {
   icon: LucideIcon;
   iconWrap: string;
 };
-
-const FILTERS: { id: FaqCategory; labelKey: TranslationKey; icon: LucideIcon }[] = [
-  { id: 'all', labelKey: 'faqFilterAll', icon: Sparkles },
-  { id: 'payments', labelKey: 'faqFilterPayments', icon: Wallet },
-  { id: 'community', labelKey: 'faqFilterCommunity', icon: Users },
-  { id: 'vat', labelKey: 'faqFilterVat', icon: Receipt },
-  { id: 'workspace', labelKey: 'faqFilterWorkspace', icon: Globe },
-];
 
 const FAQ_ITEMS: FaqItemDef[] = [
   {
@@ -106,27 +99,21 @@ const FAQ_ITEMS: FaqItemDef[] = [
 
 export function FaqSection() {
   const { locale } = useLanguage();
-  const [filter, setFilter] = useState<FaqCategory>('all');
   const [openId, setOpenId] = useState<string | null>('checkout');
-
-  const visible = useMemo(
-    () => (filter === 'all' ? FAQ_ITEMS : FAQ_ITEMS.filter((item) => item.category === filter)),
-    [filter]
-  );
 
   return (
     <section
       className="relative py-16 sm:py-24 overflow-hidden bg-[#FAFAFA]"
       aria-labelledby="faq-heading"
     >
-      <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-8 sm:mb-10">
           <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
             {t('faqEyebrow', locale)}
           </p>
           <h2
             id="faq-heading"
-            className="font-outfit font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight leading-tight"
+            className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
           >
             {t('faqHeadline', locale)}
           </h2>
@@ -135,97 +122,88 @@ export function FaqSection() {
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-center items-center gap-2 mb-8">
-          {FILTERS.map((tab) => {
-            const active = filter === tab.id;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setFilter(tab.id);
-                  setOpenId(null);
-                }}
-                className={
-                  active
-                    ? 'inline-flex items-center gap-1.5 bg-[#1a1848] text-white font-bold text-[10px] sm:text-xs px-3 py-2.5 rounded-xl shadow-sm min-h-[44px] whitespace-nowrap'
-                    : 'inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[10px] sm:text-xs px-3 py-2.5 rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] min-h-[44px] whitespace-nowrap'
-                }
-              >
-                <Icon
-                  size={13}
-                  className={active ? 'text-[#F472B6]' : 'text-slate-400'}
-                  aria-hidden
-                />
-                {t(tab.labelKey, locale)}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="space-y-3 mb-10">
-          {visible.map((item) => {
-            const Icon = item.icon;
-            const open = openId === item.id;
-            return (
-              <div
-                key={item.id}
-                className={`bg-white border rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all duration-200 ${
-                  open
-                    ? 'border-[#F472B6]/50 shadow-md shadow-[#F472B6]/5'
-                    : 'border-slate-200/80 hover:border-slate-300/90'
-                }`}
-              >
-                <button
-                  type="button"
-                  aria-expanded={open}
-                  onClick={() => setOpenId(open ? null : item.id)}
-                  className="w-full flex items-center gap-3 px-4 sm:px-5 py-4 min-h-[56px] text-left"
-                >
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-10 items-start">
+          {/* Left: "Still have questions?" card */}
+          <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] border border-slate-200/70 px-6 py-10">
+            <div className="flex items-center justify-start mb-6">
+              <div className="flex -space-x-2">
+                {['AK', 'SB', 'ML'].map((initials, idx) => (
                   <span
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.iconWrap}`}
-                  >
-                    <Icon size={18} aria-hidden />
-                  </span>
-                  <span className="flex-1 font-outfit font-bold text-xs sm:text-sm text-slate-900 pr-2 tracking-tight">
-                    {t(item.qKey, locale)}
-                  </span>
-                  <ChevronDown
-                    size={18}
-                    className={`shrink-0 transition-transform duration-200 ${
-                      open ? 'rotate-180 text-[#F472B6]' : 'text-slate-400'
-                    }`}
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={`${initials}-${idx}`}
+                    className="w-10 h-10 rounded-full overflow-hidden border border-white bg-[#E9D5FF] flex items-center justify-center text-[11px] font-extrabold text-[#2B2568]"
                     aria-hidden
-                  />
-                </button>
-                {open && (
-                  <div className="px-4 sm:px-5 pb-5 pt-0">
-                    <p className="pl-[3.25rem] text-xs sm:text-[13px] text-slate-600 font-medium leading-relaxed font-display">
-                      {t(item.aKey, locale)}
-                    </p>
-                  </div>
-                )}
+                  >
+                    {initials}
+                  </span>
+                ))}
               </div>
-            );
-          })}
-        </div>
+              <span className="ml-3 inline-flex items-center rounded-full bg-[#2B2568] text-white px-3 h-6 text-[10px] font-extrabold">
+                + You
+              </span>
+            </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col items-center text-center gap-4">
-          <div>
-            <p className="font-outfit font-extrabold text-lg text-slate-900 tracking-tight">
-              {t('faqStillQuestion', locale)}
-            </p>
-            <p className="text-sm font-medium text-slate-600 mt-1 font-display">
-              {t('faqStillSub', locale)}
-            </p>
+            <div className="text-left">
+              <p className="font-outfit font-extrabold text-2xl text-slate-900 tracking-tight">
+                {t('faqStillQuestion', locale)}
+              </p>
+              <p className="text-sm font-medium text-slate-600 mt-2 font-display">
+                {t('faqStillSub', locale)}
+              </p>
+            </div>
+
+            <a
+              href="mailto:support@clikd.app"
+              className="mt-6 inline-flex items-center justify-center min-h-[44px] bg-[#2B2568] hover:bg-[#1a1848] text-white font-bold text-xs sm:text-sm px-6 py-2 rounded-xl shadow-md shadow-[#2B2568]/20 transition-all active:scale-[0.98]"
+            >
+              {t('faqContactSupport', locale)}
+            </a>
           </div>
-          <a
-            href="mailto:support@clikd.app"
-            className="inline-flex items-center justify-center min-h-[44px] bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#F472B6]/20 transition-all active:scale-[0.98]"
-          >
-            {t('faqContactSupport', locale)}
-          </a>
+
+          {/* Right: FAQ accordion list */}
+          <div className="space-y-3">
+            {FAQ_ITEMS.map((item) => {
+              const open = openId === item.id;
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-2xl overflow-hidden border transition-all duration-200 ${
+                    open
+                      ? 'bg-gradient-to-br from-[#E9D5FF] via-[#F5F3FF] to-[#FCE7F3] border-transparent shadow-[0_18px_60px_rgba(233,213,255,0.35)]'
+                      : 'bg-white border-slate-200/80 hover:border-slate-300/90 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => setOpenId(open ? null : item.id)}
+                    className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4 min-h-[56px]"
+                  >
+                    <span
+                      className={`flex-1 font-outfit font-extrabold text-sm sm:text-base tracking-tight ${
+                        open ? 'text-slate-900' : 'text-slate-900'
+                      }`}
+                    >
+                      {t(item.qKey, locale)}
+                    </span>
+                    {open ? (
+                      <Minus size={22} className="shrink-0 text-[#2B2568]" aria-hidden />
+                    ) : (
+                      <Plus size={22} className="shrink-0 text-slate-900" aria-hidden />
+                    )}
+                  </button>
+
+                  {open ? (
+                    <div className="px-5 sm:px-6 pb-6 pt-0">
+                      <p className="text-xs sm:text-[13px] text-slate-700/90 font-medium leading-relaxed font-display">
+                        {t(item.aKey, locale)}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

@@ -63,11 +63,11 @@ export function RoiCalculator() {
               </p>
               <h2
                 id="roi-heading"
-                className="font-outfit font-extrabold text-3xl sm:text-4xl text-slate-900 tracking-tight mb-3 leading-tight"
+                className="font-outfit font-bold text-3xl sm:text-4xl text-slate-900 tracking-tight mb-3 leading-tight"
               >
                 {t('roiHeadline', locale)}
               </h2>
-              <p className="text-slate-600 font-medium mb-10 leading-relaxed max-w-md font-display">
+              <p className="text-slate-600 font-medium mb-10 text-base sm:text-lg leading-relaxed max-w-md font-display">
                 {t('roiSub', locale)}
               </p>
 
