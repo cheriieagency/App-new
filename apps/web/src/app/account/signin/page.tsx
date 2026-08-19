@@ -38,7 +38,10 @@ type Role = 'member' | 'creator';
 function SignInForm() {
   const searchParams = useSearchParams();
   const { locale } = useLanguage();
-  const [role, setRole] = useState<Role>('member');
+  const rawCallbackUrl = searchParams.get('callbackUrl') || '';
+  const hideCreateAccountLink = true; // Hide signup CTA while launching waitlist
+  const inferredRole: Role = rawCallbackUrl.startsWith('/admin') ? 'creator' : 'member';
+  const [role, setRole] = useState<Role>(inferredRole);
   const callbackUrl = role === 'creator' ? '/admin' : '/dashboard';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +50,11 @@ function SignInForm() {
   const [loading, setLoading] = useState(false);
 
   const demoMode = isDemoAuthUiEnabled();
+
+  // If we were redirected from `/admin`, start in creator mode and block signup UX.
+  useEffect(() => {
+    setRole(inferredRole);
+  }, [inferredRole]);
 
   useEffect(() => {
     const saved = loadRememberedAuth();
@@ -234,15 +242,21 @@ function SignInForm() {
 
           <SocialSignInButtons callbackUrl={callbackUrl} />
 
-          <p className="text-center text-sm text-zinc-400">
-            {t('noAccount', locale)}{' '}
-            <Link
-              href={`/account/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-              className="font-black text-[var(--nc-coral)] hover:opacity-80 transition-colors"
-            >
-              {t('createAccount', locale)}
-            </Link>
-          </p>
+          {hideCreateAccountLink ? (
+            <p className="text-center text-sm text-zinc-400">
+              {t('noAccount', locale)}
+            </p>
+          ) : (
+            <p className="text-center text-sm text-zinc-400">
+              {t('noAccount', locale)}{' '}
+              <Link
+                href={`/account/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+                className="font-black text-[var(--nc-coral)] hover:opacity-80 transition-colors"
+              >
+                {t('createAccount', locale)}
+              </Link>
+            </p>
+          )}
         </form>
 
         <p className="text-center text-xs text-zinc-400 font-medium mt-6">

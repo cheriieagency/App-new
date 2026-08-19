@@ -28,6 +28,8 @@ export function PlatformShowcaseSection() {
   const [active, setActive] = useState<ShowcaseTabId>('planner');
   const tab = copy.tabs[active];
   const baseId = useId();
+  const headlineParts = copy.headline.split(', for ');
+  const shouldSplitHeadline = headlineParts.length === 2;
 
   const onTabKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -56,7 +58,16 @@ export function PlatformShowcaseSection() {
             id="platform-showcase-heading"
             className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
           >
-            {copy.headline}
+            {shouldSplitHeadline ? (
+              <>
+                {headlineParts[0]},
+                <span className="block bg-gradient-to-r from-[#F472B6] via-[#E9D5FF] to-[#10B981] bg-clip-text text-transparent">
+                  for {headlineParts[1]}
+                </span>
+              </>
+            ) : (
+              copy.headline
+            )}
           </h2>
           <p className="mt-3 max-w-3xl mx-auto text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
             {copy.sub}

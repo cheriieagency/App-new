@@ -15,9 +15,11 @@ import {
   GraduationCap,
   Heart,
   Home,
+  BookOpen,
   Image as ImageIcon,
   Inbox,
   Link2,
+  Lock,
   Mail,
   Megaphone,
   MessageSquare,
@@ -479,70 +481,189 @@ function BioBody() {
           Publish Changes
         </span>
       </div>
-      <div className="flex gap-1 p-1 rounded-xl bg-slate-100/80 border border-slate-200/80 w-fit">
-        {['Design', 'Blocks', 'Analytics', 'Settings'].map((t, i) => (
-          <span
-            key={t}
-            className={`h-9 px-3 rounded-lg text-xs ${
-              i === 0 ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-500 font-medium'
-            }`}
-          >
-            {t}
-          </span>
-        ))}
+      <div className="flex items-end gap-6 border-b border-slate-200/80">
+        {['Design & Theme', 'Blocks & Links', 'UTM Analytics', 'Settings'].map((t) => {
+          const active = t === 'Design & Theme';
+          return (
+            <span
+              key={t}
+              className={`pb-3 text-[13px] font-extrabold ${
+                active ? 'text-slate-900 border-b-2 border-[#F472B6]' : 'text-slate-500'
+              }`}
+            >
+              {t}
+            </span>
+          );
+        })}
       </div>
       <div className="grid grid-cols-12 gap-4">
-        <div className={`col-span-7 ${adminCardClass} p-4 space-y-3`}>
-          <p className="text-xs font-bold text-slate-900">Exclusive themes</p>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="col-span-7 space-y-4">
+          <div className={`${adminCardClass} p-4 space-y-3`}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-slate-900">Exclusive Themes</p>
+                <p className="text-[11px] text-slate-500 font-display mt-0.5">
+                  Luxury preset selector with live swatches
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
             {themes.map((th) => (
               <div
                 key={th.name}
-                className={`rounded-xl border p-2.5 ${
-                  th.on ? 'border-[#1a1848] ring-2 ring-[#1a1848]/15' : 'border-slate-200'
+                className={`relative rounded-xl overflow-hidden border ${
+                  th.on ? 'border-[#1a1848] ring-2 ring-[#1a1848]/15' : 'border-slate-200/80'
                 }`}
               >
                 <div
-                  className="h-8 rounded-lg mb-1.5"
-                  style={{ background: `linear-gradient(90deg, ${th.a}, ${th.b})` }}
+                  className="h-20"
+                  style={{
+                    background: `linear-gradient(90deg, ${th.a}, ${th.b})`,
+                  }}
                 />
-                <p className="text-[11px] font-semibold text-slate-800">{th.name}</p>
+
+                <div className="absolute inset-0 p-3 flex flex-col justify-end">
+                  <p className="text-[11px] font-semibold text-white tracking-tight">{th.name}</p>
+                </div>
+
+                {th.on ? (
+                  <div className="absolute right-2 top-2 w-6 h-6 rounded-full bg-white/20 border border-white/20 flex items-center justify-center">
+                    <Check size={14} className="text-white" />
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2 pt-1">
-            {[
-              { l: 'Clicks', v: '4,812' },
-              { l: 'Checkouts', v: '38' },
-              { l: 'Conv.', v: '3.1%' },
-            ].map((k) => (
-              <div key={k.l} className="rounded-xl bg-slate-50 px-3 py-2">
-                <p className="text-[9px] font-mono font-bold uppercase text-slate-400">{k.l}</p>
-                <p className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tabular-nums">
-                  {k.v}
-                </p>
+          </div>
+
+          <div className={`${adminCardClass} p-4 space-y-4`}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-slate-900">Header &amp; Cover Banner</p>
+                <p className="text-[11px] text-slate-500 font-display mt-1">HD Cover Photo</p>
               </div>
-            ))}
+
+              {/* Toggle mock */}
+              <div className="w-11 h-6 rounded-full bg-slate-200 relative shrink-0">
+                <div className="absolute top-1 left-1.5 w-4 h-4 rounded-full bg-[#4F46E5] shadow" />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-mono font-bold uppercase tracking-wide text-slate-400">Cover image</p>
+              <div className="mt-3 flex items-start gap-3">
+                <div className="w-24 h-16 rounded-xl bg-gradient-to-r from-[#4F46E5] to-[#A855F7]" />
+                <div className="flex flex-col gap-2 pt-1">
+                  <span className="inline-flex items-center justify-center rounded-full bg-[#EEF2FF] text-[#4F46E5] px-3 py-1 text-[11px] font-extrabold">
+                    Replace image
+                  </span>
+                  <span className="inline-flex items-center justify-center rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-[11px] font-extrabold">
+                    Remove
+                  </span>
+                </div>
+              </div>
+              <p className="mt-2 text-[10px] text-slate-500 font-display">JPG, PNG or WebP · Max 5MB</p>
+            </div>
           </div>
         </div>
-        <div className="col-span-5 flex justify-center">
-          <div className="w-[210px] rounded-[32px] border-[5px] border-slate-900 overflow-hidden bg-gradient-to-b from-indigo-600 to-purple-500 text-white p-4 space-y-3 shadow-xl">
-            <div className="w-14 h-14 rounded-full bg-white/20 mx-auto border-2 border-white/70 flex items-center justify-center font-extrabold">
-              E
-            </div>
-            <div className="text-center">
-              <p className="font-bold text-sm">Ebba Brobeck</p>
-              <p className="text-[10px] text-white/80">Social media · Nordic</p>
-            </div>
-            <div className="space-y-1.5 text-[11px] font-semibold">
-              <div className="bg-white/15 rounded-xl px-3 py-2.5">Masterclass — 1,499 SEK</div>
-              <div className="bg-white/15 rounded-xl px-3 py-2.5">Gratis e-bok</div>
-              <div className="bg-white/15 rounded-xl px-3 py-2.5">Join Clikd insiders</div>
-              <div className="bg-white text-[#4F46E5] rounded-xl px-3 py-2.5 text-center">
-                Book a call
+        <div className="col-span-5 flex flex-col items-center justify-center">
+          <div className="w-[220px] rounded-[40px] border-[6px] border-slate-900 overflow-hidden bg-gradient-to-b from-[#2B2568] via-[#4F46E5] to-[#0F172A] text-white shadow-xl">
+            <div className="relative px-4 pt-3 pb-5">
+              {/* Status bar */}
+              <div className="relative flex items-start justify-between text-[10px] font-mono text-white/70">
+                <span className="pt-0.5">9:41</span>
+                <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[86px] h-2.5 rounded-full bg-black/25" />
+                <div className="flex items-center gap-2 pt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/60" />
+                  <span className="w-3 h-1.5 rounded-full bg-white/20" />
+                </div>
+              </div>
+
+              {/* Crown + check badge */}
+              <div className="relative mt-10 flex items-center justify-center">
+                <div className="w-20 h-20 rounded-full bg-[#BDB0FF]/40 border border-white/20 flex items-center justify-center">
+                  <Trophy size={30} className="text-white/90" />
+                </div>
+                <div className="absolute right-8 bottom-8 w-8 h-8 rounded-full bg-[#0F172A]/30 border border-white/15 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-[#3B82F6]/20 border border-white/10 flex items-center justify-center">
+                    <Check size={14} className="text-white" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Identity */}
+              <div className="mt-2 text-center">
+                <p className="text-[18px] font-extrabold leading-none">Clikd QA</p>
+                <p className="text-[10px] text-white/60 font-mono mt-2">@clikdqa</p>
+                <p className="text-[12px] text-white/35 font-semibold mt-1">My bio store</p>
+              </div>
+
+              {/* LINKS / STORE switch */}
+              <div className="mt-4 rounded-2xl bg-white/10 border border-white/10 p-1 flex items-center justify-between">
+                <div className="flex-1 mx-0.5 rounded-xl bg-white/10 py-2 text-center text-[12px] font-extrabold text-white/90">
+                  LINKS
+                </div>
+                <div className="flex-1 mx-0.5 rounded-xl px-2 py-2 text-center text-[12px] font-extrabold text-white/60 flex items-center justify-center gap-1">
+                  STORE <Lock size={12} className="text-white/35" />
+                </div>
+              </div>
+
+              {/* Cards */}
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl bg-white/10 border border-white/10 px-3 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+                        <BookOpen size={18} className="text-white/80" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-extrabold truncate">Grátis E-bok</p>
+                        <p className="text-[10px] text-white/60 font-semibold truncate">Ladda ned gratis</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-extrabold bg-[#34D399]/20 text-[#064E3B] rounded-full px-2 py-1 whitespace-nowrap border border-[#34D399]/30">
+                      FREE
+                    </span>
+                  </div>
+                </div>
+
+                {[
+                  { title: 'Join the Commu...', sub: 'Free &amp; open' },
+                  { title: 'Join the Commu...', sub: 'Free &amp; open' },
+                ].map((item, idx) => (
+                  <div
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={idx}
+                    className="rounded-2xl bg-[#6D28D9]/25 border border-white/10 px-3 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+                          <Home size={18} className="text-white/80" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-extrabold truncate">{item.title}</p>
+                          <p className="text-[10px] text-white/60 font-semibold truncate">
+                            {item.sub.replace('&amp;', '&')}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-[#34D399]/20 text-[#064E3B] rounded-full px-2 py-1 whitespace-nowrap border border-[#34D399]/30">
+                        FREE
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="mt-6 text-center">
+                <p className="text-[9px] text-white/55 tracking-[0.16em] font-bold">POWERED BY CLIKD: STUDIO</p>
               </div>
             </div>
           </div>
+          <p className="text-[10px] text-slate-400 font-mono mt-2">clikd.app/@clikdqa</p>
         </div>
       </div>
     </div>

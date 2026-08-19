@@ -40,6 +40,7 @@ function SignUpForm() {
 			? "creator"
 			: "member";
 	const callbackUrl = role === "creator" ? "/admin" : "/dashboard";
+	const signupDisabled = rawCallback.startsWith('/admin');
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [workspaceName, setWorkspaceName] = useState("");
@@ -60,6 +61,10 @@ function SignUpForm() {
 
 	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+		if (signupDisabled) {
+			setError('Sign up is disabled during waitlist launch.');
+			return;
+		}
 		setLoading(true);
 		setError(null);
 
@@ -217,7 +222,7 @@ function SignUpForm() {
 
 				<button
 					type="submit"
-					disabled={loading}
+					disabled={loading || signupDisabled}
 					className="rounded-full bg-[var(--nc-coral)] p-3 text-[16px] font-extrabold text-white disabled:opacity-50 hover:opacity-90 transition-all"
 				>
 					{loading ? t('loading', locale) : t('signUp', locale)}

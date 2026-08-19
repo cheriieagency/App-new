@@ -1,8 +1,23 @@
 'use client';
 
 import { useMemo, useState, type FormEvent } from 'react';
-import { ArrowRight, Mail, Sparkles, Users, Clock, ShieldCheck } from 'lucide-react';
+import {
+  ArrowRight,
+  Mail,
+  Sparkles,
+  Users,
+  CheckCircle2,
+  XCircle,
+  Send,
+  Inbox,
+  Home,
+  BarChart3,
+  Megaphone,
+  Music2,
+  Camera,
+} from 'lucide-react';
 import { ClikdWordmark } from '@/components/brand/ClikdLogo';
+import { PlatformShowcaseSection } from '@/components/landing/PlatformShowcaseSection';
 
 function normalizeEmail(raw: string) {
   return raw.trim().toLowerCase();
@@ -17,6 +32,11 @@ function formatQueueNumber(n: number) {
   return `#${n.toLocaleString('en-US')}`;
 }
 
+function formatQueueCount(n: number) {
+  // Space as thousands separator (matches the screenshot vibe).
+  return n.toLocaleString('sv-SE');
+}
+
 export function WaitlistPageClient() {
   const [email, setEmail] = useState('');
   const [pending, setPending] = useState(false);
@@ -27,6 +47,9 @@ export function WaitlistPageClient() {
     const e = normalizeEmail(email);
     return isValidEmail(e) && !pending;
   }, [email, pending]);
+
+  const queueEstimate = queueNumber ?? 452;
+  const queueEstimateText = formatQueueCount(queueEstimate);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -76,162 +99,311 @@ export function WaitlistPageClient() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
-      {/* Developer shortcut login */}
-      <div className="flex justify-end px-4 sm:px-6 pt-4">
-        <a
-          href="/admin"
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 backdrop-blur px-4 py-2 text-xs font-mono font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 transition-colors"
-        >
-          Developer Login
-        </a>
-      </div>
+      {/* Top bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8">
+        <div className="flex items-center justify-between gap-3">
+          <ClikdWordmark className="text-xl" />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
-        <div className="grid lg:grid-cols-2 gap-10 items-start">
-          {/* Left: value + proof */}
-          <div className="space-y-6">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6]">
-              VIP early access
-            </p>
-
-            <div className="space-y-3">
-              <h1 className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight">
-                clikd: VIP Waitlist
-              </h1>
-              <p className="text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
-                Join the queue to get early access to the all-in-one studio: planner, bio store,
-                community, ads and checkout—built for Nordic creators.
-              </p>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              {[
-                {
-                  Icon: Sparkles,
-                  title: 'Priority access',
-                  sub: 'Be the first to get feature drops.',
-                },
-                { Icon: Clock, title: 'Coming soon', sub: 'We’ll invite you as we launch.' },
-                {
-                  Icon: Users,
-                  title: 'Creator-first',
-                  sub: 'Built for real social media workflows.',
-                },
-                {
-                  Icon: ShieldCheck,
-                  title: 'No spam',
-                  sub: 'Only early access and launch info.',
-                },
-              ].map((x) => (
-                <div
-                  key={x.title}
-                  className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-                >
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#E9D5FF]/70 text-[#2B2568]">
-                    <x.Icon size={18} />
-                  </div>
-                  <p className="mt-3 font-outfit font-extrabold text-slate-900 tracking-tight">
-                    {x.title}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-600 font-display">{x.sub}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-slate-500 font-display">
-              <Mail size={16} className="text-[#F472B6]" />
-              <span>Early access only. Unsubscribe anytime.</span>
-            </div>
-          </div>
-
-          {/* Right: form */}
-          <div className="space-y-4">
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6 sm:p-8">
-              <div className="flex items-center justify-between gap-4 mb-6">
-                <ClikdWordmark className="text-xl" />
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#FCE7F3] text-[#2B2568] px-3 py-1 text-[10px] font-extrabold">
-                  <Sparkles size={12} /> Coming soon
-                </span>
-              </div>
-
-              {queueNumber == null ? (
-                <>
-                  <h2 className="font-outfit font-extrabold text-2xl text-slate-900 tracking-tight">
-                    Get on the VIP queue
-                  </h2>
-                  <p className="text-slate-600 mt-2 font-display leading-relaxed text-sm">
-                    Enter your email. We’ll send your early access invite automatically.
-                  </p>
-
-                  <form onSubmit={submit} className="mt-6 space-y-3">
-                    <label className="block">
-                      <span className="sr-only">Email address</span>
-                      <input
-                        value={email}
-                        onChange={(ev) => setEmail(ev.target.value)}
-                        type="email"
-                        inputMode="email"
-                        autoComplete="email"
-                        placeholder="you@company.com"
-                        className="w-full h-12 min-h-[44px] rounded-xl border border-slate-200/90 bg-white px-4 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FCE7F3] focus:border-[#F472B6]/50"
-                      />
-                    </label>
-
-                    <button
-                      type="submit"
-                      disabled={!canSubmit}
-                      className="w-full h-12 min-h-[44px] rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white font-extrabold text-sm px-5 flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {pending ? 'Joining…' : 'Join waitlist'}
-                      <ArrowRight size={16} />
-                    </button>
-
-                    {error ? (
-                      <p className="text-sm font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
-                        {error}
-                      </p>
-                    ) : (
-                      <p className="text-[12px] text-slate-500 font-display leading-relaxed">
-                        By joining, you agree to receive early access emails. No marketing blasts.
-                      </p>
-                    )}
-                  </form>
-                </>
-              ) : (
-                <div className="space-y-4">
-                  <div className="rounded-2xl bg-[#E9D5FF]/50 border border-[#E9D5FF] p-5">
-                    <p className="font-mono font-bold uppercase tracking-[0.14em] text-[#2B2568] text-[10px]">
-                      Confirmation
-                    </p>
-                    <p className="mt-3 font-outfit font-extrabold text-2xl text-slate-900 tracking-tight">
-                      You&apos;re in.
-                    </p>
-                    <p className="mt-2 text-slate-600 font-display leading-relaxed">
-                      Queue number: <span className="font-mono font-extrabold text-[#2B2568]">{formatQueueNumber(queueNumber)}</span>
-                    </p>
-                  </div>
-
-                  <p className="text-sm text-slate-600 font-display leading-relaxed">
-                    Watch your inbox for your early access invite. If you don&apos;t see it within a
-                    minute, check spam.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQueueNumber(null);
-                      setEmail('');
-                      setError(null);
-                    }}
-                    className="w-full h-12 min-h-[44px] rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-sm px-5 transition-all"
-                  >
-                    Join with a different email
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-3">
+            {/* Developer shortcut login */}
+            <a
+              href="/admin"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 backdrop-blur px-4 py-2 text-xs font-mono font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 transition-colors min-h-[44px]"
+            >
+              Developer Login
+            </a>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-0 pt-8 sm:pt-12 text-center">
+        {/* Promo pill */}
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#FCE7F3] text-[#2B2568] px-4 py-2 text-[10px] font-extrabold min-h-[44px]">
+          <Sparkles size={12} />
+          VIP Early Access
+        </span>
+
+        {/* Headline */}
+        <h1 className="mt-8 font-outfit font-black text-[2.9rem] leading-[1.02] tracking-tight text-slate-900 sm:text-[3.7rem]">
+          Be first in the future{' '}
+          <span className="block bg-gradient-to-r from-[#F472B6] via-[#E9D5FF] to-[#10B981] bg-clip-text text-transparent">
+              creators studio.
+          </span>
+        </h1>
+
+        <p className="mt-4 mx-auto max-w-2xl text-slate-600 font-display text-base sm:text-lg leading-relaxed">
+          An all-in-one dashboard that replaces 5 separate tools. Direct dispatch to TikTok/Reels, Swish checkout, community,
+          email CRM, and Meta Ads — built for Nordic creators.
+        </p>
+
+        {/* Email + CTA */}
+        {queueNumber == null ? (
+          <>
+            <form onSubmit={submit} className="mt-10">
+              <div className="flex flex-col sm:flex-row items-stretch justify-center gap-3">
+                <input
+                  value={email}
+                  onChange={(ev) => setEmail(ev.target.value)}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="Enter your email address..."
+                  className="w-full sm:w-[420px] h-12 min-h-[44px] rounded-2xl border border-slate-200/90 bg-white px-5 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FCE7F3] focus:border-[#F472B6]/50"
+                />
+
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  className="h-12 min-h-[44px] rounded-2xl bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-extrabold text-sm px-6 flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {pending ? 'Joining…' : 'Join the queue'}
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+
+              {error ? (
+                <p className="mt-4 text-sm font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 inline-flex">
+                  {error}
+                </p>
+              ) : (
+                <p className="mt-4 text-[12px] text-slate-500 font-display leading-relaxed">
+                  🔒 VIP queue + launch updates only. No spam-blasts.
+                </p>
+              )}
+            </form>
+
+            {/* Queue line */}
+            <p className="mt-4 text-sm text-slate-500 font-display">
+              🔥 {queueEstimateText} creators are already in the queue for early access.
+            </p>
+          </>
+        ) : (
+          <div className="mt-10 max-w-xl mx-auto">
+            <div className="rounded-3xl bg-white/70 backdrop-blur border border-[#E9D5FF] p-6 sm:p-7 shadow-sm">
+              <p className="font-mono font-bold uppercase tracking-[0.14em] text-[#2B2568] text-[10px]">
+                You&apos;re in
+              </p>
+              <p className="mt-3 font-outfit font-black text-3xl text-slate-900 tracking-tight">
+                VIP queue spot secured.
+              </p>
+              <p className="mt-2 text-slate-600 font-display leading-relaxed">
+                Your queue spot: <span className="font-mono font-extrabold text-[#2B2568]">{formatQueueNumber(queueNumber)}</span>
+              </p>
+              <p className="mt-3 text-sm text-slate-600 font-display leading-relaxed">
+                Check your inbox for your early access invite. If it doesn&apos;t arrive within a minute, check spam.
+              </p>
+
+              <div className="mt-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQueueNumber(null);
+                    setEmail('');
+                    setError(null);
+                  }}
+                  className="w-full h-12 min-h-[44px] rounded-2xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-sm px-5 transition-all"
+                >
+                  Join with a different email
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Feature cards + comparison chart */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-24 text-center">
+        {/* Feature cards */}
+        <section className="mt-14">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
+          {/* Card 1: Large (spans 2 columns on desktop) */}
+          <div className="lg:col-span-2 bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="flex items-start justify-between gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white">
+                <Send size={22} />
+              </div>
+
+              <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 text-emerald-700 px-4 py-2 text-[11px] font-extrabold border border-emerald-100">
+                Direct Publishing API
+              </span>
+            </div>
+
+            <p className="mt-4 font-outfit font-black text-slate-900 text-[1.6rem] leading-tight tracking-tight">
+              Automated Multi-Platform Auto-Posting
+            </p>
+
+            <p className="mt-2 text-sm sm:text-[15px] text-slate-600 font-display leading-relaxed">
+              Schedule and publish videos directly to TikTok, Instagram Reels, and Facebook in seconds. Integrated
+              OAuth scopes ensure zero manual draft approvals or push notification hassles.
+            </p>
+
+            <div className="mt-6 h-px bg-slate-200/70" />
+
+            <div className="mt-5 flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-extrabold text-white min-h-[44px]">
+                    <Music2 size={14} />
+                    TikTok Direct Post Active
+                  </span>
+
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[#FCE7F3] text-[#2B2568] px-4 py-2 text-xs font-extrabold border border-[#F472B6]/20 min-h-[44px]">
+                    <Camera size={14} />
+                    Instagram Auto-Reel
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-emerald-600 font-extrabold text-sm">
+                  100% Direct API Status
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Email CRM */}
+          <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-700">
+              <Mail size={22} />
+            </div>
+            <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">Email CRM & Broadcasts</p>
+            <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
+              Subscriber directly, automated email broadcasts, tags, and engagement tracking built on custom Resend
+              infrastructure.
+            </p>
+
+            <div className="mt-6 h-px bg-slate-200/70" />
+
+            <div className="mt-5 flex items-center justify-between gap-3 flex-wrap">
+              <div className="inline-flex items-center gap-2 text-emerald-700 font-extrabold text-sm">
+                <CheckCircle2 size={16} /> Resend Verified
+              </div>
+              <p className="text-xs font-display text-slate-500">99.8% Inbox Guarantee</p>
+            </div>
+          </div>
+
+          {/* Row 2 cards */}
+          <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-700">
+              <Inbox size={22} />
+            </div>
+            <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">Automated DMs</p>
+            <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
+              Manage DMs and comments across Instagram and TikTok profiles seamlessly from a single workspace.
+            </p>
+
+            <div className="mt-6 h-px bg-slate-200/70" />
+
+            <div className="mt-5 flex items-center justify-between">
+              <div className="text-sm font-extrabold text-slate-700 flex items-center gap-2">
+                Auto Comment-to-DM Trigger
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="w-12 h-12 rounded-2xl bg-[#FCE7F3] flex items-center justify-center text-[#2B2568]">
+              <Home size={22} />
+            </div>
+            <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">Bio Link Storefront</p>
+            <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
+              Custom themes, UTM tracking, digital products, and a tap mobile checkout flow.
+            </p>
+
+            <div className="mt-6 h-px bg-slate-200/70" />
+
+            <div className="mt-5 flex items-center justify-between">
+              <div className="text-sm font-extrabold text-[#F472B6] flex items-center gap-2">
+                1-Tap Swish &amp; Card Checkout
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-700">
+              <Users size={22} />
+            </div>
+            <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">Community &amp; Courses</p>
+            <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
+              Member feeds, moderation tools, classroom courses, storefront, live events, and XP leaderboards.
+            </p>
+
+            <div className="mt-6 h-px bg-slate-200/70" />
+
+            <div className="mt-5 flex items-center justify-between">
+              <div className="text-sm font-extrabold text-violet-700 flex items-center gap-2">
+                Gamified Member Hub &amp; XP
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3 cards */}
+          <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-50 flex items-center justify-center text-cyan-700">
+                <Megaphone size={22} />
+              </div>
+              <span className="inline-flex items-center rounded-full bg-[#FFFBEB] text-[#F59E0B] px-3 py-1 text-[11px] font-extrabold border border-[#F59E0B]/20">
+                NEW
+              </span>
+            </div>
+
+            <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">Meta Ads Manager &amp; ROAS</p>
+            <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
+              Launch Facebook &amp; Instagram ad campaigns directly from your studio with real-time ROAS tracking and
+              conversion attribution.
+            </p>
+
+            <div className="mt-6 h-px bg-slate-200/70" />
+
+            <div className="mt-5 flex items-center justify-between">
+              <div className="text-sm font-extrabold text-slate-700 flex items-center gap-2">
+                Real-time Campaign ROAS
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-700">
+              <BarChart3 size={22} />
+            </div>
+
+            <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">
+              In-depth Analytics &amp; Revenue Reports
+            </p>
+
+            <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
+              Reach, video views, impressions, audience growth, Linkin.bio performance, and total Swish &amp; card sales
+              reports unified in one view.
+            </p>
+
+            <div className="mt-5 flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-4 py-2 text-xs font-extrabold">
+                Reach: 94.2K
+              </span>
+              <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-4 py-2 text-xs font-extrabold">
+                Views: 186.4K
+              </span>
+              <span className="inline-flex items-center rounded-full bg-[#E0F2FE] text-[#0284C7] px-4 py-2 text-xs font-extrabold">
+                +842 Followers
+              </span>
+            </div>
+
+            <div className="mt-6 h-px bg-slate-200/70" />
+
+            <div className="mt-5 flex items-center justify-between">
+              <div className="text-sm font-extrabold text-slate-700 flex items-center gap-2">
+                Full Cross-Platform Reports
+              </div>
+            </div>
+          </div>
+          </div>
+        </section>
+
+        <div className="relative left-1/2 w-screen -translate-x-1/2">
+          <PlatformShowcaseSection />
+        </div>
+
       </div>
     </div>
   );

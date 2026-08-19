@@ -2310,7 +2310,7 @@ export default function AdminPage() {
   // Redirect unauthenticated users in an effect — never during render (React 19).
   useEffect(() => {
     if (!isPending && !session) {
-      router.replace('/account/signin');
+      router.replace('/account/signin?callbackUrl=/admin');
     }
   }, [isPending, session, router]);
 
