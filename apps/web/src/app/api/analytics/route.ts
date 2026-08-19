@@ -265,6 +265,7 @@ export async function GET(request: Request) {
     let demographics = null as Awaited<
       ReturnType<typeof fetchMultiPlatformDemographics>
     > | null;
+    let usedLivePeriodInsights = false;
 
     if (workspaceId) {
       const [mediaResult, demoResult, periodResult] = await Promise.all([
@@ -298,6 +299,7 @@ export async function GET(request: Request) {
         demoResult ??
         ((snapshot?.demographics as typeof demographics) ?? null);
       if (periodResult) {
+        usedLivePeriodInsights = true;
         insights = {
           reach: periodResult.reach,
           impressions: periodResult.impressions,
@@ -322,24 +324,74 @@ export async function GET(request: Request) {
       isIsoInRange(item.timestamp, range.from, range.to)
     );
     const mediaTotals = aggregateMediaMetrics(rangedMedia);
-    const likes =
-      (insights.likes || 0) > 0 ? insights.likes : mediaTotals.likes;
-    const comments =
-      (insights.comments || 0) > 0 ? insights.comments : mediaTotals.comments;
-    const shares =
-      (insights.shares || 0) > 0 ? insights.shares! : mediaTotals.shares;
-    const saves = insights.saves || 0;
-    const impressions =
-      (insights.impressions || 0) > 0
+    // TikTok has no calendar-window "period insights" in this route, so when we
+    // rely on IG/FB period insights we still need to add TikTok interactions/views
+    // from the in-range media rollup.
+    let tiktokLikes = 0;
+    let tiktokComments = 0;
+    let tiktokShares = 0;
+    let tiktokViews = 0;
+    for (const item of rangedMedia) {
+      if (item.platform !== 'tiktok') continue;
+      tiktokLikes += Number(item.like_count) || 0;
+      tiktokComments += Number(item.comments_count) || 0;
+      tiktokShares += Number(item.shares_count) || 0;
+      tiktokViews += Number(item.view_count) || 0;
+    }
+    // When live period insights fail, prefer media rollups over snapshot
+    // metrics to avoid showing stale reach/views.
+    let likes =
+      usedLivePeriodInsights && (insights.likes || 0) > 0
+        ? insights.likes
+        : mediaTotals.likes;
+    let comments =
+      usedLivePeriodInsights && (insights.comments || 0) > 0
+        ? insights.comments
+        : mediaTotals.comments;
+    let shares =
+      usedLivePeriodInsights && (insights.shares || 0) > 0
+        ? insights.shares!
+        : mediaTotals.shares;
+    const saves = usedLivePeriodInsights ? insights.saves || 0 : 0;
+    let impressions =
+      usedLivePeriodInsights && (insights.impressions || 0) > 0
         ? insights.impressions
         : mediaTotals.views;
-    const reach =
-      (insights.reach || 0) > 0 ? insights.reach : impressions;
+    let reach =
+      usedLivePeriodInsights && (insights.reach || 0) > 0
+        ? insights.reach
+        : impressions;
+
+    if (usedLivePeriodInsights) {
+      likes += tiktokLikes;
+      comments += tiktokComments;
+      shares += tiktokShares;
+      impressions += tiktokViews;
+      // We don't have a proper TikTok "reach" metric here; treat views as
+      // the proxy so the overall KPI isn't missing TikTok entirely.
+      // This also keeps the ER denominator aligned with the numerator.
+      reach += tiktokViews;
+    }
     const engagementTotal = likes + comments + shares + saves;
-    const engagementRate =
+    // Engagement rate should be a sensible percentage. When `reach` is
+    // missing/underreported (platform metric mismatch), ER can explode into
+    // thousands. In that case we fall back to `impressions` which is usually
+    // the stable denominator across IG/FB/TikTok integrations.
+    const engagementRateFromReach =
       reach > 0
         ? Math.round((engagementTotal / reach) * 1000) / 10
         : 0;
+    const denom = Math.max(impressions || 0, reach || 0, 1);
+    const engagementRateFromImpressions =
+      denom > 0
+        ? Math.round((engagementTotal / denom) * 1000) / 10
+        : 0;
+    // If `reach` is underreported (common when platform metrics disagree),
+    // ER can explode. Use the more conservative denominator outcome.
+    const engagementRate = Math.min(
+      engagementRateFromReach,
+      engagementRateFromImpressions
+    );
 
     const metrics = {
       reach,

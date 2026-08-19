@@ -96,6 +96,10 @@ async function lookupSocialAccount(
 
     const platform = String(row.platform || '');
     const platformUserId = String(row.platform_user_id || '');
+    const metaPageId =
+      typeof meta.page_id === 'string' && meta.page_id.trim()
+        ? meta.page_id.trim()
+        : '';
     const metaIg =
       typeof meta.ig_user_id === 'string' ? meta.ig_user_id.trim() : '';
     const igUserId =
@@ -107,7 +111,14 @@ async function lookupSocialAccount(
       workspace_id: String(row.workspace_id),
       platform,
       platform_user_id: platformUserId,
-      page_id: row.page_id != null ? String(row.page_id) : null,
+      // page_id can live either in the dedicated column or inside `meta`.
+      // Some webhook events only match `meta->page_id`, so we must read it.
+      page_id:
+        row.page_id != null
+          ? String(row.page_id)
+          : metaPageId
+            ? metaPageId
+            : null,
       access_token: pageAccessToken,
       ig_user_id: igUserId,
     } satisfies SocialAccountRow;

@@ -68,13 +68,16 @@ function aggregateFromPosts(posts: UnifiedPostMetric[]): HashtagAnalyticsResult 
       ? untagged.reduce((s, p) => s + (p.impressions || 0), 0) / untagged.length
       : avgReachTagged;
 
+  // If baseline (untagged) reach is extremely small, even normal tagged
+  // numbers create absurdly large lift percentages. Treat those cases as
+  // "no stable baseline" instead of displaying thousands of %.
+  const MIN_BASELINE_IMPRESSIONS = 20;
   const avgReachLift =
-    avgReachUntagged > 0
-      ? Math.round(((avgReachTagged - avgReachUntagged) / avgReachUntagged) * 1000) /
-        10
-      : tagged.length > 0 && untagged.length === 0
-        ? 0
-        : 0;
+    avgReachUntagged >= MIN_BASELINE_IMPRESSIONS
+      ? Math.round(
+          ((avgReachTagged - avgReachUntagged) / avgReachUntagged) * 1000
+        ) / 10
+      : 0;
 
   type Acc = {
     tag: string;
