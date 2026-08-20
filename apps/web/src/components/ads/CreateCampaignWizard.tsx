@@ -79,15 +79,14 @@ const OBJECTIVES: Array<{
   },
 ];
 
-const RETARGETING = [
-  { id: '', label: 'None — cold / broad' },
-  {
-    id: 'Website visitors last 30 days',
-    label: 'Website visitors last 30 days',
-  },
-  { id: 'Add to cart last 14 days', label: 'Add to cart last 14 days' },
-  { id: 'Viewed content last 7 days', label: 'Viewed content last 7 days' },
-];
+const RETARGETING_NONE = { id: '', label: 'None — cold / broad' };
+
+type MetaAudienceOption = {
+  id: string;
+  name: string;
+  subtype?: string | null;
+  description?: string | null;
+};
 
 type CreativePick = {
   id: string;
@@ -118,17 +117,30 @@ export default function CreateCampaignWizard({
   onOpenChange,
   onSubmit,
   submitting,
+  audiences = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: CreateCampaignPayload) => Promise<void> | void;
   submitting?: boolean;
+  /** Live Meta custom audiences from Sync / GET /api/ads */
+  audiences?: MetaAudienceOption[];
 }) {
   const { activeWorkspaceId } = useWorkspace();
   const { locale, t } = useLanguage();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [upload, { loading: uploading }] = useUpload();
+
+  const retargetingOptions = useMemo(() => {
+    const fromMeta = audiences
+      .filter((a) => a.id && a.name)
+      .map((a) => ({
+        id: a.name,
+        label: a.subtype ? `${a.name} (${a.subtype})` : a.name,
+      }));
+    return [RETARGETING_NONE, ...fromMeta];
+  }, [audiences]);
 
   const [step, setStep] = useState(1);
   const [objective, setObjective] = useState<ObjectiveId>('OUTCOME_SALES');
@@ -378,7 +390,7 @@ export default function CreateCampaignWizard({
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Course launch — Nordic retargeting"
+                placeholder="Campaign name"
                 className="min-h-11 rounded-xl"
               />
             </label>
@@ -459,10 +471,10 @@ export default function CreateCampaignWizard({
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-slate-700">
-                Meta Pixel retargeting
+                Meta custom audiences
               </p>
               <div className="space-y-2">
-                {RETARGETING.map((r) => (
+                {retargetingOptions.map((r) => (
                   <button
                     key={r.id || 'none'}
                     type="button"
@@ -477,6 +489,12 @@ export default function CreateCampaignWizard({
                   </button>
                 ))}
               </div>
+              {audiences.length === 0 ? (
+                <p className="text-xs text-slate-500">
+                  No custom audiences loaded yet. Sync Meta Ads after connecting
+                  Facebook with ads permissions.
+                </p>
+              ) : null}
             </div>
           </div>
         )}

@@ -347,6 +347,73 @@ export function hoverEffectClass(effect: BioHoverEffect): string {
   return 'transition-all duration-200 hover:-translate-y-1 hover:shadow-lg';
 }
 
+/** Frosted glass link cards — driven only by blockVariant, not canvas type. */
+export function usesFrostedBlocks(theme: BioTheme): boolean {
+  return theme.blockVariant === 'frosted';
+}
+
+/** True when canvas uses mesh / liquid dark treatments (preview chrome). */
+export function usesGlassCanvas(theme: BioTheme): boolean {
+  return theme.bgType === 'mesh' || theme.bgType === 'liquid';
+}
+
+/** Inline styles for bio link / store block surfaces from the active theme. */
+export function bioBlockSurfaceStyle(theme: BioTheme): CSSProperties {
+  const radius = buttonRadiusPx(theme.buttonRadius);
+  const variant = theme.blockVariant || 'solid';
+
+  if (variant === 'frosted') {
+    return {
+      background: theme.buttonBg || 'rgba(255,255,255,0.10)',
+      color: theme.buttonText || '#FFFFFF',
+      border: `1px solid ${theme.buttonBorder || 'rgba(255,255,255,0.20)'}`,
+      borderRadius: radius,
+      boxShadow: buttonShadowCss(theme.buttonShadow),
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+    };
+  }
+
+  if (variant === 'luxe') {
+    return {
+      background: theme.buttonBg?.startsWith('#') ? theme.buttonBg : '#FFFFFF',
+      color: theme.buttonText || '#1C1917',
+      border: `1px solid ${theme.buttonBorder || '#E7E5E4'}`,
+      borderRadius: radius,
+      boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
+    };
+  }
+
+  if (variant === 'minimal') {
+    return {
+      background: 'transparent',
+      color: theme.nameColor || theme.buttonText,
+      border: `1.5px solid ${theme.buttonBorder || 'currentColor'}`,
+      borderRadius: radius,
+      boxShadow: 'none',
+    };
+  }
+
+  // solid (+ outline/filled buttonStyle)
+  if (theme.buttonStyle === 'outline') {
+    return {
+      background: 'transparent',
+      color: theme.buttonText || theme.nameColor,
+      border: `1.5px solid ${theme.buttonBorder || theme.buttonBg}`,
+      borderRadius: radius,
+      boxShadow: 'none',
+    };
+  }
+
+  return {
+    background: theme.buttonBg || theme.accent || '#0F172A',
+    color: theme.buttonText || '#FFFFFF',
+    border: '1px solid transparent',
+    borderRadius: radius,
+    boxShadow: buttonShadowCss(theme.buttonShadow),
+  };
+}
+
 export function normalizeBioTheme(raw?: Partial<BioTheme> | null): BioTheme {
   const base = DEFAULT_BIO_THEME;
   if (!raw || typeof raw !== 'object') return { ...base };

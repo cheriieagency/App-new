@@ -27,27 +27,15 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (!session.ok) return session.response;
 
   if (!process.env.DATABASE_URL?.trim()) {
-    // Offline demo: accept optimistic UI without persistence.
-    const { id: campaignId } = await context.params;
-    const body = (await request.json().catch(() => ({}))) as {
-      status?: string;
-      daily_budget?: number;
-      dailyBudget?: number;
-    };
-    return Response.json({
-      ok: true,
-      demo: true,
-      campaign: {
-        id: campaignId,
-        status: body.status?.toUpperCase() || 'ACTIVE',
-        daily_budget:
-          typeof body.daily_budget === 'number'
-            ? body.daily_budget
-            : typeof body.dailyBudget === 'number'
-              ? body.dailyBudget
-              : 0,
+    return Response.json(
+      {
+        ok: false,
+        demo: false,
+        error: 'database_required',
+        message: 'DATABASE_URL is required to update Meta campaigns.',
       },
-    });
+      { status: 503 }
+    );
   }
 
   const { id: campaignId } = await context.params;

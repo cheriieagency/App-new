@@ -24,12 +24,15 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (!process.env.DATABASE_URL?.trim()) {
-    const body = (await request.json().catch(() => ({}))) as { status?: string };
-    return Response.json({
-      ok: true,
-      demo: true,
-      ad: { id: adId, status: body.status?.toUpperCase() || 'ACTIVE' },
-    });
+    return Response.json(
+      {
+        ok: false,
+        demo: false,
+        error: 'database_required',
+        message: 'DATABASE_URL is required to update Meta ads.',
+      },
+      { status: 503 }
+    );
   }
 
   try {

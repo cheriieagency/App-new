@@ -1,5 +1,6 @@
 /**
  * POST /api/ads/sync — pull campaigns / adsets / ads / audiences / insights (v20.0).
+ * Requires DATABASE_URL + connected Meta token. Never seeds demo campaigns.
  */
 
 import { requireApiSession } from '@/lib/auth/require-api-session';
@@ -7,13 +8,24 @@ import {
   aggregateCampaignKpis,
   aggregateSeriesKpis,
 } from '@/lib/ads/persist';
-import { ensureDemoAdsSeed, ensureDemoInsightSeries } from '@/lib/ads/demo-seed';
+import { purgeDemoAdsForWorkspace } from '@/lib/ads/demo-seed';
 import {
   loadMetaAdsAccessToken,
   resolveAdsDateRange,
   resolveAdsWorkspaceId,
   syncMetaAdsForWorkspace,
 } from '@/lib/ads/sync';
+
+function emptyKpis() {
+  return {
+    totalSpend: 0,
+    impressions: 0,
+    clicks: 0,
+    conversions: 0,
+    avgCpc: 0,
+    avgRoas: 0,
+  };
+}
 
 export async function POST(request: Request) {
   const session = await requireApiSession();
@@ -22,11 +34,12 @@ export async function POST(request: Request) {
   if (!process.env.DATABASE_URL?.trim()) {
     return Response.json(
       {
-        ok: true,
-        demo: true,
-        message: 'Demo mode — Meta sync skipped without DATABASE_URL.',
+        ok: false,
+        demo: false,
+        error: 'database_required',
+        message: 'DATABASE_URL is required to sync Meta Ads.',
       },
-      { status: 200 }
+      { status: 503 }
     );
   }
 
@@ -55,43 +68,38 @@ export async function POST(request: Request) {
       preset: body.preset,
     });
 
+    await purgeDemoAdsForWorkspace({
+      workspaceId,
+      userId: session.user.id,
+    });
+
     const token = await loadMetaAdsAccessToken({
       userId: session.user.id,
       workspaceId,
     });
 
     if (!token) {
-      const seeded = await ensureDemoAdsSeed({
-        workspaceId,
-        userId: session.user.id,
-        force: true,
-      });
-      const series = await ensureDemoInsightSeries({
-        workspaceId,
-        userId: session.user.id,
-        since: range.since,
-        until: range.until,
-      });
       return Response.json({
-        ok: true,
-        demo: true,
+        ok: false,
+        demo: false,
         workspaceId,
         connected: false,
-        accounts: seeded.accounts,
-        campaigns: seeded.campaigns,
-        adsets: seeded.adsets,
-        ads: seeded.ads,
-        series,
+        accounts: [],
+        campaigns: [],
+        adsets: [],
+        ads: [],
+        audiences: [],
+        series: [],
         dateRange: range,
-        kpis: aggregateSeriesKpis(series),
-        syncedAccounts: seeded.accounts.length,
-        syncedCampaigns: seeded.campaigns.length,
-        syncedAdSets: seeded.adsets.length,
-        syncedAds: seeded.ads.length,
+        kpis: emptyKpis(),
+        syncedAccounts: 0,
+        syncedCampaigns: 0,
+        syncedAdSets: 0,
+        syncedAds: 0,
         message:
-          'Loaded demo Meta Ads data. Connect Facebook with ads permissions to sync live campaigns.',
+          'Connect Facebook under Settings → Socials with ads_read / ads_management, then sync again.',
         cta: { label: 'Connect Facebook', href: '/admin/settings/socials' },
-      });
+      }, { status: 403 });
     }
 
     const result = await syncMetaAdsForWorkspace({
@@ -102,40 +110,6 @@ export async function POST(request: Request) {
       since: range.since,
       until: range.until,
     });
-
-    if (result.campaigns.length === 0) {
-      const seeded = await ensureDemoAdsSeed({
-        workspaceId,
-        userId: session.user.id,
-        force: true,
-      });
-      const series = await ensureDemoInsightSeries({
-        workspaceId,
-        userId: session.user.id,
-        since: range.since,
-        until: range.until,
-      });
-      return Response.json({
-        ok: true,
-        demo: true,
-        workspaceId,
-        connected: true,
-        tokenPlatform: token.platform,
-        accounts: seeded.accounts,
-        campaigns: seeded.campaigns,
-        adsets: seeded.adsets,
-        ads: seeded.ads,
-        series,
-        dateRange: range,
-        kpis: aggregateSeriesKpis(series),
-        syncedAccounts: 0,
-        syncedCampaigns: 0,
-        syncedAdSets: 0,
-        syncedAds: 0,
-        message:
-          'No live Meta campaigns found — showing demo data. Create campaigns in Ads Manager, then sync again.',
-      });
-    }
 
     return Response.json({
       ok: true,
@@ -149,13 +123,18 @@ export async function POST(request: Request) {
         result.series.length > 0
           ? aggregateSeriesKpis(result.series)
           : aggregateCampaignKpis(result.campaigns),
-      message: `Synced ${result.syncedCampaigns} campaigns, ${result.syncedAdSets} ad sets, ${result.syncedAds} ads.`,
+      message:
+        result.campaigns.length === 0
+          ? 'Synced Meta — no campaigns in this ad account yet.'
+          : `Synced ${result.syncedCampaigns} campaigns, ${result.syncedAdSets} ad sets, ${result.syncedAds} ads.`,
+      cta: null,
     });
   } catch (error) {
     console.error('[POST /api/ads/sync]', error);
     return Response.json(
       {
         ok: false,
+        demo: false,
         error: 'sync_failed',
         message:
           error instanceof Error

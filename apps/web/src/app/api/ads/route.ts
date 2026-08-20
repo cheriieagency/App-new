@@ -1,6 +1,7 @@
 /**
  * GET /api/ads?workspaceId=…&preset=last_7d|last_30d&since=&until=
  * Full Meta Ads Manager board: campaigns → adsets → ads + KPI series.
+ * Real data only when DATABASE_URL is set — never auto-seeds demo campaigns.
  */
 
 import { requireApiSession } from '@/lib/auth/require-api-session';
@@ -13,17 +14,24 @@ import {
   listMetaAdSets,
   listMetaCampaigns,
 } from '@/lib/ads/persist';
-import {
-  ensureDemoAdsSeed,
-  ensureDemoInsightSeries,
-  getInMemoryDemoAdsPayload,
-  isDemoAdsId,
-} from '@/lib/ads/demo-seed';
+import { isDemoAdsId, purgeDemoAdsForWorkspace } from '@/lib/ads/demo-seed';
 import {
   loadMetaAdsAccessToken,
   resolveAdsDateRange,
   resolveAdsWorkspaceId,
 } from '@/lib/ads/sync';
+import { fetchMetaCustomAudiences } from '@/lib/meta/marketing-api';
+
+function emptyKpis() {
+  return {
+    totalSpend: 0,
+    impressions: 0,
+    clicks: 0,
+    conversions: 0,
+    avgCpc: 0,
+    avgRoas: 0,
+  };
+}
 
 export async function GET(request: Request) {
   const session = await requireApiSession();
@@ -42,6 +50,7 @@ export async function GET(request: Request) {
       ok: true,
       workspaceId: null,
       connected: false,
+      demo: false,
       accounts: [],
       campaigns: [],
       adsets: [],
@@ -49,125 +58,122 @@ export async function GET(request: Request) {
       audiences: [],
       series: [],
       dateRange: range,
-      kpis: {
-        totalSpend: 0,
-        impressions: 0,
-        clicks: 0,
-        conversions: 0,
-        avgCpc: 0,
-        avgRoas: 0,
-      },
+      kpis: emptyKpis(),
       message: 'Select a workspace to load Meta Ads.',
+      cta: null,
     });
   }
 
   if (!process.env.DATABASE_URL?.trim()) {
-    return Response.json(
-      getInMemoryDemoAdsPayload(workspaceId, range.since, range.until)
-    );
+    return Response.json({
+      ok: true,
+      demo: false,
+      workspaceId,
+      connected: false,
+      accounts: [],
+      campaigns: [],
+      adsets: [],
+      ads: [],
+      audiences: [],
+      series: [],
+      dateRange: range,
+      kpis: emptyKpis(),
+      message:
+        'DATABASE_URL is required to load Meta Ads. Connect Postgres, then Sync Meta.',
+      cta: null,
+    });
   }
 
   try {
+    // Drop any legacy demo seed so the board never shows fake spend/ROAS.
+    await purgeDemoAdsForWorkspace({
+      workspaceId,
+      userId: session.user.id,
+    });
+
     const token = await loadMetaAdsAccessToken({
       userId: session.user.id,
       workspaceId,
     });
 
-    let [accounts, campaigns, adsets, ads] = await Promise.all([
+    const [accountsRaw, campaignsRaw, adsetsRaw, adsRaw] = await Promise.all([
       listMetaAdAccounts({ workspaceId, userId: session.user.id }),
       listMetaCampaigns({ workspaceId, userId: session.user.id }),
       listMetaAdSets({ workspaceId, userId: session.user.id }),
       listMetaAds({ workspaceId, userId: session.user.id }),
     ]);
 
-    if (campaigns.length === 0) {
-      const seeded = await ensureDemoAdsSeed({
-        workspaceId,
-        userId: session.user.id,
-      });
-      accounts = seeded.accounts;
-      campaigns = seeded.campaigns;
-      adsets = seeded.adsets;
-      ads = seeded.ads;
-    } else if (adsets.length === 0 || ads.length === 0) {
-      // Backfill ad sets / ads for older campaign-only (or adset-only) demos.
-      const seeded = await ensureDemoAdsSeed({
-        workspaceId,
-        userId: session.user.id,
-      });
-      if (adsets.length === 0) adsets = seeded.adsets;
-      if (ads.length === 0) ads = seeded.ads;
-      if (accounts.length === 0) accounts = seeded.accounts;
-    }
+    const accounts = accountsRaw.filter((a) => !isDemoAdsId(a.id));
+    const campaigns = campaignsRaw.filter((c) => !isDemoAdsId(c.id));
+    const adsets = adsetsRaw.filter((a) => !isDemoAdsId(a.id));
+    const ads = adsRaw.filter((a) => !isDemoAdsId(a.id));
 
-    let series = await listInsightSeries({
+    const series = await listInsightSeries({
       workspaceId,
       userId: session.user.id,
       since: range.since,
       until: range.until,
     });
 
-    const allDemo =
-      campaigns.length > 0 && campaigns.every((c) => isDemoAdsId(c.id));
-
-    if (series.length === 0 && allDemo) {
-      series = await ensureDemoInsightSeries({
-        workspaceId,
-        userId: session.user.id,
-        since: range.since,
-        until: range.until,
-      });
-    }
-
     const kpis =
       series.length > 0
         ? aggregateSeriesKpis(series)
         : aggregateCampaignKpis(campaigns);
 
+    let audiences: Array<{
+      id: string;
+      name: string;
+      subtype: string | null;
+      description: string | null;
+    }> = [];
+
+    if (token && accounts.length > 0) {
+      try {
+        const remote = await fetchMetaCustomAudiences(
+          accounts[0].id,
+          token.accessToken
+        );
+        audiences = remote.map((a) => ({
+          id: a.id,
+          name: a.name,
+          subtype: a.subtype ?? null,
+          description: a.description ?? null,
+        }));
+      } catch (audErr) {
+        console.warn('[GET /api/ads] audiences', audErr);
+      }
+    }
+
+    const connected = Boolean(token);
     return Response.json({
       ok: true,
-      demo: allDemo,
+      demo: false,
       workspaceId,
-      connected: Boolean(token),
+      connected,
       tokenPlatform: token?.platform ?? null,
       accounts,
       campaigns,
       adsets,
       ads,
-      audiences: allDemo
-        ? [
-            {
-              id: 'demo-aud-visitors-30d',
-              name: 'Website visitors last 30 days',
-              subtype: 'WEBSITE',
-              description: 'Meta Pixel retargeting',
-            },
-            {
-              id: 'demo-aud-cart-14d',
-              name: 'Add to cart last 14 days',
-              subtype: 'WEBSITE',
-              description: 'Meta Pixel retargeting',
-            },
-          ]
-        : [],
+      audiences,
       series,
       dateRange: range,
       kpis,
-      message: allDemo
-        ? 'Demo campaigns loaded — connect Facebook with ads permissions, then Sync Meta Metrics for live data.'
-        : token
-          ? null
-          : 'Connect Facebook under Settings → Socials (ads_read / ads_management) to sync Meta Ads.',
-      cta:
-        allDemo || !token
-          ? { label: 'Connect Facebook', href: '/admin/settings/socials' }
-          : null,
+      message: connected
+        ? campaigns.length === 0
+          ? 'No Meta campaigns yet. Click Sync Meta to pull from your ad account, or create a campaign.'
+          : null
+        : 'Connect Facebook under Settings → Socials with ads_read / ads_management, then Sync Meta.',
+      cta: connected
+        ? null
+        : { label: 'Connect Facebook', href: '/admin/settings/socials' },
     });
   } catch (error) {
     console.error('[GET /api/ads]', error);
     return Response.json(
       {
         ok: false,
+        demo: false,
         error: 'load_failed',
         message:
           error instanceof Error ? error.message : 'Failed to load Meta Ads',
@@ -176,16 +182,10 @@ export async function GET(request: Request) {
         campaigns: [],
         adsets: [],
         ads: [],
+        audiences: [],
         series: [],
         dateRange: range,
-        kpis: {
-          totalSpend: 0,
-          impressions: 0,
-          clicks: 0,
-          conversions: 0,
-          avgCpc: 0,
-          avgRoas: 0,
-        },
+        kpis: emptyKpis(),
       },
       { status: 500 }
     );

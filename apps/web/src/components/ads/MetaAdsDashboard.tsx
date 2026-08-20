@@ -84,6 +84,12 @@ type AdsPayload = {
   campaigns?: AdsCampaign[];
   adsets?: AdsAdSet[];
   ads?: AdsAd[];
+  audiences?: Array<{
+    id: string;
+    name: string;
+    subtype?: string | null;
+    description?: string | null;
+  }>;
   series?: AdsInsightDay[];
   dateRange?: { since: string; until: string; preset?: string };
   kpis?: AdsKpis;
@@ -411,6 +417,25 @@ export default function MetaAdsDashboard() {
           {error instanceof Error ? error.message : 'Failed to load ads'}
         </div>
       )}
+
+      {!isLoading && !isError && (data?.message || data?.cta) ? (
+        <div
+          className={`${adminCardClass} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}
+        >
+          <p className="text-sm font-medium text-slate-700">
+            {data?.message ||
+              'Connect Facebook with ads permissions to sync live Meta Ads.'}
+          </p>
+          {data?.cta?.href ? (
+            <a
+              href={data.cta.href}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2B2568] px-4 text-sm font-semibold text-white"
+            >
+              {data.cta.label || 'Connect Facebook'}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="flex h-40 items-center justify-center text-slate-400">
@@ -880,6 +905,7 @@ export default function MetaAdsDashboard() {
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         submitting={createMutation.isPending}
+        audiences={data?.audiences || []}
         onSubmit={(payload) => createMutation.mutateAsync(payload)}
       />
     </div>

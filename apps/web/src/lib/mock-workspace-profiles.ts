@@ -308,7 +308,9 @@ export function updateWorkspaceBio(
         ? patch.handle
         : `@${patch.handle}`
       : current.handle,
-    name: patch.display_name ?? current.name,
+    // Never overwrite workspace brand name with bio.display_name — that is the
+    // public bio title (e.g. creator name), not the sidebar workspace label.
+    // Theme / design autosaves were flipping "Clikd's Workspace" on every click.
     avatar_url:
       patch.profile_photo !== undefined ? patch.profile_photo : current.avatar_url,
   };

@@ -96,14 +96,15 @@ import {
 } from '@/lib/bio-utm';
 import {
   BIO_THEME_PRESETS,
+  bioBlockSurfaceStyle,
   bioCanvasStyle,
-  buttonRadiusPx,
-  buttonShadowCss,
   DEFAULT_BIO_THEME,
   getBioFontFamily,
   getBioGoogleFontsHref,
   hoverEffectClass,
   normalizeBioTheme,
+  usesFrostedBlocks,
+  usesGlassCanvas,
   type BioTheme,
 } from '@/lib/bio-theme';
 import BioBuilderDesignTab from '@/components/admin/BioBuilderDesignTab';
@@ -586,17 +587,16 @@ function PreviewBlockRow({ block, theme }: { block: BioBlock; theme: BioTheme })
     return <div className="h-px mx-2 bg-white/15" />;
   }
 
-  const isFrosted =
-    theme.blockVariant === 'frosted' ||
-    theme.bgType === 'mesh' ||
-    theme.bgType === 'liquid';
+  const isFrosted = usesFrostedBlocks(theme);
   const pricePill = getPreviewPricePill(block);
   const hover = hoverEffectClass(theme.hoverEffect);
+  const surface = bioBlockSurfaceStyle(theme);
 
   if (isFrosted) {
     return (
       <div
-        className={`bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex items-center justify-between gap-2 text-white ${hover}`}
+        className={`backdrop-blur-md p-3 flex items-center justify-between gap-2 ${hover}`}
+        style={surface}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 flex items-center justify-center text-xs flex-shrink-0 overflow-hidden">
@@ -607,8 +607,12 @@ function PreviewBlockRow({ block, theme }: { block: BioBlock; theme: BioTheme })
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-bold text-xs text-white truncate leading-snug">{block.title}</p>
-            <p className="font-sans text-[10px] text-white/70 truncate">{block.subtitle}</p>
+            <p className="font-bold text-xs truncate leading-snug" style={{ color: surface.color }}>
+              {block.title}
+            </p>
+            <p className="font-sans text-[10px] truncate opacity-70" style={{ color: surface.color }}>
+              {block.subtitle}
+            </p>
           </div>
         </div>
         {pricePill ? (
@@ -622,46 +626,23 @@ function PreviewBlockRow({ block, theme }: { block: BioBlock; theme: BioTheme })
     );
   }
 
-  const radius = buttonRadiusPx(theme.buttonRadius);
-  const variant = theme.blockVariant || 'solid';
-  let bg = theme.buttonBg;
-  let color = theme.buttonText;
-  let border = '1px solid transparent';
-  let shadow = buttonShadowCss(theme.buttonShadow);
-
-  if (variant === 'luxe') {
-    bg = '#FFFFFF';
-    color = '#1C1917';
-    border = '1px solid #E7E5E4';
-    shadow = '0 1px 2px rgba(15,23,42,0.06)';
-  } else if (variant === 'minimal') {
-    bg = 'transparent';
-    color = theme.nameColor;
-    border = `1.5px solid currentColor`;
-    shadow = 'none';
-  } else {
-    bg = '#0F172A';
-    color = '#FFFFFF';
-    border = '1px solid transparent';
-    shadow = buttonShadowCss(theme.buttonShadow);
-  }
-
   return (
     <div
-      className={`p-3 flex items-center justify-between gap-2 rounded-2xl ${hover}`}
+      className={`p-3 flex items-center justify-between gap-2 ${hover}`}
       style={{
-        background: bg,
-        color,
-        borderRadius: radius,
-        boxShadow: shadow,
-        border,
+        ...surface,
         fontFamily: getBioFontFamily(theme.fontId),
       }}
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center text-xs flex-shrink-0 overflow-hidden"
-          style={{ background: `${theme.accent}22` }}
+          style={{
+            background:
+              theme.blockVariant === 'minimal'
+                ? `${theme.accent}22`
+                : 'rgba(255,255,255,0.12)',
+          }}
         >
           {block.icon_url ? (
             <img src={block.icon_url} alt="" className="w-full h-full object-cover" />
@@ -670,15 +651,11 @@ function PreviewBlockRow({ block, theme }: { block: BioBlock; theme: BioTheme })
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-bold text-xs truncate leading-snug" style={{ color }}>
-            {block.title}
-          </p>
-          <p className="font-sans text-[10px] truncate" style={{ color, opacity: 0.7 }}>
-            {block.subtitle}
-          </p>
+          <p className="font-bold text-xs truncate leading-snug">{block.title}</p>
+          <p className="font-sans text-[10px] truncate opacity-70">{block.subtitle}</p>
         </div>
       </div>
-      {pricePill && <span className={pricePill.className}>{pricePill.label}</span>}
+      {pricePill ? <span className={pricePill.className}>{pricePill.label}</span> : null}
     </div>
   );
 }
@@ -707,10 +684,8 @@ function MobilePreview({
   const storeBlocks = visible.filter((b) => b.category === 'store');
   const activeBlocks = previewTab === 'store' ? storeBlocks : linkBlocks;
   const fontFamily = getBioFontFamily(theme.fontId);
-  const isGlass =
-    theme.blockVariant === 'frosted' ||
-    theme.bgType === 'mesh' ||
-    theme.bgType === 'liquid';
+  const isGlass = usesGlassCanvas(theme);
+  const isFrosted = usesFrostedBlocks(theme);
 
   useEffect(() => {
     const href = getBioGoogleFontsHref(theme.fontId);
@@ -725,13 +700,12 @@ function MobilePreview({
   }, [theme.fontId]);
 
   const avatarRadius = theme.avatarShape === 'squircle' ? '1.5rem' : '9999px';
-  const canvas = isGlass
-    ? bioCanvasStyle({ ...theme, bg: theme.bg || '#0B0F17', bgType: theme.bgType || 'mesh' })
-    : bioCanvasStyle(theme);
-  const coverOn = theme.coverEnabled || isGlass;
+  const canvas = bioCanvasStyle(theme);
+  const coverOn = Boolean(theme.coverEnabled);
   const coverUrl =
     theme.coverImageUrl ||
     'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80';
+  const chromeLight = isGlass || isFrosted;
   const socialIcons = socialLinks.slice(0, 5).map((sl, i) => {
     const plat = SOCIAL_PLATFORMS.find((p) => p.id === sl.platform) ?? SOCIAL_PLATFORMS[6];
     return (
@@ -787,22 +761,28 @@ function MobilePreview({
         <div className="rounded-[36px] p-[3px] shadow-2xl bg-gradient-to-b from-slate-600 via-slate-800 to-slate-950">
           <div
             className="rounded-[33px] overflow-hidden relative"
-            style={{ height: 560, background: isGlass ? '#0B0F17' : theme.bg }}
+            style={{ height: 560, background: theme.bg || '#FAFAFA' }}
           >
             <div className="absolute inset-0" style={canvas} />
             <div className="relative z-10 flex flex-col h-full">
               {/* Status bar */}
               <div className="h-8 flex items-center justify-between px-5 flex-shrink-0 relative z-20">
                 <span
-                  className={`text-[9px] font-bold ${isGlass ? 'text-white/90' : ''}`}
-                  style={isGlass ? undefined : { color: theme.nameColor }}
+                  className="text-[9px] font-bold"
+                  style={{ color: theme.nameColor }}
                 >
                   9:41
                 </span>
                 <div className="w-20 h-3.5 bg-black/50 rounded-full border border-white/10" />
                 <div className="flex gap-0.5">
-                  <div className={`w-2.5 h-2 rounded-sm ${isGlass ? 'bg-white/50' : ''}`} style={isGlass ? undefined : { background: `${theme.nameColor}66` }} />
-                  <div className={`w-2 h-2 rounded-full ${isGlass ? 'bg-white/50' : ''}`} style={isGlass ? undefined : { background: `${theme.nameColor}66` }} />
+                  <div
+                    className="w-2.5 h-2 rounded-sm"
+                    style={{ background: `${theme.nameColor}66` }}
+                  />
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: `${theme.nameColor}66` }}
+                  />
                 </div>
               </div>
 
@@ -831,7 +811,7 @@ function MobilePreview({
                         <Crown size={22} className="text-white" />
                       )}
                     </div>
-                    {(theme.verifiedBadge || isGlass) && (
+                    {(theme.verifiedBadge) && (
                       <span
                         className="absolute bottom-0.5 right-0.5 bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[9px] border-2 border-slate-950 shadow"
                         title="Verified"
@@ -841,17 +821,20 @@ function MobilePreview({
                     )}
                   </div>
                   <p
-                    className={`text-[13px] font-extrabold tracking-tight ${isGlass ? 'text-white' : ''}`}
-                    style={isGlass ? undefined : { color: theme.nameColor }}
+                    className="text-[13px] font-extrabold tracking-tight"
+                    style={{ color: theme.nameColor }}
                   >
                     {displayName || 'Creator Name'}
                   </p>
-                  <p className="font-mono text-[11px] text-slate-400 mt-0.5">
+                  <p
+                    className="font-mono text-[11px] mt-0.5"
+                    style={{ color: theme.mutedColor }}
+                  >
                     @{handle || 'creator'}
                   </p>
                   <p
-                    className={`text-[11px] font-medium leading-snug mt-1.5 px-1 ${isGlass ? 'text-white/80' : ''}`}
-                    style={isGlass ? undefined : { color: theme.mutedColor }}
+                    className="text-[11px] font-medium leading-snug mt-1.5 px-1"
+                    style={{ color: theme.mutedColor }}
                   >
                     {bioText || 'Bio text here...'}
                   </p>
@@ -866,7 +849,7 @@ function MobilePreview({
                   {/* Segmented tabs */}
                   <div
                     className={
-                      isGlass
+                      chromeLight
                         ? 'bg-white/10 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex items-center gap-0.5'
                         : 'flex items-center gap-0.5 p-1 rounded-2xl border border-slate-200 bg-slate-50'
                     }
@@ -884,7 +867,7 @@ function MobilePreview({
                           type="button"
                           onClick={() => setPreviewTab(key)}
                           className={`flex-1 h-8 min-h-[32px] rounded-xl text-[9px] font-extrabold uppercase tracking-[0.14em] transition-all ${
-                            isGlass
+                            chromeLight
                               ? active
                                 ? 'bg-white/20 text-white shadow-xs'
                                 : 'text-white/70 opacity-70'
@@ -900,7 +883,10 @@ function MobilePreview({
                   </div>
 
                   {activeBlocks.length === 0 ? (
-                    <p className={`text-[10px] px-0.5 pt-2 text-center ${isGlass ? 'text-white/40' : 'text-slate-400'}`}>
+                    <p
+                      className="text-[10px] px-0.5 pt-2 text-center"
+                      style={{ color: theme.mutedColor }}
+                    >
                       {previewTab === 'store'
                         ? t('noStoreProductsYet', locale)
                         : t('noLinksYet', locale)}
@@ -924,9 +910,8 @@ function MobilePreview({
               {/* Watermark footer */}
               <div className="px-3 pb-3 pt-1 flex-shrink-0 text-center">
                 <p
-                  className={`font-mono text-[8px] uppercase tracking-widest ${
-                    isGlass ? 'text-white/40' : 'text-slate-400/80'
-                  }`}
+                  className="font-mono text-[8px] uppercase tracking-widest"
+                  style={{ color: theme.mutedColor }}
                 >
                   Powered by clikd: Studio
                 </p>
@@ -2048,6 +2033,7 @@ export default function AdminPage() {
   }, [activeWorkspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist Bio edits into the global workspace profile (instant tab sync).
+  // Theme-only patches must not rewrite workspace brand name — only bio.theme.
   useEffect(() => {
     if (bioHydratingRef.current) return;
     const themeLabel =

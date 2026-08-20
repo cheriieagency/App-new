@@ -526,6 +526,14 @@ export type ExtraKey =
   | 'themeAuroraBlurb'
   | 'themeNordic'
   | 'themeNordicBlurb'
+  | 'themeArctic'
+  | 'themeArcticBlurb'
+  | 'themeEmerald'
+  | 'themeEmeraldBlurb'
+  | 'themeCoral'
+  | 'themeCoralBlurb'
+  | 'themeNoir'
+  | 'themeNoirBlurb'
   | 'mockLinkWelcomeSub'
   | 'mockLinkStudioTitle'
   | 'mockLinkStudioSub'
@@ -2089,6 +2097,14 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   themeAuroraBlurb: 'Indigo / purple glow',
   themeNordic: 'Nordic Minimal',
   themeNordicBlurb: 'Clean white + crisp slate',
+  themeArctic: 'Arctic Mist',
+  themeArcticBlurb: 'Icy slate + frosted winter air',
+  themeEmerald: 'Emerald Vault',
+  themeEmeraldBlurb: 'Deep forest + jewel accents',
+  themeCoral: 'Coral Pulse',
+  themeCoralBlurb: 'Warm rose energy for CTAs',
+  themeNoir: 'Noir Cinema',
+  themeNoirBlurb: 'Cinematic black + amber light',
   mockLinkWelcomeSub: 'Welcome to my world',
   mockLinkStudioTitle: 'Clikd Studio',
   mockLinkStudioSub: 'The place to be',
@@ -3461,6 +3477,14 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   themeAuroraBlurb: 'Indigo / lila glöd',
   themeNordic: 'Nordic Minimal',
   themeNordicBlurb: 'Rent vitt + skarp slate',
+  themeArctic: 'Arctic Mist',
+  themeArcticBlurb: 'Isig slate + frostad vinterluft',
+  themeEmerald: 'Emerald Vault',
+  themeEmeraldBlurb: 'Djup skog + juvelaccenter',
+  themeCoral: 'Coral Pulse',
+  themeCoralBlurb: 'Varm rosa energi för CTA:er',
+  themeNoir: 'Noir Cinema',
+  themeNoirBlurb: 'Filmisk svart + bärnstensljus',
   mockLinkWelcomeSub: 'Välkommen till min värld',
   mockLinkStudioTitle: 'Clikd Studio',
   mockLinkStudioSub: 'Platsen att vara',
@@ -4730,6 +4754,14 @@ navFeatures: 'Ominaisuudet',
   themeAuroraBlurb: 'Indigo / violetti hehku',
   themeNordic: 'Nordic Minimal',
   themeNordicBlurb: 'Puhdas valkoinen + slate',
+  themeArctic: 'Arctic Mist',
+  themeArcticBlurb: 'Jäinen slate + huurteinen talvi',
+  themeEmerald: 'Emerald Vault',
+  themeEmeraldBlurb: 'Syvä metsä + jalokivi',
+  themeCoral: 'Coral Pulse',
+  themeCoralBlurb: 'Lämmin ruusuenergia CTA:ille',
+  themeNoir: 'Noir Cinema',
+  themeNoirBlurb: 'Elokuvamainen musta + meripihka',
   mockLinkWelcomeSub: 'Tervetuloa maailmaani',
   mockLinkStudioTitle: 'Clikd Studio',
   mockLinkStudioSub: 'Paikka olla',

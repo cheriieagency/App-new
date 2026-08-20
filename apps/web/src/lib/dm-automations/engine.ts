@@ -228,6 +228,21 @@ export async function processCommentAutomationEvent(
 
   await ensureDmAutomationsSchema();
 
+  // Idempotent — skip comments already delivered / skipped (webhook + poll).
+  try {
+    const prior = await sql`
+      SELECT id FROM public.dm_logs
+      WHERE comment_id = ${event.commentId}
+        AND status IN ('sent', 'delivered', 'skipped')
+      LIMIT 1
+    `;
+    if (Array.isArray(prior) && prior.length > 0) {
+      return { matched: false, sent: false, error: 'already_processed' };
+    }
+  } catch {
+    /* continue if dm_logs shape differs */
+  }
+
   const account = await resolveSocialAccount(event);
   if (!account) {
     return { matched: false, sent: false, error: 'account_not_found' };

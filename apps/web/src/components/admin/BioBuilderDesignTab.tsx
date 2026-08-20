@@ -161,7 +161,10 @@ function ThemeColorField({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const hex = value.startsWith('#') ? value : '#000000';
+  // <input type="color"> only accepts #rrggbb — map rgba / named values to a safe hex.
+  const hexForPicker = /^#[0-9A-Fa-f]{6}$/.test(value.trim())
+    ? value.trim()
+    : '#6366F1';
   return (
     <label className="block space-y-1.5">
       <span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400">
@@ -170,7 +173,7 @@ function ThemeColorField({
       <div className="flex items-center gap-2">
         <input
           type="color"
-          value={hex.length === 7 ? hex : '#000000'}
+          value={hexForPicker}
           onChange={(e) => onChange(e.target.value)}
           className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl border border-zinc-200 cursor-pointer bg-white p-1"
         />
@@ -203,7 +206,7 @@ function Segmented<T extends string>({
             key={opt.key}
             type="button"
             onClick={() => onChange(opt.key)}
-            className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+            className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
               active
                 ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60'
                 : 'text-zinc-500 border border-transparent hover:text-zinc-800'
@@ -261,6 +264,30 @@ export default function BioBuilderDesignTab({
         <div className="grid grid-cols-2 gap-2.5">
           {LATER_THEME_PRESETS.map((preset) => {
             const active = theme.presetId === preset.presetId;
+            const labelKey =
+              (
+                {
+                  'midnight-glass': 'themeMidnight',
+                  'champagne-luxe': 'themeChampagne',
+                  'aurora-glow': 'themeAurora',
+                  'nordic-minimal': 'themeNordic',
+                  'arctic-mist': 'themeArctic',
+                  'emerald-vault': 'themeEmerald',
+                  'coral-pulse': 'themeCoral',
+                  'noir-cinema': 'themeNoir',
+                } as const
+              )[preset.presetId as string] || null;
+            const blurbKey = labelKey
+              ? (`${labelKey}Blurb` as
+                  | 'themeMidnightBlurb'
+                  | 'themeChampagneBlurb'
+                  | 'themeAuroraBlurb'
+                  | 'themeNordicBlurb'
+                  | 'themeArcticBlurb'
+                  | 'themeEmeraldBlurb'
+                  | 'themeCoralBlurb'
+                  | 'themeNoirBlurb')
+              : null;
             return (
               <button
                 key={preset.presetId}
@@ -287,7 +314,11 @@ export default function BioBuilderDesignTab({
                   <div className="flex gap-1 mb-2">
                     <span
                       className="w-6 h-6 rounded-lg border border-white/40 shadow-sm backdrop-blur-sm"
-                      style={{ background: preset.buttonBg }}
+                      style={{
+                        background: preset.buttonBg.startsWith('#')
+                          ? preset.buttonBg
+                          : preset.accent,
+                      }}
                     />
                     <span
                       className="w-6 h-6 rounded-lg border border-white/40 shadow-sm"
@@ -295,15 +326,17 @@ export default function BioBuilderDesignTab({
                     />
                   </div>
                   <p className="text-xs font-extrabold text-white drop-shadow-sm">
-                    {preset.label}
+                    {labelKey ? t(labelKey) : preset.label}
                   </p>
-                  <p className="text-[10px] text-white/80">{preset.desc}</p>
-                  {active && (
-                    <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white text-indigo-600 flex items-center justify-center">
-                      <Check size={11} strokeWidth={3} />
-                    </span>
-                  )}
+                  <p className="text-[10px] text-white/80">
+                    {blurbKey ? t(blurbKey) : preset.desc}
+                  </p>
                 </div>
+                {active && (
+                  <span className="absolute top-2 right-2 z-20 w-5 h-5 rounded-full bg-white text-indigo-600 flex items-center justify-center shadow">
+                    <Check size={11} strokeWidth={3} />
+                  </span>
+                )}
               </button>
             );
           })}

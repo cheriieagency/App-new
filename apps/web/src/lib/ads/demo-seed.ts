@@ -809,3 +809,77 @@ export async function ensureDemoInsightSeries(input: {
   });
   return days;
 }
+
+/**
+ * Remove previously seeded demo Meta Ads rows for a workspace.
+ * Called when DATABASE_URL is set so Ads Manager only shows live / empty data.
+ */
+export async function purgeDemoAdsForWorkspace(input: {
+  workspaceId: string;
+  userId?: string;
+}): Promise<{ purged: boolean }> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return { purged: false };
+  }
+
+  const sql = (await import('@/app/api/utils/sql')).default;
+  const workspaceId = input.workspaceId.trim();
+  if (!workspaceId) return { purged: false };
+
+  try {
+    await sql`
+      DELETE FROM public.meta_ads_insight_days
+      WHERE workspace_id = ${workspaceId}
+        AND (
+          ad_account_id LIKE 'a0000000-%'
+          OR ad_account_id LIKE 'act_demo_%'
+          OR ad_account_id LIKE 'demo-%'
+        )
+    `;
+    await sql`
+      DELETE FROM public.meta_ads
+      WHERE workspace_id = ${workspaceId}
+        AND (
+          id LIKE 'a0000000-%'
+          OR id LIKE 'demo-%'
+          OR ad_account_id LIKE 'a0000000-%'
+          OR ad_account_id LIKE 'act_demo_%'
+        )
+    `;
+    await sql`
+      DELETE FROM public.meta_adsets
+      WHERE workspace_id = ${workspaceId}
+        AND (
+          id LIKE 'a0000000-%'
+          OR id LIKE 'demo-%'
+          OR ad_account_id LIKE 'a0000000-%'
+          OR ad_account_id LIKE 'act_demo_%'
+        )
+    `;
+    await sql`
+      DELETE FROM public.meta_campaigns
+      WHERE workspace_id = ${workspaceId}
+        AND (
+          id LIKE 'a0000000-%'
+          OR id LIKE 'demo-%'
+          OR ad_account_id LIKE 'a0000000-%'
+          OR ad_account_id LIKE 'act_demo_%'
+        )
+    `;
+    await sql`
+      DELETE FROM public.meta_ad_accounts
+      WHERE workspace_id = ${workspaceId}
+        AND (
+          id LIKE 'a0000000-%'
+          OR id LIKE 'demo-%'
+          OR id LIKE 'act_demo_%'
+          OR COALESCE(account_id, '') LIKE 'demo_%'
+          OR COALESCE(name, '') ILIKE '%demo ad account%'
+        )
+    `;
+    return { purged: true };
+  } catch (error) {
+    console.warn('[ads/demo-seed] purgeDemoAdsForWorkspace failed', error);
+    return { purged: false };
+  }
+}

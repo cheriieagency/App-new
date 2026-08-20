@@ -1,14 +1,11 @@
 /**
  * POST /api/ads/campaigns — Create Campaign wizard (objective → audience → creative).
- * Live Meta: creates campaign + ad set via Marketing API v20.0 when connected.
- * Demo / offline: persists hierarchy locally with demo ids.
+ * Live Meta only when DATABASE_URL + connected token + real ad account.
  */
 
-import { randomUUID } from 'crypto';
 import { requireApiSession } from '@/lib/auth/require-api-session';
-import { DEMO_AD_ACCOUNT_ID, isDemoAdsId } from '@/lib/ads/demo-seed';
+import { isDemoAdsId } from '@/lib/ads/demo-seed';
 import {
-  insertLocalAd,
   insertLocalAdSet,
   insertLocalCampaign,
   listMetaAdAccounts,
@@ -35,6 +32,18 @@ type Objective = (typeof OBJECTIVES)[number];
 export async function POST(request: Request) {
   const session = await requireApiSession();
   if (!session.ok) return session.response;
+
+  if (!process.env.DATABASE_URL?.trim()) {
+    return Response.json(
+      {
+        ok: false,
+        demo: false,
+        error: 'database_required',
+        message: 'DATABASE_URL is required to create Meta campaigns.',
+      },
+      { status: 503 }
+    );
+  }
 
   try {
     const body = (await request.json()) as {
@@ -114,19 +123,22 @@ export async function POST(request: Request) {
     ].filter(Boolean);
     const targetingSummary = targetingParts.join(' · ');
 
-    if (!process.env.DATABASE_URL?.trim()) {
-      return Response.json({
-        ok: true,
-        demo: true,
-        campaign: {
-          id: `demo-${randomUUID()}`,
-          name,
-          objective,
-          status,
-          daily_budget: dailyBudget,
+    const token = await loadMetaAdsAccessToken({
+      userId: session.user.id,
+      workspaceId,
+    });
+    if (!token) {
+      return Response.json(
+        {
+          ok: false,
+          demo: false,
+          error: 'meta_not_connected',
+          message:
+            'Connect Facebook under Settings → Socials with ads_read / ads_management before creating campaigns.',
+          cta: { label: 'Connect Facebook', href: '/admin/settings/socials' },
         },
-        message: 'Demo create — set DATABASE_URL to persist campaigns.',
-      });
+        { status: 403 }
+      );
     }
 
     const accounts = await listMetaAdAccounts({
@@ -135,66 +147,72 @@ export async function POST(request: Request) {
     });
     const liveAccount =
       accounts.find((a) => !isDemoAdsId(a.id)) || accounts[0] || null;
-    const adAccountId =
-      body.adAccountId?.trim() || liveAccount?.id || DEMO_AD_ACCOUNT_ID;
+    const adAccountId = (
+      body.adAccountId?.trim() ||
+      liveAccount?.id ||
+      ''
+    ).trim();
 
-    const token = await loadMetaAdsAccessToken({
-      userId: session.user.id,
-      workspaceId,
-    });
+    if (!adAccountId || isDemoAdsId(adAccountId)) {
+      return Response.json(
+        {
+          ok: false,
+          demo: false,
+          error: 'ad_account_required',
+          message:
+            'Sync Meta Ads first to load your ad account, then create a campaign.',
+        },
+        { status: 400 }
+      );
+    }
 
-    let campaignId = `a0000000-0000-4000-8000-${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-    let adsetId = `a0000000-0000-4000-8000-${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-    let adId = `a0000000-0000-4000-8000-${randomUUID().replace(/-/g, '').slice(0, 12)}`;
-    let demo = true;
+    let campaignId = '';
+    let adsetId = '';
     let metaNote: string | null = null;
 
-    const canLive =
-      Boolean(token) &&
-      !isDemoAdsId(adAccountId) &&
-      !adAccountId.includes('demo');
-
-    if (canLive && token) {
-      try {
-        const created = await createMetaCampaign(token.accessToken, {
-          adAccountId,
-          name,
-          objective: objective as Objective,
-          status: 'PAUSED',
-          dailyBudgetMinor: budgetMajorToMinor(dailyBudget),
-        });
-        campaignId = created.id;
-        demo = false;
-        try {
-          const adset = await createMetaAdSet(token.accessToken, {
-            adAccountId,
-            campaignId,
-            name: `${name} — Ad set`,
-            dailyBudgetMinor: budgetMajorToMinor(dailyBudget),
-            countries: countries.length ? countries : ['SE'],
-            ageMin,
-            ageMax,
-            status: 'PAUSED',
-          });
-          adsetId = adset.id;
-        } catch (error) {
-          metaNote =
+    try {
+      const created = await createMetaCampaign(token.accessToken, {
+        adAccountId,
+        name,
+        objective: objective as Objective,
+        status: 'PAUSED',
+        dailyBudgetMinor: budgetMajorToMinor(dailyBudget),
+      });
+      campaignId = created.id;
+    } catch (error) {
+      console.error('[POST /api/ads/campaigns] Meta campaign create', error);
+      return Response.json(
+        {
+          ok: false,
+          demo: false,
+          error: 'meta_create_failed',
+          message:
             error instanceof Error
-              ? `Campaign created on Meta; ad set failed: ${error.message}`
-              : 'Campaign created on Meta; ad set create failed.';
-          console.warn('[POST /api/ads/campaigns] adset', error);
-        }
-      } catch (error) {
-        console.warn(
-          '[POST /api/ads/campaigns] Meta create failed — local fallback',
-          error
-        );
-        metaNote =
-          error instanceof Error
-            ? `Meta create failed (${error.message}); saved locally.`
-            : 'Meta create failed; saved locally.';
-        demo = true;
-      }
+              ? error.message
+              : 'Failed to create campaign on Meta',
+        },
+        { status: 502 }
+      );
+    }
+
+    try {
+      const adset = await createMetaAdSet(token.accessToken, {
+        adAccountId,
+        campaignId,
+        name: `${name} — Ad set`,
+        dailyBudgetMinor: budgetMajorToMinor(dailyBudget),
+        countries: countries.length ? countries : ['SE'],
+        ageMin,
+        ageMax,
+        status: 'PAUSED',
+      });
+      adsetId = adset.id;
+    } catch (error) {
+      metaNote =
+        error instanceof Error
+          ? `Campaign created on Meta; ad set failed: ${error.message}`
+          : 'Campaign created on Meta; ad set create failed.';
+      console.warn('[POST /api/ads/campaigns] adset', error);
     }
 
     const campaign = await insertLocalCampaign({
@@ -209,48 +227,39 @@ export async function POST(request: Request) {
       currency: liveAccount?.currency || 'SEK',
     });
 
-    const adset = await insertLocalAdSet({
-      id: adsetId,
-      workspaceId,
-      userId: session.user.id,
-      adAccountId,
-      campaignId,
-      name: `${name} — Ad set`,
-      status,
-      dailyBudget,
-      targetingSummary,
-      currency: liveAccount?.currency || 'SEK',
-    });
+    const adset = adsetId
+      ? await insertLocalAdSet({
+          id: adsetId,
+          workspaceId,
+          userId: session.user.id,
+          adAccountId,
+          campaignId,
+          name: `${name} — Ad set`,
+          status,
+          dailyBudget,
+          targetingSummary,
+          currency: liveAccount?.currency || 'SEK',
+        })
+      : null;
 
-    const ad = await insertLocalAd({
-      id: adId,
-      workspaceId,
-      userId: session.user.id,
-      adAccountId,
-      campaignId,
-      adsetId,
-      name: body.creativeName?.trim() || `${name} — Ad`,
-      status,
-      creativeThumbnail: creativeUrl,
-      headline,
-      currency: liveAccount?.currency || 'SEK',
-    });
+    // Creative/ad object is created on Meta in a later step — persist name/url on adset only for now.
+    void creativeUrl;
+    void headline;
 
     return Response.json({
       ok: true,
-      demo,
+      demo: false,
       campaign,
       adset,
-      ad,
-      message: demo
-        ? metaNote || 'Campaign created locally (demo / Meta not connected).'
-        : metaNote || 'Campaign created on Meta and saved to clikd:.',
+      ad: null,
+      message: metaNote || 'Campaign created on Meta and saved to clikd:.',
     });
   } catch (error) {
     console.error('[POST /api/ads/campaigns]', error);
     return Response.json(
       {
         ok: false,
+        demo: false,
         error: 'create_failed',
         message:
           error instanceof Error ? error.message : 'Failed to create campaign',

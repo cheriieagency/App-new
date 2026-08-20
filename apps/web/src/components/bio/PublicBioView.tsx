@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Crown } from 'lucide-react';
 import {
+  bioBlockSurfaceStyle,
   bioCanvasStyle,
   getBioFontFamily,
   getBioGoogleFontsHref,
   hoverEffectClass,
   normalizeBioTheme,
+  usesFrostedBlocks,
+  usesGlassCanvas,
   type BioTheme,
 } from '@/lib/bio-theme';
 import type { WorkspaceBioBlock, WorkspaceProfile } from '@/lib/mock-workspace-profiles';
@@ -124,12 +127,10 @@ function BlockRow({
   trackedHref?: string;
 }) {
   if (block.type === 'divider') {
-    return <div className="h-px mx-1 bg-white/15" />;
+    return <div className="h-px mx-1 opacity-20" style={{ background: theme.mutedColor }} />;
   }
-  const isFrosted =
-    theme.blockVariant === 'frosted' ||
-    theme.bgType === 'mesh' ||
-    theme.bgType === 'liquid';
+  const isFrosted = usesFrostedBlocks(theme);
+  const surface = bioBlockSurfaceStyle(theme);
   const pill = pricePill(block, freeLabel, language);
   const rawHref = block.destination_url || block.url || '#';
   // Route through /r/{slug} when available so Analytics gets real click events.
@@ -144,13 +145,19 @@ function BlockRow({
   const inner = (
     <>
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 flex items-center justify-center text-base flex-shrink-0 overflow-hidden">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-base flex-shrink-0 overflow-hidden"
+          style={{
+            background: isFrosted ? 'rgba(99,102,241,0.2)' : `${theme.accent}18`,
+            border: isFrosted ? '1px solid rgba(129,140,248,0.3)' : 'none',
+          }}
+        >
           <span>{block.emoji || '🔗'}</span>
         </div>
         <div className="min-w-0 flex-1 text-left">
-          <p className="font-bold text-sm text-white truncate leading-snug">{block.title}</p>
+          <p className="font-bold text-sm truncate leading-snug">{block.title}</p>
           {block.subtitle ? (
-            <p className="text-[11px] text-white/70 truncate font-medium">{block.subtitle}</p>
+            <p className="text-[11px] truncate font-medium opacity-70">{block.subtitle}</p>
           ) : null}
         </div>
       </div>
@@ -158,50 +165,18 @@ function BlockRow({
     </>
   );
 
-  if (usesCheckout) {
-    const className = isFrosted
-      ? `w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3.5 flex items-center justify-between gap-2 text-white min-h-[52px] ${hoverEffectClass(theme.hoverEffect)}`
-      : `w-full rounded-2xl p-3.5 flex items-center justify-between gap-2 min-h-[52px] border border-slate-200 bg-white text-slate-900 shadow-sm ${hoverEffectClass(theme.hoverEffect)}`;
-    return (
-      <button type="button" onClick={() => onCheckout?.(block)} className={className}>
-        {isFrosted ? (
-          inner
-        ) : (
-          <>
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-base flex-shrink-0">
-                <span>{block.emoji || '🔗'}</span>
-              </div>
-              <div className="min-w-0 flex-1 text-left">
-                <p className="font-bold text-sm truncate leading-snug">{block.title}</p>
-                {block.subtitle ? (
-                  <p className="text-[11px] text-slate-500 truncate font-medium">
-                    {block.subtitle}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            {pill ? (
-              <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                {pill.label}
-              </span>
-            ) : null}
-          </>
-        )}
-      </button>
-    );
-  }
+  const className = `w-full p-3.5 flex items-center justify-between gap-2 min-h-[52px] ${hoverEffectClass(theme.hoverEffect)}`;
 
-  if (isFrosted) {
+  if (usesCheckout) {
     return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3.5 flex items-center justify-between gap-2 text-white min-h-[52px] ${hoverEffectClass(theme.hoverEffect)}`}
+      <button
+        type="button"
+        onClick={() => onCheckout?.(block)}
+        className={className}
+        style={surface}
       >
         {inner}
-      </a>
+      </button>
     );
   }
 
@@ -210,24 +185,10 @@ function BlockRow({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`rounded-2xl p-3.5 flex items-center justify-between gap-2 min-h-[52px] border border-slate-200 bg-white text-slate-900 shadow-sm ${hoverEffectClass(theme.hoverEffect)}`}
+      className={className}
+      style={surface}
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-base flex-shrink-0">
-          <span>{block.emoji || '🔗'}</span>
-        </div>
-        <div className="min-w-0 flex-1 text-left">
-          <p className="font-bold text-sm truncate leading-snug">{block.title}</p>
-          {block.subtitle ? (
-            <p className="text-[11px] text-slate-500 truncate font-medium">{block.subtitle}</p>
-          ) : null}
-        </div>
-      </div>
-      {pill ? (
-        <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-          {pill.label}
-        </span>
-      ) : null}
+      {inner}
     </a>
   );
 }
@@ -245,12 +206,11 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
   const links = visible.filter((b) => b.category !== 'store');
   const store = visible.filter((b) => b.category === 'store');
   const active = tab === 'store' ? store : links;
-  const isGlass =
-    theme.blockVariant === 'frosted' ||
-    theme.bgType === 'mesh' ||
-    theme.bgType === 'liquid';
+  const isGlass = usesGlassCanvas(theme);
+  const isFrosted = usesFrostedBlocks(theme);
+  const chromeLight = isGlass || isFrosted;
   const canvas = bioCanvasStyle(theme);
-  const coverOn = theme.coverEnabled || isGlass;
+  const coverOn = Boolean(theme.coverEnabled);
   const coverUrl =
     theme.coverImageUrl ||
     'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80';
@@ -354,8 +314,44 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
   return (
     <div
       className="min-h-screen relative"
-      style={{ background: isGlass ? '#0B0F17' : theme.bg || '#FAFAFA', fontFamily }}
+      style={{ background: theme.bg || '#FAFAFA', fontFamily }}
     >
+      <style jsx global>{`
+        @keyframes bio-liquid {
+          0%,
+          100% {
+            background-position: 0% 40%;
+          }
+          50% {
+            background-position: 100% 60%;
+          }
+        }
+        .bio-block-shimmer {
+          position: relative;
+          overflow: hidden;
+        }
+        .bio-block-shimmer::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            105deg,
+            transparent 40%,
+            rgba(255, 255, 255, 0.35) 50%,
+            transparent 60%
+          );
+          transform: translateX(-120%);
+          pointer-events: none;
+        }
+        .bio-block-shimmer:hover::after {
+          animation: bio-shimmer 0.7s ease;
+        }
+        @keyframes bio-shimmer {
+          to {
+            transform: translateX(120%);
+          }
+        }
+      `}</style>
       <div className="absolute inset-0 pointer-events-none" style={canvas} />
       <div className="relative z-10 max-w-md mx-auto min-h-screen flex flex-col pb-8">
         {coverOn && (
@@ -391,14 +387,21 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
             )}
           </div>
           <h1
-            className={`text-xl font-extrabold tracking-tight ${isGlass ? 'text-white' : 'text-slate-900'}`}
+            className="text-xl font-extrabold tracking-tight"
+            style={{ color: theme.nameColor }}
           >
             {bio.display_name || profile.name}
           </h1>
-          <p className="font-mono text-sm text-slate-400 mt-1">@{handle}</p>
+          <p
+            className="font-mono text-sm mt-1"
+            style={{ color: theme.mutedColor }}
+          >
+            @{handle}
+          </p>
           {bio.bio_text ? (
             <p
-              className={`text-sm font-medium leading-snug mt-2 ${isGlass ? 'text-white/80' : 'text-slate-600'}`}
+              className="text-sm font-medium leading-snug mt-2"
+              style={{ color: theme.mutedColor }}
             >
               {bio.bio_text}
             </p>
@@ -408,7 +411,7 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
         <div className="px-4 mt-5 space-y-3 flex-1">
           <div
             className={
-              isGlass
+              chromeLight
                 ? 'bg-white/10 backdrop-blur-md p-1 rounded-2xl border border-white/10 flex gap-0.5'
                 : 'bg-slate-100 p-1 rounded-2xl border border-slate-200 flex gap-0.5'
             }
@@ -425,8 +428,8 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
                   key={key}
                   type="button"
                   onClick={() => setTab(key)}
-                  className={`flex-1 h-10 min-h-[40px] rounded-xl text-[11px] font-extrabold uppercase tracking-wider transition-all ${
-                    isGlass
+                  className={`flex-1 h-11 min-h-[44px] rounded-xl text-[11px] font-extrabold uppercase tracking-wider transition-all ${
+                    chromeLight
                       ? on
                         ? 'bg-white/20 text-white'
                         : 'text-white/70'
@@ -442,7 +445,10 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
           </div>
 
           {active.length === 0 ? (
-            <p className={`text-center text-sm py-8 ${isGlass ? 'text-white/40' : 'text-slate-400'}`}>
+            <p
+              className="text-center text-sm py-8"
+              style={{ color: theme.mutedColor }}
+            >
               {tab === 'store' ? t('bio.noProductsYet') : t('bio.noLinksYet')}
             </p>
           ) : (
@@ -465,9 +471,8 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
         </div>
 
         <p
-          className={`mt-auto pt-8 text-center font-mono text-[9px] uppercase tracking-widest ${
-            isGlass ? 'text-white/40' : 'text-slate-400'
-          }`}
+          className="mt-auto pt-8 text-center font-mono text-[9px] uppercase tracking-widest"
+          style={{ color: theme.mutedColor }}
         >
           {t('bio.poweredBy')}
         </p>

@@ -204,6 +204,7 @@ export default function DMAutomationPanel() {
   const [recentComments, setRecentComments] = useState<RecentIgComment[]>([]);
   const [selectedCommentText, setSelectedCommentText] = useState('');
   const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const [autoWatchLabel, setAutoWatchLabel] = useState('Auto-watching Instagram comments…');
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -248,6 +249,89 @@ export default function DMAutomationPanel() {
     if (!resolved || resolved === activeWorkspace.id) return;
     setActiveWorkspaceId(resolved);
   }, [data?.workspaceId, activeWorkspace.id, setActiveWorkspaceId]);
+
+  /**
+   * Auto Comment-to-DM: poll Instagram for new keyword comments and send Private
+   * Replies without “Fetch latest comments” / “Run live test DM”. Complements
+   * Meta webhooks (and covers localhost / missed webhook deliveries).
+   */
+  useEffect(() => {
+    if (!activeWorkspace.id) return;
+
+    let cancelled = false;
+    let inFlight = false;
+
+    const runPoll = async () => {
+      if (cancelled || inFlight) return;
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState === 'hidden'
+      ) {
+        return;
+      }
+      inFlight = true;
+      try {
+        const res = await fetch('/api/admin/inbox/automations/poll', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-workspace-id': activeWorkspace.id,
+          },
+          credentials: 'include',
+          body: JSON.stringify({ workspaceId: activeWorkspace.id }),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          sent?: number;
+          matched?: number;
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          setAutoWatchLabel(
+            json.error
+              ? `Auto-watch paused: ${json.error}`
+              : 'Auto-watch paused (retrying…)'
+          );
+          return;
+        }
+        const sent = Number(json.sent) || 0;
+        setAutoWatchLabel(
+          sent > 0
+            ? `Auto-sent ${sent} DM${sent === 1 ? '' : 's'} — watching for new comments…`
+            : 'Auto-watching Instagram comments…'
+        );
+        if (sent > 0) {
+          toast.success(
+            `Comment-to-DM auto-sent ${sent} DM${sent === 1 ? '' : 's'}`
+          );
+          void qc.invalidateQueries({
+            queryKey: ['dm-automations', activeWorkspace.id],
+          });
+        }
+      } catch (err) {
+        console.warn('[DMAutomationPanel] auto-poll failed', err);
+        if (!cancelled) {
+          setAutoWatchLabel('Auto-watch paused (retrying…)');
+        }
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void runPoll();
+    const intervalId = window.setInterval(runPoll, 45_000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void runPoll();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [activeWorkspace.id, qc]);
 
   const saveMutation = useMutation({
     mutationFn: async (payload: FormState) => {
@@ -863,6 +947,13 @@ export default function DMAutomationPanel() {
             </h2>
             <p className="text-sm text-slate-500 mt-0.5">
               {t('dmSub', locale)}
+            </p>
+            <p className="text-xs font-semibold text-emerald-700 mt-1.5 flex items-center gap-1.5">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+                aria-hidden
+              />
+              {autoWatchLabel}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

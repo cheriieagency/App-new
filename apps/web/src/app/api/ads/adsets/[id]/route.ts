@@ -30,19 +30,15 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (!process.env.DATABASE_URL?.trim()) {
-    const body = (await request.json().catch(() => ({}))) as {
-      status?: string;
-      daily_budget?: number;
-    };
-    return Response.json({
-      ok: true,
-      demo: true,
-      adset: {
-        id: adsetId,
-        status: body.status?.toUpperCase() || 'ACTIVE',
-        daily_budget: body.daily_budget ?? 0,
+    return Response.json(
+      {
+        ok: false,
+        demo: false,
+        error: 'database_required',
+        message: 'DATABASE_URL is required to update Meta ad sets.',
       },
-    });
+      { status: 503 }
+    );
   }
 
   try {
