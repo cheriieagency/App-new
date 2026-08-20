@@ -46,7 +46,9 @@ function originOf(value?: string | null): string {
  * Optional TIKTOK_REDIRECT_URI overrides when the portal uses a fixed URI.
  */
 export function getTikTokOAuthBaseUrl(requestOrigin?: string | null): string {
-  const explicit = originOf(process.env.TIKTOK_REDIRECT_URI);
+  const explicit = originOf(
+    process.env.TIKTOK_REDIRECT_URI || process.env.NEXT_PUBLIC_TIKTOK_REDIRECT_URI
+  );
   if (explicit) return explicit;
 
   const request = originOf(requestOrigin);

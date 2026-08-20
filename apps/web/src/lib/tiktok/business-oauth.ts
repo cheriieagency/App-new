@@ -45,7 +45,7 @@ export async function exchangeTikTokBusinessAuthCode(
   const secret = tiktokEnv.businessSecret();
   if (!appId || !secret) {
     throw new Error(
-      'TikTok Business credentials missing (TIKTOK_BUSINESS_APP_ID / TIKTOK_BUSINESS_SECRET)'
+      'TikTok Business credentials missing (TIKTOK_BUSINESS_APP_ID / TIKTOK_BUSINESS_APP_SECRET)'
     );
   }
 
@@ -97,7 +97,8 @@ export async function exchangeTikTokBusinessAuthCode(
 }
 
 export function isTikTokBusinessMockMode(): boolean {
-  // Mock inbox / connect when Business secret is not yet provisioned.
+  // Never mock when a real DB is configured — connect must fail closed.
+  if (process.env.DATABASE_URL?.trim()) return false;
   return !tiktokEnv.businessSecret()?.trim();
 }
 

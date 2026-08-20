@@ -2385,7 +2385,8 @@ landingHeroLine1: 'The All-in-One Creator Engine',
     'Connect Instagram and Facebook separately, or link both in one Meta Suite login.',
   resyncMetaWebhooks: 'Re-sync Meta Webhooks',
   connectTikTokTitle: 'Connect TikTok Account',
-  connectTikTokSub: 'Link TikTok for Content Posting. Reconnect after this update so video.publish is granted.',
+  connectTikTokSub:
+    'Link TikTok Business for ads, inbox, and advertiser access. After connecting, your account status shows here.',
   demoModeSimulatedTitle: 'Demo Mode — simulated OAuth',
   demoModeSimulatedSub:
     'Turn Demo Mode off to use live Instagram, Facebook, TikTok, YouTube, LinkedIn, and Pinterest connections.',
@@ -3753,7 +3754,8 @@ landingHeroLine1: 'The All-in-One Creator Engine',
     'Koppla Instagram och Facebook separat, eller båda via en Meta Suite-inloggning.',
   resyncMetaWebhooks: 'Synka om Meta-webhooks',
   connectTikTokTitle: 'Koppla TikTok-konto',
-  connectTikTokSub: 'Länka TikTok för Content Posting. Koppla om kontot efter denna uppdatering så att video.publish beviljas.',
+  connectTikTokSub:
+    'Länka TikTok Business för annonser, inbox och annonsörsåtkomst. Efter anslutning visas kontostatus här.',
   demoModeSimulatedTitle: 'Demoläge — simulerad OAuth',
   demoModeSimulatedSub:
     'Stäng demoläge för att använda live Instagram, Facebook, TikTok, YouTube, LinkedIn och Pinterest.',

@@ -83,19 +83,27 @@ export const tiktokEnv = {
   /** process.env.TIKTOK_BUSINESS_APP_ID — Marketing / Business API app id */
   businessAppId: () =>
     readEnv('TIKTOK_BUSINESS_APP_ID') || readEnv('TIKTOK_APP_ID'),
-  /** process.env.TIKTOK_BUSINESS_SECRET — Marketing / Business API secret */
+  /**
+   * Business API secret.
+   * Preferred: TIKTOK_BUSINESS_APP_SECRET (Vercel / TikTok portal naming).
+   * Aliases: TIKTOK_BUSINESS_SECRET, TIKTOK_APP_SECRET.
+   */
   businessSecret: () =>
-    readEnv('TIKTOK_BUSINESS_SECRET') || readEnv('TIKTOK_APP_SECRET'),
-  /** True when Business Messaging credentials are configured. */
+    readEnv('TIKTOK_BUSINESS_APP_SECRET') ||
+    readEnv('TIKTOK_BUSINESS_SECRET') ||
+    readEnv('TIKTOK_APP_SECRET'),
+  /** True when Business Messaging / Marketing credentials are configured. */
   hasBusinessCredentials: () =>
     Boolean(
       (readEnv('TIKTOK_BUSINESS_APP_ID') || readEnv('TIKTOK_APP_ID')) &&
-        (readEnv('TIKTOK_BUSINESS_SECRET') || readEnv('TIKTOK_APP_SECRET'))
+        (readEnv('TIKTOK_BUSINESS_APP_SECRET') ||
+          readEnv('TIKTOK_BUSINESS_SECRET') ||
+          readEnv('TIKTOK_APP_SECRET'))
     ),
   requiredKeys: ['TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET'] as const,
   businessRequiredKeys: [
     'TIKTOK_BUSINESS_APP_ID',
-    'TIKTOK_BUSINESS_SECRET',
+    'TIKTOK_BUSINESS_APP_SECRET',
   ] as const,
 };
 

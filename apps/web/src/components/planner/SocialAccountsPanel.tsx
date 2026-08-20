@@ -51,7 +51,7 @@ function withWorkspaceQuery(path: string, workspaceId: string | null | undefined
 
 const PLATFORM_TITLES: Record<SocialPlatform, string> = {
   instagram: 'Meta / Instagram Graph API',
-  tiktok: 'TikTok Content Posting API',
+  tiktok: 'TikTok Business API',
   youtube: 'YouTube Data API v3',
   linkedin: 'LinkedIn Share API',
   facebook: 'Meta / Facebook Pages API',
@@ -683,20 +683,27 @@ export default function SocialAccountsPanel({
     await handleDisconnect(account);
   };
 
-  const tiktokLoginUrl = (force = true) => {
-    const path = force
-      ? '/api/auth/tiktok?force=true'
-      : '/api/auth/tiktok';
-    return withWorkspaceQuery(path, activeWorkspaceId);
+  const tiktokLoginUrl = (force = true, flow: 'business' | 'login_kit' | 'auto' = 'auto') => {
+    const params = new URLSearchParams();
+    if (force) params.set('force', 'true');
+    if (flow !== 'auto') params.set('flow', flow);
+    const qs = params.toString();
+    return withWorkspaceQuery(
+      qs ? `/api/auth/tiktok?${qs}` : '/api/auth/tiktok',
+      activeWorkspaceId
+    );
   };
 
-  const startTikTokOAuth = (force = true) => {
+  const startTikTokOAuth = (
+    force = true,
+    flow: 'business' | 'login_kit' | 'auto' = 'auto'
+  ) => {
     if (!activeWorkspaceId) {
       toast.error(t('toastSelectWorkspaceBeforeConnect'));
       setIsSwitchingTikTok(false);
       return;
     }
-    void handleConnectPlatform('TikTok', tiktokLoginUrl(force));
+    void handleConnectPlatform('TikTok', tiktokLoginUrl(force, flow));
   };
 
   /** Disconnect current TikTok row, then OAuth with forced account chooser. */
@@ -762,8 +769,8 @@ export default function SocialAccountsPanel({
         // Non-404 failures: still continue to OAuth so the user can re-link.
       }
 
-      // 2) Force TikTok authorization UI (disable_auto_auth=1).
-      startTikTokOAuth(true);
+      // 2) Force TikTok Business authorization UI.
+      startTikTokOAuth(true, 'business');
     } catch (err) {
       console.error('[TikTok Switch Error]', err);
       toast.error(t('toastTikTokSwitchFailed'));
@@ -943,7 +950,7 @@ export default function SocialAccountsPanel({
               <ConnectOrConnectedButton
                 connected={Boolean(byPlatform.get('tiktok')?.connected)}
                 account={byPlatform.get('tiktok') ?? null}
-                onConnect={() => startTikTokOAuth(true)}
+                onConnect={() => startTikTokOAuth(true, 'business')}
                 onDisconnect={() =>
                   setDisconnectTarget(byPlatform.get('tiktok') ?? null)
                 }

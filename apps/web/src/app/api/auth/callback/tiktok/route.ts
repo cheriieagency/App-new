@@ -149,6 +149,9 @@ export async function GET(request: Request) {
         refreshToken: tokens.refresh_token ?? null,
         expiresIn: tokens.expires_in ?? 24 * 60 * 60,
         workspaceId: ownedWorkspaceId,
+        scope: Array.isArray(tokens.scope)
+          ? tokens.scope.join(',')
+          : tokens.scope?.toString() || 'business',
       });
     } else {
       const codeVerifier = jar.get(TIKTOK_CODE_VERIFIER_COOKIE)?.value?.trim();

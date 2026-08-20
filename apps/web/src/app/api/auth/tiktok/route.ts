@@ -1,10 +1,10 @@
 /**
  * GET /api/auth/tiktok
- * TikTok Business OAuth entry — redirects to Business Portal authorize URL
- * using TIKTOK_BUSINESS_APP_ID. Falls back to Login Kit or mock connect when
- * Business secret is not yet available.
+ * TikTok OAuth 2.0 entry — opens the TikTok Business Portal consent screen when
+ * TIKTOK_BUSINESS_APP_ID + TIKTOK_BUSINESS_APP_SECRET are set.
  *
- * Query: workspaceId, returnTo=settings|inbox, force=true
+ * Fallback: Login Kit (TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET) for Content Posting.
+ * Query: workspaceId, returnTo=settings|inbox, force=true, flow=business|login_kit
  */
 
 import { NextResponse } from 'next/server';
@@ -34,6 +34,15 @@ import {
   setActiveWorkspaceCookies,
 } from '@/lib/social/oauth-workspace';
 
+type TikTokOAuthFlow = 'business' | 'login_kit' | 'auto';
+
+function resolveFlow(raw: string | null): TikTokOAuthFlow {
+  const v = (raw || '').trim().toLowerCase();
+  if (v === 'business' || v === 'biz') return 'business';
+  if (v === 'login_kit' || v === 'login' || v === 'posting') return 'login_kit';
+  return 'auto';
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const jar = await cookies();
@@ -50,6 +59,8 @@ export async function GET(request: Request) {
   const returnTo =
     returnToRaw.toLowerCase().includes('inbox') ? 'inbox' : 'settings';
   const failRedirect = getTikTokSuccessRedirectPath(returnTo);
+  const flow = resolveFlow(url.searchParams.get('flow'));
+  const forceSelect = url.searchParams.get('force') === 'true';
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
@@ -57,6 +68,8 @@ export async function GET(request: Request) {
     const cb = new URL('/api/auth/tiktok', url.origin);
     if (workspaceId) cb.searchParams.set('workspaceId', workspaceId);
     cb.searchParams.set('returnTo', returnTo);
+    if (flow !== 'auto') cb.searchParams.set('flow', flow);
+    if (forceSelect) cb.searchParams.set('force', 'true');
     signIn.searchParams.set('callbackUrl', `${cb.pathname}?${cb.searchParams}`);
     return NextResponse.redirect(signIn);
   }
@@ -75,8 +88,75 @@ export async function GET(request: Request) {
     maxAge: 60 * 10,
   };
 
-  // ── Mock mode: Business secret missing → seed demo token for UI testing ──
-  if (isTikTokBusinessMockMode() && !tiktokEnv.clientKey()) {
+  const preferBusiness =
+    flow === 'business' ||
+    (flow === 'auto' && tiktokEnv.hasBusinessCredentials());
+
+  // ── TikTok Business OAuth (Marketing / Business API) ─────────────────────
+  if (preferBusiness && tiktokEnv.hasBusinessCredentials()) {
+    const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
+    try {
+      const loginUrl = buildTikTokBusinessLoginUrl(state, url.origin);
+      console.info('[auth/tiktok] business authorize', {
+        redirect_uri: getTikTokCallbackUrl(url.origin),
+        app_id_set: Boolean(tiktokEnv.businessAppId()),
+      });
+      const res = NextResponse.redirect(loginUrl);
+      res.cookies.set(TIKTOK_OAUTH_STATE_COOKIE, state, cookieOpts);
+      res.cookies.set(TIKTOK_BUSINESS_FLOW_COOKIE, 'business', cookieOpts);
+      res.cookies.set(TIKTOK_RETURN_TO_COOKIE, returnTo, cookieOpts);
+      setActiveWorkspaceCookies(res, workspaceId);
+      return res;
+    } catch (error) {
+      console.error('[auth/tiktok] business', error);
+      const dest = new URL(failRedirect, request.url);
+      dest.searchParams.set('error', 'tiktok_oauth_failed');
+      dest.searchParams.set(
+        'detail',
+        error instanceof Error ? error.message.slice(0, 160) : 'oauth_failed'
+      );
+      return NextResponse.redirect(dest);
+    }
+  }
+
+  // ── Login Kit (Content Posting — video.publish) ──────────────────────────
+  // Used when Business creds are absent, or when caller forces flow=login_kit.
+  if (
+    tiktokEnv.clientKey() &&
+    tiktokEnv.clientSecret() &&
+    flow !== 'business'
+  ) {
+    const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
+    const { codeVerifier, codeChallenge } = createTikTokPkce();
+    try {
+      const loginUrl = buildTikTokLoginUrl(state, url.origin, {
+        forceSelectAccount: forceSelect,
+        codeChallenge,
+      });
+      console.info('[auth/tiktok] login kit authorize', {
+        redirect_uri: getTikTokCallbackUrl(url.origin),
+      });
+      const res = NextResponse.redirect(loginUrl);
+      res.cookies.set(TIKTOK_OAUTH_STATE_COOKIE, state, cookieOpts);
+      res.cookies.set(TIKTOK_CODE_VERIFIER_COOKIE, codeVerifier, cookieOpts);
+      res.cookies.set(TIKTOK_BUSINESS_FLOW_COOKIE, 'login_kit', cookieOpts);
+      res.cookies.set(TIKTOK_RETURN_TO_COOKIE, returnTo, cookieOpts);
+      setActiveWorkspaceCookies(res, workspaceId);
+      return res;
+    } catch (error) {
+      console.error('[auth/tiktok] login kit', error);
+      const dest = new URL(failRedirect, request.url);
+      dest.searchParams.set('error', 'tiktok_oauth_failed');
+      dest.searchParams.set(
+        'detail',
+        error instanceof Error ? error.message.slice(0, 160) : 'oauth_failed'
+      );
+      return NextResponse.redirect(dest);
+    }
+  }
+
+  // ── Demo-only mock (never when DATABASE_URL is set) ──────────────────────
+  if (isTikTokBusinessMockMode()) {
     const mockOpenId = `mock_tt_${session.user.id.slice(0, 8)}`;
     try {
       await upsertTikTokToken({
@@ -115,65 +195,13 @@ export async function GET(request: Request) {
     return res;
   }
 
-  // Login Kit first — Content Posting (`video.publish`) for Post Studio.
-  if (tiktokEnv.clientKey() && tiktokEnv.clientSecret()) {
-    const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
-    const { codeVerifier, codeChallenge } = createTikTokPkce();
-    try {
-      const loginUrl = buildTikTokLoginUrl(state, url.origin, {
-        forceSelectAccount: true,
-        codeChallenge,
-      });
-      console.info('[auth/tiktok] login kit authorize', {
-        redirect_uri: getTikTokCallbackUrl(url.origin),
-      });
-      const res = NextResponse.redirect(loginUrl);
-      res.cookies.set(TIKTOK_OAUTH_STATE_COOKIE, state, cookieOpts);
-      res.cookies.set(TIKTOK_CODE_VERIFIER_COOKIE, codeVerifier, cookieOpts);
-      res.cookies.set(TIKTOK_BUSINESS_FLOW_COOKIE, 'login_kit', cookieOpts);
-      res.cookies.set(TIKTOK_RETURN_TO_COOKIE, returnTo, cookieOpts);
-      setActiveWorkspaceCookies(res, workspaceId);
-      return res;
-    } catch (error) {
-      console.error('[auth/tiktok] login kit', error);
-      const dest = new URL(failRedirect, request.url);
-      dest.searchParams.set('error', 'tiktok_oauth_failed');
-      dest.searchParams.set(
-        'detail',
-        error instanceof Error ? error.message.slice(0, 160) : 'oauth_failed'
-      );
-      return NextResponse.redirect(dest);
-    }
-  }
-
-  // Business OAuth only when Login Kit keys are missing (inbox / ads).
-  if (tiktokEnv.hasBusinessCredentials()) {
-    const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
-    try {
-      const loginUrl = buildTikTokBusinessLoginUrl(state, url.origin);
-      console.info('[auth/tiktok] business authorize', {
-        redirect_uri: getTikTokCallbackUrl(url.origin),
-        app_id_set: Boolean(tiktokEnv.businessAppId()),
-      });
-      const res = NextResponse.redirect(loginUrl);
-      res.cookies.set(TIKTOK_OAUTH_STATE_COOKIE, state, cookieOpts);
-      res.cookies.set(TIKTOK_BUSINESS_FLOW_COOKIE, 'business', cookieOpts);
-      res.cookies.set(TIKTOK_RETURN_TO_COOKIE, returnTo, cookieOpts);
-      setActiveWorkspaceCookies(res, workspaceId);
-      return res;
-    } catch (error) {
-      console.error('[auth/tiktok] business', error);
-      const dest = new URL(failRedirect, request.url);
-      dest.searchParams.set('error', 'tiktok_oauth_failed');
-      return NextResponse.redirect(dest);
-    }
-  }
-
   const dest = new URL(failRedirect, request.url);
   dest.searchParams.set('error', 'tiktok_not_configured');
   dest.searchParams.set(
     'detail',
-    'Set TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET for posting'
+    preferBusiness
+      ? 'Set TIKTOK_BUSINESS_APP_ID + TIKTOK_BUSINESS_APP_SECRET'
+      : 'Set TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET for posting, or Business app credentials'
   );
   return NextResponse.redirect(dest);
 }
