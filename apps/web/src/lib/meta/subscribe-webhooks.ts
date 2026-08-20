@@ -1,19 +1,25 @@
 /**
- * Register a Facebook Page for this app's Meta webhooks via
- * POST /{page-id}/subscribed_apps (Graph API v21.0).
+ * Register Meta webhooks via POST /{page-id}/subscribed_apps (Graph API v21.0).
  *
- * IMPORTANT: Never call subscribed_apps on Instagram Scoped IDs (1784…).
- * Page-level subscription (feed,messages,messaging_postbacks) covers the
- * linked Instagram Business Account for comment / messaging webhooks.
+ * Page subscription includes feed + messages + Instagram `comments` so
+ * Comment-to-DM receives IG comment events on linked Business accounts.
  *
  * ALWAYS use a Page Access Token (from /me/accounts) — User tokens → Error #3.
+ * Instagram-scoped subscribed_apps is best-effort only (Page Access Token).
  */
 
-/** @deprecated IG-scoped subscribed_apps is invalid — kept for type compat only. */
+/** Instagram Graph webhook fields (Comment-to-DM + messaging). */
 export const INSTAGRAM_SUBSCRIBED_FIELDS = 'comments,messages,mentions';
 
-/** Facebook Page webhook fields only (canonical subscription). */
+/**
+ * Facebook Page webhook fields — includes Instagram `comments` alongside
+ * feed + messaging so Re-sync / OAuth covers Comment-to-DM delivery.
+ */
 export const FACEBOOK_PAGE_SUBSCRIBED_FIELDS =
+  'feed,messages,messaging_postbacks,comments';
+
+/** Fallback if Meta rejects `comments` on the Page edge. */
+const FACEBOOK_PAGE_SUBSCRIBED_FIELDS_FALLBACK =
   'feed,messages,messaging_postbacks';
 
 export type SubscribeWebhooksResult = {
@@ -46,7 +52,7 @@ export function isInstagramAccountId(
   );
 }
 
-/** Always Page fields — IG-scoped subscribed_apps is not used. */
+/** Canonical subscribed_fields for Page (and diagnostic) targets. */
 export function subscribedFieldsForAccount(
   _platform?: string | null,
   _platformUserId?: string | null
@@ -104,15 +110,30 @@ export async function fetchPageAccessTokensFromUserToken(
   }
 }
 
+function looksLikeInvalidCommentsField(result: SubscribeWebhooksResult): boolean {
+  const msg = String(result.error || '').toLowerCase();
+  return (
+    msg.includes('comments') &&
+    (msg.includes('subscribed_fields') ||
+      msg.includes('invalid parameter') ||
+      msg.includes('nonexisting field') ||
+      msg.includes('unknown field') ||
+      msg.includes('(#100)'))
+  );
+}
+
 /**
- * Subscribe one Facebook Page with Page fields only.
- * Refuses Instagram Scoped IDs (1784…) — those calls cause Meta Error #3.
+ * Subscribe one Page (or optionally IG id) with subscribed_fields.
+ * By default refuses Instagram Scoped IDs — pass allowInstagramId for
+ * best-effort Instagram comments/messages subscription.
  */
 export async function subscribeMetaAccountToAppWebhooks(input: {
   pageOrIgId: string;
   accessToken: string;
-  /** Comma-separated subscribed_fields (Page fields only). */
+  /** Comma-separated subscribed_fields. */
   subscribedFields?: string;
+  /** Allow POST /{instagram-id}/subscribed_apps (best-effort). */
+  allowInstagramId?: boolean;
 }): Promise<SubscribeWebhooksResult> {
   const targetId = String(input.pageOrIgId || '').trim();
   const accessToken = String(input.accessToken || '').trim();
@@ -129,10 +150,9 @@ export async function subscribeMetaAccountToAppWebhooks(input: {
     };
   }
 
-  // Never POST /{instagram_id}/subscribed_apps — invalid for IG scoped ids.
-  if (isInstagramAccountId(null, targetId)) {
+  if (isInstagramAccountId(null, targetId) && !input.allowInstagramId) {
     console.warn(
-      '[meta/subscribe-webhooks] skipped IG-scoped id (use Page id only)',
+      '[meta/subscribe-webhooks] skipped IG-scoped id (use Page id, or allowInstagramId)',
       targetId
     );
     return {
@@ -216,7 +236,7 @@ function shouldRetryWithPageToken(result: SubscribeWebhooksResult): boolean {
 
 /**
  * Subscribe a Facebook Page with Page Access Token + optional fallback.
- * Instagram targets are rejected (call Page id only).
+ * Includes Instagram `comments` in subscribed_fields; falls back if Meta rejects it.
  */
 export async function subscribeWithPageTokenFallback(input: {
   targetId: string;
@@ -235,7 +255,7 @@ export async function subscribeWithPageTokenFallback(input: {
     return { ok: false, targetId: '', fields, error: 'missing_target_id' };
   }
 
-  // Guard: never attempt IG-scoped subscribed_apps.
+  // Page path only — IG targets use subscribeInstagramCommentsBestEffort.
   if (
     isInstagramAccountId(input.platform, targetId) ||
     String(input.platform || '').toLowerCase() === 'instagram'
@@ -249,12 +269,34 @@ export async function subscribeWithPageTokenFallback(input: {
     };
   }
 
-  if (primary) {
-    const first = await subscribeMetaAccountToAppWebhooks({
+  async function attempt(accessToken: string): Promise<SubscribeWebhooksResult> {
+    const withComments = await subscribeMetaAccountToAppWebhooks({
       pageOrIgId: targetId,
-      accessToken: primary,
-      subscribedFields: fields,
+      accessToken,
+      subscribedFields: FACEBOOK_PAGE_SUBSCRIBED_FIELDS,
     });
+    if (withComments.ok) return withComments;
+
+    // Meta sometimes rejects `comments` on the Page edge — keep feed+messages.
+    if (looksLikeInvalidCommentsField(withComments)) {
+      console.warn(
+        '[meta/subscribe-webhooks] Page rejected comments field — retrying without it',
+        targetId,
+        withComments.error
+      );
+      const withoutComments = await subscribeMetaAccountToAppWebhooks({
+        pageOrIgId: targetId,
+        accessToken,
+        subscribedFields: FACEBOOK_PAGE_SUBSCRIBED_FIELDS_FALLBACK,
+      });
+      return { ...withoutComments, usedFallback: true };
+    }
+
+    return withComments;
+  }
+
+  if (primary) {
+    const first = await attempt(primary);
     if (first.ok || !shouldRetryWithPageToken(first) || !fallback || fallback === primary) {
       return first;
     }
@@ -263,20 +305,12 @@ export async function subscribeWithPageTokenFallback(input: {
       targetId,
       first.error
     );
-    const second = await subscribeMetaAccountToAppWebhooks({
-      pageOrIgId: targetId,
-      accessToken: fallback,
-      subscribedFields: fields,
-    });
+    const second = await attempt(fallback);
     return { ...second, usedFallback: true };
   }
 
   if (fallback) {
-    const only = await subscribeMetaAccountToAppWebhooks({
-      pageOrIgId: targetId,
-      accessToken: fallback,
-      subscribedFields: fields,
-    });
+    const only = await attempt(fallback);
     return { ...only, usedFallback: true };
   }
 
@@ -289,10 +323,50 @@ export async function subscribeWithPageTokenFallback(input: {
 }
 
 /**
- * After OAuth: subscribe each Facebook Page only
- * (feed,messages,messaging_postbacks) with page.access_token.
- * Linked Instagram is covered by the Page subscription — do not call
- * POST /{instagram_id}/subscribed_apps.
+ * Best-effort: subscribe Instagram Business Account for `comments` + messages
+ * using the linked Page Access Token (never a User token).
+ */
+export async function subscribeInstagramCommentsBestEffort(input: {
+  igUserId: string;
+  pageAccessToken: string;
+}): Promise<SubscribeWebhooksResult> {
+  const igUserId = String(input.igUserId || '').trim();
+  const pageAccessToken = String(input.pageAccessToken || '').trim();
+  if (!igUserId || !pageAccessToken) {
+    return {
+      ok: false,
+      targetId: igUserId,
+      fields: INSTAGRAM_SUBSCRIBED_FIELDS,
+      error: 'missing_ig_id_or_page_token',
+    };
+  }
+
+  const result = await subscribeMetaAccountToAppWebhooks({
+    pageOrIgId: igUserId,
+    accessToken: pageAccessToken,
+    subscribedFields: INSTAGRAM_SUBSCRIBED_FIELDS,
+    allowInstagramId: true,
+  });
+
+  if (!result.ok) {
+    console.warn(
+      '[meta/subscribe-webhooks] Instagram comments subscribe best-effort failed',
+      { igUserId, error: result.error, errorCode: result.errorCode }
+    );
+  } else {
+    console.log(
+      '[meta/subscribe-webhooks] Instagram comments subscribed',
+      igUserId,
+      INSTAGRAM_SUBSCRIBED_FIELDS
+    );
+  }
+
+  return result;
+}
+
+/**
+ * After OAuth: subscribe each Facebook Page with feed/messages/comments,
+ * then best-effort subscribe linked Instagram for comments+messages.
  */
 export async function subscribePagesAndInstagramAfterOAuth(input: {
   pages: Array<{
@@ -304,7 +378,8 @@ export async function subscribePagesAndInstagramAfterOAuth(input: {
   fallbackPageAccessToken?: string | null;
 }): Promise<SubscribeWebhooksResult[]> {
   const results: SubscribeWebhooksResult[] = [];
-  const seen = new Set<string>();
+  const seenPages = new Set<string>();
+  const seenIg = new Set<string>();
   const fallback = String(input.fallbackPageAccessToken || '').trim();
 
   for (const page of input.pages) {
@@ -313,8 +388,8 @@ export async function subscribePagesAndInstagramAfterOAuth(input: {
     if (!pageId || !pageToken || pageId.startsWith('user-')) continue;
     if (isInstagramAccountId(null, pageId)) continue;
 
-    if (!seen.has(pageId)) {
-      seen.add(pageId);
+    if (!seenPages.has(pageId)) {
+      seenPages.add(pageId);
       results.push(
         await subscribeWithPageTokenFallback({
           targetId: pageId,
@@ -324,13 +399,23 @@ export async function subscribePagesAndInstagramAfterOAuth(input: {
         })
       );
     }
-    // Intentionally skip page.instagram_business_account.id
+
+    const igId = String(page.instagram_business_account?.id || '').trim();
+    if (igId && !seenIg.has(igId)) {
+      seenIg.add(igId);
+      results.push(
+        await subscribeInstagramCommentsBestEffort({
+          igUserId: igId,
+          pageAccessToken: pageToken,
+        })
+      );
+    }
   }
 
   return results;
 }
 
-/** @deprecated Prefer subscribePagesAndInstagramAfterOAuth (Page-only). */
+/** @deprecated Prefer subscribePagesAndInstagramAfterOAuth. */
 export async function subscribePagesAfterOAuth(
   pages: Array<{
     id?: string | null;
@@ -342,7 +427,7 @@ export async function subscribePagesAfterOAuth(
 }
 
 /**
- * Subscribe Facebook Page id only (IG id ignored).
+ * Subscribe Facebook Page (+ optional linked IG comments) after connect / re-sync.
  */
 export async function subscribeMetaAccountsAfterConnect(input: {
   pageId?: string | null;
@@ -356,6 +441,7 @@ export async function subscribeMetaAccountsAfterConnect(input: {
     String(input.fallbackAccessToken || '').trim();
   const pageId = String(input.pageId || '').trim();
   const fallback = String(input.fallbackAccessToken || '').trim();
+  const igUserId = String(input.igUserId || '').trim();
 
   if (pageId && pageToken && !isInstagramAccountId(null, pageId)) {
     results.push(
@@ -368,8 +454,14 @@ export async function subscribeMetaAccountsAfterConnect(input: {
     );
   }
 
-  // igUserId intentionally unused — Page subscription covers linked IG.
-  void input.igUserId;
+  if (igUserId && pageToken) {
+    results.push(
+      await subscribeInstagramCommentsBestEffort({
+        igUserId,
+        pageAccessToken: pageToken,
+      })
+    );
+  }
 
   return results;
 }

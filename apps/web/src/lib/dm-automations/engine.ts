@@ -450,8 +450,11 @@ export function extractCommentEventsFromWebhook(
       const field = String(change.field || '').toLowerCase();
       const value = change.value || {};
 
-      // Instagram: field=comments · Page: field=feed with item=comment
-      const isIgComment = field === 'comments' || objectType === 'instagram';
+      // Instagram: field=comments|live_comments · Page: field=feed with item=comment
+      const isIgComment =
+        field === 'comments' ||
+        field === 'live_comments' ||
+        objectType === 'instagram';
       const isPageComment =
         field === 'feed' &&
         (String(value.item || '').toLowerCase() === 'comment' ||
@@ -459,7 +462,7 @@ export function extractCommentEventsFromWebhook(
 
       if (!isIgComment && !isPageComment) {
         // Still allow bare comments field without object type.
-        if (field && field !== 'comments') continue;
+        if (field && field !== 'comments' && field !== 'live_comments') continue;
       }
 
       // Skip removals / edits that aren't new comments.

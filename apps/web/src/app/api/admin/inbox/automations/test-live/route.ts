@@ -1085,8 +1085,7 @@ async function runLiveDiagnostic(
               : []
           );
 
-      // Page fields: feed/messages/messaging_postbacks cover IG comments+DMs.
-      // Also accept literal comments/messages if IG-scoped somehow works.
+      // Prefer explicit Instagram `comments`; feed/mention remain legacy signals.
       const hasCommentsSignal =
         fields.includes('comments') ||
         fields.includes('feed') ||
@@ -1143,7 +1142,7 @@ async function runLiveDiagnostic(
               : `Subscription found but missing comment/message fields. Current: ${fields.join(', ') || '(none)'}`,
             fix: webhookOk
               ? undefined
-              : 'Re-sync Meta Webhooks to subscribe feed,messages,messaging_postbacks (covers IG comments + DMs).',
+              : 'Re-sync Meta Webhooks to subscribe feed,messages,messaging_postbacks,comments.',
             details: {
               targetId: subscribeTargetId,
               usingPageId: Boolean(pageId),

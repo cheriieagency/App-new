@@ -159,6 +159,7 @@ export async function POST(request: Request) {
       const {
         subscribeWithPageTokenFallback,
         fetchPageAccessTokensFromUserToken,
+        subscribeInstagramCommentsBestEffort,
       } = await import('@/lib/meta/subscribe-webhooks');
 
       const metaAccounts = await sql`
@@ -237,9 +238,10 @@ export async function POST(request: Request) {
         }
       }
 
-      // Subscribe Facebook Pages ONLY (never POST /{instagram_id}/subscribed_apps).
-      // Page fields: feed,messages,messaging_postbacks — covers linked IG.
+      // Subscribe Facebook Pages (+ best-effort Instagram comments field).
+      // Page fields: feed,messages,messaging_postbacks,comments.
       const seenPageIds = new Set<string>();
+      const seenIgIds = new Set<string>();
 
       const subscribePage = async (
         pageId: string,
@@ -260,6 +262,26 @@ export async function POST(request: Request) {
           ok: pageResult.ok,
           error: pageResult.error,
           usedFallback: pageResult.usedFallback,
+        });
+      };
+
+      const subscribeIgComments = async (
+        igUserId: string,
+        pageAccessToken: string
+      ) => {
+        if (!igUserId || seenIgIds.has(igUserId)) return;
+        seenIgIds.add(igUserId);
+        const igResult = await subscribeInstagramCommentsBestEffort({
+          igUserId,
+          pageAccessToken,
+        });
+        subscribeDetails.push({
+          platform: 'instagram',
+          targetId: igResult.targetId,
+          fields: igResult.fields,
+          ok: igResult.ok,
+          error: igResult.error,
+          warning: !igResult.ok,
         });
       };
 
@@ -290,22 +312,27 @@ export async function POST(request: Request) {
           continue;
         }
         await subscribePage(pageId, pageAccessToken);
+        const igFromMeta =
+          typeof meta.ig_user_id === 'string' ? meta.ig_user_id.trim() : '';
+        if (igFromMeta) {
+          await subscribeIgComments(igFromMeta, pageAccessToken);
+        }
       }
 
-      // Instagram rows → subscribe their linked Facebook Page id (not IG id).
+      // Instagram rows → subscribe linked Facebook Page + IG comments field.
       for (const row of rows) {
         if (String(row.platform) !== 'instagram') continue;
+        const igUserId = String(row.platform_user_id || '').trim();
         const pageId = String(row.page_id || '').trim();
-        if (!pageId || pageId.startsWith('1784')) continue;
         const pageAccessToken =
-          pageTokenByPageId.get(pageId) ||
-          pageTokenByIgId.get(String(row.platform_user_id || '')) ||
+          (pageId ? pageTokenByPageId.get(pageId) : '') ||
+          pageTokenByIgId.get(igUserId) ||
           primaryPageToken;
         if (!pageAccessToken) {
           if (!seenPageIds.size) {
             subscribeDetails.push({
               platform: 'facebook',
-              targetId: pageId,
+              targetId: pageId || igUserId,
               ok: false,
               error:
                 'missing_page_access_token — reconnect Meta so /me/accounts returns page.access_token',
@@ -313,7 +340,12 @@ export async function POST(request: Request) {
           }
           continue;
         }
-        await subscribePage(pageId, pageAccessToken);
+        if (pageId && !pageId.startsWith('1784')) {
+          await subscribePage(pageId, pageAccessToken);
+        }
+        if (igUserId) {
+          await subscribeIgComments(igUserId, pageAccessToken);
+        }
       }
 
       void primaryPageId;
@@ -338,8 +370,9 @@ export async function POST(request: Request) {
     const workspaceSubscribed = pageOk;
 
     if (action === 'resubscribe_webhooks') {
+      // Instagram comments subscribe is best-effort — don't block success on it.
       const fatalErrors = subscribeDetails
-        .filter((r) => !r.ok && r.error)
+        .filter((r) => !r.ok && r.error && !r.warning && r.platform === 'facebook')
         .map((r) => `${r.platform}:${r.targetId} — ${r.error}`);
 
       return NextResponse.json({
@@ -361,8 +394,8 @@ export async function POST(request: Request) {
             ],
         nextSteps: workspaceSubscribed
           ? [
-              'Facebook Page webhooks subscribed (feed,messages,messaging_postbacks) — covers linked Instagram.',
-              'Confirm App Dashboard → Webhooks callback URL is /api/webhooks/meta/comments.',
+              'Meta webhooks subscribed (feed,messages,messaging_postbacks,comments) for linked Instagram.',
+              'Confirm App Dashboard → Instagram Webhooks includes field `comments` → /api/webhooks/meta/comments.',
               'Comment a trigger keyword on a post to test live Comment-to-DM.',
             ]
           : [

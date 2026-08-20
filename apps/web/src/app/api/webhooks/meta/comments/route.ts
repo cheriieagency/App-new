@@ -87,12 +87,11 @@ async function lookupSocialAccount(
       row.meta && typeof row.meta === 'object'
         ? (row.meta as Record<string, unknown>)
         : {};
-    // Prefer stored Page Access Token (required for Private Reply).
+    // Prefer meta.page_access_token (true Page token); fall back to access_token column.
     const pageAccessToken =
       (typeof meta.page_access_token === 'string' &&
         meta.page_access_token.trim()) ||
       String(row.access_token || '').trim();
-    if (!pageAccessToken) return null;
 
     const platform = String(row.platform || '');
     const platformUserId = String(row.platform_user_id || '');
@@ -107,15 +106,15 @@ async function lookupSocialAccount(
         ? platformUserId
         : metaIg || null;
 
+    // Keep rows even without a token so Private Reply can log explicit warnings.
     return {
       workspace_id: String(row.workspace_id),
       platform,
       platform_user_id: platformUserId,
       // page_id can live either in the dedicated column or inside `meta`.
-      // Some webhook events only match `meta->page_id`, so we must read it.
       page_id:
-        row.page_id != null
-          ? String(row.page_id)
+        row.page_id != null && String(row.page_id).trim()
+          ? String(row.page_id).trim()
           : metaPageId
             ? metaPageId
             : null,
@@ -140,8 +139,10 @@ async function lookupSocialAccount(
         (COALESCE(sa.meta->>'page_access_token', '') <> '') AS has_page_token
       FROM public.social_accounts sa
       WHERE sa.platform IN ('instagram', 'facebook')
-        AND sa.access_token IS NOT NULL
-        AND sa.access_token <> ''
+        AND (
+          (sa.access_token IS NOT NULL AND sa.access_token <> '')
+          OR COALESCE(sa.meta->>'page_access_token', '') <> ''
+        )
         AND (
           sa.platform_user_id = ${entryId}
           OR sa.page_id = ${entryId}
@@ -154,6 +155,7 @@ async function lookupSocialAccount(
           WHERE a.workspace_id = sa.workspace_id AND a.is_active = true
         ) THEN 0 ELSE 1 END,
         CASE WHEN COALESCE(sa.meta->>'page_access_token', '') <> '' THEN 0 ELSE 1 END,
+        CASE WHEN sa.page_id IS NOT NULL AND sa.page_id <> '' THEN 0 ELSE 1 END,
         CASE WHEN sa.platform = 'instagram' THEN 0 ELSE 1 END
       LIMIT 10
     `;
@@ -289,49 +291,115 @@ async function loadActiveAutomations(
   }
 }
 
-/** Prefer meta.page_access_token from FB Page row in the same workspace. */
-async function resolvePageAccessToken(
-  account: SocialAccountRow
-): Promise<string> {
-  const existing = String(account.access_token || '').trim();
+/**
+ * Resolve Facebook Page ID + Page Access Token for Private Reply.
+ * Reads dedicated columns and meta.page_id / meta.page_access_token from
+ * both Instagram and Facebook sibling rows in the same workspace.
+ */
+async function resolvePrivateReplyCredentials(
+  account: SocialAccountRow,
+  entryId: string
+): Promise<{ pageId: string; pageAccessToken: string }> {
+  let pageId =
+    String(account.page_id || '').trim() ||
+    (account.platform === 'facebook'
+      ? String(account.platform_user_id || '').trim()
+      : '') ||
+    (!String(entryId).startsWith('1784') ? String(entryId).trim() : '');
+  let pageAccessToken = String(account.access_token || '').trim();
+
   try {
     const rows = await sql`
-      SELECT access_token, meta, platform
+      SELECT platform, platform_user_id, page_id, access_token, meta
       FROM public.social_accounts
       WHERE workspace_id = ${account.workspace_id}
         AND platform IN ('facebook', 'instagram')
-        AND access_token IS NOT NULL
-        AND access_token <> ''
-        AND (
-          page_id = ${account.page_id}
-          OR platform_user_id = ${account.page_id}
-          OR page_id = ${account.platform_user_id}
-          OR platform = 'facebook'
-        )
       ORDER BY
         CASE WHEN platform = 'facebook' THEN 0 ELSE 1 END,
-        CASE WHEN COALESCE(meta->>'page_access_token', '') <> '' THEN 0 ELSE 1 END
-      LIMIT 5
+        CASE WHEN COALESCE(meta->>'page_access_token', '') <> '' THEN 0 ELSE 1 END,
+        CASE WHEN page_id IS NOT NULL AND page_id <> '' THEN 0 ELSE 1 END
+      LIMIT 10
     `;
     const list = Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
+
     for (const row of list) {
       const meta =
         row.meta && typeof row.meta === 'object'
           ? (row.meta as Record<string, unknown>)
           : {};
+      const metaPageId =
+        typeof meta.page_id === 'string' ? meta.page_id.trim() : '';
+      const colPageId =
+        row.page_id != null ? String(row.page_id).trim() : '';
+      const fbPlatformId =
+        row.platform === 'facebook'
+          ? String(row.platform_user_id || '').trim()
+          : '';
+
+      if (!pageId) {
+        const candidate =
+          colPageId ||
+          metaPageId ||
+          (fbPlatformId && !fbPlatformId.startsWith('1784')
+            ? fbPlatformId
+            : '');
+        if (candidate && !candidate.startsWith('1784')) {
+          pageId = candidate;
+        }
+      }
+
       const fromMeta =
         typeof meta.page_access_token === 'string'
           ? meta.page_access_token.trim()
           : '';
-      if (fromMeta) return fromMeta;
+      if (fromMeta) {
+        pageAccessToken = fromMeta;
+        break;
+      }
       if (row.platform === 'facebook' && row.access_token) {
-        return String(row.access_token).trim();
+        const tok = String(row.access_token).trim();
+        if (tok) {
+          pageAccessToken = tok;
+          break;
+        }
+      }
+    }
+
+    // If we still lack a token but have pageId, prefer the FB row matching that page.
+    if (pageId && !pageAccessToken) {
+      const match = list.find((row) => {
+        const meta =
+          row.meta && typeof row.meta === 'object'
+            ? (row.meta as Record<string, unknown>)
+            : {};
+        const col = row.page_id != null ? String(row.page_id).trim() : '';
+        const metaPage =
+          typeof meta.page_id === 'string' ? meta.page_id.trim() : '';
+        const platformId = String(row.platform_user_id || '').trim();
+        return (
+          col === pageId ||
+          metaPage === pageId ||
+          (row.platform === 'facebook' && platformId === pageId)
+        );
+      });
+      if (match) {
+        const meta =
+          match.meta && typeof match.meta === 'object'
+            ? (match.meta as Record<string, unknown>)
+            : {};
+        const fromMeta =
+          typeof meta.page_access_token === 'string'
+            ? meta.page_access_token.trim()
+            : '';
+        pageAccessToken =
+          fromMeta || String(match.access_token || '').trim();
       }
     }
   } catch (error) {
-    console.warn('[Meta Webhook] page token resolve failed', error);
+    console.warn('[Meta Webhook] Private Reply credential resolve failed', error);
   }
-  return existing;
+
+  return { pageId, pageAccessToken };
 }
 
 async function insertDmLog(input: {
@@ -504,348 +572,414 @@ export async function POST(request: Request) {
       return ok();
     }
 
-    const entry = body?.entry?.[0];
-    const entryId = entry?.id ? String(entry.id) : '';
-    const change = entry?.changes?.[0];
-    const field = change?.field ? String(change.field) : '';
-    const value = change?.value;
-
-    if (!value) {
-      console.log('[Meta Webhook] No change value present, ignoring.');
-      return ok();
-    }
-
-    const item = String(value.item || '').toLowerCase();
-    const verb = String(value.verb || 'add').toLowerCase();
-    if (field === 'feed' && item && item !== 'comment') {
-      console.log('[Meta Webhook] Ignoring non-comment feed item:', item);
-      return ok();
-    }
-    if (verb && verb !== 'add' && verb !== 'edited') {
-      console.log('[Meta Webhook] Ignoring verb:', verb);
-      return ok();
-    }
-
-    const from = (value.from || {}) as {
-      id?: string;
-      username?: string;
-      name?: string;
-    };
-    const media = (value.media || {}) as { id?: string };
-
-    const commentId = String(value.id || value.comment_id || '').trim();
-    const commentText = String(value.text || value.message || '').trim();
-    const mediaId = String(media.id || value.post_id || '').trim() || null;
-    const commenterId = String(from.id || value.sender_id || '').trim();
-    const commenterUsername =
-      (from.username && String(from.username)) ||
-      (from.name && String(from.name)) ||
-      null;
-
-    console.log('[Meta Webhook Parsed]', {
-      object: objectType,
-      entryId,
-      field,
-      commentId,
-      commentText,
-      commenterId,
-      commenterUsername,
-      mediaId,
-    });
-
-    // Ignore empty comments
-    if (!commentId || !commentText) {
-      return ok();
-    }
-
-    // Ignore self-comments
-    if (commenterId && entryId && commenterId === entryId) {
-      console.log('[Meta Webhook] Self-comment detected, skipping auto-DM.');
-      return ok();
-    }
-
     if (!process.env.DATABASE_URL?.trim()) {
       console.warn('[Meta Webhook] DATABASE_URL missing');
       return ok();
     }
 
-    // Ensure dm_logs / dm_automations columns exist (incl. comment_text).
-    try {
-      await ensureDmAutomationsSchema();
-    } catch (schemaErr) {
-      console.warn('[Meta Webhook] schema ensure failed', schemaErr);
-    }
-
-    // Workspace token lookup: platform_user_id === entryId
-    const account = await lookupSocialAccount(entryId);
-    if (!account) {
-      console.warn(
-        '[Meta Webhook] No active social account found for ID:',
-        entryId
-      );
+    const entries = Array.isArray(body?.entry) ? body.entry : [];
+    if (entries.length === 0) {
+      console.log('[Meta Webhook] No entry[] present, ignoring.');
       return ok();
     }
 
-    const rules = await loadActiveAutomations(account.workspace_id);
-    if (rules.length === 0) {
-      console.log(
-        '[Meta Webhook] No active dm_automations for workspace',
-        account.workspace_id
-      );
-      return ok();
-    }
-
-    const cleaned = cleanCommentText(commentText);
-    const cleanKeywordsByRule = rules.map((rule) => ({
-      id: String(rule.id),
-      title: rule.title || null,
-      cleanKeywords: cleanTriggerKeywords(rule.trigger_keywords),
-    }));
-
-    let matchedRule: AutomationRow | null = null;
-    let matchedKeyword: string | null = null;
-
-    for (const rule of rules) {
-      // Normalize DB keywords: strip #, trim, lowercase — then fuzzy / partial match.
-      const cleanKeywords = cleanTriggerKeywords(rule.trigger_keywords);
-      const kw =
-        findMatchingKeyword(commentText, cleanKeywords) ||
-        findMatchingKeyword(cleaned, cleanKeywords);
-      if (kw) {
-        matchedRule = rule;
-        matchedKeyword = kw;
-        break;
-      }
-    }
-
-    console.log('[Meta Matcher Check]', {
-      commentText,
-      cleaned,
-      cleanKeywords: cleanKeywordsByRule,
-      matchedRule: matchedRule
-        ? {
-            id: matchedRule.id,
-            title: matchedRule.title || null,
-            keyword: matchedKeyword,
-          }
-        : null,
-    });
-
-    if (!matchedRule || !matchedKeyword) {
-      console.log('[Meta Webhook] No keyword match for comment:', {
-        commentText,
-        cleaned,
-        ruleCount: rules.length,
-        ruleKeywords: cleanKeywordsByRule.map((r) => r.cleanKeywords),
-      });
-      return ok();
-    }
-
-    console.log('[Meta Webhook] Matched rule', {
-      automationId: matchedRule.id,
-      keyword: matchedKeyword,
-      title: matchedRule.title,
-    });
-
-    const messageText = buildDmText(matchedRule);
-    if (!messageText) {
-      console.warn('[Meta Webhook] Empty DM body for rule', matchedRule.id);
-      return ok();
-    }
-
-    // Private Reply MUST use Facebook Page ID + Page Access Token.
-    // POST /{igUserId}/messages with a user token → Meta Error #3.
-    const igUserId =
-      account.ig_user_id ||
-      (account.platform === 'instagram' ? account.platform_user_id : '') ||
-      (String(entryId).startsWith('1784') ? entryId : '');
-
-    const pageId =
-      String(account.page_id || '').trim() ||
-      (account.platform === 'facebook'
-        ? String(account.platform_user_id || '').trim()
-        : '') ||
-      (!String(entryId).startsWith('1784') ? String(entryId).trim() : '');
-
-    const pageAccessToken = await resolvePageAccessToken(account);
-    if (!pageAccessToken) {
-      console.warn('[Meta Webhook] Missing Page Access Token for Private Reply', {
-        workspace: account.workspace_id,
-        igUserId,
-        pageId: pageId || null,
-      });
-      await insertDmLog({
-        workspaceId: account.workspace_id,
-        automationId: matchedRule.id,
-        commentId,
-        mediaId,
-        commenterId: commenterId || 'unknown',
-        commenterUsername,
-        commentText,
-        matchedKeyword,
-        status: 'failed',
-        errorMessage: 'missing_page_access_token',
-      });
-      return ok();
-    }
-
-    if (!pageId) {
-      console.warn(
-        '[Meta Webhook] Missing Facebook Page ID for Private Reply',
-        { entryId, workspace: account.workspace_id, igUserId }
-      );
-      await insertDmLog({
-        workspaceId: account.workspace_id,
-        automationId: matchedRule.id,
-        commentId,
-        mediaId,
-        commenterId: commenterId || 'unknown',
-        commenterUsername,
-        commentText,
-        matchedKeyword,
-        status: 'failed',
-        errorMessage: 'missing_facebook_page_id',
-      });
-      return ok();
-    }
-
-    const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
-      pageId
-    )}/messages`;
-    // Explicit DM body: rule text + optional storefront CTA URL.
-    const dmText = String(matchedRule.dm_message_text || '').trim();
-    const ctaUrl = String(matchedRule.cta_button_url || '').trim();
-    const privateReplyText = ctaUrl
-      ? `${dmText}\n\n${ctaUrl}`.trim()
-      : dmText || messageText;
-    const dispatchPayload = {
-      recipient: {
-        comment_id: commentId,
-      },
-      message: {
-        text: privateReplyText,
-      },
-    };
-
-    let dmMessageId: string | null = null;
-    let lastGraphError: string | null = null;
-    let dmResStatus: number | null = null;
-    let publicResStatus: number | null = null;
-
-    try {
-      const dmRes = await fetch(messagingUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${pageAccessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dispatchPayload),
-      });
-      dmResStatus = dmRes.status;
-      const graphData = (await dmRes.json().catch(() => ({}))) as {
-        message_id?: string;
-        id?: string;
-        error?: { message?: string; code?: number };
-      };
-
-      if (dmRes.ok && (graphData.message_id || graphData.id)) {
-        dmMessageId = String(graphData.message_id || graphData.id);
-      } else {
-        lastGraphError =
-          graphData.error?.message ||
-          `private_reply_failed_${dmRes.status}`;
-      }
-    } catch (fetchErr) {
-      lastGraphError =
-        fetchErr instanceof Error
-          ? fetchErr.message
-          : 'private_reply_network_error';
-      console.warn('[Meta Private Reply network]', pageId, lastGraphError);
-    }
-
-    // STEP B — Public comment reply (ON unless reply_to_comment_publicly === false).
-    const shouldPublicReply = matchedRule.reply_to_comment_publicly !== false;
-    if (shouldPublicReply) {
-      const publicText =
-        String(matchedRule.public_comment_text || '').trim() ||
-        'Kolla din DM! Jag har skickat länken till dig. 📬';
-      try {
-        const publicRes = await fetch(
-          `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}/replies`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${pageAccessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message: publicText }),
-          }
-        );
-        publicResStatus = publicRes.status;
-        const replyData = await publicRes.json().catch(() => ({}));
-        if (!publicRes.ok) {
-          console.warn('[Meta Public Reply failed]', publicRes.status, replyData);
+    // Process every entry/change — Meta may batch multiple Instagram comments.
+    for (const entry of entries) {
+      const entryId = entry?.id ? String(entry.id) : '';
+      const changes = Array.isArray(entry?.changes) ? entry.changes : [];
+      for (const change of changes) {
+        try {
+          await processCommentChange({
+            objectType,
+            entryId,
+            field: change?.field ? String(change.field) : '',
+            value: change?.value,
+          });
+        } catch (changeErr) {
+          console.error('[Meta Webhook] change processing failed', changeErr);
         }
-      } catch (replyErr) {
-        console.warn('[Meta Webhook] public comment reply failed', replyErr);
       }
-    }
-
-    console.log('[Meta Live Private Reply & Public Comment Sent]', {
-      commentId,
-      pageId,
-      dmStatus: dmResStatus,
-      publicReplyStatus: publicResStatus,
-      dmMessageId,
-      matchedKeyword,
-    });
-
-    if (dmMessageId) {
-      await insertDmLog({
-        workspaceId: account.workspace_id,
-        automationId: matchedRule.id,
-        commentId,
-        mediaId,
-        commenterId: commenterId || 'unknown',
-        commenterUsername,
-        commentText,
-        matchedKeyword,
-        status: 'sent',
-        dmMessageId,
-      });
-
-      try {
-        await sql`
-          UPDATE public.dm_automations
-          SET total_dms_sent = COALESCE(total_dms_sent, 0) + 1
-          WHERE id = ${matchedRule.id}
-        `;
-      } catch (incErr) {
-        console.warn('[Meta Webhook] total_dms_sent increment failed', incErr);
-      }
-    } else {
-      await insertDmLog({
-        workspaceId: account.workspace_id,
-        automationId: matchedRule.id,
-        commentId,
-        mediaId,
-        commenterId: commenterId || 'unknown',
-        commenterUsername,
-        commentText,
-        matchedKeyword,
-        status: 'failed',
-        errorMessage: lastGraphError || 'private_reply_failed',
-      });
-      console.warn(
-        '[Meta Webhook] Private reply failed for comment',
-        commentId,
-        lastGraphError
-      );
     }
 
     return ok();
   } catch (error) {
     console.error('[Meta Webhook] unhandled error', error);
     return ok();
+  }
+}
+
+type CommentChangeInput = {
+  objectType: string;
+  entryId: string;
+  field: string;
+  value: Record<string, unknown> | undefined;
+};
+
+/**
+ * Handle one Instagram `comments` / Page `feed` comment change → Private Reply.
+ */
+async function processCommentChange(input: CommentChangeInput): Promise<void> {
+  const { objectType, entryId, field, value } = input;
+
+  if (!value) {
+    console.log('[Meta Webhook] No change value present, ignoring.');
+    return;
+  }
+
+  const fieldLower = String(field || '').toLowerCase();
+  const item = String(value.item || '').toLowerCase();
+  const verb = String(value.verb || '').toLowerCase();
+
+  // Instagram product webhooks use field=comments|live_comments (no item/verb).
+  // Page webhooks use field=feed with item=comment.
+  const isInstagramCommentsField =
+    fieldLower === 'comments' || fieldLower === 'live_comments';
+  const isPageFeedComment =
+    fieldLower === 'feed' && (!item || item === 'comment');
+  const isBareCommentPayload =
+    !fieldLower &&
+    Boolean(value.id || value.comment_id) &&
+    Boolean(value.text || value.message);
+
+  if (fieldLower === 'feed' && item && item !== 'comment') {
+    console.log('[Meta Webhook] Ignoring non-comment feed item:', item);
+    return;
+  }
+
+  if (!isInstagramCommentsField && !isPageFeedComment && !isBareCommentPayload) {
+    // Allow unknown fields that still look like comment payloads (forward-compat).
+    if (!(value.id || value.comment_id) || !(value.text || value.message)) {
+      console.log('[Meta Webhook] Ignoring non-comment field:', fieldLower || '(empty)');
+      return;
+    }
+  }
+
+  // Instagram comments rarely include verb; Page feed uses add|edited.
+  if (verb && verb !== 'add' && verb !== 'edited') {
+    console.log('[Meta Webhook] Ignoring verb:', verb);
+    return;
+  }
+
+  const from = (value.from || {}) as {
+    id?: string;
+    username?: string;
+    name?: string;
+  };
+  const media = (value.media || {}) as { id?: string };
+
+  const commentId = String(value.id || value.comment_id || '').trim();
+  const commentText = String(value.text || value.message || '').trim();
+  const mediaId = String(media.id || value.post_id || '').trim() || null;
+  const commenterId = String(from.id || value.sender_id || '').trim();
+  const commenterUsername =
+    (from.username && String(from.username)) ||
+    (from.name && String(from.name)) ||
+    null;
+
+  console.log('[Meta Webhook Parsed]', {
+    object: objectType,
+    entryId,
+    field: fieldLower || '(empty)',
+    isInstagramCommentsField,
+    commentId,
+    commentText,
+    commenterId,
+    commenterUsername,
+    mediaId,
+  });
+
+  if (!commentId || !commentText) {
+    return;
+  }
+
+  // Ignore self-comments from the IG/Page account itself.
+  if (commenterId && entryId && commenterId === entryId) {
+    console.log('[Meta Webhook] Self-comment detected, skipping auto-DM.');
+    return;
+  }
+
+  try {
+    await ensureDmAutomationsSchema();
+  } catch (schemaErr) {
+    console.warn('[Meta Webhook] schema ensure failed', schemaErr);
+  }
+
+  const account = await lookupSocialAccount(entryId);
+  if (!account) {
+    console.warn(
+      '[Meta Webhook] No active social account found for ID:',
+      entryId
+    );
+    return;
+  }
+
+  const rules = await loadActiveAutomations(account.workspace_id);
+  if (rules.length === 0) {
+    console.log(
+      '[Meta Webhook] No active dm_automations for workspace',
+      account.workspace_id
+    );
+    return;
+  }
+
+  const cleaned = cleanCommentText(commentText);
+  const cleanKeywordsByRule = rules.map((rule) => ({
+    id: String(rule.id),
+    title: rule.title || null,
+    cleanKeywords: cleanTriggerKeywords(rule.trigger_keywords),
+  }));
+
+  let matchedRule: AutomationRow | null = null;
+  let matchedKeyword: string | null = null;
+
+  for (const rule of rules) {
+    const cleanKeywords = cleanTriggerKeywords(rule.trigger_keywords);
+    const kw =
+      findMatchingKeyword(commentText, cleanKeywords) ||
+      findMatchingKeyword(cleaned, cleanKeywords);
+    if (kw) {
+      matchedRule = rule;
+      matchedKeyword = kw;
+      break;
+    }
+  }
+
+  console.log('[Meta Matcher Check]', {
+    commentText,
+    cleaned,
+    cleanKeywords: cleanKeywordsByRule,
+    matchedRule: matchedRule
+      ? {
+          id: matchedRule.id,
+          title: matchedRule.title || null,
+          keyword: matchedKeyword,
+        }
+      : null,
+  });
+
+  if (!matchedRule || !matchedKeyword) {
+    console.log('[Meta Webhook] No keyword match for comment:', {
+      commentText,
+      cleaned,
+      ruleCount: rules.length,
+      ruleKeywords: cleanKeywordsByRule.map((r) => r.cleanKeywords),
+    });
+    return;
+  }
+
+  console.log('[Meta Webhook] Matched rule', {
+    automationId: matchedRule.id,
+    keyword: matchedKeyword,
+    title: matchedRule.title,
+  });
+
+  const messageText = buildDmText(matchedRule);
+  if (!messageText) {
+    console.warn('[Meta Webhook] Empty DM body for rule', matchedRule.id);
+    return;
+  }
+
+  // Private Reply MUST use Facebook Page ID + Page Access Token.
+  const igUserId =
+    account.ig_user_id ||
+    (account.platform === 'instagram' ? account.platform_user_id : '') ||
+    (String(entryId).startsWith('1784') ? entryId : '');
+
+  const { pageId, pageAccessToken } = await resolvePrivateReplyCredentials(
+    account,
+    entryId
+  );
+
+  if (!pageAccessToken) {
+    console.warn(
+      '[Meta Webhook] Missing page_access_token for Private Reply — reconnect Instagram with a linked Facebook Page (pages_manage_metadata) so meta.page_access_token is stored.',
+      {
+        workspace: account.workspace_id,
+        igUserId: igUserId || null,
+        facebook_page_id: pageId || null,
+        platform: account.platform,
+        platform_user_id: account.platform_user_id,
+        has_column_page_id: Boolean(account.page_id),
+      }
+    );
+    await insertDmLog({
+      workspaceId: account.workspace_id,
+      automationId: matchedRule.id,
+      commentId,
+      mediaId,
+      commenterId: commenterId || 'unknown',
+      commenterUsername,
+      commentText,
+      matchedKeyword,
+      status: 'failed',
+      errorMessage: 'missing_page_access_token',
+    });
+    return;
+  }
+
+  if (!pageId) {
+    console.warn(
+      '[Meta Webhook] Missing facebook_page_id for Private Reply — reconnect Instagram so social_accounts.page_id / meta.page_id is stored from the linked Facebook Page.',
+      {
+        workspace: account.workspace_id,
+        igUserId: igUserId || null,
+        entryId,
+        platform: account.platform,
+        platform_user_id: account.platform_user_id,
+        has_page_access_token: Boolean(pageAccessToken),
+      }
+    );
+    await insertDmLog({
+      workspaceId: account.workspace_id,
+      automationId: matchedRule.id,
+      commentId,
+      mediaId,
+      commenterId: commenterId || 'unknown',
+      commenterUsername,
+      commentText,
+      matchedKeyword,
+      status: 'failed',
+      errorMessage: 'missing_facebook_page_id',
+    });
+    return;
+  }
+
+  console.log('[Meta Webhook] Private Reply credentials resolved', {
+    facebook_page_id: pageId,
+    igUserId: igUserId || null,
+    has_page_access_token: true,
+    token_prefix: `${pageAccessToken.slice(0, 8)}…`,
+  });
+
+  const messagingUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(
+    pageId
+  )}/messages`;
+  const dmText = String(matchedRule.dm_message_text || '').trim();
+  const ctaUrl = String(matchedRule.cta_button_url || '').trim();
+  const privateReplyText = ctaUrl
+    ? `${dmText}\n\n${ctaUrl}`.trim()
+    : dmText || messageText;
+  const dispatchPayload = {
+    recipient: {
+      comment_id: commentId,
+    },
+    message: {
+      text: privateReplyText,
+    },
+  };
+
+  let dmMessageId: string | null = null;
+  let lastGraphError: string | null = null;
+  let dmResStatus: number | null = null;
+  let publicResStatus: number | null = null;
+
+  try {
+    const dmRes = await fetch(messagingUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${pageAccessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dispatchPayload),
+    });
+    dmResStatus = dmRes.status;
+    const graphData = (await dmRes.json().catch(() => ({}))) as {
+      message_id?: string;
+      id?: string;
+      error?: { message?: string; code?: number };
+    };
+
+    if (dmRes.ok && (graphData.message_id || graphData.id)) {
+      dmMessageId = String(graphData.message_id || graphData.id);
+    } else {
+      lastGraphError =
+        graphData.error?.message ||
+        `private_reply_failed_${dmRes.status}`;
+    }
+  } catch (fetchErr) {
+    lastGraphError =
+      fetchErr instanceof Error
+        ? fetchErr.message
+        : 'private_reply_network_error';
+    console.warn('[Meta Private Reply network]', pageId, lastGraphError);
+  }
+
+  const shouldPublicReply = matchedRule.reply_to_comment_publicly !== false;
+  if (shouldPublicReply) {
+    const publicText =
+      String(matchedRule.public_comment_text || '').trim() ||
+      'Kolla din DM! Jag har skickat länken till dig. 📬';
+    try {
+      const publicRes = await fetch(
+        `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}/replies`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${pageAccessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: publicText }),
+        }
+      );
+      publicResStatus = publicRes.status;
+      const replyData = await publicRes.json().catch(() => ({}));
+      if (!publicRes.ok) {
+        console.warn('[Meta Public Reply failed]', publicRes.status, replyData);
+      }
+    } catch (replyErr) {
+      console.warn('[Meta Webhook] public comment reply failed', replyErr);
+    }
+  }
+
+  console.log('[Meta Live Private Reply & Public Comment Sent]', {
+    commentId,
+    pageId,
+    dmStatus: dmResStatus,
+    publicReplyStatus: publicResStatus,
+    dmMessageId,
+    matchedKeyword,
+  });
+
+  if (dmMessageId) {
+    await insertDmLog({
+      workspaceId: account.workspace_id,
+      automationId: matchedRule.id,
+      commentId,
+      mediaId,
+      commenterId: commenterId || 'unknown',
+      commenterUsername,
+      commentText,
+      matchedKeyword,
+      status: 'sent',
+      dmMessageId,
+    });
+
+    try {
+      await sql`
+        UPDATE public.dm_automations
+        SET total_dms_sent = COALESCE(total_dms_sent, 0) + 1
+        WHERE id = ${matchedRule.id}
+      `;
+    } catch (incErr) {
+      console.warn('[Meta Webhook] total_dms_sent increment failed', incErr);
+    }
+  } else {
+    await insertDmLog({
+      workspaceId: account.workspace_id,
+      automationId: matchedRule.id,
+      commentId,
+      mediaId,
+      commenterId: commenterId || 'unknown',
+      commenterUsername,
+      commentText,
+      matchedKeyword,
+      status: 'failed',
+      errorMessage: lastGraphError || 'private_reply_failed',
+    });
+    console.warn(
+      '[Meta Webhook] Private reply failed for comment',
+      commentId,
+      lastGraphError
+    );
   }
 }
