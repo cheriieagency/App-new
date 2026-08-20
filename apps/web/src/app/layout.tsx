@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/react';
 import './global.css';
 import { Providers } from './providers';
 import { SITE_URL } from '@/lib/site';
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="font-sans antialiased bg-clikd-light text-slate-900">
         {/* Mobile bottom nav + pb-20 spacer are mounted in Providers for app routes. */}
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
