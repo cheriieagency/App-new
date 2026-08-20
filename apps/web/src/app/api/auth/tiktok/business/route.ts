@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import { tiktokEnv } from '@/lib/config/env';
+import { missingEnvKeys, tiktokEnv } from '@/lib/config/env';
 import {
   TIKTOK_BUSINESS_FLOW_COOKIE,
   buildTikTokBusinessLoginUrl,
@@ -23,6 +23,7 @@ import {
   appendWorkspaceToOAuthState,
   setActiveWorkspaceCookies,
 } from '@/lib/social/oauth-workspace';
+import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -41,6 +42,19 @@ export async function GET(request: Request) {
     returnToRaw.toLowerCase().includes('inbox') ? 'inbox' : 'settings';
   const failRedirect = getTikTokSuccessRedirectPath(returnTo);
 
+  const failPopup = (reason: string, detail?: string) => {
+    const dest = new URL(failRedirect, url.origin);
+    dest.searchParams.set('error', reason);
+    if (detail) dest.searchParams.set('detail', detail.slice(0, 160));
+    return oauthPopupCompleteResponse({
+      success: false,
+      platform: 'tiktok_business',
+      error: reason,
+      detail: detail || reason,
+      continueHref: `${dest.pathname}${dest.search}`,
+    });
+  };
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     const signIn = new URL('/account/signin', request.url);
@@ -52,19 +66,27 @@ export async function GET(request: Request) {
   }
 
   if (!workspaceId) {
-    const dest = new URL(failRedirect, request.url);
-    dest.searchParams.set('error', 'missing_workspace_id');
-    return NextResponse.redirect(dest);
+    return failPopup(
+      'missing_workspace_id',
+      'Select a workspace before connecting TikTok Business'
+    );
   }
 
   if (!tiktokEnv.hasBusinessCredentials()) {
-    const dest = new URL(failRedirect, request.url);
-    dest.searchParams.set('error', 'tiktok_not_configured');
-    dest.searchParams.set(
-      'detail',
-      'Set TIKTOK_BUSINESS_APP_ID + TIKTOK_BUSINESS_APP_SECRET'
+    const missing = missingEnvKeys(
+      'TIKTOK_BUSINESS_APP_ID',
+      'TIKTOK_BUSINESS_APP_SECRET'
     );
-    return NextResponse.redirect(dest);
+    console.warn('[auth/tiktok/business] missing credentials', {
+      missing,
+      redirect_uri: getTikTokCallbackUrl(),
+    });
+    return failPopup(
+      'tiktok_not_configured',
+      missing.length
+        ? `Missing ${missing.join(' + ')} in apps/web/.env.local (restart dev server after adding)`
+        : 'Set TIKTOK_BUSINESS_APP_ID + TIKTOK_BUSINESS_APP_SECRET in .env.local and restart'
+    );
   }
 
   const cookieOpts = {
@@ -77,9 +99,10 @@ export async function GET(request: Request) {
 
   const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
   try {
-    const loginUrl = buildTikTokBusinessLoginUrl(state, url.origin);
+    const redirectUri = getTikTokCallbackUrl();
+    const loginUrl = buildTikTokBusinessLoginUrl(state);
     console.info('[auth/tiktok/business] business authorize', {
-      redirect_uri: getTikTokCallbackUrl(url.origin),
+      redirect_uri: redirectUri,
       app_id_set: Boolean(tiktokEnv.businessAppId()),
     });
     const res = NextResponse.redirect(loginUrl);
@@ -90,12 +113,9 @@ export async function GET(request: Request) {
     return res;
   } catch (error) {
     console.error('[auth/tiktok/business]', error);
-    const dest = new URL(failRedirect, request.url);
-    dest.searchParams.set('error', 'tiktok_oauth_failed');
-    dest.searchParams.set(
-      'detail',
+    return failPopup(
+      'tiktok_oauth_failed',
       error instanceof Error ? error.message.slice(0, 160) : 'oauth_failed'
     );
-    return NextResponse.redirect(dest);
   }
 }

@@ -96,7 +96,12 @@ function MetaConnectToast() {
         'Meta login succeeded, but no Facebook Pages were returned. Grant Page access and try again.'
       );
     } else if (error) {
-      toast.error(`Connection failed: ${error.replace(/_/g, ' ')}`);
+      const detail = searchParams.get('detail');
+      toast.error(
+        detail
+          ? `Connection failed: ${detail}`
+          : `Connection failed: ${error.replace(/_/g, ' ')}`
+      );
     }
   }, [searchParams, queryClient]);
 
