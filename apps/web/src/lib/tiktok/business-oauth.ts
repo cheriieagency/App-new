@@ -21,12 +21,13 @@ export type TikTokBusinessTokenResponse = {
 /** Build Business Portal authorize URL (app_id + redirect_uri + state). */
 export function buildTikTokBusinessLoginUrl(
   state: string,
-  requestOrigin?: string | null
+  _requestOrigin?: string | null
 ): string {
   const appId = tiktokEnv.businessAppId();
   if (!appId) throw new Error('TIKTOK_BUSINESS_APP_ID is not configured');
 
-  const redirectUri = getTikTokCallbackUrl(requestOrigin);
+  // Must match the portal registration exactly — never derive from request host.
+  const redirectUri = getTikTokCallbackUrl();
   const authUrl = new URL('https://business-api.tiktok.com/portal/auth');
   authUrl.searchParams.set('app_id', appId);
   authUrl.searchParams.set('state', state);

@@ -9,7 +9,7 @@
  */
 
 import { createHash, randomBytes } from 'crypto';
-import { appBaseUrl, tiktokEnv } from '@/lib/config/env';
+import { tiktokEnv } from '@/lib/config/env';
 
 export const TIKTOK_OAUTH_STATE_COOKIE = 'clikd_tiktok_oauth_state';
 /** HTTP-only cookie holding the PKCE code_verifier until callback. */
@@ -29,43 +29,56 @@ export const TIKTOK_OAUTH_SCOPES = [
   'video.upload',
 ] as const;
 
-function originOf(value?: string | null): string {
-  const raw = value?.trim();
-  if (!raw) return '';
+/**
+ * Public origin for TikTok redirect_uri (legacy helpers).
+ * Prefer getTikTokCallbackUrl() for authorize/token — Business OAuth requires
+ * an exact registered URI, never the live request host.
+ */
+export function getTikTokOAuthBaseUrl(_requestOrigin?: string | null): string {
   try {
-    return new URL(raw).origin;
+    return new URL(getTikTokCallbackUrl()).origin;
   } catch {
-    return '';
+    return 'https://clikd.app';
   }
 }
 
-/**
- * Public origin for TikTok redirect_uri.
- * Prefer the request host (the callback that is actually running) so local
- * Connect TikTok does not bounce to production when NEXTAUTH_URL is clikd.app.
- * Optional TIKTOK_REDIRECT_URI overrides when the portal uses a fixed URI.
- */
-export function getTikTokOAuthBaseUrl(requestOrigin?: string | null): string {
-  const explicit = originOf(
-    process.env.TIKTOK_REDIRECT_URI || process.env.NEXT_PUBLIC_TIKTOK_REDIRECT_URI
-  );
-  if (explicit) return explicit;
-
-  const request = originOf(requestOrigin);
-  if (request) return request;
-
-  const fromBetterAuth = originOf(process.env.BETTER_AUTH_URL);
-  const fromPublic = originOf(process.env.NEXT_PUBLIC_APP_URL);
-  const fromNextAuth = originOf(process.env.NEXTAUTH_URL);
-  return fromBetterAuth || fromPublic || fromNextAuth || appBaseUrl(requestOrigin);
-}
+const TIKTOK_DEFAULT_CALLBACK =
+  'https://clikd.app/api/auth/callback/tiktok';
 
 /**
- * Explicit TikTok OAuth callback URL registered in the TikTok Developer Portal.
- * Always: `${configuredBase}/api/auth/callback/tiktok`
+ * Exact redirect_uri registered in the TikTok Developer / Business Portal.
+ *
+ * Priority:
+ *  1. NEXT_PUBLIC_TIKTOK_REDIRECT_URI (full callback URL or origin)
+ *  2. TIKTOK_REDIRECT_URI (full callback URL or origin)
+ *  3. https://clikd.app/api/auth/callback/tiktok
+ *
+ * Never uses the live request host — that causes "redirect URI does not match"
+ * when localhost / preview URLs differ from the portal registration.
  */
-export function getTikTokCallbackUrl(requestOrigin?: string | null): string {
-  return `${getTikTokOAuthBaseUrl(requestOrigin)}/api/auth/callback/tiktok`;
+export function getTikTokCallbackUrl(_requestOrigin?: string | null): string {
+  const candidates = [
+    process.env.NEXT_PUBLIC_TIKTOK_REDIRECT_URI,
+    process.env.TIKTOK_REDIRECT_URI,
+  ];
+
+  for (const raw of candidates) {
+    const value = raw?.trim();
+    if (!value) continue;
+    try {
+      const url = new URL(value);
+      // Already a full callback path
+      if (url.pathname.includes('/api/auth/callback/tiktok')) {
+        return `${url.origin}/api/auth/callback/tiktok`;
+      }
+      // Origin-only (or other path) → append the registered callback path
+      return `${url.origin}/api/auth/callback/tiktok`;
+    } catch {
+      /* try next candidate */
+    }
+  }
+
+  return TIKTOK_DEFAULT_CALLBACK;
 }
 
 /** Resolve where to send the user after a successful TikTok connect. */
@@ -117,7 +130,8 @@ export function buildTikTokLoginUrl(
     throw new Error('TikTok PKCE code_challenge is required');
   }
 
-  const redirectUri = getTikTokCallbackUrl(requestOrigin);
+  // Must match the portal registration exactly — same URI for authorize + token exchange.
+  const redirectUri = getTikTokCallbackUrl();
 
   // https://developers.tiktok.com/doc/login-kit-web
   const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
@@ -194,7 +208,7 @@ export async function exchangeTikTokCode(
   if (!authCode) throw new Error('TikTok authorization code is empty');
 
   // Must match the redirect_uri used in buildTikTokLoginUrl / Developer Portal.
-  const redirectUri = getTikTokCallbackUrl(requestOrigin);
+  const redirectUri = getTikTokCallbackUrl();
 
   const params = new URLSearchParams({
     client_key: clientKey,
