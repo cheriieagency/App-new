@@ -12,7 +12,7 @@
     },
     {
       "path": "/api/cron/dm-comment-poll",
-      "schedule": "*/2 * * * *"
+      "schedule": "* * * * *"
     }
   ]
 }

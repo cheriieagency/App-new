@@ -1,8 +1,6 @@
 /**
  * POST /api/admin/inbox/automations/poll
- * Session-authenticated Comment-to-DM poll for the active workspace.
- * Used by the Automations UI to auto-process new IG comments without
- * manually fetching / running live test DM.
+ * Session-authenticated Comment-to-DM poll (ownership + plan gated + rate limited).
  */
 
 import { cookies, headers } from 'next/headers';
@@ -15,6 +13,10 @@ import {
 import { pollAndProcessCommentAutomations } from '@/lib/dm-automations/poll-comments';
 import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 import { requireFeature } from '@/lib/plan-guard';
+
+/** Min gap between polls per user (server-side abuse / Meta rate protection). */
+const MIN_POLL_GAP_MS = 15_000;
+const lastPollByUser = new Map<string, number>();
 
 async function resolveWorkspaceId(
   request: Request,
@@ -37,8 +39,34 @@ async function resolveWorkspaceId(
   );
 }
 
+function sameOriginOk(request: Request): boolean {
+  const host = request.headers.get('host') || '';
+  if (!host) return true;
+  const origin = request.headers.get('origin') || '';
+  const referer = request.headers.get('referer') || '';
+  // Browser fetch with credentials usually sends Origin; allow missing for same-tab.
+  if (!origin && !referer) return true;
+  try {
+    if (origin) {
+      const o = new URL(origin);
+      return o.host === host;
+    }
+    if (referer) {
+      const r = new URL(referer);
+      return r.host === host;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 export async function POST(request: Request) {
   try {
+    if (!sameOriginOk(request)) {
+      return NextResponse.json({ error: 'forbidden_origin' }, { status: 403 });
+    }
+
     const session = await auth.api.getSession({ headers: await headers() });
     const userId = session?.user?.id?.trim();
     if (!userId) {
@@ -54,6 +82,24 @@ export async function POST(request: Request) {
         { status: 503 }
       );
     }
+
+    const now = Date.now();
+    const last = lastPollByUser.get(userId) || 0;
+    if (now - last < MIN_POLL_GAP_MS) {
+      return NextResponse.json({
+        ok: true,
+        throttled: true,
+        retryAfterMs: MIN_POLL_GAP_MS - (now - last),
+        sent: 0,
+        matched: 0,
+        workspacesScanned: 0,
+        commentsFetched: 0,
+        commentsSkipped: 0,
+        errors: [],
+        details: [],
+      });
+    }
+    lastPollByUser.set(userId, now);
 
     let body: { workspaceId?: unknown } = {};
     try {
@@ -84,13 +130,15 @@ export async function POST(request: Request) {
 
     const result = await pollAndProcessCommentAutomations({
       workspaceId: access.workspaceId,
-      lookbackMinutes: 45,
+      lookbackMinutes: 30,
       maxCommentsPerAccount: 40,
     });
 
     return NextResponse.json({
       ok: true,
+      throttled: false,
       workspaceId: access.workspaceId,
+      intervalSeconds: 20,
       ...result,
     });
   } catch (error) {

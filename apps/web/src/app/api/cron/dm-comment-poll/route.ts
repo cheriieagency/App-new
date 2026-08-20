@@ -1,7 +1,7 @@
 /**
  * GET/POST /api/cron/dm-comment-poll
- * Every 2 minutes — fetch recent Instagram comments and auto-run Comment-to-DM
- * rules (webhook backup when Meta does not deliver comment events).
+ * Every minute — fetch recent Instagram comments and auto-run Comment-to-DM
+ * rules (webhook backup when Meta does not deliver / admin tab is closed).
  * Header: Authorization: Bearer ${CRON_SECRET}
  */
 
@@ -31,12 +31,13 @@ async function runCron() {
   }
 
   const result = await pollAndProcessCommentAutomations({
-    lookbackMinutes: 45,
+    lookbackMinutes: 30,
     maxCommentsPerAccount: 40,
   });
 
   return Response.json({
     ok: true,
+    intervalSeconds: 60,
     ...result,
   });
 }

@@ -27,6 +27,7 @@ import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useLanguage } from '@/lib/locale-context';
 import { localeTag, t, tf, type Locale, type TranslationKey } from '@/lib/i18n';
+import { useCommentToDmAutoPoll } from '@/hooks/useCommentToDmAutoPoll';
 
 type AutomationRule = {
   /** UUID string from public.dm_automations — never coerce with Number(). */
@@ -204,7 +205,9 @@ export default function DMAutomationPanel() {
   const [recentComments, setRecentComments] = useState<RecentIgComment[]>([]);
   const [selectedCommentText, setSelectedCommentText] = useState('');
   const [devToolsOpen, setDevToolsOpen] = useState(false);
-  const [autoWatchLabel, setAutoWatchLabel] = useState('Auto-watching Instagram comments…');
+  const [autoWatchLabel, setAutoWatchLabel] = useState(
+    'Auto-watching Instagram every 20s…'
+  );
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -251,87 +254,37 @@ export default function DMAutomationPanel() {
   }, [data?.workspaceId, activeWorkspace.id, setActiveWorkspaceId]);
 
   /**
-   * Auto Comment-to-DM: poll Instagram for new keyword comments and send Private
-   * Replies without “Fetch latest comments” / “Run live test DM”. Complements
-   * Meta webhooks (and covers localhost / missed webhook deliveries).
+   * Shared 20s Comment-to-DM poll (also runs from admin shell).
+   * Status label only — delivery is handled by the singleton timer.
    */
-  useEffect(() => {
-    if (!activeWorkspace.id) return;
-
-    let cancelled = false;
-    let inFlight = false;
-
-    const runPoll = async () => {
-      if (cancelled || inFlight) return;
-      if (
-        typeof document !== 'undefined' &&
-        document.visibilityState === 'hidden'
-      ) {
+  useCommentToDmAutoPoll({
+    enabled: Boolean(activeWorkspace.id),
+    onResult: (result) => {
+      if (result.httpOk === false) {
+        setAutoWatchLabel(
+          result.error
+            ? `Auto-watch paused: ${result.error}`
+            : 'Auto-watch paused (retrying…)'
+        );
         return;
       }
-      inFlight = true;
-      try {
-        const res = await fetch('/api/admin/inbox/automations/poll', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-workspace-id': activeWorkspace.id,
-          },
-          credentials: 'include',
-          body: JSON.stringify({ workspaceId: activeWorkspace.id }),
-        });
-        const json = (await res.json().catch(() => ({}))) as {
-          ok?: boolean;
-          sent?: number;
-          matched?: number;
-          error?: string;
-        };
-        if (cancelled) return;
-        if (!res.ok) {
-          setAutoWatchLabel(
-            json.error
-              ? `Auto-watch paused: ${json.error}`
-              : 'Auto-watch paused (retrying…)'
-          );
-          return;
-        }
-        const sent = Number(json.sent) || 0;
-        setAutoWatchLabel(
-          sent > 0
-            ? `Auto-sent ${sent} DM${sent === 1 ? '' : 's'} — watching for new comments…`
-            : 'Auto-watching Instagram comments…'
-        );
-        if (sent > 0) {
-          toast.success(
-            `Comment-to-DM auto-sent ${sent} DM${sent === 1 ? '' : 's'}`
-          );
-          void qc.invalidateQueries({
-            queryKey: ['dm-automations', activeWorkspace.id],
-          });
-        }
-      } catch (err) {
-        console.warn('[DMAutomationPanel] auto-poll failed', err);
-        if (!cancelled) {
-          setAutoWatchLabel('Auto-watch paused (retrying…)');
-        }
-      } finally {
-        inFlight = false;
+      if (result.throttled) {
+        setAutoWatchLabel('Auto-watching Instagram every 20s…');
+        return;
       }
-    };
-
-    void runPoll();
-    const intervalId = window.setInterval(runPoll, 45_000);
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') void runPoll();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [activeWorkspace.id, qc]);
+      const sent = Number(result.sent) || 0;
+      setAutoWatchLabel(
+        sent > 0
+          ? `Auto-sent ${sent} DM${sent === 1 ? '' : 's'} — watching every 20s…`
+          : 'Auto-watching Instagram every 20s…'
+      );
+      if (sent > 0) {
+        toast.success(
+          `Comment-to-DM auto-sent ${sent} DM${sent === 1 ? '' : 's'}`
+        );
+      }
+    },
+  });
 
   const saveMutation = useMutation({
     mutationFn: async (payload: FormState) => {
