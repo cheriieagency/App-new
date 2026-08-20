@@ -23,6 +23,7 @@ import {
   isInstagramAccountId,
 } from '@/lib/meta/subscribe-webhooks';
 import { requireFeature } from '@/lib/plan-guard';
+import { fetchRecentInstagramComments as fetchIgCommentsShared } from '@/lib/dm-automations/fetch-instagram-comments';
 
 const GRAPH_V = 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_V}`;
@@ -361,15 +362,19 @@ async function loadConnectedIgAccount(input: {
   userId: string;
 }): Promise<ConnectedIgAccount | null> {
   try {
+    // Workspace-scoped after ownership check — social_accounts.user_id can
+    // diverge from the session (reconnects / ownership transfers).
     const rows = await sql`
-      SELECT platform, platform_user_id, page_id, access_token, handle, meta
+      SELECT platform, platform_user_id, page_id, access_token, handle, meta, user_id
       FROM public.social_accounts
       WHERE workspace_id = ${input.workspaceId}
-        AND user_id = ${input.userId}
         AND platform IN ('instagram', 'facebook')
-        AND access_token IS NOT NULL
-        AND access_token <> ''
+        AND (
+          (access_token IS NOT NULL AND access_token <> '')
+          OR COALESCE(meta->>'page_access_token', '') <> ''
+        )
       ORDER BY
+        CASE WHEN user_id::text = ${input.userId} THEN 0 ELSE 1 END,
         CASE WHEN platform = 'instagram' THEN 0 ELSE 1 END,
         connected_at DESC NULLS LAST
     `;
@@ -391,7 +396,7 @@ async function loadConnectedIgAccount(input: {
         ? (fb.meta as Record<string, unknown>)
         : {};
 
-    // Page Access Token: FB meta → IG meta → FB row token (never prefer IG user token).
+    // Page Access Token: FB meta → IG meta → FB row token.
     const pageTok =
       (typeof fbMeta.page_access_token === 'string' &&
         fbMeta.page_access_token.trim()) ||
@@ -410,9 +415,12 @@ async function loadConnectedIgAccount(input: {
       (typeof fbMeta.page_id === 'string' ? fbMeta.page_id.trim() : '') ||
       null;
 
+    const igTok = String(ig.access_token || '').trim();
+    if (!igTok && !pageTok) return null;
+
     return {
       igUserId: String(ig.platform_user_id || '').trim(),
-      accessToken: String(ig.access_token || '').trim(),
+      accessToken: igTok,
       pageAccessToken: pageTok,
       handle: ig.handle != null ? String(ig.handle) : null,
       pageId,
@@ -423,10 +431,11 @@ async function loadConnectedIgAccount(input: {
   }
 }
 
-/** Flatten recent media comments into a selectable list (newest first). */
+/** Newest comments across recent media (Page token → IG user token). */
 async function fetchRecentInstagramComments(input: {
   igUserId: string;
   accessToken: string;
+  pageAccessToken?: string;
   limit?: number;
 }): Promise<{
   success: boolean;
@@ -435,83 +444,27 @@ async function fetchRecentInstagramComments(input: {
   metaError?: unknown;
 }> {
   const limit = Math.min(Math.max(input.limit ?? 5, 1), 10);
-  const url = new URL(
-    `${GRAPH_BASE}/${encodeURIComponent(input.igUserId)}/media`
-  );
-  url.searchParams.set(
-    'fields',
-    'id,caption,comments.limit(10){id,text,username,from,timestamp,created_time}'
-  );
-  url.searchParams.set('limit', String(limit));
-  url.searchParams.set('access_token', input.accessToken);
+  const result = await fetchIgCommentsShared({
+    igUserId: input.igUserId,
+    pageAccessToken: input.pageAccessToken || null,
+    accessToken: input.accessToken,
+    mediaLimit: limit,
+    commentsPerMedia: 10,
+    maxComments: limit,
+  });
 
-  try {
-    const res = await fetch(url.toString());
-    const json = (await res.json().catch(() => ({}))) as {
-      data?: Array<{
-        id?: string;
-        comments?: {
-          data?: Array<{
-            id?: string;
-            text?: string;
-            username?: string;
-            from?: { username?: string; id?: string };
-            timestamp?: string;
-            created_time?: string;
-          }>;
-        };
-      }>;
-      error?: { message?: string; code?: number };
-    };
-
-    if (!res.ok || json.error) {
-      return {
-        success: false,
-        comments: [],
-        error:
-          json.error?.message ||
-          `Failed to fetch Instagram media/comments (HTTP ${res.status})`,
-        metaError: json.error || json,
-      };
-    }
-
-    const comments: RecentIgComment[] = [];
-    for (const media of json.data ?? []) {
-      for (const c of media.comments?.data ?? []) {
-        if (!c.id) continue;
-        comments.push({
-          id: String(c.id),
-          text: String(c.text || ''),
-          username:
-            (c.username && String(c.username)) ||
-            (c.from?.username && String(c.from.username)) ||
-            null,
-          createdTime:
-            (c.timestamp && String(c.timestamp)) ||
-            (c.created_time && String(c.created_time)) ||
-            null,
-          mediaId: media.id ? String(media.id) : null,
-        });
-      }
-    }
-
-    comments.sort((a, b) => {
-      const ta = a.createdTime ? Date.parse(a.createdTime) : 0;
-      const tb = b.createdTime ? Date.parse(b.createdTime) : 0;
-      return tb - ta;
-    });
-
-    return {
-      success: true,
-      comments: comments.slice(0, limit),
-    };
-  } catch (error) {
-    return {
-      success: false,
-      comments: [],
-      error: error instanceof Error ? error.message : 'Network error',
-    };
-  }
+  return {
+    success: result.success,
+    comments: result.comments.map((c) => ({
+      id: c.id,
+      text: c.text,
+      username: c.username,
+      createdTime: c.createdTime,
+      mediaId: c.mediaId,
+    })),
+    error: result.error,
+    metaError: result.metaError,
+  };
 }
 
 async function resolveLiveReplyMessage(input: {
@@ -633,7 +586,10 @@ async function handleFetchComments(request: Request): Promise<NextResponse> {
     workspaceId: access.workspaceId,
     userId,
   });
-  if (!account?.igUserId || !account.accessToken) {
+  if (
+    !account?.igUserId ||
+    (!account.accessToken && !account.pageAccessToken)
+  ) {
     return NextResponse.json({
       success: false,
       comments: [],
@@ -645,6 +601,7 @@ async function handleFetchComments(request: Request): Promise<NextResponse> {
   const result = await fetchRecentInstagramComments({
     igUserId: account.igUserId,
     accessToken: account.accessToken,
+    pageAccessToken: account.pageAccessToken,
     limit: 5,
   });
 
@@ -724,7 +681,10 @@ async function runLiveDiagnostic(
       workspaceId: access.workspaceId,
       userId,
     });
-    if (!account?.igUserId || !account.accessToken) {
+    if (
+      !account?.igUserId ||
+      (!account.accessToken && !account.pageAccessToken)
+    ) {
       return NextResponse.json({
         success: false,
         comments: [],
@@ -735,6 +695,7 @@ async function runLiveDiagnostic(
     const result = await fetchRecentInstagramComments({
       igUserId: account.igUserId,
       accessToken: account.accessToken,
+      pageAccessToken: account.pageAccessToken,
       limit: 5,
     });
     return NextResponse.json({

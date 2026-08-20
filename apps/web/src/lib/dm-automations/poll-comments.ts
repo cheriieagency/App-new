@@ -13,9 +13,8 @@ import {
   processCommentAutomationEvent,
   type IncomingCommentEvent,
 } from '@/lib/dm-automations/engine';
+import { fetchRecentInstagramComments } from '@/lib/dm-automations/fetch-instagram-comments';
 import { ensureSocialAccountsSchema } from '@/lib/social/persist';
-
-const GRAPH_BASE = 'https://graph.facebook.com/v21.0';
 
 export type PollCommentsResult = {
   workspacesScanned: number;
@@ -37,16 +36,10 @@ type PollAccount = {
   workspaceId: string;
   igUserId: string;
   pageId: string | null;
+  /** Instagram user / long-lived token. */
   accessToken: string;
-};
-
-type PolledComment = {
-  id: string;
-  text: string;
-  username: string | null;
-  fromId: string | null;
-  createdTime: string | null;
-  mediaId: string | null;
+  /** Facebook Page token (preferred for comments + private reply). */
+  pageAccessToken: string | null;
 };
 
 function pageTokenFromMeta(meta: unknown): string {
@@ -101,8 +94,8 @@ async function listPollTargets(workspaceIdFilter?: string): Promise<PollAccount[
     const igUserId = String(row.platform_user_id || '').trim();
     if (!workspaceId || !igUserId) continue;
 
-    const metaTok = pageTokenFromMeta(row.meta);
-    let accessToken = metaTok || String(row.access_token || '').trim();
+    const igUserToken = String(row.access_token || '').trim();
+    let pageAccessToken = pageTokenFromMeta(row.meta) || null;
     let pageId =
       row.page_id != null && String(row.page_id).trim()
         ? String(row.page_id).trim()
@@ -124,9 +117,9 @@ async function listPollTargets(workspaceIdFilter?: string): Promise<PollAccount[
         : [];
       for (const fb of fbList) {
         const fbMetaTok = pageTokenFromMeta(fb.meta);
-        if (fbMetaTok) accessToken = fbMetaTok;
-        else if (!metaTok && fb.access_token) {
-          accessToken = String(fb.access_token).trim();
+        if (fbMetaTok) pageAccessToken = fbMetaTok;
+        else if (!pageAccessToken && fb.access_token) {
+          pageAccessToken = String(fb.access_token).trim();
         }
         if (!pageId) {
           const cand =
@@ -134,97 +127,23 @@ async function listPollTargets(workspaceIdFilter?: string): Promise<PollAccount[
             String(fb.platform_user_id || '').trim();
           if (cand && !cand.startsWith('1784')) pageId = cand;
         }
-        if (accessToken && pageId) break;
+        if (pageAccessToken && pageId) break;
       }
     } catch {
-      /* keep IG token */
+      /* keep IG tokens */
     }
 
-    if (!accessToken) continue;
-    out.push({ workspaceId, igUserId, pageId, accessToken });
+    if (!pageAccessToken && !igUserToken) continue;
+    out.push({
+      workspaceId,
+      igUserId,
+      pageId,
+      accessToken: igUserToken,
+      pageAccessToken,
+    });
   }
 
   return out;
-}
-
-async function fetchRecentComments(input: {
-  igUserId: string;
-  accessToken: string;
-  mediaLimit?: number;
-}): Promise<{ comments: PolledComment[]; error?: string }> {
-  const mediaLimit = Math.min(Math.max(input.mediaLimit ?? 8, 1), 15);
-  const url = new URL(
-    `${GRAPH_BASE}/${encodeURIComponent(input.igUserId)}/media`
-  );
-  url.searchParams.set(
-    'fields',
-    'id,comments.limit(25){id,text,username,from,timestamp,created_time}'
-  );
-  url.searchParams.set('limit', String(mediaLimit));
-  url.searchParams.set('access_token', input.accessToken);
-
-  try {
-    const res = await fetch(url.toString());
-    const json = (await res.json().catch(() => ({}))) as {
-      data?: Array<{
-        id?: string;
-        comments?: {
-          data?: Array<{
-            id?: string;
-            text?: string;
-            username?: string;
-            from?: { id?: string; username?: string };
-            timestamp?: string;
-            created_time?: string;
-          }>;
-        };
-      }>;
-      error?: { message?: string };
-    };
-
-    if (!res.ok || json.error) {
-      return {
-        comments: [],
-        error:
-          json.error?.message ||
-          `media_comments_fetch_failed_${res.status}`,
-      };
-    }
-
-    const comments: PolledComment[] = [];
-    for (const media of json.data ?? []) {
-      for (const c of media.comments?.data ?? []) {
-        if (!c.id) continue;
-        comments.push({
-          id: String(c.id),
-          text: String(c.text || ''),
-          username:
-            (c.username && String(c.username)) ||
-            (c.from?.username && String(c.from.username)) ||
-            null,
-          fromId: c.from?.id ? String(c.from.id) : null,
-          createdTime:
-            (c.timestamp && String(c.timestamp)) ||
-            (c.created_time && String(c.created_time)) ||
-            null,
-          mediaId: media.id ? String(media.id) : null,
-        });
-      }
-    }
-
-    comments.sort((a, b) => {
-      const ta = a.createdTime ? Date.parse(a.createdTime) : 0;
-      const tb = b.createdTime ? Date.parse(b.createdTime) : 0;
-      return tb - ta;
-    });
-
-    return { comments };
-  } catch (error) {
-    return {
-      comments: [],
-      error: error instanceof Error ? error.message : 'network_error',
-    };
-  }
 }
 
 async function commentAlreadyHandled(commentId: string): Promise<boolean> {
@@ -254,7 +173,7 @@ function withinLookback(
 /**
  * Poll Instagram for recent comments and auto-run Comment-to-DM rules.
  * @param workspaceId Optional — limit to one workspace (admin UI).
- * @param lookbackMinutes Only process comments newer than this (default 45).
+ * @param lookbackMinutes Only process comments newer than this (default 180).
  */
 export async function pollAndProcessCommentAutomations(input?: {
   workspaceId?: string;
@@ -277,7 +196,7 @@ export async function pollAndProcessCommentAutomations(input?: {
   }
 
   const lookbackMs =
-    Math.max(5, input?.lookbackMinutes ?? 45) * 60 * 1000;
+    Math.max(5, input?.lookbackMinutes ?? 180) * 60 * 1000;
   const maxPerAccount = Math.min(
     Math.max(input?.maxCommentsPerAccount ?? 40, 5),
     80
@@ -288,14 +207,34 @@ export async function pollAndProcessCommentAutomations(input?: {
 
   for (const account of targets) {
     seenWs.add(account.workspaceId);
-    const fetched = await fetchRecentComments({
+    const fetched = await fetchRecentInstagramComments({
       igUserId: account.igUserId,
+      pageAccessToken: account.pageAccessToken,
       accessToken: account.accessToken,
+      mediaLimit: 20,
+      commentsPerMedia: 40,
+      maxComments: maxPerAccount,
     });
 
-    if (fetched.error) {
-      result.errors.push(`${account.workspaceId}: ${fetched.error}`);
+    if (!fetched.success) {
+      result.errors.push(
+        `${account.workspaceId}: ${fetched.error || 'comments_fetch_failed'}`
+      );
       continue;
+    }
+
+    if (fetched.comments.length === 0) {
+      console.warn('[dm-automations/poll] zero comments', {
+        workspaceId: account.workspaceId,
+        mediaScanned: fetched.mediaScanned,
+        tokenUsed: fetched.tokenUsed,
+        hasPageToken: Boolean(account.pageAccessToken),
+        hasIgToken: Boolean(account.accessToken),
+        hint: fetched.error || null,
+      });
+      if (fetched.error) {
+        result.errors.push(`${account.workspaceId}: ${fetched.error}`);
+      }
     }
 
     const batch = fetched.comments.slice(0, maxPerAccount);
@@ -377,6 +316,7 @@ export async function pollAndProcessCommentAutomations(input?: {
     matched: result.matched,
     sent: result.sent,
     errorCount: result.errors.length,
+    firstError: result.errors[0] || null,
   });
 
   return result;

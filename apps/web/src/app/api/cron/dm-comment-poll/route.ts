@@ -31,7 +31,7 @@ async function runCron() {
   }
 
   const result = await pollAndProcessCommentAutomations({
-    lookbackMinutes: 30,
+    lookbackMinutes: 180,
     maxCommentsPerAccount: 40,
   });
 

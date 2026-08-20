@@ -273,10 +273,24 @@ export default function DMAutomationPanel() {
         return;
       }
       const sent = Number(result.sent) || 0;
+      const fetched = Number(result.commentsFetched) || 0;
+      const errCount = Array.isArray(result.errors) ? result.errors.length : 0;
+      if (errCount > 0 && sent === 0) {
+        const first = result.errors?.[0] || result.error || 'Graph error';
+        const short = first.includes('No readable comments')
+          ? 'Auto-watch: Meta sees comments but API returns none — test from another IG account (or add Tester / go Live)'
+          : first.length > 120
+            ? `${first.slice(0, 117)}…`
+            : first;
+        setAutoWatchLabel(`Auto-watch issue: ${short}`);
+        return;
+      }
       setAutoWatchLabel(
         sent > 0
           ? `Auto-sent ${sent} DM${sent === 1 ? '' : 's'} — watching every 20s…`
-          : 'Auto-watching Instagram every 20s…'
+          : fetched > 0
+            ? `Saw ${fetched} recent comment${fetched === 1 ? '' : 's'} — watching every 20s…`
+            : 'Auto-watching Instagram every 20s…'
       );
       if (sent > 0) {
         toast.success(
@@ -774,16 +788,26 @@ export default function DMAutomationPanel() {
         success?: boolean;
         comments?: RecentIgComment[];
         error?: string;
+        metaError?: { message?: string };
       };
       if (!res.ok || json.success === false) {
-        throw new Error(json.error || t('toastFetchCommentsFailed', locale));
+        throw new Error(
+          json.error ||
+            json.metaError?.message ||
+            t('toastFetchCommentsFailed', locale)
+        );
       }
-      return Array.isArray(json.comments) ? json.comments : [];
+      return {
+        comments: Array.isArray(json.comments) ? json.comments : [],
+        warning: json.error || null,
+      };
     },
-    onSuccess: (comments) => {
+    onSuccess: ({ comments, warning }) => {
       setRecentComments(comments);
       if (comments.length === 0) {
-        toast.message(t('toastNoRecentIgComments', locale));
+        toast.message(
+          warning || t('toastNoRecentIgComments', locale)
+        );
         return;
       }
       toast.success(
@@ -910,6 +934,22 @@ export default function DMAutomationPanel() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setDevToolsOpen(true);
+                fetchCommentsMutation.mutate();
+              }}
+              disabled={fetchCommentsMutation.isPending}
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {fetchCommentsMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <RefreshCw size={16} />
+              )}
+              {t('dmFetchComments', locale)}
+            </button>
             <button
               type="button"
               onClick={() => resyncWebhooksMutation.mutate()}

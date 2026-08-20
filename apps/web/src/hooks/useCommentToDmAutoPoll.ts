@@ -15,6 +15,8 @@ export type CommentToDmPollResult = {
   ok?: boolean;
   sent?: number;
   matched?: number;
+  commentsFetched?: number;
+  errors?: string[];
   error?: string;
   message?: string;
   httpOk?: boolean;

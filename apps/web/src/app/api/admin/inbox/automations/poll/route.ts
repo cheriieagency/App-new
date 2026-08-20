@@ -130,7 +130,7 @@ export async function POST(request: Request) {
 
     const result = await pollAndProcessCommentAutomations({
       workspaceId: access.workspaceId,
-      lookbackMinutes: 30,
+      lookbackMinutes: 180,
       maxCommentsPerAccount: 40,
     });
 
