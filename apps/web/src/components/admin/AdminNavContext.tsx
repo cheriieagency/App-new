@@ -173,10 +173,10 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 
   const setSection = useCallback((s: AdminSection) => {
     setSectionState(s);
-    // Keep campaign/folder only on their own tabs — never nest setState updaters
-    // (React 19 runs those during render and history.replaceState then errors).
+    // Keep campaign only on Projects. Media folder selection is preserved while the
+    // Media Library panel stays mounted (keep-alive) so leaving Media does not
+    // null the folder and get yanked back by MediaLibraryPanel's auto-select effect.
     setActiveCampaignIdState((prev) => (s === 'projects' ? prev : null));
-    setActiveMediaFolderIdState((prev) => (s === 'media' ? prev : null));
     if (s !== 'projects') setCreateProjectOpenState(false);
     if (s !== 'media') setCreateMediaFolderOpenState(false);
     queueMicrotask(() => {

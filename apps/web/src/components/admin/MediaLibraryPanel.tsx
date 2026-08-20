@@ -69,6 +69,7 @@ export default function MediaLibraryPanel() {
   const { locale } = useLanguage();
   const { activeWorkspace } = useWorkspace();
   const {
+    section,
     activeMediaFolderId,
     setActiveMediaFolderId,
     createMediaFolderOpen,
@@ -139,11 +140,16 @@ export default function MediaLibraryPanel() {
       }
     : (folders.find((f) => f.id === activeId) as MediaFolder);
 
+  // Only auto-select Brand assets while Media is the active section.
+  // Media stays mounted (keep-alive) after first visit — without this guard,
+  // leaving Media clears folder id → this effect calls setActiveMediaFolderId
+  // → that setter forces section back to 'media' and navigation appears broken.
   useEffect(() => {
+    if (section !== 'media') return;
     if (!activeMediaFolderId) {
       setActiveMediaFolderId(MEDIA_LIBRARY_ROOT_ID);
     }
-  }, [activeMediaFolderId, setActiveMediaFolderId]);
+  }, [section, activeMediaFolderId, setActiveMediaFolderId]);
 
   useEffect(() => {
     setRenaming(false);
