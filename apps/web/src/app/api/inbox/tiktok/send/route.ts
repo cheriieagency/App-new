@@ -103,10 +103,11 @@ export async function POST(request: Request) {
     return Response.json({ error: 'recipient_required' }, { status: 400 });
   }
 
-  // Prefer tiktok_tokens (Business), fall back to social_accounts (Login Kit).
+  // Prefer Business token for DM automation.
   const bizToken = await getTikTokTokenForWorkspace({
     workspaceId,
     userId: session.user.id,
+    tokenSource: 'business',
   });
   const tokenRow =
     bizToken?.access_token

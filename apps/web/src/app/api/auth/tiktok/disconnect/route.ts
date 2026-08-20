@@ -1,6 +1,7 @@
 /**
  * POST /api/auth/tiktok/disconnect
- * Deletes the TikTok social_accounts row for session.user.id + active workspace.
+ * Disconnect TikTok Profile (`platform: tiktok`) and/or Business (`tiktok_business`)
+ * independently. Body: { workspaceId, kind?: 'profile' | 'business' | 'all', accountId? }
  */
 
 import { NextResponse } from 'next/server';
@@ -12,6 +13,15 @@ import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
 } from '@/lib/social/oauth-workspace';
+
+type DisconnectKind = 'profile' | 'business' | 'all';
+
+function resolveKind(raw: unknown): DisconnectKind {
+  const v = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+  if (v === 'profile' || v === 'login_kit' || v === 'posting') return 'profile';
+  if (v === 'business' || v === 'biz' || v === 'ads') return 'business';
+  return 'all';
+}
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -45,6 +55,17 @@ export async function POST(request: Request) {
       body.platform_user_id.trim()) ||
     null;
 
+  const kind = resolveKind(body.kind ?? body.connection ?? body.flow);
+  const platformHint =
+    typeof body.platform === 'string' ? body.platform.trim().toLowerCase() : '';
+
+  const effectiveKind: DisconnectKind =
+    platformHint === 'tiktok_business'
+      ? 'business'
+      : platformHint === 'tiktok'
+        ? 'profile'
+        : kind;
+
   if (!workspaceId && !accountId && !platformUserId) {
     return NextResponse.json(
       { error: 'workspaceId, accountId, or platformUserId required' },
@@ -53,44 +74,66 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await deleteSocialAccountRow({
-      userId: session.user.id,
-      accountId,
-      platform: 'tiktok',
-      platformUserId,
-      workspaceId,
-      preferWorkspaceScoped: Boolean(workspaceId),
-    });
+    const platforms: Array<'tiktok' | 'tiktok_business'> =
+      effectiveKind === 'profile'
+        ? ['tiktok']
+        : effectiveKind === 'business'
+          ? ['tiktok_business']
+          : ['tiktok', 'tiktok_business'];
+
+    const deletedIds: string[] = [];
+    let anyDeleted = false;
+
+    for (const platform of platforms) {
+      const result = await deleteSocialAccountRow({
+        userId: session.user.id,
+        accountId: platforms.length === 1 ? accountId : null,
+        platform,
+        platformUserId: platforms.length === 1 ? platformUserId : null,
+        workspaceId,
+        preferWorkspaceScoped: Boolean(workspaceId),
+      });
+      if (result.deleted) {
+        anyDeleted = true;
+        deletedIds.push(...(result.deletedIds || []));
+      }
+    }
 
     if (workspaceId) {
       try {
-        await deleteTikTokTokenForWorkspace({
-          workspaceId,
-          userId: session.user.id,
-        });
+        if (effectiveKind === 'profile') {
+          await deleteTikTokTokenForWorkspace({
+            workspaceId,
+            userId: session.user.id,
+            tokenSource: 'login_kit',
+          });
+        } else if (effectiveKind === 'business') {
+          await deleteTikTokTokenForWorkspace({
+            workspaceId,
+            userId: session.user.id,
+            tokenSource: 'business',
+          });
+        } else {
+          await deleteTikTokTokenForWorkspace({
+            workspaceId,
+            userId: session.user.id,
+          });
+        }
       } catch (tokenError) {
         console.warn('[tiktok/disconnect] tiktok_tokens delete skipped', tokenError);
       }
     }
 
-    // Already disconnected is success for the UI.
-    if (!result.deleted) {
-      return NextResponse.json({
-        success: true,
-        message: 'Account already disconnected',
-        deleted: false,
-        platform: 'tiktok',
-        workspaceId,
-      });
-    }
-
     return NextResponse.json({
       success: true,
-      message: 'Account disconnected successfully',
+      message: anyDeleted
+        ? 'Account disconnected successfully'
+        : 'Account already disconnected',
       ok: true,
-      deleted: true,
-      deletedIds: result.deletedIds,
-      platform: 'tiktok',
+      deleted: anyDeleted,
+      deletedIds,
+      platform: effectiveKind === 'business' ? 'tiktok_business' : 'tiktok',
+      kind: effectiveKind,
       workspaceId,
     });
   } catch (error) {

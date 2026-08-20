@@ -1,8 +1,9 @@
 /**
  * GET /api/auth/callback/tiktok
  * Handles both:
- *  - TikTok Business OAuth (`auth_code` → Business token API → tiktok_tokens)
- *  - Login Kit (`code` + PKCE → open.tiktokapis.com → social_accounts + tiktok_tokens)
+ *  - TikTok Business OAuth (`auth_code` → Business token → tiktok_business + tiktok_tokens)
+ *  - Login Kit profile (`code` + PKCE → tiktok + tiktok_tokens login_kit)
+ * Each connection is stored independently so both can coexist per workspace.
  */
 
 import { NextResponse } from 'next/server';
@@ -71,7 +72,7 @@ export async function GET(request: Request) {
     if (detail) dest.searchParams.set('detail', detail.slice(0, 160));
     const res = oauthPopupCompleteResponse({
       success: false,
-      platform: 'tiktok',
+      platform: isBusinessFlow ? 'tiktok_business' : 'tiktok',
       error: reason,
       detail: detail || undefined,
       continueHref: `${dest.pathname}${dest.search}`,
@@ -124,6 +125,9 @@ export async function GET(request: Request) {
         tokens.open_id ||
         tokens.advertiser_ids?.[0] ||
         `biz_${userId.slice(0, 8)}`;
+      const scopeStr = Array.isArray(tokens.scope)
+        ? tokens.scope.join(',')
+        : tokens.scope?.toString() || 'business';
 
       await upsertTikTokToken({
         workspaceId: ownedWorkspaceId,
@@ -137,9 +141,10 @@ export async function GET(request: Request) {
         expiresIn: tokens.expires_in ?? 24 * 60 * 60,
       });
 
+      // Independent social_accounts row — does not overwrite profile (tiktok).
       await upsertOAuthSocialAccount({
         userId,
-        platform: 'tiktok',
+        platform: 'tiktok_business',
         externalId: openId,
         handle: '@tiktok_business',
         displayName: 'TikTok Business',
@@ -149,15 +154,13 @@ export async function GET(request: Request) {
         refreshToken: tokens.refresh_token ?? null,
         expiresIn: tokens.expires_in ?? 24 * 60 * 60,
         workspaceId: ownedWorkspaceId,
-        scope: Array.isArray(tokens.scope)
-          ? tokens.scope.join(',')
-          : tokens.scope?.toString() || 'business',
+        scope: scopeStr,
       });
     } else {
       const codeVerifier = jar.get(TIKTOK_CODE_VERIFIER_COOKIE)?.value?.trim();
       if (!codeVerifier) return fail('missing_code_verifier');
 
-      console.info('[tiktok/callback] login kit exchange', {
+      console.info('[tiktok/callback] login kit (profile) exchange', {
         redirect_uri: getTikTokCallbackUrl(origin),
       });
 
@@ -183,6 +186,7 @@ export async function GET(request: Request) {
         expiresIn: tokens.expires_in ?? null,
       });
 
+      // Independent social_accounts row — does not overwrite business.
       await upsertOAuthSocialAccount({
         userId,
         platform: 'tiktok',
@@ -200,14 +204,17 @@ export async function GET(request: Request) {
     }
 
     const dest = new URL(successPath, origin);
-    dest.searchParams.set('success', 'tiktok_connected');
+    dest.searchParams.set(
+      'success',
+      isBusinessFlow ? 'tiktok_business_connected' : 'tiktok_connected'
+    );
     if (!isBusinessFlow && !tikTokHasPostingScope(loginKitScope)) {
       dest.searchParams.set('warning', 'tiktok_no_publish_scope');
       dest.searchParams.set('detail', loginKitScope || 'none');
     }
     const res = oauthPopupCompleteResponse({
       success: true,
-      platform: 'tiktok',
+      platform: isBusinessFlow ? 'tiktok_business' : 'tiktok',
       continueHref: `${dest.pathname}${dest.search}`,
     });
     clearOAuthCookies(res);

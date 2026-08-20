@@ -1,6 +1,6 @@
 /**
  * GET /api/auth/tiktok/login
- * Legacy alias → Business OAuth entry at /api/auth/tiktok
+ * Legacy alias → TikTok Profile (Login Kit) OAuth.
  */
 
-export { GET } from '@/app/api/auth/tiktok/route';
+export { GET } from '@/app/api/auth/tiktok/profile/route';

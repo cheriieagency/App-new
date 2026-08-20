@@ -1,10 +1,13 @@
 /**
- * Persist TikTok Business / Login Kit tokens in `tiktok_tokens`.
+ * Persist TikTok profile (Login Kit) and Business tokens independently.
+ * Unique key: (workspace_id, user_id, token_source)
  */
 
 import sql from '@/app/api/utils/sql';
 
 let schemaReady: Promise<void> | null = null;
+
+export type TikTokTokenSource = 'business' | 'login_kit' | 'mock';
 
 export type TikTokTokenRow = {
   id: string;
@@ -15,7 +18,7 @@ export type TikTokTokenRow = {
   refresh_token: string | null;
   advertiser_ids: string[];
   scope: string | null;
-  token_source: 'business' | 'login_kit' | 'mock';
+  token_source: TikTokTokenSource;
   expires_at: string | null;
   updated_at: string;
 };
@@ -41,9 +44,11 @@ export async function ensureTikTokTokensSchema(): Promise<void> {
         updated_at      timestamptz NOT NULL DEFAULT now()
       )
     `;
+    // Migrate legacy unique (workspace, user) → (workspace, user, token_source)
+    await sql`DROP INDEX IF EXISTS public.tiktok_tokens_ws_user_uidx`;
     await sql`
-      CREATE UNIQUE INDEX IF NOT EXISTS tiktok_tokens_ws_user_uidx
-        ON public.tiktok_tokens (workspace_id, user_id)
+      CREATE UNIQUE INDEX IF NOT EXISTS tiktok_tokens_ws_user_source_uidx
+        ON public.tiktok_tokens (workspace_id, user_id, token_source)
     `;
     await sql`
       CREATE INDEX IF NOT EXISTS tiktok_tokens_open_id_idx
@@ -66,7 +71,7 @@ export async function upsertTikTokToken(input: {
   refreshToken?: string | null;
   advertiserIds?: string[];
   scope?: string | string[] | null;
-  tokenSource: 'business' | 'login_kit' | 'mock';
+  tokenSource: TikTokTokenSource;
   expiresIn?: number | null;
 }): Promise<TikTokTokenRow | null> {
   if (!process.env.DATABASE_URL?.trim()) return null;
@@ -98,13 +103,12 @@ export async function upsertTikTokToken(input: {
       ${expiresAt},
       now()
     )
-    ON CONFLICT (workspace_id, user_id) DO UPDATE SET
+    ON CONFLICT (workspace_id, user_id, token_source) DO UPDATE SET
       open_id = COALESCE(EXCLUDED.open_id, public.tiktok_tokens.open_id),
       access_token = EXCLUDED.access_token,
       refresh_token = COALESCE(EXCLUDED.refresh_token, public.tiktok_tokens.refresh_token),
       advertiser_ids = EXCLUDED.advertiser_ids,
       scope = COALESCE(EXCLUDED.scope, public.tiktok_tokens.scope),
-      token_source = EXCLUDED.token_source,
       expires_at = EXCLUDED.expires_at,
       updated_at = now()
     RETURNING id, workspace_id, user_id, open_id, access_token, refresh_token,
@@ -116,17 +120,19 @@ export async function upsertTikTokToken(input: {
   return mapTokenRow(row);
 }
 
-/** Write refreshed Login Kit tokens to both `tiktok_tokens` and `social_accounts`. */
+/** Write refreshed Login Kit (profile) tokens to tiktok_tokens + social_accounts.tiktok. */
 export async function persistRefreshedTikTokTokens(input: {
   userId: string;
   workspaceId: string;
   accessToken: string;
   refreshToken?: string | null;
   expiresIn?: number | null;
+  tokenSource?: TikTokTokenSource;
 }): Promise<void> {
   if (!process.env.DATABASE_URL?.trim()) return;
   await ensureTikTokTokensSchema();
 
+  const source = input.tokenSource ?? 'login_kit';
   const expiresAt =
     typeof input.expiresIn === 'number' && input.expiresIn > 0
       ? new Date(Date.now() + input.expiresIn * 1000).toISOString()
@@ -141,11 +147,13 @@ export async function persistRefreshedTikTokTokens(input: {
           updated_at = now()
       WHERE workspace_id = ${input.workspaceId}
         AND user_id = ${input.userId}
+        AND token_source = ${source}
     `;
   } catch (error) {
     console.warn('[tiktok] tiktok_tokens refresh persist failed', error);
   }
 
+  const socialPlatform = source === 'business' ? 'tiktok_business' : 'tiktok';
   try {
     await sql`
       UPDATE public.social_accounts
@@ -155,7 +163,7 @@ export async function persistRefreshedTikTokTokens(input: {
           updated_at = now()
       WHERE user_id::text = ${input.userId}
         AND workspace_id::text = ${input.workspaceId}
-        AND platform = 'tiktok'
+        AND platform = ${socialPlatform}
     `;
   } catch (error) {
     console.warn('[tiktok] social_accounts refresh persist failed', error);
@@ -165,9 +173,20 @@ export async function persistRefreshedTikTokTokens(input: {
 export async function deleteTikTokTokenForWorkspace(input: {
   workspaceId: string;
   userId: string;
+  /** When omitted, deletes all TikTok token rows for the workspace/user. */
+  tokenSource?: TikTokTokenSource | null;
 }): Promise<void> {
   if (!process.env.DATABASE_URL?.trim()) return;
   await ensureTikTokTokensSchema();
+  if (input.tokenSource) {
+    await sql`
+      DELETE FROM public.tiktok_tokens
+      WHERE workspace_id = ${input.workspaceId}
+        AND user_id = ${input.userId}
+        AND token_source = ${input.tokenSource}
+    `;
+    return;
+  }
   await sql`
     DELETE FROM public.tiktok_tokens
     WHERE workspace_id = ${input.workspaceId}
@@ -178,9 +197,35 @@ export async function deleteTikTokTokenForWorkspace(input: {
 export async function getTikTokTokenForWorkspace(input: {
   workspaceId: string;
   userId?: string | null;
+  /** Prefer a specific connection; defaults to newest row. */
+  tokenSource?: TikTokTokenSource | null;
 }): Promise<TikTokTokenRow | null> {
   if (!process.env.DATABASE_URL?.trim()) return null;
   await ensureTikTokTokensSchema();
+
+  if (input.tokenSource) {
+    const rows = input.userId
+      ? await sql`
+          SELECT id, workspace_id, user_id, open_id, access_token, refresh_token,
+                 advertiser_ids, scope, token_source, expires_at, updated_at
+          FROM public.tiktok_tokens
+          WHERE workspace_id = ${input.workspaceId}
+            AND user_id = ${input.userId}
+            AND token_source = ${input.tokenSource}
+          LIMIT 1
+        `
+      : await sql`
+          SELECT id, workspace_id, user_id, open_id, access_token, refresh_token,
+                 advertiser_ids, scope, token_source, expires_at, updated_at
+          FROM public.tiktok_tokens
+          WHERE workspace_id = ${input.workspaceId}
+            AND token_source = ${input.tokenSource}
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `;
+    const row = rows?.[0] as Record<string, unknown> | undefined;
+    return row ? mapTokenRow(row) : null;
+  }
 
   const rows = input.userId
     ? await sql`
@@ -189,6 +234,13 @@ export async function getTikTokTokenForWorkspace(input: {
         FROM public.tiktok_tokens
         WHERE workspace_id = ${input.workspaceId}
           AND user_id = ${input.userId}
+        ORDER BY
+          CASE token_source
+            WHEN 'login_kit' THEN 0
+            WHEN 'business' THEN 1
+            ELSE 2
+          END,
+          updated_at DESC
         LIMIT 1
       `
     : await sql`
@@ -202,6 +254,33 @@ export async function getTikTokTokenForWorkspace(input: {
 
   const row = rows?.[0] as Record<string, unknown> | undefined;
   return row ? mapTokenRow(row) : null;
+}
+
+export async function listTikTokTokensForWorkspace(input: {
+  workspaceId: string;
+  userId?: string | null;
+}): Promise<TikTokTokenRow[]> {
+  if (!process.env.DATABASE_URL?.trim()) return [];
+  await ensureTikTokTokensSchema();
+
+  const rows = input.userId
+    ? await sql`
+        SELECT id, workspace_id, user_id, open_id, access_token, refresh_token,
+               advertiser_ids, scope, token_source, expires_at, updated_at
+        FROM public.tiktok_tokens
+        WHERE workspace_id = ${input.workspaceId}
+          AND user_id = ${input.userId}
+        ORDER BY updated_at DESC
+      `
+    : await sql`
+        SELECT id, workspace_id, user_id, open_id, access_token, refresh_token,
+               advertiser_ids, scope, token_source, expires_at, updated_at
+        FROM public.tiktok_tokens
+        WHERE workspace_id = ${input.workspaceId}
+        ORDER BY updated_at DESC
+      `;
+
+  return (rows || []).map((r) => mapTokenRow(r as Record<string, unknown>));
 }
 
 function mapTokenRow(row: Record<string, unknown>): TikTokTokenRow {

@@ -1021,6 +1021,9 @@ export type ExtraKey =
   | 'resyncMetaWebhooks'
   | 'connectTikTokTitle'
   | 'connectTikTokSub'
+  | 'connectTikTokProfile'
+  | 'connectTikTokProfileSub'
+  | 'connectTikTokBusinessSub'
   | 'demoModeSimulatedTitle'
   | 'demoModeSimulatedSub'
   // Planner / workspace create
@@ -2386,7 +2389,10 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   resyncMetaWebhooks: 'Re-sync Meta Webhooks',
   connectTikTokTitle: 'Connect TikTok Account',
   connectTikTokSub:
-    'Link TikTok Business for ads, inbox, and advertiser access. After connecting, your account status shows here.',
+    'Connect your TikTok Profile for posting & analytics, and TikTok Business for DMs & ads — independently.',
+  connectTikTokProfile: 'Connect TikTok Profile',
+  connectTikTokProfileSub: 'Posting & Analytics (Login Kit)',
+  connectTikTokBusinessSub: 'DMs & Ads (Business API)',
   demoModeSimulatedTitle: 'Demo Mode — simulated OAuth',
   demoModeSimulatedSub:
     'Turn Demo Mode off to use live Instagram, Facebook, TikTok, YouTube, LinkedIn, and Pinterest connections.',
@@ -3755,7 +3761,10 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   resyncMetaWebhooks: 'Synka om Meta-webhooks',
   connectTikTokTitle: 'Koppla TikTok-konto',
   connectTikTokSub:
-    'Länka TikTok Business för annonser, inbox och annonsörsåtkomst. Efter anslutning visas kontostatus här.',
+    'Koppla TikTok-profil för publicering & analys, och TikTok Business för DM & annonser — oberoende av varandra.',
+  connectTikTokProfile: 'Koppla TikTok-profil',
+  connectTikTokProfileSub: 'Publicering & analys (Login Kit)',
+  connectTikTokBusinessSub: 'DM & annonser (Business API)',
   demoModeSimulatedTitle: 'Demoläge — simulerad OAuth',
   demoModeSimulatedSub:
     'Stäng demoläge för att använda live Instagram, Facebook, TikTok, YouTube, LinkedIn och Pinterest.',

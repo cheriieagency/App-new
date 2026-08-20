@@ -122,15 +122,20 @@ function formatCount(n: number, language: ReturnType<typeof useLanguage>['langua
   return n.toLocaleString(localeTag(language));
 }
 
-/** Account label shown under a Connected quick-action button. */
 function ConnectedAccountChip({
   account,
 }: {
   account: ConnectedSocialAccount;
 }) {
   const platformLabel =
-    PLATFORM_META[account.platform]?.label ||
-    account.platform.charAt(0).toUpperCase() + account.platform.slice(1);
+    account.platform === 'tiktok_business'
+      ? 'TikTok Business'
+      : account.platform === 'tiktok'
+        ? account.tiktok_connection === 'profile'
+          ? 'TikTok Profile'
+          : PLATFORM_META.tiktok?.label || 'TikTok'
+        : PLATFORM_META[account.platform as SocialPlatform]?.label ||
+          account.platform.charAt(0).toUpperCase() + account.platform.slice(1);
   const label =
     account.display_name ||
     account.handle ||
@@ -150,7 +155,7 @@ function ConnectedAccountChip({
         />
       ) : (
         <span className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center flex-shrink-0 text-[10px] font-extrabold text-emerald-700 uppercase">
-          {account.platform.slice(0, 2)}
+          {account.platform === 'tiktok_business' ? 'TB' : account.platform.slice(0, 2)}
         </span>
       )}
       <div className="min-w-0">
@@ -214,7 +219,12 @@ function ConnectOrConnectedButton({
         >
           <CheckCircle2 size={16} strokeWidth={2.5} />
           Connected ·{' '}
-          {PLATFORM_META[account.platform]?.label || account.platform}
+          {account.platform === 'tiktok_business'
+            ? 'TikTok Business'
+            : account.platform === 'tiktok'
+              ? 'TikTok Profile'
+              : PLATFORM_META[account.platform as SocialPlatform]?.label ||
+                account.platform}
         </button>
         <ConnectedAccountChip account={account} />
         {onDisconnect ? (
@@ -498,7 +508,7 @@ export default function SocialAccountsPanel({
       return;
     }
     if (platform === 'tiktok') {
-      startTikTokOAuth(true);
+      startTikTokOAuth('profile', true);
       return;
     }
     if (platform === 'pinterest') {
@@ -587,6 +597,7 @@ export default function SocialAccountsPanel({
         'youtube',
         'linkedin',
         'tiktok',
+        'tiktok_business',
         'pinterest',
         'google',
       ]);
@@ -594,17 +605,25 @@ export default function SocialAccountsPanel({
       if (livePlatforms.has(account.platform)) {
         const workspaceId =
           account.workspace_id || activeWorkspaceId || undefined;
+        const kind =
+          account.platform === 'tiktok_business'
+            ? 'business'
+            : account.platform === 'tiktok'
+              ? 'profile'
+              : undefined;
         const body = {
           accountId: account.id ?? undefined,
           platform: account.platform,
+          kind,
           platformUserId:
             account.platform_user_id || account.external_id || undefined,
           workspaceId,
         };
 
-        // TikTok: dedicated route first (workspace-scoped), then shared disconnect.
+        // TikTok dual connections: dedicated route first (workspace-scoped).
         let res =
-          account.platform === 'tiktok'
+          account.platform === 'tiktok' ||
+          account.platform === 'tiktok_business'
             ? await fetch('/api/auth/tiktok/disconnect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -683,32 +702,36 @@ export default function SocialAccountsPanel({
     await handleDisconnect(account);
   };
 
-  const tiktokLoginUrl = (force = true, flow: 'business' | 'login_kit' | 'auto' = 'auto') => {
-    const params = new URLSearchParams();
-    if (force) params.set('force', 'true');
-    if (flow !== 'auto') params.set('flow', flow);
-    const qs = params.toString();
-    return withWorkspaceQuery(
-      qs ? `/api/auth/tiktok?${qs}` : '/api/auth/tiktok',
-      activeWorkspaceId
-    );
+  const tiktokAuthUrl = (
+    kind: 'profile' | 'business',
+    force = true
+  ) => {
+    const path =
+      kind === 'business'
+        ? '/api/auth/tiktok/business'
+        : '/api/auth/tiktok/profile';
+    const withForce = force ? `${path}?force=true` : path;
+    return withWorkspaceQuery(withForce, activeWorkspaceId);
   };
 
   const startTikTokOAuth = (
-    force = true,
-    flow: 'business' | 'login_kit' | 'auto' = 'auto'
+    kind: 'profile' | 'business',
+    force = true
   ) => {
     if (!activeWorkspaceId) {
       toast.error(t('toastSelectWorkspaceBeforeConnect'));
       setIsSwitchingTikTok(false);
       return;
     }
-    void handleConnectPlatform('TikTok', tiktokLoginUrl(force, flow));
+    const label =
+      kind === 'business' ? 'TikTok Business' : 'TikTok Profile';
+    void handleConnectPlatform(label, tiktokAuthUrl(kind, force));
   };
 
-  /** Disconnect current TikTok row, then OAuth with forced account chooser. */
+  /** Disconnect current TikTok connection, then re-open OAuth for that kind. */
   const handleTikTokSwitchAccount = async (
-    currentAccount?: ConnectedSocialAccount | null
+    currentAccount?: ConnectedSocialAccount | null,
+    kind: 'profile' | 'business' = 'profile'
   ) => {
     try {
       setIsSwitchingTikTok(true);
@@ -725,12 +748,14 @@ export default function SocialAccountsPanel({
         null;
       const workspaceId =
         currentAccount?.workspace_id || activeWorkspaceId || undefined;
+      const platform =
+        kind === 'business' ? ('tiktok_business' as const) : ('tiktok' as const);
 
-      // 1) Clear existing TikTok row for this user/workspace (best-effort).
       if (currentAccount?.connected) {
         const body = {
           accountId: accountId || undefined,
-          platform: 'tiktok' as const,
+          platform,
+          kind,
           platformUserId: platformUserId || undefined,
           workspaceId,
         };
@@ -754,7 +779,7 @@ export default function SocialAccountsPanel({
         if (res.ok || res.status === 404) {
           markDisconnectedInCache({
             ...currentAccount,
-            platform: 'tiktok',
+            platform,
             connected: true,
           });
           await Promise.all([
@@ -766,11 +791,9 @@ export default function SocialAccountsPanel({
           setIsSwitchingTikTok(false);
           return;
         }
-        // Non-404 failures: still continue to OAuth so the user can re-link.
       }
 
-      // 2) Force TikTok Business authorization UI.
-      startTikTokOAuth(true, 'business');
+      startTikTokOAuth(kind, true);
     } catch (err) {
       console.error('[TikTok Switch Error]', err);
       toast.error(t('toastTikTokSwitchFailed'));
@@ -934,9 +957,10 @@ export default function SocialAccountsPanel({
 
       {!compact && (
         <div className="space-y-3 sm:space-y-4">
-          <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3 w-full">
+          <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-4 w-full">
             <div className="min-w-0">
-              <p className="text-sm font-extrabold text-slate-900">
+              <p className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <TikTokIcon size={16} />
                 {t('connectTikTokTitle')}
               </p>
               <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
@@ -946,25 +970,93 @@ export default function SocialAccountsPanel({
                 {t('socials.workspaceGuidePerWorkspace')}
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
-              <ConnectOrConnectedButton
-                connected={Boolean(byPlatform.get('tiktok')?.connected)}
-                account={byPlatform.get('tiktok') ?? null}
-                onConnect={() => startTikTokOAuth(true, 'business')}
-                onDisconnect={() =>
-                  setDisconnectTarget(byPlatform.get('tiktok') ?? null)
-                }
-                onSwitchAccount={() =>
-                  void handleTikTokSwitchAccount(byPlatform.get('tiktok'))
-                }
-                disconnectLabel={t('socials.disconnectAccount')}
-                switchLabel={t('socials.switchAccount')}
-                switchBusy={isSwitchingTikTok}
-                idleLabel="Connect TikTok Account"
-                idleClassName="bg-[#0F172A] hover:bg-[#1e293b]"
-                icon={<TikTokIcon size={16} />}
-                connectBusy={connectingPlatform === 'TikTok'}
-              />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Profile — Login Kit */}
+              <div className="rounded-2xl border border-slate-100 bg-[#FAFAFA] px-3.5 py-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-extrabold text-slate-900">
+                      {t('connectTikTokProfile')}
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      {t('connectTikTokProfileSub')}
+                    </p>
+                  </div>
+                  {byPlatform.get('tiktok')?.connected ? (
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 text-[10px] font-extrabold">
+                      <CheckCircle2 size={12} strokeWidth={2.5} />
+                      Connected
+                    </span>
+                  ) : null}
+                </div>
+                <ConnectOrConnectedButton
+                  connected={Boolean(byPlatform.get('tiktok')?.connected)}
+                  account={byPlatform.get('tiktok') ?? null}
+                  onConnect={() => startTikTokOAuth('profile', true)}
+                  onDisconnect={() =>
+                    setDisconnectTarget(byPlatform.get('tiktok') ?? null)
+                  }
+                  onSwitchAccount={() =>
+                    void handleTikTokSwitchAccount(
+                      byPlatform.get('tiktok'),
+                      'profile'
+                    )
+                  }
+                  disconnectLabel={t('socials.disconnectAccount')}
+                  switchLabel={t('socials.switchAccount')}
+                  switchBusy={isSwitchingTikTok}
+                  idleLabel={t('connectTikTokProfile')}
+                  idleClassName="bg-[#0F172A] hover:bg-[#1e293b]"
+                  icon={<TikTokIcon size={16} />}
+                  connectBusy={connectingPlatform === 'TikTok Profile'}
+                />
+              </div>
+
+              {/* Business — Marketing / DMs / Ads */}
+              <div className="rounded-2xl border border-slate-100 bg-[#FAFAFA] px-3.5 py-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-extrabold text-slate-900">
+                      {t('connectTikTokBusiness')}
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      {t('connectTikTokBusinessSub')}
+                    </p>
+                  </div>
+                  {byPlatform.get('tiktok_business')?.connected ? (
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 text-[10px] font-extrabold">
+                      <CheckCircle2 size={12} strokeWidth={2.5} />
+                      Connected
+                    </span>
+                  ) : null}
+                </div>
+                <ConnectOrConnectedButton
+                  connected={Boolean(
+                    byPlatform.get('tiktok_business')?.connected
+                  )}
+                  account={byPlatform.get('tiktok_business') ?? null}
+                  onConnect={() => startTikTokOAuth('business', true)}
+                  onDisconnect={() =>
+                    setDisconnectTarget(
+                      byPlatform.get('tiktok_business') ?? null
+                    )
+                  }
+                  onSwitchAccount={() =>
+                    void handleTikTokSwitchAccount(
+                      byPlatform.get('tiktok_business'),
+                      'business'
+                    )
+                  }
+                  disconnectLabel={t('socials.disconnectAccount')}
+                  switchLabel={t('socials.switchAccount')}
+                  switchBusy={isSwitchingTikTok}
+                  idleLabel={t('connectTikTokBusiness')}
+                  idleClassName="bg-[#2B2568] hover:bg-[#1a1848]"
+                  icon={<TikTokIcon size={16} />}
+                  connectBusy={connectingPlatform === 'TikTok Business'}
+                />
+              </div>
             </div>
           </div>
 

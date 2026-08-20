@@ -4,7 +4,11 @@
  */
 
 import sql from '@/app/api/utils/sql';
-import type { ConnectedSocialAccount, SocialPlatform } from '@/lib/mock-content-planner';
+import type {
+  ConnectedAccountPlatform,
+  ConnectedSocialAccount,
+  SocialPlatform,
+} from '@/lib/mock-content-planner';
 import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
@@ -23,8 +27,14 @@ export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   'pinterest',
 ];
 
-/** Content platforms + Google (Drive/Calendar/Meet integration). */
-export type PersistablePlatform = SocialPlatform | 'google';
+/** All connectable account platforms returned to Settings (includes TikTok Business). */
+export const CONNECTED_ACCOUNT_PLATFORMS: ConnectedAccountPlatform[] = [
+  ...SOCIAL_PLATFORMS,
+  'tiktok_business',
+];
+
+/** Content platforms + Google + TikTok Business (DMs/Ads) connection. */
+export type PersistablePlatform = SocialPlatform | 'google' | 'tiktok_business';
 
 export type UpsertSocialAccountRow = {
   userId: string;
@@ -125,7 +135,8 @@ export async function ensureSocialAccountsSchema(): Promise<void> {
         ALTER TABLE public.social_accounts
           ADD CONSTRAINT social_accounts_platform_check
           CHECK (platform IN (
-            'instagram', 'facebook', 'tiktok', 'linkedin', 'youtube', 'pinterest', 'google'
+            'instagram', 'facebook', 'tiktok', 'tiktok_business',
+            'linkedin', 'youtube', 'pinterest', 'google'
           ))
       `;
     } catch (error) {
@@ -244,7 +255,7 @@ export async function upsertSocialAccountRow(
   `;
 
   return {
-    platform: input.platform as SocialPlatform,
+    platform: input.platform as ConnectedSocialAccount['platform'],
     connected: true,
     handle,
     display_name: displayName,
@@ -257,6 +268,12 @@ export async function upsertSocialAccountRow(
     external_id: input.platformUserId,
     platform_user_id: input.platformUserId,
     workspace_id: boundWorkspaceId,
+    tiktok_connection:
+      input.platform === 'tiktok_business'
+        ? 'business'
+        : input.platform === 'tiktok'
+          ? 'profile'
+          : null,
   };
 }
 
@@ -280,7 +297,7 @@ function disconnectedStub(platform: SocialPlatform): ConnectedSocialAccount {
 }
 
 function mapRow(raw: Record<string, unknown>): ConnectedSocialAccount {
-  const platform = raw.platform as SocialPlatform;
+  const platform = raw.platform as ConnectedSocialAccount['platform'];
   const meta =
     raw.meta && typeof raw.meta === 'object'
       ? (raw.meta as Record<string, unknown>)
@@ -329,6 +346,12 @@ function mapRow(raw: Record<string, unknown>): ConnectedSocialAccount {
     platform_user_id: externalId || null,
     workspace_id:
       raw.workspace_id != null ? String(raw.workspace_id) : null,
+    tiktok_connection:
+      platform === 'tiktok_business'
+        ? 'business'
+        : platform === 'tiktok'
+          ? 'profile'
+          : null,
   };
 }
 
@@ -416,19 +439,27 @@ export async function listLiveSocialAccountsForUser(input: {
       }
     }
 
-    const byPlatform = new Map<SocialPlatform, ConnectedSocialAccount>();
+    const byPlatform = new Map<ConnectedAccountPlatform, ConnectedSocialAccount>();
     if (Array.isArray(rows)) {
       for (const raw of rows as Array<Record<string, unknown>>) {
-        const platform = raw.platform as SocialPlatform;
-        if (!platform || !SOCIAL_PLATFORMS.includes(platform)) continue;
+        const platform = raw.platform as ConnectedAccountPlatform;
+        if (
+          !platform ||
+          !CONNECTED_ACCOUNT_PLATFORMS.includes(platform)
+        ) {
+          continue;
+        }
         if (byPlatform.has(platform)) continue;
         byPlatform.set(platform, mapRow(raw));
       }
     }
 
-    return SOCIAL_PLATFORMS.map(
+    // Base platforms always present (connected or stub); append TikTok Business when linked.
+    const base = SOCIAL_PLATFORMS.map(
       (platform) => byPlatform.get(platform) ?? disconnectedStub(platform)
     );
+    const business = byPlatform.get('tiktok_business');
+    return business ? [...base, business] : base;
   } catch (error) {
     console.error('[social/persist] list failed', error);
     return SOCIAL_PLATFORMS.map(disconnectedStub);

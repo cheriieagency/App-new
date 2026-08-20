@@ -13,6 +13,9 @@ export type SocialPlatform =
   | 'facebook'
   | 'pinterest';
 
+/** Platforms shown in Connected Accounts (includes TikTok Business row). */
+export type ConnectedAccountPlatform = SocialPlatform | 'tiktok_business' | 'google';
+
 export type ContentTone = 'inspirerande' | 'professionell' | 'saljig' | 'casual';
 
 /** Legacy status used by older admin composer. */
@@ -139,7 +142,7 @@ export type CampaignLabel = {
 };
 
 export type ConnectedSocialAccount = {
-  platform: SocialPlatform;
+  platform: ConnectedAccountPlatform;
   connected: boolean;
   handle: string | null;
   display_name: string | null;
@@ -160,6 +163,8 @@ export type ConnectedSocialAccount = {
   platform_user_id?: string | null;
   /** Workspace this connection is bound to. */
   workspace_id?: string | null;
+  /** TikTok dual-connect: profile (Login Kit) vs business. */
+  tiktok_connection?: 'profile' | 'business' | null;
 };
 
 export type AiContentIdea = {

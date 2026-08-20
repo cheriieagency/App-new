@@ -14,6 +14,7 @@ export type OAuthSocialPlatform =
   | 'youtube'
   | 'linkedin'
   | 'tiktok'
+  | 'tiktok_business'
   | 'instagram'
   | 'facebook'
   | 'pinterest'

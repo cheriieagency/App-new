@@ -107,16 +107,17 @@ async function loadTikTokPublishToken(
   expiresAt: string | null;
   scope: string | null;
 } | null> {
-  const stored = await getTikTokTokenForWorkspace({ workspaceId, userId });
+  const stored = await getTikTokTokenForWorkspace({
+    workspaceId,
+    userId,
+    tokenSource: 'login_kit',
+  });
   const social = await getTikTokAccessTokenForWorkspace({ workspaceId, userId });
 
   const usable = (token?: string | null) =>
     Boolean(token?.trim()) && !token!.startsWith('mock_');
 
-  if (
-    stored?.token_source === 'login_kit' &&
-    usable(stored.access_token)
-  ) {
+  if (stored && usable(stored.access_token)) {
     return {
       accessToken: stored.access_token,
       refreshToken: stored.refresh_token,
@@ -131,15 +132,6 @@ async function loadTikTokPublishToken(
       refreshToken: social!.refreshToken,
       expiresAt: social!.expiresAt,
       scope: stored?.scope ?? null,
-    };
-  }
-
-  if (stored && stored.token_source !== 'business' && usable(stored.access_token)) {
-    return {
-      accessToken: stored.access_token,
-      refreshToken: stored.refresh_token,
-      expiresAt: stored.expires_at,
-      scope: stored.scope,
     };
   }
 
