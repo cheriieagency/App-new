@@ -436,8 +436,8 @@ export async function fetchRecentInstagramComments(input: {
     if (comments.length === 0) {
       const countHint =
         (media.commentsCountSum || 0) > 0
-          ? ` Meta sees ${media.commentsCountSum} comment(s) but the API returns none. Usually: (1) comment from another IG account — not the business profile itself, (2) Meta app is in Development mode — add that commenter as a Tester, or go Live with instagram_manage_comments Advanced Access.`
-          : ' Comment a keyword from a different Instagram account on a recent post, or reconnect Instagram with comment permissions.';
+          ? ` Meta sees ${media.commentsCountSum} comment(s) on your Reel/post but hides the text. Your token permissions are fine — the Meta app is in Development mode (or the permission is only Standard Access). Fix: Meta Developer → App → switch App Mode to Live, and ensure instagram_manage_comments has Advanced Access. For a quick test without going Live: App Roles → add the commenter’s Facebook account as Tester, accept the invite, then comment again from that Instagram.`
+          : ' Comment a keyword from a different Instagram account on a recent post.';
       lastError = edgeErrors[0] || `No readable comments.${countHint}`;
       if (i < attempts.length - 1) continue;
 

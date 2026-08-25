@@ -208,6 +208,12 @@ export default function DMAutomationPanel() {
   const [autoWatchLabel, setAutoWatchLabel] = useState(
     'Auto-watching Instagram every 20s…'
   );
+  /** True when Meta counts comments but API returns none (app not Live / no Advanced Access). */
+  const [metaCommentsBlocked, setMetaCommentsBlocked] = useState(false);
+  const metaAppDashboardUrl =
+    'https://developers.facebook.com/apps/1891008578454284/settings/basic/';
+  const metaAppRolesUrl =
+    'https://developers.facebook.com/apps/1891008578454284/roles/roles/';
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -277,14 +283,21 @@ export default function DMAutomationPanel() {
       const errCount = Array.isArray(result.errors) ? result.errors.length : 0;
       if (errCount > 0 && sent === 0) {
         const first = result.errors?.[0] || result.error || 'Graph error';
-        const short = first.includes('No readable comments')
-          ? 'Auto-watch: Meta sees comments but API returns none — test from another IG account (or add Tester / go Live)'
-          : first.length > 120
-            ? `${first.slice(0, 117)}…`
-            : first;
-        setAutoWatchLabel(`Auto-watch issue: ${short}`);
+        const blocked =
+          /No readable comments/i.test(first) ||
+          /hides the text/i.test(first) ||
+          /Development mode/i.test(first);
+        setMetaCommentsBlocked(blocked);
+        setAutoWatchLabel(
+          blocked
+            ? 'Blocked by Meta app mode — see fix below'
+            : first.length > 120
+              ? `Auto-watch issue: ${first.slice(0, 117)}…`
+              : `Auto-watch issue: ${first}`
+        );
         return;
       }
+      setMetaCommentsBlocked(false);
       setAutoWatchLabel(
         sent > 0
           ? `Auto-sent ${sent} DM${sent === 1 ? '' : 's'} — watching every 20s…`
@@ -805,11 +818,20 @@ export default function DMAutomationPanel() {
     onSuccess: ({ comments, warning }) => {
       setRecentComments(comments);
       if (comments.length === 0) {
+        const blocked =
+          Boolean(warning) &&
+          (/No readable comments/i.test(warning || '') ||
+            /hides the text/i.test(warning || '') ||
+            /Development mode/i.test(warning || ''));
+        setMetaCommentsBlocked(blocked);
         toast.message(
-          warning || t('toastNoRecentIgComments', locale)
+          blocked
+            ? 'Meta hides comment text until the app is Live (or the commenter is an App Tester).'
+            : warning || t('toastNoRecentIgComments', locale)
         );
         return;
       }
+      setMetaCommentsBlocked(false);
       toast.success(
         tf('toastFetchedIgComments', locale, { count: comments.length })
       );
@@ -925,9 +947,17 @@ export default function DMAutomationPanel() {
             <p className="text-sm text-slate-500 mt-0.5">
               {t('dmSub', locale)}
             </p>
-            <p className="text-xs font-semibold text-emerald-700 mt-1.5 flex items-center gap-1.5">
+            <p
+              className={`text-xs font-semibold mt-1.5 flex items-center gap-1.5 ${
+                metaCommentsBlocked ? 'text-amber-800' : 'text-emerald-700'
+              }`}
+            >
               <span
-                className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+                className={`inline-block h-1.5 w-1.5 rounded-full ${
+                  metaCommentsBlocked
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-500 animate-pulse'
+                }`}
                 aria-hidden
               />
               {autoWatchLabel}
@@ -973,6 +1003,46 @@ export default function DMAutomationPanel() {
             </button>
           </div>
         </div>
+
+        {metaCommentsBlocked ? (
+          <div className="mx-5 sm:mx-7 mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-4 sm:px-5 text-sm text-amber-950">
+            <p className="font-extrabold text-amber-950">
+              Clikd can see your Reel has a comment, but Meta is hiding the comment text from the API.
+            </p>
+            <p className="mt-2 text-amber-900/90 leading-relaxed">
+              Your Instagram permissions are correct. This happens when the Meta app is in{' '}
+              <span className="font-bold">Development</span> mode, or{' '}
+              <span className="font-bold">instagram_manage_comments</span> only has Standard Access.
+            </p>
+            <ol className="mt-3 list-decimal pl-5 space-y-1.5 text-amber-900/90">
+              <li>
+                Fast test:{' '}
+                <a
+                  href={metaAppRolesUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold underline underline-offset-2"
+                >
+                  App Roles → Add Testers
+                </a>{' '}
+                — invite the Facebook account of the person who commented, they must accept, then comment again.
+              </li>
+              <li>
+                Real fix:{' '}
+                <a
+                  href={metaAppDashboardUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold underline underline-offset-2"
+                >
+                  App Settings → switch App Mode to Live
+                </a>
+                , then request Advanced Access for{' '}
+                <span className="font-mono text-xs">instagram_manage_comments</span>.
+              </li>
+            </ol>
+          </div>
+        ) : null}
 
         {/* Developer tools — collapsed by default to keep the Automations UI clean */}
         <div className="mx-5 sm:mx-7 mt-4 mb-4">

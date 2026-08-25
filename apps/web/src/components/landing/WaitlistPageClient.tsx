@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import {
   ArrowRight,
   Mail,
@@ -17,6 +18,15 @@ import {
 } from 'lucide-react';
 import { ClikdWordmark } from '@/components/brand/ClikdLogo';
 import { PlatformShowcaseSection } from '@/components/landing/PlatformShowcaseSection';
+import { useLanguage } from '@/lib/locale-context';
+import { t, type TranslationKey } from '@/lib/i18n';
+
+/** Legal links only — Terms, GDPR, Privacy (no cookies / product / account). */
+const WAITLIST_LEGAL_LINKS: { labelKey: TranslationKey; href: string }[] = [
+  { labelKey: 'legalVillkor', href: '/legal/villkor' },
+  { labelKey: 'legalGdpr', href: '/legal/gdpr' },
+  { labelKey: 'legalIntegritet', href: '/legal/integritet' },
+];
 
 function normalizeEmail(raw: string) {
   return raw.trim().toLowerCase();
@@ -33,10 +43,13 @@ function formatQueueCount(n: number) {
 }
 
 export function WaitlistPageClient() {
+  const { locale } = useLanguage();
   const [email, setEmail] = useState('');
   const [pending, setPending] = useState(false);
   const [queueNumber, setQueueNumber] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const year = new Date().getFullYear();
+
 
   const canSubmit = useMemo(() => {
     const e = normalizeEmail(email);
@@ -398,6 +411,28 @@ export function WaitlistPageClient() {
         </div>
 
       </div>
+
+      <footer className="border-t border-slate-200/80 bg-white text-slate-500">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs font-medium text-slate-400">
+            © {year} clikd<span className="text-[#F472B6]">:</span>
+          </p>
+          <nav
+            aria-label="Legal"
+            className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1"
+          >
+            {WAITLIST_LEGAL_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm font-bold text-slate-700 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
+              >
+                {t(link.labelKey, locale)}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }
