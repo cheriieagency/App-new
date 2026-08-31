@@ -17,6 +17,8 @@ export type WorkspaceSocialToken = {
   avatar_url: string | null;
   page_name: string | null;
   followers_count: number | null;
+  /** Raw meta jsonb — may include user_access_token for Marketing API. */
+  meta?: Record<string, unknown> | null;
 };
 
 const MEDIA_PLATFORMS = ['instagram', 'facebook', 'tiktok'] as const;
@@ -46,7 +48,7 @@ export async function loadWorkspaceSocialTokens(input: {
     try {
       rows = await sql`
         SELECT platform, platform_user_id, access_token, refresh_token, expires_at,
-               page_id, handle, display_name, avatar_url, page_name, followers_count
+               page_id, handle, display_name, avatar_url, page_name, followers_count, meta
         FROM social_accounts
         WHERE user_id::text = ${userId}
           AND workspace_id::text = ${workspaceId}
@@ -58,7 +60,7 @@ export async function loadWorkspaceSocialTokens(input: {
     } catch {
       rows = await sql`
         SELECT platform, platform_user_id, access_token, refresh_token, expires_at,
-               page_id, handle, display_name, avatar_url, page_name, followers_count
+               page_id, handle, display_name, avatar_url, page_name, followers_count, meta
         FROM social_accounts
         WHERE user_id = ${userId}
           AND workspace_id = ${workspaceId}
@@ -70,21 +72,31 @@ export async function loadWorkspaceSocialTokens(input: {
     }
 
     const byPlatform = new Map<string, WorkspaceSocialToken>();
-    for (const row of (rows as WorkspaceSocialToken[]) ?? []) {
-      if (!row?.platform || byPlatform.has(row.platform)) continue;
-      byPlatform.set(row.platform, {
-        platform: row.platform,
-        platform_user_id: row.platform_user_id ?? null,
-        access_token: row.access_token ?? null,
-        refresh_token: row.refresh_token ?? null,
+    for (const row of (rows as Array<Record<string, unknown>>) ?? []) {
+      const platform = String(row?.platform || '');
+      if (!platform || byPlatform.has(platform)) continue;
+      const meta =
+        row.meta && typeof row.meta === 'object' && !Array.isArray(row.meta)
+          ? (row.meta as Record<string, unknown>)
+          : null;
+      byPlatform.set(platform, {
+        platform,
+        platform_user_id:
+          row.platform_user_id != null ? String(row.platform_user_id) : null,
+        access_token:
+          row.access_token != null ? String(row.access_token) : null,
+        refresh_token:
+          row.refresh_token != null ? String(row.refresh_token) : null,
         expires_at: row.expires_at ? String(row.expires_at) : null,
-        page_id: row.page_id ?? null,
-        handle: row.handle ?? null,
-        display_name: row.display_name ?? null,
-        avatar_url: row.avatar_url ?? null,
-        page_name: row.page_name ?? null,
+        page_id: row.page_id != null ? String(row.page_id) : null,
+        handle: row.handle != null ? String(row.handle) : null,
+        display_name:
+          row.display_name != null ? String(row.display_name) : null,
+        avatar_url: row.avatar_url != null ? String(row.avatar_url) : null,
+        page_name: row.page_name != null ? String(row.page_name) : null,
         followers_count:
           typeof row.followers_count === 'number' ? row.followers_count : null,
+        meta,
       });
     }
     return [...byPlatform.values()];

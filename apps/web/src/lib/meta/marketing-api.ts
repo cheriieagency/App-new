@@ -497,7 +497,40 @@ export async function createMetaCampaign(
   return marketingJson<{ id: string }>(url.toString(), { method: 'POST' });
 }
 
-/** POST /act_…/adsets — create an ad set (simplified targeting). */
+/** Map campaign objective → valid ad set optimization + billing. */
+function adSetGoalsForObjective(
+  objective: CreateMetaCampaignInput['objective']
+): { optimization_goal: string; billing_event: string } {
+  switch (objective) {
+    case 'OUTCOME_SALES':
+      return {
+        optimization_goal: 'OFFSITE_CONVERSIONS',
+        billing_event: 'IMPRESSIONS',
+      };
+    case 'OUTCOME_LEADS':
+      return {
+        optimization_goal: 'LEAD_GENERATION',
+        billing_event: 'IMPRESSIONS',
+      };
+    case 'OUTCOME_TRAFFIC':
+      return {
+        optimization_goal: 'LINK_CLICKS',
+        billing_event: 'IMPRESSIONS',
+      };
+    case 'OUTCOME_ENGAGEMENT':
+      return {
+        optimization_goal: 'POST_ENGAGEMENT',
+        billing_event: 'IMPRESSIONS',
+      };
+    default:
+      return {
+        optimization_goal: 'LINK_CLICKS',
+        billing_event: 'IMPRESSIONS',
+      };
+  }
+}
+
+/** POST /act_…/adsets — create an ad set (simplified targeting, ABO budget). */
 export async function createMetaAdSet(
   accessToken: string,
   input: {
@@ -509,6 +542,7 @@ export async function createMetaAdSet(
     ageMin: number;
     ageMax: number;
     status?: 'ACTIVE' | 'PAUSED';
+    objective?: CreateMetaCampaignInput['objective'];
     /** Optional Meta Pixel id for website custom audiences / optimization. */
     pixelId?: string | null;
   }
@@ -522,10 +556,11 @@ export async function createMetaAdSet(
     age_min: input.ageMin,
     age_max: input.ageMax,
   };
+  const goals = adSetGoalsForObjective(input.objective || 'OUTCOME_TRAFFIC');
   url.searchParams.set('name', input.name);
   url.searchParams.set('campaign_id', input.campaignId);
-  url.searchParams.set('billing_event', 'IMPRESSIONS');
-  url.searchParams.set('optimization_goal', 'REACH');
+  url.searchParams.set('billing_event', goals.billing_event);
+  url.searchParams.set('optimization_goal', goals.optimization_goal);
   url.searchParams.set(
     'daily_budget',
     String(Math.max(100, Math.round(input.dailyBudgetMinor)))
@@ -533,6 +568,23 @@ export async function createMetaAdSet(
   url.searchParams.set('bid_strategy', 'LOWEST_COST_WITHOUT_CAP');
   url.searchParams.set('targeting', JSON.stringify(targeting));
   url.searchParams.set('status', input.status || 'PAUSED');
+  // Outcome campaigns require a destination type for traffic/sales/leads.
+  if (
+    input.objective === 'OUTCOME_TRAFFIC' ||
+    input.objective === 'OUTCOME_SALES' ||
+    input.objective === 'OUTCOME_LEADS'
+  ) {
+    url.searchParams.set('destination_type', 'WEBSITE');
+  }
+  if (input.pixelId?.trim() && input.objective === 'OUTCOME_SALES') {
+    url.searchParams.set(
+      'promoted_object',
+      JSON.stringify({
+        pixel_id: input.pixelId.trim(),
+        custom_event_type: 'PURCHASE',
+      })
+    );
+  }
   url.searchParams.set('access_token', accessToken);
   return marketingJson<{ id: string }>(url.toString(), { method: 'POST' });
 }

@@ -134,13 +134,18 @@ export async function GET(request: Request) {
     return Response.json({ folders, assets });
   } catch (error) {
     console.error('[GET /api/admin/media]', error);
-    // Soft-fallback so the Media Library UI never hard-crashes.
-    return Response.json({
-      folders: listMediaFolders(userId),
-      assets: listMediaAssets(userId, MEDIA_LIBRARY_ROOT_ID),
-      demo: true,
-      error: 'load_failed',
-    });
+    // Never soft-fallback to mock library when DATABASE_URL is set.
+    return Response.json(
+      {
+        folders: [],
+        assets: [],
+        demo: false,
+        error: 'load_failed',
+        message:
+          error instanceof Error ? error.message : 'Failed to load media library',
+      },
+      { status: 500 }
+    );
   }
 }
 

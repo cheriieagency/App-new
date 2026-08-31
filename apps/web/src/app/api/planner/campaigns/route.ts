@@ -29,6 +29,7 @@ import {
   reorderDurableCampaigns,
   updateDurableCampaign,
 } from '@/lib/planner/campaigns';
+import { listDurablePlannerPosts } from '@/lib/planner/posts';
 
 function useDurable(): boolean {
   return Boolean(process.env.DATABASE_URL?.trim());
@@ -106,25 +107,49 @@ export async function GET(request: Request) {
           userId,
           id,
         });
+        const allPosts = await listDurablePlannerPosts({
+          userId,
+          project,
+          workspaceId,
+        });
+        const posts = allPosts.filter((p) =>
+          (p.campaigns ?? []).includes(id)
+        );
         return Response.json({
           campaign,
-          posts: listPostsForCampaign(id, project, userId),
+          posts,
+          demo: false,
         });
       }
       const campaigns = await listDurableCampaigns({ workspaceId, userId });
-      return Response.json({ campaigns });
+      return Response.json({ campaigns, demo: false });
     }
 
     if (id) {
       return Response.json({
         campaign: getCampaignLabel(id, userId),
         posts: listPostsForCampaign(id, project, userId),
+        demo: true,
       });
     }
-    return Response.json({ campaigns: listCampaignLabels(userId) });
+    return Response.json({ campaigns: listCampaignLabels(userId), demo: true });
   } catch (error) {
     console.error('[GET /api/planner/campaigns]', error);
-    // Soft-fallback so Projects UI never hard-crashes.
+    // Never soft-fallback to mock when DATABASE_URL is set — that looks like data loss.
+    if (useDurable()) {
+      return Response.json(
+        {
+          error: 'load_failed',
+          message:
+            error instanceof Error ? error.message : 'Failed to load campaigns',
+          campaigns: id ? undefined : [],
+          campaign: id ? null : undefined,
+          posts: id ? [] : undefined,
+          demo: false,
+        },
+        { status: 500 }
+      );
+    }
     if (id) {
       return Response.json({
         campaign: getCampaignLabel(id, userId),

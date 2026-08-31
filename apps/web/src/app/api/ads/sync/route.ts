@@ -102,6 +102,34 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
+    if (token.needsReconnect || !token.isUserToken) {
+      return Response.json(
+        {
+          ok: false,
+          demo: false,
+          workspaceId,
+          connected: true,
+          needsReconnect: true,
+          accounts: [],
+          campaigns: [],
+          adsets: [],
+          ads: [],
+          audiences: [],
+          series: [],
+          dateRange: range,
+          kpis: emptyKpis(),
+          syncedAccounts: 0,
+          syncedCampaigns: 0,
+          syncedAdSets: 0,
+          syncedAds: 0,
+          message:
+            'Your Meta connection only has a Page token. Reconnect Facebook under Settings → Socials (with ads_read / ads_management) so Ads Manager can access your ad accounts.',
+          cta: { label: 'Reconnect Facebook', href: '/admin/settings/socials' },
+        },
+        { status: 403 }
+      );
+    }
+
     const result = await syncMetaAdsForWorkspace({
       userId: session.user.id,
       workspaceId,
@@ -110,6 +138,51 @@ export async function POST(request: Request) {
       since: range.since,
       until: range.until,
     });
+
+    // Honest failure: token worked but Graph returned no ad accounts,
+    // or every account failed campaign pull.
+    if (result.noAdAccounts) {
+      return Response.json(
+        {
+          ok: false,
+          demo: false,
+          workspaceId,
+          connected: true,
+          tokenPlatform: token.platform,
+          dateRange: range,
+          ...result,
+          kpis: emptyKpis(),
+          message:
+            'Meta returned no ad accounts for this user. Confirm ads_read access and that your Facebook user can manage an Ad Account, then reconnect.',
+          cta: { label: 'Reconnect Facebook', href: '/admin/settings/socials' },
+        },
+        { status: 502 }
+      );
+    }
+
+    if (
+      result.accountErrors.length > 0 &&
+      result.syncedCampaigns === 0 &&
+      result.campaigns.length === 0
+    ) {
+      return Response.json(
+        {
+          ok: false,
+          demo: false,
+          workspaceId,
+          connected: true,
+          tokenPlatform: token.platform,
+          dateRange: range,
+          ...result,
+          kpis: emptyKpis(),
+          message:
+            result.accountErrors[0]?.error ||
+            'Failed to pull campaigns from Meta. Check Marketing API permissions.',
+          cta: { label: 'Reconnect Facebook', href: '/admin/settings/socials' },
+        },
+        { status: 502 }
+      );
+    }
 
     return Response.json({
       ok: true,
@@ -124,9 +197,11 @@ export async function POST(request: Request) {
           ? aggregateSeriesKpis(result.series)
           : aggregateCampaignKpis(result.campaigns),
       message:
-        result.campaigns.length === 0
-          ? 'Synced Meta — no campaigns in this ad account yet.'
-          : `Synced ${result.syncedCampaigns} campaigns, ${result.syncedAdSets} ad sets, ${result.syncedAds} ads.`,
+        result.accountErrors.length > 0
+          ? `Synced with warnings (${result.accountErrors.length} account error${result.accountErrors.length === 1 ? '' : 's'}). ${result.syncedCampaigns} campaigns, ${result.syncedAdSets} ad sets, ${result.syncedAds} ads.`
+          : result.campaigns.length === 0
+            ? 'Synced Meta — no campaigns in this ad account yet.'
+            : `Synced ${result.syncedCampaigns} campaigns, ${result.syncedAdSets} ad sets, ${result.syncedAds} ads.`,
       cta: null,
     });
   } catch (error) {

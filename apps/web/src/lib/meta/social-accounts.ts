@@ -232,6 +232,13 @@ export async function upsertMetaSocialAccounts(input: {
           token_source: 'page',
           page_access_token: pageAccessToken,
           page_id: page.id,
+          // Marketing API needs the user token (/me/adaccounts, campaigns).
+          ...(userToken
+            ? {
+                user_access_token: userToken,
+                user_token_source: 'oauth_long_lived',
+              }
+            : {}),
         },
       });
       console.log(
@@ -320,6 +327,12 @@ export async function upsertMetaSocialAccounts(input: {
         page_access_token: pageAccessToken || null,
         page_id:
           page && !String(page.id).startsWith('user-') ? page.id : null,
+        ...(userToken
+          ? {
+              user_access_token: userToken,
+              user_token_source: 'oauth_long_lived',
+            }
+          : {}),
       },
     });
     rows.push({
@@ -470,7 +483,7 @@ export async function listMetaSocialAccountsForUser(
       `;
     }
     if (!Array.isArray(rows) || rows.length === 0) {
-      return (demoByUser.get(userId) ?? []).map(toConnected);
+      return [];
     }
 
     // One card per platform (prefer most recent)
@@ -515,7 +528,7 @@ export async function listMetaSocialAccountsForUser(
       return [...byPlatform.values()];
     } catch (fallbackError) {
       console.error('[social_accounts] list failed', fallbackError);
-      return (demoByUser.get(userId) ?? []).map(toConnected);
+      return [];
     }
   }
 }
@@ -536,12 +549,12 @@ export async function listStoredMetaAccounts(
       ORDER BY platform ASC, COALESCE(connected_at, created_at) DESC
     `;
     if (!Array.isArray(rows) || rows.length === 0) {
-      return [...(demoByUser.get(userId) ?? [])];
+      return [];
     }
     return (rows as Array<Record<string, unknown>>).map(mapDbRow);
   } catch (error) {
     console.error('[social_accounts] listStored failed', error);
-    return [...(demoByUser.get(userId) ?? [])];
+    return [];
   }
 }
 

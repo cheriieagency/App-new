@@ -4,17 +4,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  BarChart3,
   CalendarDays,
   Check,
   Link2,
   Loader2,
+  Palette,
+  Pencil,
   Plus,
   Radio,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAdminNav } from '@/components/admin/AdminNavContext';
+import { useAdminNav, type AdminSection } from '@/components/admin/AdminNavContext';
+import { ADMIN_NAV_ITEMS } from '@/components/admin/adminNavItems';
 import { adminCardClass } from '@/components/admin/AdminUi';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import {
@@ -27,6 +29,51 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { localeTag, useLanguage, type NestedKey } from '@/lib/i18n';
+import {
+  DEFAULT_HOME_SHORTCUTS,
+  HOME_SHORTCUT_KEYS,
+  HOME_SHORTCUT_META,
+  MAX_HOME_SHORTCUTS,
+  normalizeHomeShortcuts,
+  type HomeShortcutKey,
+} from '@/lib/admin-home/shortcuts';
+import {
+  DEFAULT_STICKY_COLOR,
+  STICKY_COLOR_IDS,
+  normalizeStickyColor,
+  stickyTheme,
+  type StickyColorId,
+} from '@/lib/admin-home/sticky-colors';
+import { authClient } from '@/lib/auth-client';
+import {
+  detectDefaultTimezone,
+  loadTimezone,
+  saveTimezone,
+} from '@/lib/settings-prefs';
+
+/** Local hour (0–23) in an IANA timezone. */
+function hourInTimezone(timeZone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }).formatToParts(new Date());
+    const raw = Number(parts.find((p) => p.type === 'hour')?.value);
+    if (!Number.isFinite(raw)) return new Date().getHours();
+    return raw === 24 ? 0 : raw;
+  } catch {
+    return new Date().getHours();
+  }
+}
+
+/** Time-of-day greeting key for the user's timezone. */
+function greetingKeyForHour(hour: number): NestedKey {
+  if (hour >= 5 && hour < 11) return 'admin.greetMorning';
+  if (hour >= 11 && hour < 14) return 'admin.greetDay';
+  if (hour >= 14 && hour < 17) return 'admin.greetAfternoon';
+  return 'admin.greetEvening';
+}
 
 type StickyTask = { id: string; text: string; done: boolean };
 
@@ -110,15 +157,55 @@ export default function AdminHomeDashboard() {
   const { t, language } = useLanguage();
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
+  const { data: session } = authClient.useSession();
+  const userId = session?.user?.id ?? null;
+  const firstName = useMemo(() => {
+    const name = session?.user?.name?.trim() || '';
+    if (!name) return '';
+    return name.split(/\s+/)[0] || '';
+  }, [session?.user?.name]);
+
+  const [timezone, setTimezone] = useState(() =>
+    typeof window !== 'undefined'
+      ? loadTimezone(userId) || detectDefaultTimezone()
+      : 'Europe/Stockholm'
+  );
+
+  useEffect(() => {
+    const cached = loadTimezone(userId);
+    if (cached) setTimezone(cached);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (!res.ok) return;
+        const data = (await res.json()) as { timezone?: string };
+        if (cancelled || !data.timezone?.trim()) return;
+        setTimezone(data.timezone.trim());
+        saveTimezone(data.timezone.trim(), userId);
+      } catch {
+        /* keep cached / detected tz */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const greetingTitle = useMemo(() => {
+    const base = t(greetingKeyForHour(hourInTimezone(timezone)));
+    return firstName ? `${base}, ${firstName}` : base;
+  }, [t, timezone, firstName]);
 
   const dateLabel = useMemo(() => {
     const raw = new Date().toLocaleDateString(localeTag(language), {
       weekday: 'long',
       day: 'numeric',
       month: 'short',
+      timeZone: timezone,
     });
     return raw.charAt(0).toUpperCase() + raw.slice(1);
-  }, [language]);
+  }, [language, timezone]);
 
   const homeQueryKey = ['admin-home', activeWorkspaceId] as const;
 
@@ -133,6 +220,9 @@ export default function AdminHomeDashboard() {
       const json = (await res.json()) as {
         stickies?: Array<Record<string, unknown>>;
         kanban?: Array<Record<string, unknown>>;
+        shortcuts?: unknown;
+        stickyColor?: unknown;
+        sticky_color?: unknown;
         message?: string;
         error?: string;
       };
@@ -142,25 +232,50 @@ export default function AdminHomeDashboard() {
       return {
         stickies: (json.stickies || []).map(mapSticky),
         kanban: (json.kanban || []).map(mapKanban),
+        shortcuts: normalizeHomeShortcuts(json.shortcuts),
+        stickyColor: normalizeStickyColor(
+          json.stickyColor ?? json.sticky_color
+        ),
       };
     },
   });
 
   const stickyTasks = data?.stickies ?? [];
   const kanban = data?.kanban ?? [];
+  const shortcutKeys = data?.shortcuts ?? DEFAULT_HOME_SHORTCUTS;
+  const stickyColor = data?.stickyColor ?? DEFAULT_STICKY_COLOR;
+  const noteTheme = stickyTheme(stickyColor);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [activityFilter, setActivityFilter] = useState<ActivityCategory>('all');
   const activities: ActivityItem[] = [];
 
   const [draftKind, setDraftKind] = useState<DraftKind>(null);
   const [draftText, setDraftText] = useState('');
   const [draftDueDate, setDraftDueDate] = useState('');
+  const [editingSticky, setEditingSticky] = useState<StickyTask | null>(null);
+  const [editShortcutsOpen, setEditShortcutsOpen] = useState(false);
+  const [draftShortcuts, setDraftShortcuts] = useState<HomeShortcutKey[]>([]);
 
   useEffect(() => {
     if (draftKind) {
       setDraftText('');
       setDraftDueDate('');
+      setEditingSticky(null);
     }
   }, [draftKind]);
+
+  useEffect(() => {
+    if (editingSticky) {
+      setDraftText(editingSticky.text);
+      setDraftKind(null);
+    }
+  }, [editingSticky]);
+
+  useEffect(() => {
+    if (editShortcutsOpen) {
+      setDraftShortcuts([...shortcutKeys]);
+    }
+  }, [editShortcutsOpen, shortcutKeys]);
 
   const invalidateHome = () =>
     queryClient.invalidateQueries({ queryKey: homeQueryKey });
@@ -209,7 +324,7 @@ export default function AdminHomeDashboard() {
   });
 
   const patchStickyMutation = useMutation({
-    mutationFn: async (input: { id: string; done: boolean }) => {
+    mutationFn: async (input: { id: string; done?: boolean; text?: string }) => {
       const res = await fetch('/api/admin/home', {
         method: 'PATCH',
         headers: {
@@ -220,6 +335,7 @@ export default function AdminHomeDashboard() {
           kind: 'sticky',
           id: input.id,
           done: input.done,
+          text: input.text,
           workspaceId: activeWorkspaceId,
         }),
       });
@@ -233,20 +349,74 @@ export default function AdminHomeDashboard() {
       const prev = queryClient.getQueryData<{
         stickies: StickyTask[];
         kanban: KanbanTask[];
+        shortcuts?: HomeShortcutKey[];
       }>(homeQueryKey);
       if (prev) {
         queryClient.setQueryData(homeQueryKey, {
           ...prev,
           stickies: prev.stickies.map((s) =>
-            s.id === input.id ? { ...s, done: input.done } : s
+            s.id === input.id
+              ? {
+                  ...s,
+                  done: typeof input.done === 'boolean' ? input.done : s.done,
+                  text:
+                    typeof input.text === 'string' && input.text.trim()
+                      ? input.text.trim()
+                      : s.text,
+                }
+              : s
           ),
         });
       }
       return { prev };
     },
+    onSuccess: (_data, input) => {
+      if (typeof input.text === 'string') {
+        setEditingSticky(null);
+        setDraftText('');
+      }
+    },
     onError: (_err, _input, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(homeQueryKey, ctx.prev);
       toast.error('Could not update note');
+    },
+    onSettled: () => void invalidateHome(),
+  });
+
+  const deleteStickyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const qs = new URLSearchParams({
+        workspaceId: activeWorkspaceId,
+        id,
+        kind: 'sticky',
+      });
+      const res = await fetch(`/api/admin/home?${qs.toString()}`, {
+        method: 'DELETE',
+        headers: { 'x-workspace-id': activeWorkspaceId },
+      });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(json.message || 'Delete failed');
+      }
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: homeQueryKey });
+      const prev = queryClient.getQueryData<{
+        stickies: StickyTask[];
+        kanban: KanbanTask[];
+        shortcuts?: HomeShortcutKey[];
+      }>(homeQueryKey);
+      if (prev) {
+        queryClient.setQueryData(homeQueryKey, {
+          ...prev,
+          stickies: prev.stickies.filter((s) => s.id !== id),
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(homeQueryKey, ctx.prev);
+      toast.error('Could not delete note');
     },
     onSettled: () => void invalidateHome(),
   });
@@ -316,18 +486,133 @@ export default function AdminHomeDashboard() {
     },
   });
 
-  const go = (section: 'calendar' | 'analytics' | 'biobuilder') => {
+  const saveShortcutsMutation = useMutation({
+    mutationFn: async (shortcuts: HomeShortcutKey[]) => {
+      const res = await fetch('/api/admin/home', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspaceId,
+        },
+        body: JSON.stringify({
+          kind: 'shortcuts',
+          shortcuts,
+          workspaceId: activeWorkspaceId,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        error?: string;
+        shortcuts?: unknown;
+      };
+      if (!res.ok) {
+        throw new Error(json.message || json.error || 'Save failed');
+      }
+      return normalizeHomeShortcuts(json.shortcuts ?? shortcuts);
+    },
+    onSuccess: (shortcuts) => {
+      queryClient.setQueryData(homeQueryKey, (prev: unknown) => {
+        const typed = prev as
+          | {
+              stickies: StickyTask[];
+              kanban: KanbanTask[];
+              shortcuts: HomeShortcutKey[];
+              stickyColor: StickyColorId;
+            }
+          | undefined;
+        if (!typed) {
+          return {
+            stickies: [],
+            kanban: [],
+            shortcuts,
+            stickyColor: DEFAULT_STICKY_COLOR,
+          };
+        }
+        return { ...typed, shortcuts };
+      });
+      setEditShortcutsOpen(false);
+      void invalidateHome();
+      toast.success('Saved');
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Could not save shortcuts');
+    },
+  });
+
+  const saveStickyColorMutation = useMutation({
+    mutationFn: async (color: StickyColorId) => {
+      const res = await fetch('/api/admin/home', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspaceId,
+        },
+        body: JSON.stringify({
+          kind: 'sticky_color',
+          stickyColor: color,
+          workspaceId: activeWorkspaceId,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        error?: string;
+        stickyColor?: unknown;
+      };
+      if (!res.ok) {
+        throw new Error(json.message || json.error || 'Save failed');
+      }
+      return normalizeStickyColor(json.stickyColor ?? color);
+    },
+    onMutate: async (color) => {
+      await queryClient.cancelQueries({ queryKey: homeQueryKey });
+      const prev = queryClient.getQueryData<{
+        stickies: StickyTask[];
+        kanban: KanbanTask[];
+        shortcuts: HomeShortcutKey[];
+        stickyColor: StickyColorId;
+      }>(homeQueryKey);
+      if (prev) {
+        queryClient.setQueryData(homeQueryKey, { ...prev, stickyColor: color });
+      }
+      return { prev };
+    },
+    onSuccess: () => setColorPickerOpen(false),
+    onError: (_err, _color, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(homeQueryKey, ctx.prev);
+      toast.error('Could not save note color');
+    },
+    onSettled: () => void invalidateHome(),
+  });
+
+  const go = (section: AdminSection) => {
     if (section === 'calendar') {
       router.push('/planner');
+      return;
+    }
+    if (section === 'ads') {
+      router.push('/ads');
       return;
     }
     setSection(section);
     router.push(`/admin?tab=${section}`);
   };
 
+  const toggleDraftShortcut = (key: HomeShortcutKey) => {
+    setDraftShortcuts((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      if (prev.length >= MAX_HOME_SHORTCUTS) return prev;
+      return [...prev, key];
+    });
+  };
+
   const submitDraft = () => {
     const text = draftText.trim();
-    if (!text || !draftKind) return;
+    if (!text) return;
+    if (editingSticky) {
+      patchStickyMutation.mutate({ id: editingSticky.id, text });
+      return;
+    }
+    if (!draftKind) return;
     createMutation.mutate({
       kind: draftKind,
       text,
@@ -350,32 +635,18 @@ export default function AdminHomeDashboard() {
     { id: 'done', titleKey: 'admin.colDone', dot: 'bg-emerald-500' },
   ];
 
-  const shortcuts = [
-    {
-      key: 'planner' as const,
-      title: t('admin.shortcutPlanner'),
-      detail: t('admin.shortcutPlannerOpen'),
-      icon: CalendarDays,
-      accent: 'bg-[#E9D5FF]/70 text-[#2B2568]',
-      onClick: () => go('calendar'),
-    },
-    {
-      key: 'analytics' as const,
-      title: t('admin.shortcutAnalytics'),
-      detail: t('admin.shortcutAnalyticsOpen'),
-      icon: BarChart3,
-      accent: 'bg-emerald-50 text-[#10B981]',
-      onClick: () => go('analytics'),
-    },
-    {
-      key: 'bio' as const,
-      title: t('admin.shortcutBio'),
-      detail: t('admin.shortcutBioOpen'),
-      icon: Link2,
-      accent: 'bg-[#FCE7F3] text-[#F472B6]',
-      onClick: () => go('biobuilder'),
-    },
-  ];
+  const shortcuts = shortcutKeys.map((key) => {
+    const meta = HOME_SHORTCUT_META[key];
+    const nav = ADMIN_NAV_ITEMS.find((item) => item.key === key);
+    return {
+      key,
+      title: t(meta.labelKey),
+      detail: t(meta.openKey),
+      icon: nav?.icon ?? Link2,
+      accent: meta.accent,
+      onClick: () => go(key),
+    };
+  });
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -384,7 +655,7 @@ export default function AdminHomeDashboard() {
           {t('admin.homeEyebrow')}
         </p>
         <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mt-1">
-          {t('admin.homeTitle')}
+          {greetingTitle}
         </h1>
         <p className="text-sm text-slate-500 font-medium mt-1">
           {t('admin.homeSub')}
@@ -394,7 +665,13 @@ export default function AdminHomeDashboard() {
       {/* Hero: Post-it + shortcuts */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
         <div className="lg:col-span-5">
-          <div className="relative bg-[#F8F4FF] border border-[#EDE4FF] shadow-md rounded-3xl p-6 transform -rotate-1 hover:rotate-0 transition-transform">
+          <div
+            className="relative border shadow-md rounded-3xl p-6 transform -rotate-1 hover:rotate-0 transition-transform"
+            style={{
+              backgroundColor: noteTheme.bg,
+              borderColor: noteTheme.border,
+            }}
+          >
             <span
               className="w-7 h-7 rounded-full bg-[#F472B6] border-2 border-white absolute -top-3 left-1/2 -translate-x-1/2 shadow-sm"
               aria-hidden
@@ -403,7 +680,10 @@ export default function AdminHomeDashboard() {
               <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
                 {t('admin.focusTitle')}
               </h2>
-              <span className="inline-flex items-center rounded-full bg-white/80 border border-[#EDE4FF] px-2.5 py-1 text-[10px] font-bold text-[#2B2568] capitalize">
+              <span
+                className="inline-flex items-center rounded-full bg-white/80 border px-2.5 py-1 text-[10px] font-bold text-[#2B2568] capitalize"
+                style={{ borderColor: noteTheme.chipBorder }}
+              >
                 {dateLabel}
               </span>
             </div>
@@ -420,7 +700,16 @@ export default function AdminHomeDashboard() {
             ) : (
               <ul className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1">
                 {stickyTasks.map((task) => (
-                  <li key={task.id}>
+                  <li
+                    key={task.id}
+                    className="group flex items-start gap-1.5 min-h-[44px] rounded-xl px-1.5 py-1 transition-colors"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = noteTheme.rowHover;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
                     <button
                       type="button"
                       onClick={() =>
@@ -429,67 +718,149 @@ export default function AdminHomeDashboard() {
                           done: !task.done,
                         })
                       }
-                      className="w-full flex items-start gap-2.5 text-left min-h-[44px] rounded-xl px-2 py-1.5 hover:bg-[#EFE8FF]/70 transition-colors"
+                      aria-label={task.done ? 'Mark incomplete' : 'Mark complete'}
+                      className="mt-0.5 h-9 w-9 flex items-center justify-center flex-shrink-0 rounded-lg"
                     >
                       <span
-                        className={`mt-0.5 h-5 w-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
+                        className={`h-5 w-5 rounded-md border-2 flex items-center justify-center ${
                           task.done
                             ? 'bg-[#10B981] border-[#10B981] text-white'
-                            : 'bg-white/80 border-[#D4C4F7]'
+                            : 'bg-white/80'
                         }`}
+                        style={
+                          task.done
+                            ? undefined
+                            : { borderColor: noteTheme.checkBorder }
+                        }
                       >
                         {task.done ? <Check size={12} strokeWidth={3} /> : null}
                       </span>
-                      <span
-                        className={`text-sm font-semibold leading-snug ${
-                          task.done
-                            ? 'text-slate-500 line-through decoration-slate-400'
-                            : 'text-slate-800'
-                        }`}
-                      >
-                        {task.text}
-                      </span>
                     </button>
+                    <p
+                      className={`flex-1 min-w-0 pt-2 text-sm font-semibold leading-snug ${
+                        task.done
+                          ? 'text-slate-500 line-through decoration-slate-400'
+                          : 'text-slate-800'
+                      }`}
+                    >
+                      {task.text}
+                    </p>
+                    <div className="flex items-center gap-0.5 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => setEditingSticky(task)}
+                        aria-label={t('admin.editSticky')}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#2B2568]/70 hover:bg-white/80 hover:text-[#2B2568] transition-colors"
+                      >
+                        <Pencil size={14} strokeWidth={2.25} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteStickyMutation.mutate(task.id)}
+                        disabled={deleteStickyMutation.isPending}
+                        aria-label={t('admin.deleteSticky')}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 size={14} strokeWidth={2.25} />
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
             )}
 
-            <button
-              type="button"
-              onClick={() => setDraftKind('sticky')}
-              className="mt-4 inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl text-xs font-bold text-[#2B2568]/80 hover:bg-[#EFE8FF] transition-colors"
-            >
-              <Plus size={14} strokeWidth={2.5} />
-              {t('admin.addSticky')}
-            </button>
+            <div className="mt-4 flex items-center justify-between gap-2 pr-10">
+              <button
+                type="button"
+                onClick={() => setDraftKind('sticky')}
+                className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl text-xs font-bold text-[#2B2568]/80 hover:bg-white/60 transition-colors"
+              >
+                <Plus size={14} strokeWidth={2.5} />
+                {t('admin.addSticky')}
+              </button>
+            </div>
+
+            <div className="absolute bottom-3 right-3 z-10">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setColorPickerOpen((o) => !o)}
+                  aria-label={t('admin.stickyColor')}
+                  aria-expanded={colorPickerOpen}
+                  className="inline-flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-full text-[#2B2568]/35 hover:text-[#2B2568]/70 hover:bg-white/50 transition-colors"
+                >
+                  <Palette size={13} strokeWidth={2} />
+                </button>
+                {colorPickerOpen ? (
+                  <div
+                    className="absolute right-0 bottom-full mb-2 z-20 flex flex-wrap gap-1.5 w-[148px] p-2 rounded-2xl bg-white border border-slate-200 shadow-lg"
+                    role="listbox"
+                    aria-label={t('admin.stickyColor')}
+                  >
+                    {STICKY_COLOR_IDS.map((id) => {
+                      const swatch = stickyTheme(id);
+                      const selected = id === stickyColor;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          disabled={saveStickyColorMutation.isPending}
+                          onClick={() => saveStickyColorMutation.mutate(id)}
+                          className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-105 disabled:opacity-50 ${
+                            selected
+                              ? 'border-[#2B2568] ring-2 ring-[#2B2568]/20'
+                              : 'border-white shadow-sm'
+                          }`}
+                          style={{ backgroundColor: swatch.bg }}
+                          title={id}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          {shortcuts.map((card) => {
-            const Icon = card.icon;
-            return (
-              <button
-                key={card.key}
-                type="button"
-                onClick={card.onClick}
-                className={`${adminCardClass} p-4 sm:p-5 text-left hover:border-[#F472B6]/50 hover:shadow-md transition-all min-h-[44px]`}
-              >
-                <span
-                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${card.accent}`}
+        <div className="lg:col-span-7 space-y-2.5">
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setEditShortcutsOpen(true)}
+              className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl text-xs font-bold text-slate-500 hover:text-[#2B2568] hover:bg-white border border-transparent hover:border-slate-200 transition-colors"
+            >
+              <Pencil size={13} strokeWidth={2.5} />
+              {t('admin.editShortcuts')}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            {shortcuts.map((card) => {
+              const Icon = card.icon;
+              return (
+                <button
+                  key={card.key}
+                  type="button"
+                  onClick={card.onClick}
+                  className={`${adminCardClass} p-4 sm:p-5 text-left hover:border-[#F472B6]/50 hover:shadow-md transition-all min-h-[44px]`}
                 >
-                  <Icon size={18} strokeWidth={2.25} />
-                </span>
-                <p className="mt-3 font-clikd-wordmark font-extrabold text-base text-slate-900 tracking-tight leading-tight">
-                  {card.title}
-                </p>
-                <p className="mt-1 text-xs font-medium text-slate-500 leading-snug">
-                  {card.detail}
-                </p>
-              </button>
-            );
-          })}
+                  <span
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${card.accent}`}
+                  >
+                    <Icon size={18} strokeWidth={2.25} />
+                  </span>
+                  <p className="mt-3 font-clikd-wordmark font-extrabold text-base text-slate-900 tracking-tight leading-tight">
+                    {card.title}
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-slate-500 leading-snug">
+                    {card.detail}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -680,22 +1051,31 @@ export default function AdminHomeDashboard() {
         </div>
       </div>
 
-      {/* Add sticky / kanban dialog — replaces blocked window.prompt */}
+      {/* Add / edit sticky or kanban dialog — replaces blocked window.prompt */}
       <Dialog
-        open={draftKind !== null}
+        open={draftKind !== null || editingSticky !== null}
         onOpenChange={(open) => {
-          if (!open && !createMutation.isPending) setDraftKind(null);
+          if (
+            !open &&
+            !createMutation.isPending &&
+            !patchStickyMutation.isPending
+          ) {
+            setDraftKind(null);
+            setEditingSticky(null);
+          }
         }}
       >
         <DialogContent className="max-w-[min(420px,94vw)] rounded-2xl border-slate-200/90 p-0 gap-0">
           <DialogHeader className="px-5 pt-5 pb-2">
             <DialogTitle className="font-clikd-wordmark text-lg font-extrabold text-slate-900">
-              {draftKind === 'sticky'
-                ? t('admin.stickyPrompt')
-                : t('admin.taskPrompt')}
+              {editingSticky
+                ? t('admin.editSticky')
+                : draftKind === 'sticky'
+                  ? t('admin.stickyPrompt')
+                  : t('admin.taskPrompt')}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 font-medium">
-              {draftKind === 'sticky'
+              {editingSticky || draftKind === 'sticky'
                 ? t('admin.focusTitle')
                 : t('admin.kanbanTitle')}
             </DialogDescription>
@@ -712,14 +1092,16 @@ export default function AdminHomeDashboard() {
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
               placeholder={
-                draftKind === 'sticky'
+                editingSticky || draftKind === 'sticky'
                   ? t('admin.stickyPrompt')
                   : t('admin.taskPrompt')
               }
               className="h-11 min-h-[44px] rounded-xl border-slate-200 text-sm font-semibold"
-              disabled={createMutation.isPending}
+              disabled={
+                createMutation.isPending || patchStickyMutation.isPending
+              }
             />
-            {draftKind === 'kanban' ? (
+            {draftKind === 'kanban' && !editingSticky ? (
               <div className="space-y-1.5">
                 <label
                   htmlFor="admin-task-deadline"
@@ -740,26 +1122,120 @@ export default function AdminHomeDashboard() {
             <DialogFooter className="flex flex-row gap-2 sm:justify-end">
               <button
                 type="button"
-                onClick={() => setDraftKind(null)}
-                disabled={createMutation.isPending}
+                onClick={() => {
+                  setDraftKind(null);
+                  setEditingSticky(null);
+                }}
+                disabled={
+                  createMutation.isPending || patchStickyMutation.isPending
+                }
                 className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={!draftText.trim() || createMutation.isPending}
+                disabled={
+                  !draftText.trim() ||
+                  createMutation.isPending ||
+                  patchStickyMutation.isPending
+                }
                 className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-bold hover:bg-[#1e1b4b] disabled:opacity-50 transition-colors"
               >
-                {createMutation.isPending ? (
+                {createMutation.isPending || patchStickyMutation.isPending ? (
                   <Loader2 size={14} className="animate-spin" />
-                ) : (
+                ) : editingSticky ? null : (
                   <Plus size={14} strokeWidth={2.5} />
                 )}
-                {draftKind === 'sticky' ? t('admin.addSticky') : t('admin.newTask')}
+                {editingSticky
+                  ? t('admin.saveSticky')
+                  : draftKind === 'sticky'
+                    ? t('admin.addSticky')
+                    : t('admin.newTask')}
               </button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editShortcutsOpen}
+        onOpenChange={(open) => {
+          if (!saveShortcutsMutation.isPending) setEditShortcutsOpen(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-md rounded-2xl border-slate-200 p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-5 pt-5 pb-2">
+            <DialogTitle className="font-clikd-wordmark font-extrabold text-lg text-slate-900">
+              {t('admin.editShortcutsTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500 font-medium">
+              {t('admin.editShortcutsSub')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-5 pb-2 grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto">
+            {HOME_SHORTCUT_KEYS.map((key) => {
+              const selected = draftShortcuts.includes(key);
+              const atMax = draftShortcuts.length >= MAX_HOME_SHORTCUTS && !selected;
+              const meta = HOME_SHORTCUT_META[key];
+              const nav = ADMIN_NAV_ITEMS.find((item) => item.key === key);
+              const Icon = nav?.icon ?? Link2;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={atMax}
+                  onClick={() => toggleDraftShortcut(key)}
+                  className={`flex items-center gap-3 min-h-[44px] rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-40 ${
+                    selected
+                      ? 'border-[#F472B6] bg-[#FCE7F3]/50'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 ${meta.accent}`}
+                  >
+                    <Icon size={16} strokeWidth={2.25} />
+                  </span>
+                  <span className="flex-1 text-sm font-bold text-slate-800">
+                    {t(meta.labelKey)}
+                  </span>
+                  <span
+                    className={`h-5 w-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
+                      selected
+                        ? 'bg-[#F472B6] border-[#F472B6] text-white'
+                        : 'bg-white border-slate-300'
+                    }`}
+                  >
+                    {selected ? <Check size={12} strokeWidth={3} /> : null}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <DialogFooter className="px-5 pb-5 pt-3 flex flex-row gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setEditShortcutsOpen(false)}
+              disabled={saveShortcutsMutation.isPending}
+              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={
+                draftShortcuts.length === 0 || saveShortcutsMutation.isPending
+              }
+              onClick={() => saveShortcutsMutation.mutate(draftShortcuts)}
+              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-bold hover:bg-[#1e1b4b] disabled:opacity-50 transition-colors"
+            >
+              {saveShortcutsMutation.isPending ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : null}
+              {t('admin.saveShortcuts')}
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

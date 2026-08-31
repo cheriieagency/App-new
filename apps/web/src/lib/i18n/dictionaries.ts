@@ -166,6 +166,10 @@ export type NestedDict = {
     homeEyebrow: string;
     homeTitle: string;
     homeSub: string;
+    greetMorning: string;
+    greetDay: string;
+    greetAfternoon: string;
+    greetEvening: string;
     focusTitle: string;
     addSticky: string;
     stickyPrompt: string;
@@ -189,6 +193,15 @@ export type NestedDict = {
     shortcutAnalyticsOpen: string;
     shortcutBio: string;
     shortcutBioOpen: string;
+    shortcutOpen: string;
+    editShortcuts: string;
+    editShortcutsTitle: string;
+    editShortcutsSub: string;
+    saveShortcuts: string;
+    editSticky: string;
+    saveSticky: string;
+    deleteSticky: string;
+    stickyColor: string;
     catGeneral: string;
     stickyEmpty: string;
     kanbanEmpty: string;
@@ -402,6 +415,10 @@ export const DICT_EN: NestedDict = {
     homeTitle: 'Admin Home',
     homeSub:
       'Today’s focus, shortcuts, Kanban and latest activity — all in one place.',
+    greetMorning: 'Good morning',
+    greetDay: 'Good day',
+    greetAfternoon: 'Good afternoon',
+    greetEvening: 'Good evening',
     focusTitle: "Today’s Focus & To-Do's",
     addSticky: 'Add sticky note',
     stickyPrompt: 'New sticky note',
@@ -425,6 +442,15 @@ export const DICT_EN: NestedDict = {
     shortcutAnalyticsOpen: 'Open analytics',
     shortcutBio: 'Bio Store & Links',
     shortcutBioOpen: 'Open bio store',
+    shortcutOpen: 'Open',
+    editShortcuts: 'Edit shortcuts',
+    editShortcutsTitle: 'Quick access',
+    editShortcutsSub: 'Pick up to 3 pages for quick access on Home.',
+    saveShortcuts: 'Save shortcuts',
+    editSticky: 'Edit sticky note',
+    saveSticky: 'Save note',
+    deleteSticky: 'Delete note',
+    stickyColor: 'Note color',
     catGeneral: 'General',
     stickyEmpty: 'No focus items yet — add your first sticky note.',
     kanbanEmpty: 'No tasks yet',
@@ -450,7 +476,7 @@ export const DICT_EN: NestedDict = {
     oauthBody: 'clikd: is requesting permission to manage your {platform} account.',
     permissions: 'Permissions requested',
     disconnectTitle: 'Disconnect account?',
-    disconnectBody: 'You can reconnect anytime. Scheduled posts for this channel will pause.',
+    disconnectBody: 'You can reconnect anytime. Your posts, projects, and media stay on your account — only publishing pauses until you reconnect the same channel.',
     confirmDisconnect: 'Disconnect',
     workspaceGuideTitle: 'Connecting different social accounts to different workspaces?',
     workspaceGuideStep1: 'Select your active workspace from the left sidebar or top workspace switcher.',
@@ -641,6 +667,10 @@ export const DICT_SV: NestedDict = {
     homeTitle: 'Admin Hem',
     homeSub:
       'Dagens fokus, genvägar, Kanban och senaste aktivitet — samlat på ett ställe.',
+    greetMorning: 'God morgon',
+    greetDay: 'God dag',
+    greetAfternoon: 'God eftermiddag',
+    greetEvening: 'God kväll',
     focusTitle: "Dagens Fokus & To-Do's",
     addSticky: 'Lägg till lapp-notering',
     stickyPrompt: 'Ny lapp-notering',
@@ -664,6 +694,15 @@ export const DICT_SV: NestedDict = {
     shortcutAnalyticsOpen: 'Öppna analytics',
     shortcutBio: 'Bio Store & Länkar',
     shortcutBioOpen: 'Öppna bio store',
+    shortcutOpen: 'Öppna',
+    editShortcuts: 'Redigera genvägar',
+    editShortcutsTitle: 'Snabbåtkomst',
+    editShortcutsSub: 'Välj upp till 3 sidor för snabbåtkomst på Hem.',
+    saveShortcuts: 'Spara genvägar',
+    editSticky: 'Redigera lapp',
+    saveSticky: 'Spara lapp',
+    deleteSticky: 'Ta bort lapp',
+    stickyColor: 'Lappfärg',
     catGeneral: 'Allmänt',
     stickyEmpty: 'Inga fokuspunkter ännu — lägg till din första lapp.',
     kanbanEmpty: 'Inga uppgifter ännu',
@@ -689,7 +728,7 @@ export const DICT_SV: NestedDict = {
     oauthBody: 'clikd: begär behörighet att hantera ditt {platform}-konto.',
     permissions: 'Begärda behörigheter',
     disconnectTitle: 'Koppla från konto?',
-    disconnectBody: 'Du kan ansluta igen när som helst. Schemalagda inlägg för kanalen pausas.',
+    disconnectBody: 'Du kan ansluta igen när som helst. Dina inlägg, projekt och media finns kvar på kontot — endast publicering pausas tills du kopplar samma kanal igen.',
     confirmDisconnect: 'Koppla från',
     workspaceGuideTitle: 'Vill du koppla olika sociala konton till olika arbetsytor?',
     workspaceGuideStep1: 'Välj aktiv arbetsyta i vänstermenyn eller arbetsyteväljaren högst upp.',
@@ -1099,6 +1138,10 @@ export const DICT_FI: NestedDict = {
     homeTitle: 'Admin-koti',
     homeSub:
       'Päivän fokus, oikotiet, Kanban ja viimeisin aktiviteetti — kaikki yhdessä paikassa.',
+    greetMorning: 'Hyvää huomenta',
+    greetDay: 'Hyvää päivää',
+    greetAfternoon: 'Hyvää iltapäivää',
+    greetEvening: 'Hyvää iltaa',
     focusTitle: "Päivän fokus & tehtävät",
     addSticky: 'Lisää muistilappu',
     stickyPrompt: 'Uusi muistilappu',
@@ -1122,6 +1165,15 @@ export const DICT_FI: NestedDict = {
     shortcutAnalyticsOpen: 'Avaa analytiikka',
     shortcutBio: 'Bio Store & linkit',
     shortcutBioOpen: 'Avaa bio-kauppa',
+    shortcutOpen: 'Avaa',
+    editShortcuts: 'Muokkaa oikoteitä',
+    editShortcutsTitle: 'Pikakäyttö',
+    editShortcutsSub: 'Valitse enintään 3 sivua pikakäyttöön Etusivulla.',
+    saveShortcuts: 'Tallenna oikotiet',
+    editSticky: 'Muokkaa muistilappua',
+    saveSticky: 'Tallenna',
+    deleteSticky: 'Poista muistilappu',
+    stickyColor: 'Muistilapun väri',
     catGeneral: 'Yleinen',
     stickyEmpty: 'Ei fokuskohtia vielä — lisää ensimmäinen muistilappu.',
     kanbanEmpty: 'Ei tehtäviä vielä',
@@ -1147,7 +1199,7 @@ export const DICT_FI: NestedDict = {
     oauthBody: 'clikd: pyytää lupaa hallita {platform}-tiliäsi.',
     permissions: 'Pyydetyt oikeudet',
     disconnectTitle: 'Irrota tili?',
-    disconnectBody: 'Voit yhdistää uudelleen milloin tahansa. Kanavan ajastetut julkaisut keskeytetään.',
+    disconnectBody: 'Voit yhdistää uudelleen milloin tahansa. Julkaisut, projektit ja media säilyvät tililläsi — vain julkaisu keskeytyy, kunnes yhdistät saman kanavan uudelleen.',
     confirmDisconnect: 'Irrota',
     workspaceGuideTitle: 'Haluatko yhdistää eri some-tilejä eri työtiloihin?',
     workspaceGuideStep1: 'Valitse aktiivinen työtila vasemmasta sivupalkista tai yläreunan työtilavalitsimesta.',

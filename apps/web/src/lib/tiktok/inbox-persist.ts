@@ -107,6 +107,19 @@ export async function ensureTikTokInboxSchema(): Promise<void> {
       ALTER TABLE public.tiktok_messages
         ADD COLUMN IF NOT EXISTS external_id text
     `);
+    // Older DBs may have created tiktok_conversations without user_id.
+    await safe('conversations_user_id', () => sql`
+      ALTER TABLE public.tiktok_conversations
+        ADD COLUMN IF NOT EXISTS user_id text
+    `);
+    await safe('conversations_avatar_url', () => sql`
+      ALTER TABLE public.tiktok_conversations
+        ADD COLUMN IF NOT EXISTS avatar_url text
+    `);
+    await safe('conversations_last_message', () => sql`
+      ALTER TABLE public.tiktok_conversations
+        ADD COLUMN IF NOT EXISTS last_message text NOT NULL DEFAULT ''
+    `);
   })().catch((error) => {
     schemaReady = null;
     throw error;
@@ -274,7 +287,7 @@ export async function listTikTokInboxThreads(input: {
 
   const limit = Math.min(Math.max(input.limit ?? 40, 1), 80);
   const convRows = await sql`
-    SELECT id, workspace_id, user_id, tiktok_user_id, username, avatar_url,
+    SELECT id, workspace_id, tiktok_user_id, username, avatar_url,
            last_message, updated_at
     FROM public.tiktok_conversations
     WHERE workspace_id = ${input.workspaceId}

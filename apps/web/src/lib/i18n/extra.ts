@@ -179,6 +179,8 @@ export type ExtraKey =
   | 'adminEmailCrm'
   | 'adminBioBuilder'
   | 'adminSearchPlaceholder'
+  | 'adminSearchHint'
+  | 'adminSearchEmpty'
   | 'boardKanban'
   | 'calendarTab'
   | 'tableTab'
@@ -1566,6 +1568,8 @@ export const EXTRA_EN: ExtraDict = {
   adminEmailCrm: 'Email CRM',
   adminBioBuilder: 'Bio Builder',
   adminSearchPlaceholder: 'Search admin…',
+  adminSearchHint: 'search',
+  adminSearchEmpty: 'No matching pages',
   boardKanban: 'Progress',
   calendarTab: 'Calendar',
   tableTab: 'Table',
@@ -2968,6 +2972,8 @@ export const EXTRA_SV: ExtraDict = {
   adminEmailCrm: 'E-post CRM',
   adminBioBuilder: 'Bio Builder',
   adminSearchPlaceholder: 'Sök i admin…',
+  adminSearchHint: 'sök',
+  adminSearchEmpty: 'Inga matchande sidor',
   boardKanban: 'Progress',
   calendarTab: 'Kalender',
   tableTab: 'Tabell',
@@ -4251,6 +4257,8 @@ export const EXTRA_NO: ExtraDict = {
   pricing: 'Priser',
   adminEmailCrm: 'E-post CRM',
   adminSearchPlaceholder: 'Søk i admin…',
+  adminSearchHint: 'søk',
+  adminSearchEmpty: 'Ingen treff',
   boardKanban: 'Progress',
   calendarTab: 'Kalender',
   tableTab: 'Tabell',
@@ -4399,6 +4407,8 @@ export const EXTRA_DA: ExtraDict = {
   pricing: 'Priser',
   adminEmailCrm: 'E-mail CRM',
   adminSearchPlaceholder: 'Søg i admin…',
+  adminSearchHint: 'søg',
+  adminSearchEmpty: 'Ingen matchende sider',
   calendarTab: 'Kalender',
   tableTab: 'Tabel',
   feedGridTab: 'Feed-gitter',
@@ -4622,6 +4632,8 @@ export const EXTRA_FI: ExtraDict = {
   adminEmailCrm: 'Sähköposti-CRM',
   adminBioBuilder: 'Bio Builder',
   adminSearchPlaceholder: 'Hae administa…',
+  adminSearchHint: 'hae',
+  adminSearchEmpty: 'Ei vastaavia sivuja',
   boardKanban: 'Progress',
   calendarTab: 'Kalenteri',
   tableTab: 'Taulukko',

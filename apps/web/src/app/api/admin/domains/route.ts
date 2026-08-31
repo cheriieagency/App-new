@@ -53,7 +53,20 @@ export async function GET(request: Request) {
   const gate = await requireFeature('customDomain', request.headers);
   if (gate) return gate;
 
-  const record = await getDomainForUser(session.user.id);
+  let record = null;
+  try {
+    record = await getDomainForUser(session.user.id);
+  } catch (error) {
+    console.error('[GET /api/admin/domains]', error);
+    return Response.json({
+      ok: true,
+      domain: null,
+      verified: false,
+      status: 'unset',
+      dns: null,
+      error: 'schema_heal_pending',
+    });
+  }
   if (!record) {
     return Response.json({
       ok: true,

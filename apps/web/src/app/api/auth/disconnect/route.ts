@@ -1,12 +1,14 @@
 /**
  * POST /api/auth/disconnect
- * Disconnect a social_accounts row for the authenticated user.
+ * Soft-disconnect a social_accounts row for the authenticated user.
+ * Tokens are cleared; profile identity stays so reconnect restores the same slot.
+ * Posts, projects, media, and other workspace data are never deleted.
  *
  * Accepts JSON body OR query string:
  *   accountId | platform + platformUserId | platform + workspaceId
  *
- * Always scopes DELETE with user_id = session.user.id.
- * For TikTok, prefers exact (user_id, platform=tiktok, workspace_id) deletion.
+ * Always scopes the update with user_id = session.user.id.
+ * For TikTok, prefers exact (user_id, platform=tiktok, workspace_id) matching.
  */
 
 import { NextResponse } from 'next/server';
@@ -169,9 +171,11 @@ async function handleDisconnect(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Account disconnected successfully',
+      message:
+        'Account disconnected. Your content stays on your clikd: account — reconnect anytime to publish again.',
       ok: true,
       deleted: true,
+      disconnected: true,
       deletedIds: result.deletedIds,
       platform: p,
       platformUserId: params.platformUserId,

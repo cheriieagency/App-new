@@ -23,6 +23,7 @@ import IgBusinessRequiredBanner from '@/components/admin/IgBusinessRequiredBanne
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import {
   PLATFORM_META,
+  type ConnectedAccountPlatform,
   type ConnectedSocialAccount,
   type SocialPlatform,
 } from '@/lib/mock-content-planner';
@@ -320,9 +321,16 @@ export default function SocialAccountsPanel({
       platform,
       connect,
     }: {
-      platform: SocialPlatform;
+      platform: ConnectedAccountPlatform;
       connect: boolean;
     }) => {
+      // Demo toggle is only for core social publish platforms (not Google / TikTok Business).
+      if (
+        platform === 'google' ||
+        platform === 'tiktok_business'
+      ) {
+        throw new Error('Unsupported demo toggle platform');
+      }
       const r = await fetch('/api/planner/socials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

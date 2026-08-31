@@ -43,6 +43,17 @@ export async function ensureDomainsSchema(): Promise<void> {
         updated_at              timestamptz NOT NULL DEFAULT now()
       )
     `;
+    // Existing workspaces tables may predate domain columns.
+    await sql`
+      ALTER TABLE public.workspaces
+        ADD COLUMN IF NOT EXISTS custom_domain text,
+        ADD COLUMN IF NOT EXISTS custom_domain_verified boolean NOT NULL DEFAULT false
+    `;
+    await sql`
+      ALTER TABLE public.workspaces
+        ADD COLUMN IF NOT EXISTS slug text,
+        ADD COLUMN IF NOT EXISTS default_community_slug text
+    `;
     await sql`
       CREATE UNIQUE INDEX IF NOT EXISTS workspaces_custom_domain_uidx
         ON public.workspaces (custom_domain)

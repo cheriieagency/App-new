@@ -140,6 +140,19 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
+    if (token.needsReconnect || !token.isUserToken) {
+      return Response.json(
+        {
+          ok: false,
+          demo: false,
+          error: 'meta_user_token_required',
+          message:
+            'Reconnect Facebook under Settings → Socials so Ads Manager can use a user token with ads_read / ads_management.',
+          cta: { label: 'Reconnect Facebook', href: '/admin/settings/socials' },
+        },
+        { status: 403 }
+      );
+    }
 
     const accounts = await listMetaAdAccounts({
       workspaceId,
@@ -171,12 +184,12 @@ export async function POST(request: Request) {
     let metaNote: string | null = null;
 
     try {
+      // ABO: budget lives on the ad set only — do not set campaign daily_budget.
       const created = await createMetaCampaign(token.accessToken, {
         adAccountId,
         name,
         objective: objective as Objective,
         status: 'PAUSED',
-        dailyBudgetMinor: budgetMajorToMinor(dailyBudget),
       });
       campaignId = created.id;
     } catch (error) {
@@ -205,6 +218,7 @@ export async function POST(request: Request) {
         ageMin,
         ageMax,
         status: 'PAUSED',
+        objective: objective as Objective,
       });
       adsetId = adset.id;
     } catch (error) {

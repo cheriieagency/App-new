@@ -47,7 +47,6 @@ import {
   Camera,
   Globe as GlobeIcon,
   Bell,
-  Search,
   Mail,
   MapPin,
   Monitor,
@@ -82,6 +81,7 @@ import type { WorkspaceBioBlock } from '@/lib/mock-workspace-profiles';
 import { useAdminNav } from '@/components/admin/AdminNavContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import BioPublishSuccessDialog from '@/components/admin/BioPublishSuccessDialog';
+import AdminSearchBar from '@/components/admin/AdminSearchBar';
 import { bioPublicDisplay, bioPublicUrl } from '@/lib/site';
 import { useSubscription } from '@/components/common/useSubscription';
 import UpgradeModal from '@/components/common/UpgradeModal';
@@ -1760,7 +1760,6 @@ export default function AdminPage() {
   const [bioTheme, setBioTheme] = useState<BioTheme>(DEFAULT_BIO_THEME);
   const [bioSubTab, setBioSubTab] = useState<BioSubTab>('design');
   const [saved, setSaved] = useState('');
-  const [adminSearch, setAdminSearch] = useState('');
   const [createWsOpen, setCreateWsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -2462,21 +2461,7 @@ export default function AdminPage() {
             onCreateNew={() => setCreateWsOpen(true)}
           />
         </div>
-        <div className="relative w-full max-w-md hidden sm:block flex-1">
-          <Search
-            size={15}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          />
-          <input
-            value={adminSearch}
-            onChange={(e) => setAdminSearch(e.target.value)}
-            placeholder={t('adminSearchPlaceholder', locale)}
-            className="w-full max-w-md bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-14 py-2 min-h-[40px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
-          />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">
-            ⌘K
-          </kbd>
-        </div>
+        <AdminSearchBar locale={locale} />
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
           <LanguageSwitcher className="hidden lg:block [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:h-9 [&_button]:min-h-[36px] [&_button]:text-slate-500 [&_button]:px-2 [&_button]:text-xs [&_button]:font-semibold" />
           <button

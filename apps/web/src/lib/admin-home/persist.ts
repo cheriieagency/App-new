@@ -85,6 +85,20 @@ export async function ensureAdminHomeSchema(): Promise<void> {
       ALTER TABLE public.admin_home_kanban
         ADD COLUMN IF NOT EXISTS due_date date
     `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS public.admin_home_prefs (
+        workspace_id text NOT NULL,
+        user_id      text NOT NULL,
+        shortcuts    jsonb NOT NULL DEFAULT '["calendar","analytics","biobuilder"]'::jsonb,
+        sticky_color text NOT NULL DEFAULT 'lilac',
+        updated_at   timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (workspace_id, user_id)
+      )
+    `;
+    await sql`
+      ALTER TABLE public.admin_home_prefs
+        ADD COLUMN IF NOT EXISTS sticky_color text NOT NULL DEFAULT 'lilac'
+    `;
   })().catch((error) => {
     schemaReady = null;
     throw error;
@@ -100,9 +114,14 @@ function newId(prefix: string): string {
 export async function listAdminHomeBoard(input: {
   workspaceId: string;
   userId: string;
-}): Promise<{ stickies: HomeSticky[]; kanban: HomeKanbanTask[] }> {
+}): Promise<{
+  stickies: HomeSticky[];
+  kanban: HomeKanbanTask[];
+  shortcuts: string[];
+  stickyColor: string;
+}> {
   await ensureAdminHomeSchema();
-  const [stickyRows, kanbanRows] = await Promise.all([
+  const [stickyRows, kanbanRows, prefRows] = await Promise.all([
     sql`
       SELECT id, text, done, sort_order
       FROM public.admin_home_stickies
@@ -116,6 +135,13 @@ export async function listAdminHomeBoard(input: {
       WHERE workspace_id = ${input.workspaceId}
         AND user_id = ${input.userId}
       ORDER BY sort_order ASC, created_at DESC
+    `,
+    sql`
+      SELECT shortcuts, sticky_color
+      FROM public.admin_home_prefs
+      WHERE workspace_id = ${input.workspaceId}
+        AND user_id = ${input.userId}
+      LIMIT 1
     `,
   ]);
 
@@ -141,7 +167,63 @@ export async function listAdminHomeBoard(input: {
     };
   });
 
-  return { stickies, kanban };
+  const { normalizeHomeShortcuts } = await import('@/lib/admin-home/shortcuts');
+  const { normalizeStickyColor } = await import('@/lib/admin-home/sticky-colors');
+  const pref = prefRows?.[0] as
+    | { shortcuts?: unknown; sticky_color?: unknown }
+    | undefined;
+  const shortcuts = normalizeHomeShortcuts(pref?.shortcuts);
+  const stickyColor = normalizeStickyColor(pref?.sticky_color);
+
+  return { stickies, kanban, shortcuts, stickyColor };
+}
+
+export async function saveHomeShortcuts(input: {
+  workspaceId: string;
+  userId: string;
+  shortcuts: string[];
+}): Promise<string[]> {
+  await ensureAdminHomeSchema();
+  const { normalizeHomeShortcuts } = await import('@/lib/admin-home/shortcuts');
+  const shortcuts = normalizeHomeShortcuts(input.shortcuts);
+  await sql`
+    INSERT INTO public.admin_home_prefs (workspace_id, user_id, shortcuts, updated_at)
+    VALUES (
+      ${input.workspaceId},
+      ${input.userId},
+      ${JSON.stringify(shortcuts)},
+      now()
+    )
+    ON CONFLICT (workspace_id, user_id) DO UPDATE SET
+      shortcuts = EXCLUDED.shortcuts,
+      updated_at = now()
+  `;
+  return shortcuts;
+}
+
+export async function saveHomeStickyColor(input: {
+  workspaceId: string;
+  userId: string;
+  stickyColor: string;
+}): Promise<string> {
+  await ensureAdminHomeSchema();
+  const { normalizeStickyColor } = await import('@/lib/admin-home/sticky-colors');
+  const { DEFAULT_HOME_SHORTCUTS } = await import('@/lib/admin-home/shortcuts');
+  const stickyColor = normalizeStickyColor(input.stickyColor);
+  await sql`
+    INSERT INTO public.admin_home_prefs (workspace_id, user_id, shortcuts, sticky_color, updated_at)
+    VALUES (
+      ${input.workspaceId},
+      ${input.userId},
+      ${JSON.stringify(DEFAULT_HOME_SHORTCUTS)}::jsonb,
+      ${stickyColor},
+      now()
+    )
+    ON CONFLICT (workspace_id, user_id) DO UPDATE SET
+      sticky_color = EXCLUDED.sticky_color,
+      updated_at = now()
+  `;
+  return stickyColor;
 }
 
 export async function createHomeSticky(input: {

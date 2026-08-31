@@ -127,7 +127,10 @@ export async function GET(request: Request) {
       description: string | null;
     }> = [];
 
-    if (token && accounts.length > 0) {
+    const connected = Boolean(token);
+    const needsReconnect = Boolean(token?.needsReconnect || (token && !token.isUserToken));
+    // Only call Marketing API with a user token.
+    if (token?.isUserToken && accounts.length > 0) {
       try {
         const remote = await fetchMetaCustomAudiences(
           accounts[0].id,
@@ -144,12 +147,12 @@ export async function GET(request: Request) {
       }
     }
 
-    const connected = Boolean(token);
     return Response.json({
       ok: true,
       demo: false,
       workspaceId,
       connected,
+      needsReconnect,
       tokenPlatform: token?.platform ?? null,
       accounts,
       campaigns,
@@ -159,14 +162,18 @@ export async function GET(request: Request) {
       series,
       dateRange: range,
       kpis,
-      message: connected
-        ? campaigns.length === 0
-          ? 'No Meta campaigns yet. Click Sync Meta to pull from your ad account, or create a campaign.'
-          : null
-        : 'Connect Facebook under Settings → Socials with ads_read / ads_management, then Sync Meta.',
-      cta: connected
-        ? null
-        : { label: 'Connect Facebook', href: '/admin/settings/socials' },
+      message: needsReconnect
+        ? 'Reconnect Facebook under Settings → Socials so Ads Manager can use ads_read / ads_management (user token).'
+        : connected
+          ? campaigns.length === 0
+            ? 'No Meta campaigns yet. Click Sync Meta to pull from your ad account, or create a campaign.'
+            : null
+          : 'Connect Facebook under Settings → Socials with ads_read / ads_management, then Sync Meta.',
+      cta: needsReconnect
+        ? { label: 'Reconnect Facebook', href: '/admin/settings/socials' }
+        : connected
+          ? null
+          : { label: 'Connect Facebook', href: '/admin/settings/socials' },
     });
   } catch (error) {
     console.error('[GET /api/ads]', error);

@@ -14,10 +14,16 @@ import {
   deleteHomeKanbanTask,
   deleteHomeSticky,
   listAdminHomeBoard,
+  saveHomeShortcuts,
+  saveHomeStickyColor,
   updateHomeKanbanTask,
   updateHomeSticky,
   type HomeKanbanColumn,
 } from '@/lib/admin-home/persist';
+import {
+  DEFAULT_HOME_SHORTCUTS,
+} from '@/lib/admin-home/shortcuts';
+import { DEFAULT_STICKY_COLOR } from '@/lib/admin-home/sticky-colors';
 
 async function resolveWorkspaceId(request: Request): Promise<string | null> {
   const url = new URL(request.url);
@@ -39,6 +45,8 @@ function emptyBoard(workspaceId: string | null) {
     workspaceId,
     stickies: [] as unknown[],
     kanban: [] as unknown[],
+    shortcuts: [...DEFAULT_HOME_SHORTCUTS],
+    stickyColor: DEFAULT_STICKY_COLOR,
   };
 }
 
@@ -69,6 +77,8 @@ export async function GET(request: Request) {
       workspaceId,
       stickies: board.stickies,
       kanban: board.kanban,
+      shortcuts: board.shortcuts,
+      stickyColor: board.stickyColor,
     });
   } catch (error) {
     console.error('[GET /api/admin/home]', error);
@@ -181,7 +191,39 @@ export async function PATCH(request: Request) {
       (await resolveWorkspaceId(request));
     const id = typeof body.id === 'string' ? body.id.trim() : '';
     const kind = String(body.kind || body.type || '').toLowerCase();
-    if (!workspaceId || !id) {
+    if (!workspaceId) {
+      return Response.json(
+        { error: 'invalid_request', message: 'workspaceId required' },
+        { status: 400 }
+      );
+    }
+
+    if (kind === 'shortcuts') {
+      const shortcuts = await saveHomeShortcuts({
+        workspaceId,
+        userId: session.user.id,
+        shortcuts: Array.isArray(body.shortcuts) ? body.shortcuts.map(String) : [],
+      });
+      return Response.json({ ok: true, shortcuts });
+    }
+
+    if (kind === 'sticky_color' || kind === 'stickyColor') {
+      const stickyColor = await saveHomeStickyColor({
+        workspaceId,
+        userId: session.user.id,
+        stickyColor:
+          typeof body.stickyColor === 'string'
+            ? body.stickyColor
+            : typeof body.sticky_color === 'string'
+              ? body.sticky_color
+              : typeof body.color === 'string'
+                ? body.color
+                : '',
+      });
+      return Response.json({ ok: true, stickyColor });
+    }
+
+    if (!id) {
       return Response.json(
         { error: 'invalid_request', message: 'workspaceId and id required' },
         { status: 400 }
@@ -233,7 +275,10 @@ export async function PATCH(request: Request) {
     }
 
     return Response.json(
-      { error: 'invalid_kind', message: 'kind must be sticky or kanban' },
+      {
+        error: 'invalid_kind',
+        message: 'kind must be sticky, kanban, shortcuts, or sticky_color',
+      },
       { status: 400 }
     );
   } catch (error) {

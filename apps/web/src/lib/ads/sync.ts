@@ -58,19 +58,65 @@ export async function resolveAdsWorkspaceId(
 export async function loadMetaAdsAccessToken(input: {
   userId: string;
   workspaceId: string;
-}): Promise<{ accessToken: string; platform: string } | null> {
+}): Promise<{
+  accessToken: string;
+  platform: string;
+  /** True when token is a Marketing API–capable user token. */
+  isUserToken: boolean;
+  /** Hint when only a Page token is available (Ads will likely fail). */
+  needsReconnect?: boolean;
+} | null> {
   const tokens = await loadWorkspaceSocialTokens({
     userId: input.userId,
     workspaceId: input.workspaceId,
     platforms: ['facebook', 'instagram'],
   });
-  const fb = tokens.find((t) => t.platform === 'facebook' && t.access_token);
-  if (fb?.access_token) {
-    return { accessToken: fb.access_token, platform: 'facebook' };
+
+  const pickUserToken = (row: (typeof tokens)[number] | undefined) => {
+    if (!row) return null;
+    const fromMeta = String(row.meta?.user_access_token || '').trim();
+    if (fromMeta) return fromMeta;
+    // Instagram rows sometimes store the long-lived user token as access_token.
+    if (
+      row.platform === 'instagram' &&
+      String(row.meta?.token_source || '') === 'user_long_lived' &&
+      row.access_token?.trim()
+    ) {
+      return row.access_token.trim();
+    }
+    return null;
+  };
+
+  const fb = tokens.find((t) => t.platform === 'facebook');
+  const ig = tokens.find((t) => t.platform === 'instagram');
+
+  const fbUser = pickUserToken(fb);
+  if (fbUser) {
+    return {
+      accessToken: fbUser,
+      platform: 'facebook',
+      isUserToken: true,
+    };
   }
-  const ig = tokens.find((t) => t.platform === 'instagram' && t.access_token);
-  if (ig?.access_token) {
-    return { accessToken: ig.access_token, platform: 'instagram' };
+  const igUser = pickUserToken(ig);
+  if (igUser) {
+    return {
+      accessToken: igUser,
+      platform: 'instagram',
+      isUserToken: true,
+    };
+  }
+
+  // Last resort: Page token — Marketing /me/adaccounts usually fails with this.
+  const pageToken =
+    fb?.access_token?.trim() || ig?.access_token?.trim() || null;
+  if (pageToken) {
+    return {
+      accessToken: pageToken,
+      platform: fb?.access_token ? 'facebook' : 'instagram',
+      isUserToken: false,
+      needsReconnect: true,
+    };
   }
   return null;
 }
@@ -115,6 +161,9 @@ export async function syncMetaAdsForWorkspace(input: {
   syncedCampaigns: number;
   syncedAdSets: number;
   syncedAds: number;
+  accountErrors: Array<{ accountId: string; error: string }>;
+  /** True when Meta returned zero ad accounts for this token. */
+  noAdAccounts: boolean;
 }> {
   const accounts = await fetchMetaAdAccounts(input.accessToken);
   await upsertMetaAdAccounts({
@@ -136,6 +185,7 @@ export async function syncMetaAdsForWorkspace(input: {
   const remoteAds: MetaAdRemote[] = [];
   const audiences: MetaCustomAudienceRemote[] = [];
   const seriesAll: MetaInsightDay[] = [];
+  const accountErrors: Array<{ accountId: string; error: string }> = [];
   const currencyByAccount = new Map(
     accounts.map((a) => [a.id, a.currency] as const)
   );
@@ -146,14 +196,19 @@ export async function syncMetaAdsForWorkspace(input: {
   });
 
   for (const account of targetAccounts) {
+    let accountHadPull = false;
     try {
       const campaigns = await fetchMetaCampaignsForAccount(
         account.id,
         input.accessToken
       );
       remoteCampaigns.push(...campaigns);
+      accountHadPull = true;
     } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : 'campaigns_failed';
       console.warn('[ads/sync] campaigns failed for', account.id, error);
+      accountErrors.push({ accountId: account.id, error: msg });
     }
     try {
       const adsets = await fetchMetaAdSetsForAccount(
@@ -161,12 +216,20 @@ export async function syncMetaAdsForWorkspace(input: {
         input.accessToken
       );
       remoteAdSets.push(...adsets);
+      accountHadPull = true;
     } catch (error) {
       console.warn('[ads/sync] adsets failed for', account.id, error);
+      if (!accountErrors.some((e) => e.accountId === account.id)) {
+        accountErrors.push({
+          accountId: account.id,
+          error: error instanceof Error ? error.message : 'adsets_failed',
+        });
+      }
     }
     try {
       const ads = await fetchMetaAdsForAccount(account.id, input.accessToken);
       remoteAds.push(...ads);
+      accountHadPull = true;
     } catch (error) {
       console.warn('[ads/sync] ads failed for', account.id, error);
     }
@@ -194,10 +257,12 @@ export async function syncMetaAdsForWorkspace(input: {
           adAccountId: account.id,
           days: series,
         });
+        accountHadPull = true;
       }
     } catch (error) {
       console.warn('[ads/sync] insights failed for', account.id, error);
     }
+    void accountHadPull;
   }
 
   const campaignsByAccount = new Map<string, MetaCampaignRemote[]>();
@@ -276,5 +341,7 @@ export async function syncMetaAdsForWorkspace(input: {
     syncedCampaigns: remoteCampaigns.length,
     syncedAdSets: remoteAdSets.length,
     syncedAds: remoteAds.length,
+    accountErrors,
+    noAdAccounts: accounts.length === 0,
   };
 }
