@@ -51,10 +51,6 @@ export function oauthPopupCompleteResponse(
         (opts.detail || opts.error || 'Something went wrong').replace(/_/g, ' ')
       );
 
-  const postMessage = ok
-    ? `window.opener.postMessage({ type: 'OAUTH_SUCCESS', platform: '${platform}' }, window.location.origin);`
-    : `window.opener.postMessage({ type: 'OAUTH_ERROR', platform: '${platform}', error: '${error}', detail: '${detail}' }, window.location.origin);`;
-
   const html = `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -72,16 +68,32 @@ export function oauthPopupCompleteResponse(
     </div>
     <script>
       (function () {
+        var payload = ${
+          ok
+            ? `{ type: 'OAUTH_SUCCESS', platform: '${platform}' }`
+            : `{ type: 'OAUTH_ERROR', platform: '${platform}', error: '${error}', detail: '${detail}' }`
+        };
+        try {
+          localStorage.setItem(
+            'clikd_oauth_popup_result',
+            JSON.stringify({ ts: Date.now(), result: {
+              success: ${ok ? 'true' : 'false'},
+              platform: '${platform}',
+              error: ${ok ? 'undefined' : `'${error}'`},
+              detail: ${ok ? 'undefined' : `'${detail}'`}
+            }})
+          );
+        } catch (e) {}
         try {
           if (window.opener && !window.opener.closed) {
-            ${postMessage}
+            window.opener.postMessage(payload, window.location.origin);
             setTimeout(function () { window.close(); }, 800);
             return;
           }
         } catch (e) {}
         setTimeout(function () {
           window.location.replace('${hrefJs}');
-        }, 1200);
+        }, 900);
       })();
     </script>
   </body>

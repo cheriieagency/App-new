@@ -438,7 +438,8 @@ export default function SocialAccountsPanel({
 
   const handleConnectPlatform = async (
     platformLabel: string,
-    loginUrl: string
+    loginUrl: string,
+    platformKey?: string
   ) => {
     if (!activeWorkspaceId) {
       toast.error(t('toastSelectWorkspaceBeforeConnect'));
@@ -449,17 +450,48 @@ export default function SocialAccountsPanel({
       const result = await openOAuthPopup(loginUrl, `Connect ${platformLabel}`);
 
       if (result.success) {
-        await refreshSocialAccounts(result.platform);
+        await refreshSocialAccounts(result.platform || platformKey);
         toast.success(t('toastSocialConnected', { platform: platformLabel }));
         return;
       }
 
       if (result.error === 'popup_blocked') {
-        toast.error(t('toastPopupBlocked'));
+        // Full-page OAuth — popup blockers are common on Safari / strict browsers.
+        toast.message('Opening sign-in in this tab…');
+        window.location.assign(loginUrl);
         return;
       }
       if (result.error === 'popup_closed') {
-        // User cancelled — quiet exit
+        // COOP providers often sever opener — connection may still have saved.
+        await refreshSocialAccounts(platformKey);
+        try {
+          const params = new URLSearchParams();
+          if (activeWorkspaceId) params.set('workspaceId', activeWorkspaceId);
+          params.set('_', String(Date.now()));
+          const r = await fetch(`/api/socials/accounts?${params}`, {
+            headers: activeWorkspaceId
+              ? {
+                  'x-workspace-id': activeWorkspaceId,
+                  'x-active-workspace-id': activeWorkspaceId,
+                }
+              : undefined,
+            credentials: 'include',
+            cache: 'no-store',
+          });
+          const json = (await r.json().catch(() => ({}))) as {
+            accounts?: Array<{ platform?: string; connected?: boolean }>;
+          };
+          const connectedNow = (json.accounts || []).some(
+            (a) =>
+              a.connected &&
+              (!platformKey || a.platform === platformKey)
+          );
+          if (connectedNow) {
+            toast.success(t('toastSocialConnected', { platform: platformLabel }));
+          }
+        } catch {
+          /* quiet — user may have cancelled */
+        }
         return;
       }
       if (result.error) {
@@ -487,7 +519,8 @@ export default function SocialAccountsPanel({
         withWorkspaceQuery(
           '/api/auth/meta/login?target=instagram',
           activeWorkspaceId
-        )
+        ),
+        'instagram'
       );
       return;
     }
@@ -497,21 +530,24 @@ export default function SocialAccountsPanel({
         withWorkspaceQuery(
           '/api/auth/meta/login?target=facebook',
           activeWorkspaceId
-        )
+        ),
+        'facebook'
       );
       return;
     }
     if (platform === 'youtube') {
       void handleConnectPlatform(
         'YouTube',
-        withWorkspaceQuery('/api/auth/youtube/login', activeWorkspaceId)
+        withWorkspaceQuery('/api/auth/youtube/login', activeWorkspaceId),
+        'youtube'
       );
       return;
     }
     if (platform === 'linkedin') {
       void handleConnectPlatform(
         'LinkedIn',
-        withWorkspaceQuery('/api/auth/linkedin/login', activeWorkspaceId)
+        withWorkspaceQuery('/api/auth/linkedin/login', activeWorkspaceId),
+        'linkedin'
       );
       return;
     }
@@ -522,7 +558,8 @@ export default function SocialAccountsPanel({
     if (platform === 'pinterest') {
       void handleConnectPlatform(
         'Pinterest',
-        withWorkspaceQuery('/api/auth/pinterest/login', activeWorkspaceId)
+        withWorkspaceQuery('/api/auth/pinterest/login', activeWorkspaceId),
+        'pinterest'
       );
       return;
     }
@@ -541,7 +578,8 @@ export default function SocialAccountsPanel({
       withWorkspaceQuery(
         `/api/auth/meta/login?target=${target}`,
         activeWorkspaceId
-      )
+      ),
+      target === 'both' ? 'instagram' : target
     );
   };
 
@@ -1090,7 +1128,8 @@ export default function SocialAccountsPanel({
                     withWorkspaceQuery(
                       '/api/auth/youtube/login',
                       activeWorkspaceId
-                    )
+                    ),
+                    'youtube'
                   );
                 }}
                 onDisconnect={() =>
@@ -1127,7 +1166,8 @@ export default function SocialAccountsPanel({
                     withWorkspaceQuery(
                       '/api/auth/linkedin/login',
                       activeWorkspaceId
-                    )
+                    ),
+                    'linkedin'
                   );
                 }}
                 onDisconnect={() =>
@@ -1164,7 +1204,8 @@ export default function SocialAccountsPanel({
                     withWorkspaceQuery(
                       '/api/auth/pinterest/login',
                       activeWorkspaceId
-                    )
+                    ),
+                    'pinterest'
                   );
                 }}
                 onDisconnect={() =>

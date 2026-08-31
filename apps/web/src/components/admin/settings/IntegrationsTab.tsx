@@ -87,19 +87,29 @@ export default function IntegrationsTab({
       return;
     }
     const label = PLATFORM_META[platform].label;
-    const result = await openOAuthPopup(
-      withWorkspaceQuery(path, workspaceId),
-      `Connect ${label}`
-    );
+    const loginUrl = withWorkspaceQuery(path, workspaceId);
+    const result = await openOAuthPopup(loginUrl, `Connect ${label}`);
     if (result.success) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['social-accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
       ]);
       toast.success(`${label} connected successfully!`);
-    } else if (result.error === 'popup_blocked') {
-      toast.error(t('toastAllowPopupsConnect', locale));
-    } else if (result.error && result.error !== 'popup_closed') {
+      return;
+    }
+    if (result.error === 'popup_blocked') {
+      toast.message('Opening sign-in in this tab…');
+      window.location.assign(loginUrl);
+      return;
+    }
+    if (result.error === 'popup_closed') {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['social-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['planner-socials'] }),
+      ]);
+      return;
+    }
+    if (result.error) {
       toast.error(
         tf('toastConnectionFailedDetail', locale, {
           error: result.error.replace(/_/g, ' '),

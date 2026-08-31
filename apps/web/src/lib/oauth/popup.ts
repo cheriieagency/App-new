@@ -1,6 +1,9 @@
 /**
  * Open a centered OAuth window and resolve when the popup posts
  * OAUTH_SUCCESS / OAUTH_ERROR / OAUTH_COMPLETE (or is closed manually).
+ *
+ * Google / LinkedIn / Pinterest often set Cross-Origin-Opener-Policy which
+ * severs `window.opener`, so we also bridge via localStorage.
  */
 
 export type OAuthPopupResult = {
@@ -10,6 +13,39 @@ export type OAuthPopupResult = {
   detail?: string;
 };
 
+/** Shared with oauth popup-callback HTML (same-origin only). */
+export const OAUTH_POPUP_STORAGE_KEY = 'clikd_oauth_popup_result';
+
+type StoredOAuthPayload = {
+  ts: number;
+  result: OAuthPopupResult;
+};
+
+export function writeOAuthPopupResult(result: OAuthPopupResult): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const payload: StoredOAuthPayload = { ts: Date.now(), result };
+    window.localStorage.setItem(OAUTH_POPUP_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    /* private mode / blocked storage */
+  }
+}
+
+export function consumeOAuthPopupResult(maxAgeMs = 120_000): OAuthPopupResult | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(OAUTH_POPUP_STORAGE_KEY);
+    if (!raw) return null;
+    window.localStorage.removeItem(OAUTH_POPUP_STORAGE_KEY);
+    const parsed = JSON.parse(raw) as StoredOAuthPayload;
+    if (!parsed?.result || typeof parsed.ts !== 'number') return null;
+    if (Date.now() - parsed.ts > maxAgeMs) return null;
+    return parsed.result;
+  } catch {
+    return null;
+  }
+}
+
 export function openOAuthPopup(
   url: string,
   title = 'Connect Account',
@@ -17,6 +53,13 @@ export function openOAuthPopup(
   h = 750
 ): Promise<OAuthPopupResult> {
   return new Promise((resolve) => {
+    // Clear any stale bridge payload from a previous attempt.
+    try {
+      window.localStorage.removeItem(OAUTH_POPUP_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+
     const dualScreenLeft =
       window.screenLeft !== undefined ? window.screenLeft : window.screenX;
     const dualScreenTop =
@@ -37,7 +80,7 @@ export function openOAuthPopup(
       title,
       [
         'toolbar=no',
-        'location=no',
+        'location=yes',
         'directories=no',
         'status=no',
         'menubar=no',
@@ -62,6 +105,7 @@ export function openOAuthPopup(
       settled = true;
       window.clearInterval(timer);
       window.removeEventListener('message', handleMessage);
+      window.removeEventListener('storage', handleStorage);
       if (popup && !popup.closed) {
         try {
           popup.close();
@@ -72,18 +116,12 @@ export function openOAuthPopup(
       resolve(result);
     };
 
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data as
-        | {
-            type?: string;
-            platform?: string;
-            error?: string;
-            detail?: string;
-          }
-        | null;
-      if (!data || typeof data !== 'object') return;
-
+    const applyPayload = (data: {
+      type?: string;
+      platform?: string;
+      error?: string;
+      detail?: string;
+    }) => {
       if (data.type === 'OAUTH_SUCCESS' || data.type === 'OAUTH_COMPLETE') {
         finish({
           success: true,
@@ -101,12 +139,46 @@ export function openOAuthPopup(
       }
     };
 
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as
+        | {
+            type?: string;
+            platform?: string;
+            error?: string;
+            detail?: string;
+          }
+        | null;
+      if (!data || typeof data !== 'object') return;
+      applyPayload(data);
+    };
+
+    // Cross-tab / COOP-safe bridge when opener is severed.
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== OAUTH_POPUP_STORAGE_KEY || !event.newValue) return;
+      const stored = consumeOAuthPopupResult();
+      if (stored) finish(stored);
+    };
+
     window.addEventListener('message', handleMessage);
+    window.addEventListener('storage', handleStorage);
 
     const timer = window.setInterval(() => {
+      // Poll storage in the same tab (storage events only fire cross-tab).
+      const stored = consumeOAuthPopupResult();
+      if (stored) {
+        finish(stored);
+        return;
+      }
       if (popup.closed) {
+        // Final storage check — callback may have written just before close.
+        const late = consumeOAuthPopupResult();
+        if (late) {
+          finish(late);
+          return;
+        }
         finish({ success: false, error: 'popup_closed' });
       }
-    }, 500);
+    }, 400);
   });
 }

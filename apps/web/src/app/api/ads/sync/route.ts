@@ -7,6 +7,7 @@ import { requireApiSession } from '@/lib/auth/require-api-session';
 import {
   aggregateCampaignKpis,
   aggregateSeriesKpis,
+  ensureMetaCampaignsSchema,
 } from '@/lib/ads/persist';
 import { purgeDemoAdsForWorkspace } from '@/lib/ads/demo-seed';
 import {
@@ -67,6 +68,9 @@ export async function POST(request: Request) {
       until: body.until,
       preset: body.preset,
     });
+
+    // Widen uuid Meta id columns → text before any insert / demo purge.
+    await ensureMetaCampaignsSchema();
 
     await purgeDemoAdsForWorkspace({
       workspaceId,

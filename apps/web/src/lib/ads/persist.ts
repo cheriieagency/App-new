@@ -13,7 +13,104 @@ import type {
 } from '@/lib/meta/marketing-api';
 import { budgetMinorToMajor } from '@/lib/meta/marketing-api';
 
+/** Bump when healer must re-run after a long-lived server process. */
+const META_ADS_SCHEMA_VERSION = 4;
+let schemaReadyVersion = 0;
 let schemaReady: Promise<void> | null = null;
+
+/**
+ * Meta Graph IDs are numeric strings (e.g. 120254718972260350 / act_…).
+ * Older local schemas used uuid PKs — widen them to text or sync inserts fail.
+ */
+async function forceMetaIdColumnsToText(
+  heal: (fn: () => Promise<unknown>) => Promise<void>
+): Promise<void> {
+  // Drop uuid defaults first so ALTER TYPE text is allowed.
+  const dropDefaults: Array<() => Promise<unknown>> = [
+    () => sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN id DROP DEFAULT`,
+    () =>
+      sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN account_id DROP DEFAULT`,
+    () => sql`ALTER TABLE public.meta_campaigns ALTER COLUMN id DROP DEFAULT`,
+    () =>
+      sql`ALTER TABLE public.meta_campaigns ALTER COLUMN ad_account_id DROP DEFAULT`,
+    () => sql`ALTER TABLE public.meta_adsets ALTER COLUMN id DROP DEFAULT`,
+    () =>
+      sql`ALTER TABLE public.meta_adsets ALTER COLUMN ad_account_id DROP DEFAULT`,
+    () =>
+      sql`ALTER TABLE public.meta_adsets ALTER COLUMN campaign_id DROP DEFAULT`,
+    () => sql`ALTER TABLE public.meta_ads ALTER COLUMN id DROP DEFAULT`,
+    () =>
+      sql`ALTER TABLE public.meta_ads ALTER COLUMN ad_account_id DROP DEFAULT`,
+    () =>
+      sql`ALTER TABLE public.meta_ads ALTER COLUMN campaign_id DROP DEFAULT`,
+    () => sql`ALTER TABLE public.meta_ads ALTER COLUMN adset_id DROP DEFAULT`,
+    () =>
+      sql`ALTER TABLE public.meta_ads_insight_days ALTER COLUMN ad_account_id DROP DEFAULT`,
+  ];
+  for (const fn of dropDefaults) await heal(fn);
+
+  const widens: Array<() => Promise<unknown>> = [
+    () =>
+      sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN id TYPE text USING id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN account_id TYPE text USING account_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN workspace_id TYPE text USING workspace_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN user_id TYPE text USING user_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_campaigns ALTER COLUMN id TYPE text USING id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_campaigns ALTER COLUMN ad_account_id TYPE text USING ad_account_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_campaigns ALTER COLUMN workspace_id TYPE text USING workspace_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_campaigns ALTER COLUMN user_id TYPE text USING user_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_adsets ALTER COLUMN id TYPE text USING id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_adsets ALTER COLUMN ad_account_id TYPE text USING ad_account_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_adsets ALTER COLUMN campaign_id TYPE text USING campaign_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_adsets ALTER COLUMN workspace_id TYPE text USING workspace_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_adsets ALTER COLUMN user_id TYPE text USING user_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads ALTER COLUMN id TYPE text USING id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads ALTER COLUMN ad_account_id TYPE text USING ad_account_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads ALTER COLUMN campaign_id TYPE text USING campaign_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads ALTER COLUMN adset_id TYPE text USING adset_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads ALTER COLUMN workspace_id TYPE text USING workspace_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads ALTER COLUMN user_id TYPE text USING user_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads_insight_days ALTER COLUMN ad_account_id TYPE text USING ad_account_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads_insight_days ALTER COLUMN workspace_id TYPE text USING workspace_id::text`,
+    () =>
+      sql`ALTER TABLE public.meta_ads_insight_days ALTER COLUMN user_id TYPE text USING user_id::text`,
+  ];
+
+  for (const fn of widens) {
+    try {
+      await fn();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      // Already text / missing column is fine; real failures need visibility.
+      if (
+        /does not exist|already of type|cannot cast/i.test(msg) === false &&
+        !/type "text" already/i.test(msg)
+      ) {
+        console.warn('[ads/persist] uuid→text widen failed:', msg);
+      }
+    }
+  }
+}
 
 export type MetaCampaignRow = {
   id: string;
@@ -75,7 +172,10 @@ export type MetaAdRow = {
 
 export async function ensureMetaCampaignsSchema(): Promise<void> {
   if (!process.env.DATABASE_URL?.trim()) return;
-  if (schemaReady) return schemaReady;
+  if (schemaReady && schemaReadyVersion === META_ADS_SCHEMA_VERSION) {
+    return schemaReady;
+  }
+  schemaReadyVersion = META_ADS_SCHEMA_VERSION;
 
   schemaReady = (async () => {
     await sql`
@@ -171,23 +271,6 @@ export async function ensureMetaCampaignsSchema(): Promise<void> {
       () =>
         sql`ALTER TABLE public.meta_campaigns ADD COLUMN IF NOT EXISTS purchase_roas numeric NOT NULL DEFAULT 0`
     );
-    // Widen uuid columns to text — Meta ids are strings; demo seeds need non-uuid forms too.
-    await heal(
-      () =>
-        sql`ALTER TABLE public.meta_campaigns ALTER COLUMN id TYPE text USING id::text`
-    );
-    await heal(
-      () =>
-        sql`ALTER TABLE public.meta_campaigns ALTER COLUMN ad_account_id TYPE text USING ad_account_id::text`
-    );
-    await heal(
-      () =>
-        sql`ALTER TABLE public.meta_campaigns ALTER COLUMN workspace_id TYPE text USING workspace_id::text`
-    );
-    await heal(
-      () =>
-        sql`ALTER TABLE public.meta_campaigns ALTER COLUMN user_id TYPE text USING user_id::text`
-    );
     await heal(
       () => sql`
         CREATE INDEX IF NOT EXISTS meta_campaigns_ws_idx
@@ -238,22 +321,6 @@ export async function ensureMetaCampaignsSchema(): Promise<void> {
     await heal(
       () =>
         sql`ALTER TABLE public.meta_ad_accounts ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()`
-    );
-    await heal(
-      () =>
-        sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN id TYPE text USING id::text`
-    );
-    await heal(
-      () =>
-        sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN account_id TYPE text USING account_id::text`
-    );
-    await heal(
-      () =>
-        sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN workspace_id TYPE text USING workspace_id::text`
-    );
-    await heal(
-      () =>
-        sql`ALTER TABLE public.meta_ad_accounts ALTER COLUMN user_id TYPE text USING user_id::text`
     );
     await heal(
       () => sql`
@@ -505,8 +572,12 @@ export async function ensureMetaCampaignsSchema(): Promise<void> {
       () =>
         sql`ALTER TABLE public.meta_ads_insight_days ADD COLUMN IF NOT EXISTS purchase_roas numeric NOT NULL DEFAULT 0`
     );
+
+    // Last: widen any leftover uuid id columns so Meta numeric ids can insert.
+    await forceMetaIdColumnsToText(heal);
   })().catch((error) => {
     schemaReady = null;
+    schemaReadyVersion = 0;
     throw error;
   });
 

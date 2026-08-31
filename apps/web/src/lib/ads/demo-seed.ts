@@ -827,53 +827,54 @@ export async function purgeDemoAdsForWorkspace(input: {
   if (!workspaceId) return { purged: false };
 
   try {
+    // Cast id columns to text — older schemas used uuid and reject LIKE on uuid.
     await sql`
       DELETE FROM public.meta_ads_insight_days
-      WHERE workspace_id = ${workspaceId}
+      WHERE workspace_id::text = ${workspaceId}
         AND (
-          ad_account_id LIKE 'a0000000-%'
-          OR ad_account_id LIKE 'act_demo_%'
-          OR ad_account_id LIKE 'demo-%'
+          ad_account_id::text LIKE 'a0000000-%'
+          OR ad_account_id::text LIKE 'act_demo_%'
+          OR ad_account_id::text LIKE 'demo-%'
         )
     `;
     await sql`
       DELETE FROM public.meta_ads
-      WHERE workspace_id = ${workspaceId}
+      WHERE workspace_id::text = ${workspaceId}
         AND (
-          id LIKE 'a0000000-%'
-          OR id LIKE 'demo-%'
-          OR ad_account_id LIKE 'a0000000-%'
-          OR ad_account_id LIKE 'act_demo_%'
+          id::text LIKE 'a0000000-%'
+          OR id::text LIKE 'demo-%'
+          OR ad_account_id::text LIKE 'a0000000-%'
+          OR ad_account_id::text LIKE 'act_demo_%'
         )
     `;
     await sql`
       DELETE FROM public.meta_adsets
-      WHERE workspace_id = ${workspaceId}
+      WHERE workspace_id::text = ${workspaceId}
         AND (
-          id LIKE 'a0000000-%'
-          OR id LIKE 'demo-%'
-          OR ad_account_id LIKE 'a0000000-%'
-          OR ad_account_id LIKE 'act_demo_%'
+          id::text LIKE 'a0000000-%'
+          OR id::text LIKE 'demo-%'
+          OR ad_account_id::text LIKE 'a0000000-%'
+          OR ad_account_id::text LIKE 'act_demo_%'
         )
     `;
     await sql`
       DELETE FROM public.meta_campaigns
-      WHERE workspace_id = ${workspaceId}
+      WHERE workspace_id::text = ${workspaceId}
         AND (
-          id LIKE 'a0000000-%'
-          OR id LIKE 'demo-%'
-          OR ad_account_id LIKE 'a0000000-%'
-          OR ad_account_id LIKE 'act_demo_%'
+          id::text LIKE 'a0000000-%'
+          OR id::text LIKE 'demo-%'
+          OR ad_account_id::text LIKE 'a0000000-%'
+          OR ad_account_id::text LIKE 'act_demo_%'
         )
     `;
     await sql`
       DELETE FROM public.meta_ad_accounts
-      WHERE workspace_id = ${workspaceId}
+      WHERE workspace_id::text = ${workspaceId}
         AND (
-          id LIKE 'a0000000-%'
-          OR id LIKE 'demo-%'
-          OR id LIKE 'act_demo_%'
-          OR COALESCE(account_id, '') LIKE 'demo_%'
+          id::text LIKE 'a0000000-%'
+          OR id::text LIKE 'demo-%'
+          OR id::text LIKE 'act_demo_%'
+          OR COALESCE(account_id::text, '') LIKE 'demo_%'
           OR COALESCE(name, '') ILIKE '%demo ad account%'
         )
     `;
