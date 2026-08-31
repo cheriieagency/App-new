@@ -150,7 +150,7 @@ export function CommunitySearchAutocomplete({
               selectAt(highlight);
             }
           }}
-          className="w-full min-h-12 pl-11 pr-20 rounded-2xl bg-white/90 backdrop-blur-md border border-slate-200/90 text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+          className="w-full min-h-12 pl-11 pr-20 rounded-2xl bg-white/90 backdrop-blur-md border border-slate-200/90 text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm outline-none focus:border-[#F472B6]/50 focus:ring-2 focus:ring-[#FCE7F3] transition-all"
         />
         {value.length > 0 ? (
           <button
@@ -203,11 +203,11 @@ export function CommunitySearchAutocomplete({
                     onMouseEnter={() => setHighlight(index)}
                     onClick={() => selectAt(index)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 min-h-14 text-left transition-colors ${
-                      active ? 'bg-indigo-50' : 'hover:bg-slate-50'
+                      active ? 'bg-[#FCE7F3]/70' : 'hover:bg-slate-50'
                     }`}
                   >
                     <div
-                      className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-slate-100 bg-gradient-to-br from-indigo-500 to-pink-500"
+                      className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-slate-100 bg-gradient-to-br from-[#2B2568] to-[#F472B6]"
                     >
                       {community.creator_image ? (
                         <img
@@ -226,7 +226,7 @@ export function CommunitySearchAutocomplete({
                         {community.name}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="inline-flex items-center text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center text-[10px] font-extrabold uppercase tracking-wider text-[#2B2568] bg-[#E9D5FF]/70 px-2 py-0.5 rounded-full">
                           #{community.category || 'Community'}
                         </span>
                         <span className="text-[11px] font-bold text-slate-400">

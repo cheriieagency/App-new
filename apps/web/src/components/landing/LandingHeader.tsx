@@ -126,11 +126,11 @@ export function LandingHeader({ isLoggedIn, user = null }: LandingHeaderProps) {
             <div className="flex items-center gap-2 sm:gap-2.5">
               {/* Explicit signed-in status — distinct from the logged-out CTAs */}
               <span
-                className="hidden sm:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl bg-[#10B981]/12 text-[#047857] text-[11px] font-extrabold tracking-wide uppercase"
+                className="hidden sm:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl bg-[#FCE7F3] text-[#2B2568] text-[11px] font-extrabold tracking-wide uppercase"
                 aria-live="polite"
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full bg-[#10B981]"
+                  className="w-1.5 h-1.5 rounded-full bg-[#F472B6]"
                   aria-hidden
                 />
                 {t('nav.signedIn')}
@@ -173,7 +173,7 @@ export function LandingHeader({ isLoggedIn, user = null }: LandingHeaderProps) {
                       {firstName}
                     </span>
                   ) : (
-                    <span className="text-[10px] font-semibold text-[#10B981] sm:hidden">
+                    <span className="text-[10px] font-semibold text-[#F472B6] sm:hidden">
                       {t('nav.signedIn')}
                     </span>
                   )}

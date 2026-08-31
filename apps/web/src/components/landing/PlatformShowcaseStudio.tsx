@@ -218,11 +218,11 @@ const PLANNER_PLATFORMS: SocialPlatform[] = [
 ];
 
 const PLANNER_STATUSES = [
-  'bg-emerald-500',
-  'bg-sky-500',
-  'bg-violet-500',
-  'bg-indigo-500',
-  'bg-amber-400',
+  'bg-[#F472B6]',
+  'bg-[#2B2568]',
+  'bg-[#E9D5FF]',
+  'bg-[#2B2568]',
+  'bg-[#F472B6]',
 ] as const;
 
 const PLANNER_TITLES: Record<SocialPlatform, string[]> = {
@@ -308,7 +308,7 @@ function buildAugustPlannerPosts(): Record<
       dayPosts.push({
         title: 'Cross-post bundle',
         platforms: ['instagram', 'tiktok'],
-        status: 'bg-sky-500',
+        status: 'bg-[#2B2568]',
       });
     }
     if (day === 18) {
@@ -316,12 +316,12 @@ function buildAugustPlannerPosts(): Record<
         {
           title: 'Live Q&A promo',
           platforms: ['instagram'],
-          status: 'bg-amber-400',
+          status: 'bg-[#F472B6]',
         },
         {
           title: 'Waitlist broadcast',
           platforms: ['facebook', 'linkedin'],
-          status: 'bg-indigo-500',
+          status: 'bg-[#2B2568]',
         }
       );
     }
@@ -472,7 +472,7 @@ function BioBody() {
   const themes = [
     { name: 'Midnight Glass', a: '#1a1848', b: '#312e81' },
     { name: 'Champagne Luxe', a: '#F5E6C8', b: '#C9A227' },
-    { name: 'Aurora Glow', a: '#4F46E5', b: '#A855F7', on: true },
+    { name: 'Aurora Glow', a: '#2B2568', b: '#F472B6', on: true },
     { name: 'Nordic Minimal', a: '#E2E8F0', b: '#94A3B8' },
   ];
   return (
@@ -555,16 +555,16 @@ function BioBody() {
 
               {/* Toggle mock */}
               <div className="w-11 h-6 rounded-full bg-slate-200 relative shrink-0">
-                <div className="absolute top-1 left-1.5 w-4 h-4 rounded-full bg-[#4F46E5] shadow" />
+                <div className="absolute top-1 left-1.5 w-4 h-4 rounded-full bg-[#2B2568] shadow" />
               </div>
             </div>
 
             <div>
               <p className="text-[11px] font-mono font-bold uppercase tracking-wide text-slate-400">Cover image</p>
               <div className="mt-3 flex items-start gap-3">
-                <div className="w-24 h-16 rounded-xl bg-gradient-to-r from-[#4F46E5] to-[#A855F7]" />
+                <div className="w-24 h-16 rounded-xl bg-gradient-to-r from-[#2B2568] to-[#F472B6]" />
                 <div className="flex flex-col gap-2 pt-1">
-                  <span className="inline-flex items-center justify-center rounded-full bg-[#EEF2FF] text-[#4F46E5] px-3 py-1 text-[11px] font-extrabold">
+                  <span className="inline-flex items-center justify-center rounded-full bg-[#E9D5FF]/70 text-[#2B2568] px-3 py-1 text-[11px] font-extrabold">
                     Replace image
                   </span>
                   <span className="inline-flex items-center justify-center rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-[11px] font-extrabold">
@@ -577,7 +577,7 @@ function BioBody() {
           </div>
         </div>
         <div className="lg:col-span-5 flex flex-col items-center justify-center pt-2 lg:pt-0">
-          <div className="w-[200px] sm:w-[220px] rounded-[40px] border-[6px] border-slate-900 overflow-hidden bg-gradient-to-b from-[#2B2568] via-[#4F46E5] to-[#0F172A] text-white shadow-xl">
+          <div className="w-[200px] sm:w-[220px] rounded-[40px] border-[6px] border-slate-900 overflow-hidden bg-gradient-to-b from-[#2B2568] via-[#3D3680] to-[#0F172A] text-white shadow-xl">
             <div className="relative px-4 pt-3 pb-5">
               {/* Status bar */}
               <div className="relative flex items-start justify-between text-[10px] font-mono text-white/70">
@@ -591,11 +591,11 @@ function BioBody() {
 
               {/* Crown + check badge */}
               <div className="relative mt-10 flex items-center justify-center">
-                <div className="w-20 h-20 rounded-full bg-[#BDB0FF]/40 border border-white/20 flex items-center justify-center">
+                <div className="w-20 h-20 rounded-full bg-[#E9D5FF]/40 border border-white/20 flex items-center justify-center">
                   <Trophy size={30} className="text-white/90" />
                 </div>
                 <div className="absolute right-8 bottom-8 w-8 h-8 rounded-full bg-[#0F172A]/30 border border-white/15 flex items-center justify-center">
-                  <div className="w-5 h-5 rounded-full bg-[#3B82F6]/20 border border-white/10 flex items-center justify-center">
+                  <div className="w-5 h-5 rounded-full bg-[#F472B6]/25 border border-white/10 flex items-center justify-center">
                     <Check size={14} className="text-white" />
                   </div>
                 </div>
@@ -631,7 +631,7 @@ function BioBody() {
                         <p className="text-[10px] text-white/60 font-semibold truncate">Ladda ned gratis</p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-extrabold bg-[#34D399]/20 text-[#064E3B] rounded-full px-2 py-1 whitespace-nowrap border border-[#34D399]/30">
+                    <span className="text-[10px] font-extrabold bg-[#FCE7F3] text-[#2B2568] rounded-full px-2 py-1 whitespace-nowrap border border-[#F472B6]/25">
                       FREE
                     </span>
                   </div>
@@ -644,7 +644,7 @@ function BioBody() {
                   <div
                     // eslint-disable-next-line react/no-array-index-key
                     key={idx}
-                    className="rounded-2xl bg-[#6D28D9]/25 border border-white/10 px-3 py-3"
+                    className="rounded-2xl bg-[#2B2568]/40 border border-white/10 px-3 py-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
@@ -658,7 +658,7 @@ function BioBody() {
                           </p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-extrabold bg-[#34D399]/20 text-[#064E3B] rounded-full px-2 py-1 whitespace-nowrap border border-[#34D399]/30">
+                      <span className="text-[10px] font-extrabold bg-[#FCE7F3] text-[#2B2568] rounded-full px-2 py-1 whitespace-nowrap border border-[#F472B6]/25">
                         FREE
                       </span>
                     </div>
@@ -711,7 +711,7 @@ function AdsBody() {
         {[
           { l: 'Spend', v: 'US$483', bar: '#F472B6' },
           { l: 'Conversions', v: '197', bar: '#1a1848' },
-          { l: 'ROAS', v: '2.44x', bar: '#10B981' },
+          { l: 'ROAS', v: '2.44x', bar: '#F472B6' },
           { l: 'CPC', v: 'US$0.07', bar: '#6366F1' },
         ].map((k, i) => (
           <div
@@ -866,7 +866,7 @@ function InboxBody() {
                 <span
                   className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center ring-2 ring-white ${
                     th.ig
-                      ? 'bg-gradient-to-br from-[#F58529] to-[#DD2A7B] text-white'
+                      ? 'bg-gradient-to-br from-[#F472B6] to-[#2B2568] text-white'
                       : 'bg-slate-900 text-white'
                   }`}
                 >
@@ -963,7 +963,7 @@ function MemberCommunityPreview() {
       letter: 'E',
       time: 'Pinned · 2h',
       tag: 'Tips',
-      tagClass: 'bg-amber-100 text-amber-700',
+      tagClass: 'bg-[#FCE7F3] text-[#2B2568]',
       tagDot: '#F59E0B',
       pinned: true,
       body: 'This week’s hook formula is live in Classroom. Drop your first line below — best one gets featured on the leaderboard.',
@@ -979,8 +979,8 @@ function MemberCommunityPreview() {
       letter: 'A',
       time: '34m',
       tag: 'Results',
-      tagClass: 'bg-emerald-50 text-emerald-700',
-      tagDot: '#10B981',
+      tagClass: 'bg-[#E9D5FF]/70 text-[#2B2568]',
+      tagDot: '#F472B6',
       pinned: false,
       body: 'Closed 4 Swish checkouts from the bio store after the carousel. Masterclass at 1,499 SEK is converting.',
       likes: 31,
@@ -995,7 +995,7 @@ function MemberCommunityPreview() {
       letter: 'M',
       time: '2h',
       tag: 'Questions',
-      tagClass: 'bg-violet-100 text-violet-700',
+      tagClass: 'bg-[#FCE7F3] text-[#F472B6]',
       tagDot: '#7C3AED',
       pinned: false,
       body: 'Anyone running Meta retargeting on waitlist emails? Sharing my ROAS in the thread.',
@@ -1102,7 +1102,7 @@ function MemberCommunityPreview() {
           {posts.map((p) => (
             <div
               key={p.name + p.time}
-              className={`${adminCardClass} overflow-hidden ${p.pinned ? 'ring-1 ring-violet-200' : ''}`}
+              className={`${adminCardClass} overflow-hidden ${p.pinned ? 'ring-1 ring-[#E9D5FF]' : ''}`}
             >
               <div className="p-4">
                 <div className="flex items-center gap-3 mb-2.5">
@@ -1111,7 +1111,7 @@ function MemberCommunityPreview() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-extrabold text-slate-900">{p.name}</p>
                       {p.pinned ? (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#2B2568] bg-[#E9D5FF]/70 px-1.5 py-0.5 rounded-full">
                           <Pin size={9} /> Pinned
                         </span>
                       ) : null}
@@ -1134,7 +1134,7 @@ function MemberCommunityPreview() {
                     <MessageSquare size={14} /> {p.comments}
                   </span>
                   {p.hot ? (
-                    <span className="ml-auto flex items-center gap-1 text-[10px] font-extrabold text-orange-400 bg-orange-50 px-2 py-1 rounded-lg">
+                    <span className="ml-auto flex items-center gap-1 text-[10px] font-extrabold text-[#F472B6] bg-[#FCE7F3] px-2 py-1 rounded-lg">
                       <Flame size={11} /> Popular
                     </span>
                   ) : null}
@@ -1153,7 +1153,7 @@ function MemberCommunityPreview() {
               <LevelRing letter="A" size={48} progress={74} />
               <div>
                 <p className="text-sm font-extrabold text-slate-900">Anna Ståhl</p>
-                <p className="text-xs font-extrabold text-amber-600">Gold · Lvl 3</p>
+                <p className="text-xs font-extrabold text-[#F472B6]">Gold · Lvl 3</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -1236,12 +1236,12 @@ function HomeBody() {
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
-        <div className="lg:col-span-5 rounded-2xl bg-[#EDE9FE]/80 border border-[#DDD6FE] p-4 sm:p-5">
+        <div className="lg:col-span-5 rounded-2xl bg-[#E9D5FF]/50 border border-[#E9D5FF] p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
               Today’s Focus & To-Do&apos;s
             </h4>
-            <span className="inline-flex items-center rounded-full bg-white/80 border border-[#EDE4FF] px-2.5 py-1 text-[10px] font-bold text-[#2B2568]">
+            <span className="inline-flex items-center rounded-full bg-white/80 border border-[#E9D5FF] px-2.5 py-1 text-[10px] font-bold text-[#2B2568]">
               Tuesday 18 Aug
             </span>
           </div>
@@ -1255,8 +1255,8 @@ function HomeBody() {
               <span
                 className={`mt-0.5 h-5 w-5 rounded-md border-2 inline-flex items-center justify-center shrink-0 ${
                   s.done
-                    ? 'bg-[#10B981] border-[#10B981] text-white'
-                    : 'bg-white/80 border-[#D4C4F7]'
+                    ? 'bg-[#F472B6] border-[#F472B6] text-white'
+                    : 'bg-white/80 border-[#E9D5FF]'
                 }`}
               >
                 {s.done ? <Check size={12} strokeWidth={3} /> : null}
@@ -1274,7 +1274,7 @@ function HomeBody() {
         <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           {[
             { t: 'Content Planner', s: '14 posts this week', accent: 'bg-[#E9D5FF]/70 text-[#2B2568]', Icon: CalendarDays },
-            { t: 'Analytics & Revenue', s: '94.2K reach', accent: 'bg-emerald-50 text-[#10B981]', Icon: BarChart3 },
+            { t: 'Analytics & Revenue', s: '94.2K reach', accent: 'bg-[#E9D5FF]/70 text-[#2B2568]', Icon: BarChart3 },
             { t: 'Bio Store & Links', s: '38 Swish checkouts', accent: 'bg-pink-50 text-[#F472B6]', Icon: Link2 },
           ].map((c) => (
             <div key={c.t} className={`${adminCardClass} p-4 sm:p-5`}>
@@ -1299,9 +1299,9 @@ function HomeBody() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             {[
-              { h: 'To Do / Ideas', dot: 'bg-amber-400', n: '2', items: [{ t: 'Script 5 hooks', a: 'EB' }, { t: 'Film B-roll', a: 'AS' }] },
-              { h: 'In progress', dot: 'bg-indigo-500', n: '2', items: [{ t: 'August calendar', a: 'EB' }, { t: 'Meta retargeting', a: 'ML' }] },
-              { h: 'Done / Review', dot: 'bg-emerald-500', n: '2', items: [{ t: 'Masterclass landing', a: 'EB' }, { t: 'Welcome sequence', a: 'SB' }] },
+              { h: 'To Do / Ideas', dot: 'bg-[#F472B6]', n: '2', items: [{ t: 'Script 5 hooks', a: 'EB' }, { t: 'Film B-roll', a: 'AS' }] },
+              { h: 'In progress', dot: 'bg-[#2B2568]', n: '2', items: [{ t: 'August calendar', a: 'EB' }, { t: 'Meta retargeting', a: 'ML' }] },
+              { h: 'Done / Review', dot: 'bg-[#F472B6]', n: '2', items: [{ t: 'Masterclass landing', a: 'EB' }, { t: 'Welcome sequence', a: 'SB' }] },
             ].map((col) => (
               <div key={col.h} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3 min-h-[180px]">
                 <div className="flex items-center gap-2 mb-3">
@@ -1336,7 +1336,7 @@ function HomeBody() {
             <h4 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
               Latest activity & alerts
             </h4>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 text-[10px] font-extrabold text-[#10B981]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FCE7F3] border border-[#F472B6]/20 px-2.5 py-1 text-[10px] font-extrabold text-[#F472B6]">
               <Radio size={11} strokeWidth={2.5} /> Live
             </span>
           </div>
