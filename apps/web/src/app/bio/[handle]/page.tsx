@@ -25,19 +25,34 @@ export default function PublicBioPage() {
         const r = await fetch(`/api/bio/${encodeURIComponent(handle)}`, {
           cache: 'no-store',
         });
-        if (r.ok) {
-          const data = (await r.json()) as { profile?: WorkspaceProfile | null };
+        const data = (await r.json().catch(() => ({}))) as {
+          profile?: WorkspaceProfile | null;
+          demo?: boolean;
+        };
+        if (r.ok && data.profile) {
           if (!cancelled) {
-            setProfile(data.profile ?? null);
+            setProfile(data.profile);
             setReady(true);
-            return;
           }
+          return;
+        }
+        // Only use localStorage mock when API explicitly returns demo / offline.
+        if (data.demo === true || r.status === 503) {
+          if (!cancelled) {
+            setProfile(getWorkspaceProfileByHandle(handle));
+            setReady(true);
+          }
+          return;
         }
       } catch {
-        /* local fallback for demo */
+        if (!cancelled) {
+          setProfile(getWorkspaceProfileByHandle(handle));
+          setReady(true);
+        }
+        return;
       }
       if (!cancelled) {
-        setProfile(getWorkspaceProfileByHandle(handle));
+        setProfile(null);
         setReady(true);
       }
     })();

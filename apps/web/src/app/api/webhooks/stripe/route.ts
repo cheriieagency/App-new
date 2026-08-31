@@ -52,6 +52,25 @@ export async function POST(request: Request) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const meta = session.metadata || {};
+
+      // Platform subscription (Creator / Pro onboarding checkout).
+      if (meta.kind === 'platform_subscription' && meta.user_id && meta.plan) {
+        const plan = String(meta.plan);
+        const userId = String(meta.user_id);
+        if (['creator', 'pro'].includes(plan)) {
+          const { setProfileSubscription } = await import(
+            '@/lib/subscription-profile'
+          );
+          await setProfileSubscription({
+            userId,
+            plan: plan as 'creator' | 'pro',
+            status: 'active',
+            onboardingCompleted: true,
+          });
+        }
+        return Response.json({ ok: true, received: true, type: event.type });
+      }
+
       let workspaceId = String(meta.workspace_id || '').trim();
       let sellerUserId = String(meta.seller_user_id || '').trim();
       const productTitle =

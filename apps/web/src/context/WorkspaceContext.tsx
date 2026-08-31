@@ -33,7 +33,15 @@ type WorkspaceContextValue = {
   activeWorkspaceId: string;
   activeWorkspace: WorkspaceProfile;
   setActiveWorkspaceId: (id: string) => void;
-  updateActiveBio: (patch: Partial<WorkspaceBioData>) => void;
+  /**
+   * Merge bio into the active workspace.
+   * Pass `{ durable: false }` for keystroke autosync (local only).
+   * Default durable=true writes workspaces.profile_data (Publish / Preview).
+   */
+  updateActiveBio: (
+    patch: Partial<WorkspaceBioData>,
+    opts?: { durable?: boolean }
+  ) => Promise<boolean>;
   createWorkspace: (input: {
     name: string;
     handle?: string;
@@ -216,22 +224,32 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const updateActiveBio = useCallback(
-    (patch: Partial<WorkspaceBioData>) => {
-      if (!activeWorkspaceId) return;
+    async (
+      patch: Partial<WorkspaceBioData>,
+      opts?: { durable?: boolean }
+    ): Promise<boolean> => {
+      if (!activeWorkspaceId) return false;
       const updated = updateWorkspaceBio(activeWorkspaceId, patch);
-      if (!updated) return;
+      if (!updated) return false;
       setWorkspaces(listWorkspaceProfiles());
-      void fetch('/api/admin/workspaces', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ id: activeWorkspaceId, bio: patch }),
-      }).then(async (r) => {
-        if (!r.ok) toast.error(t('toastBioSaveFailed'));
-        else refreshWorkspaces();
-      });
+      // Keystroke mirror — durable write happens on Publish Changes / Preview.
+      if (opts?.durable === false) return true;
+      try {
+        const r = await fetch('/api/admin/workspaces', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: activeWorkspaceId, bio: patch }),
+        });
+        if (r.ok) return true;
+        // No DATABASE_URL — local memory is enough in demo mode.
+        if (r.status === 503) return true;
+        return false;
+      } catch {
+        return false;
+      }
     },
-    [activeWorkspaceId, refreshWorkspaces, t]
+    [activeWorkspaceId]
   );
 
   const createWorkspace = useCallback(

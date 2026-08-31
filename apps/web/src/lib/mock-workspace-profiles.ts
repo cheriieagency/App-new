@@ -46,6 +46,8 @@ export type WorkspaceBioData = {
   theme: BioTheme;
   theme_label: string;
   blocks: WorkspaceBioBlock[];
+  /** Header social icons (Instagram, TikTok, …) under the username. */
+  social_links?: { platform: string; url: string }[];
 };
 
 export type WorkspaceAnalyticsData = {
@@ -126,6 +128,7 @@ export function blankWorkspaceProfile(): WorkspaceProfile {
       theme,
       theme_label: 'Nordic Minimal',
       blocks: [],
+      social_links: [],
     },
     analytics: {
       revenue_sek: 0,
@@ -428,6 +431,7 @@ export function createWorkspaceProfile(input: {
       theme,
       theme_label: 'Nordic Minimal',
       blocks: [],
+      social_links: [],
     },
     analytics: {
       revenue_sek: 0,

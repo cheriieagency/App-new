@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import OnboardingForm from '@/components/onboarding/OnboardingForm';
 
 export const metadata: Metadata = {
@@ -6,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Set up your clikd: creator studio in three quick steps.',
 };
 
-/** Onboarding questionnaire — account gate + 3-step profile wizard. */
+/** Onboarding questionnaire — account details, profile wizard, then plan checkout. */
 export default function OnboardingPage() {
   return (
     <main className="min-h-screen bg-[#FAFAFA] text-slate-900">
@@ -19,7 +20,15 @@ export default function OnboardingPage() {
         }}
       />
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 py-10 sm:py-16">
-        <OnboardingForm />
+        <Suspense
+          fallback={
+            <div className="min-h-[60vh] flex items-center justify-center text-slate-400">
+              Loading…
+            </div>
+          }
+        >
+          <OnboardingForm />
+        </Suspense>
       </div>
     </main>
   );

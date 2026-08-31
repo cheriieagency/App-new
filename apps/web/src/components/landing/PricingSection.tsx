@@ -6,6 +6,15 @@ import { motion } from 'motion/react';
 import { Check, Clock, Headphones, Lock, Percent, Wallet, Zap } from 'lucide-react';
 import { useLanguage } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
+import {
+  ltAccent,
+  ltCardBody,
+  ltCardTitle,
+  ltEyebrow,
+  ltHeaderWrap,
+  ltSection,
+  ltSectionSub,
+} from '@/components/landing/landingType';
 
 type BillingCycle = 'monthly' | 'yearly';
 
@@ -38,20 +47,13 @@ export function PricingSection() {
     >
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="max-w-2xl mx-auto text-center mb-8">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
-            {t('pricingEyebrow', locale)}
-          </p>
-          <h2
-            id="pricing-heading"
-            className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
-          >
+        <div className={ltHeaderWrap}>
+          <p className={`${ltEyebrow} mb-3`}>{t('pricingEyebrow', locale)}</p>
+          <h2 id="pricing-heading" className={ltSection}>
             {t('pricingHeadline', locale)}{' '}
-            <span className="text-[#F472B6]">{t('pricingHeadlineAccent', locale)}</span>
+            <span className={ltAccent}>{t('pricingHeadlineAccent', locale)}</span>
           </h2>
-          <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
-            {t('pricingSub', locale)}
-          </p>
+          <p className={ltSectionSub}>{t('pricingSub', locale)}</p>
         </div>
 
         {/* Value pills */}
@@ -91,7 +93,7 @@ export function PricingSection() {
               }`}
             >
               {t('pricingYearly', locale)}
-              <span className="inline-flex items-center rounded-full bg-[#10B981] text-white text-[10px] font-black uppercase tracking-wide px-2 py-0.5">
+              <span className="inline-flex items-center rounded-full bg-[#F472B6] text-white text-[10px] font-black uppercase tracking-wide px-2 py-0.5">
                 {t('pricingSave17', locale)}
               </span>
             </button>
@@ -108,10 +110,10 @@ export function PricingSection() {
             transition={{ duration: 0.4 }}
             className="relative bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 flex flex-col shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
           >
-            <h3 className="font-outfit font-extrabold text-xl text-slate-900 tracking-tight">
+            <h3 className={ltCardTitle}>
               {t('planStarter', locale)}
             </h3>
-            <p className="text-sm text-slate-600 font-medium mt-1.5 leading-relaxed mb-5 font-display">
+            <p className={`${ltCardBody} !mt-1.5 mb-5 font-medium`}>
               {t('planStarterSub', locale)}
             </p>
             <div className="mb-6">
@@ -123,7 +125,7 @@ export function PricingSection() {
                   {t('sekPerMo', locale)}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-[#10B981] mt-1">
+              <p className="text-[11px] font-bold text-[#F472B6] mt-1">
                 {t('planFreeForever', locale)}
               </p>
             </div>
@@ -143,7 +145,7 @@ export function PricingSection() {
               ))}
             </ul>
             <Link
-              href="/onboarding"
+              href="/onboarding?plan=starter"
               className="inline-flex items-center justify-center min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-3.5 rounded-xl border border-slate-200 transition-colors"
             >
               {t('planStarterCta', locale)}
@@ -161,10 +163,10 @@ export function PricingSection() {
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide text-white px-3.5 py-1.5 rounded-full whitespace-nowrap bg-[#F472B6] shadow-md shadow-[#F472B6]/30">
               {t('mostPopular', locale)}
             </span>
-            <h3 className="font-outfit font-extrabold text-xl text-slate-900 tracking-tight mt-1">
+            <h3 className={`${ltCardTitle} mt-1`}>
               {t('planCreator', locale)}
             </h3>
-            <p className="text-sm text-slate-600 font-medium mt-1.5 leading-relaxed mb-5 font-display">
+            <p className={`${ltCardBody} !mt-1.5 mb-5 font-medium`}>
               {t('planCreatorSub', locale)}
             </p>
             <div className="mb-6">
@@ -178,7 +180,7 @@ export function PricingSection() {
               </div>
               <p
                 className={`text-[11px] font-bold mt-1 ${
-                  yearly ? 'text-[#10B981]' : 'text-[#F472B6]'
+                  yearly ? 'text-[#F472B6]' : 'text-[#F472B6]'
                 }`}
               >
                 {yearly
@@ -189,14 +191,14 @@ export function PricingSection() {
             <ul className="space-y-2.5 mb-8 flex-1">
               {(
                 [
-                  { key: 'planC1' as const, bold: true, check: 'emerald' as const },
-                  { key: 'planC2' as const, bold: false, check: 'pink' as const },
-                  { key: 'planC3' as const, bold: false, check: 'pink' as const },
-                  { key: 'planC4' as const, bold: false, check: 'pink' as const },
-                  { key: 'planC5' as const, bold: false, check: 'pink' as const },
-                  { key: 'planC8' as const, bold: false, check: 'pink' as const },
-                  { key: 'planC6' as const, bold: false, check: 'pink' as const },
-                  { key: 'planC7' as const, bold: false, check: 'pink' as const },
+                  { key: 'planC1' as const, bold: true },
+                  { key: 'planC2' as const, bold: false },
+                  { key: 'planC3' as const, bold: false },
+                  { key: 'planC4' as const, bold: false },
+                  { key: 'planC5' as const, bold: false },
+                  { key: 'planC8' as const, bold: false },
+                  { key: 'planC6' as const, bold: false },
+                  { key: 'planC7' as const, bold: false },
                 ] as const
               ).map((f) => (
                 <li
@@ -207,16 +209,14 @@ export function PricingSection() {
                 >
                   <Check
                     size={16}
-                    className={`mt-0.5 flex-shrink-0 ${
-                      f.check === 'emerald' ? 'text-[#10B981]' : 'text-[#F472B6]'
-                    }`}
+                    className="mt-0.5 flex-shrink-0 text-[#F472B6]"
                   />
                   {t(f.key, locale)}
                 </li>
               ))}
             </ul>
             <Link
-              href="/onboarding"
+              href={`/onboarding?plan=creator&billing=${billingCycle}`}
               className="inline-flex items-center justify-center gap-2 min-h-[44px] bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]"
             >
               {t('planCreatorCta', locale)}
@@ -231,13 +231,13 @@ export function PricingSection() {
             transition={{ duration: 0.4, delay: 0.12 }}
             className="relative bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 flex flex-col shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
           >
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full whitespace-nowrap">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide text-[#2B2568] bg-[#E9D5FF]/70 border border-[#E9D5FF] px-3 py-1.5 rounded-full whitespace-nowrap">
               {t('planProBadge', locale)}
             </span>
-            <h3 className="font-outfit font-extrabold text-xl text-slate-900 tracking-tight mt-1">
+            <h3 className={`${ltCardTitle} mt-1`}>
               {t('planPro', locale)}
             </h3>
-            <p className="text-sm text-slate-600 font-medium mt-1.5 leading-relaxed mb-5 font-display">
+            <p className={`${ltCardBody} !mt-1.5 mb-5 font-medium`}>
               {t('planProSub', locale)}
             </p>
             <div className="mb-6">
@@ -251,7 +251,7 @@ export function PricingSection() {
               </div>
               <p
                 className={`text-[11px] font-bold mt-1 ${
-                  yearly ? 'text-[#10B981]' : 'text-[#F472B6]'
+                  yearly ? 'text-[#F472B6]' : 'text-[#F472B6]'
                 }`}
               >
                 {yearly ? t('planProSubYearly', locale) : t('planBilledMonthly', locale)}
@@ -273,22 +273,20 @@ export function PricingSection() {
                   key={f.key}
                   className={`flex items-start gap-2 text-sm font-display ${
                     f.highlight
-                      ? 'font-extrabold text-[#10B981]'
+                      ? 'font-extrabold text-[#F472B6]'
                       : 'font-medium text-slate-800'
                   }`}
                 >
                   <Check
                     size={16}
-                    className={`mt-0.5 flex-shrink-0 ${
-                      f.highlight ? 'text-[#10B981]' : 'text-sky-500'
-                    }`}
+                    className="mt-0.5 flex-shrink-0 text-[#F472B6]"
                   />
                   {t(f.key, locale)}
                 </li>
               ))}
             </ul>
             <Link
-              href="/onboarding"
+              href={`/onboarding?plan=pro&billing=${billingCycle}`}
               className="inline-flex items-center justify-center min-h-[44px] bg-[#0F172A] hover:bg-[#1a1848] text-white font-bold py-3.5 rounded-xl transition-colors"
             >
               {t('planProCta', locale)}

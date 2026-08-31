@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
@@ -16,10 +16,34 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
-import { formatAuthError, ACCOUNT_CREATED_VERIFY_EMAIL } from '@/lib/auth-error';
+import {
+  CHECKOUT_CURRENCIES,
+  formatCheckoutPrice,
+  getPlanPriceInCurrency,
+  normalizeBillingCycle,
+  normalizeCheckoutCurrency,
+  normalizeSignupPlan,
+  type CheckoutCurrency,
+} from '@/lib/billing/plan-prices';
+import {
+  formatAuthError,
+  ACCOUNT_CREATED_VERIFY_EMAIL,
+  isUnverifiedEmailError,
+} from '@/lib/auth-error';
+import type { WorkspacePlan } from '@/lib/config/plans';
+import { PLAN_DISPLAY_NAME } from '@/lib/config/plans';
 import { persistPlatformRole } from '@/lib/use-platform-role';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
+import { useLanguage } from '@/lib/locale-context';
 import { toast } from 'sonner';
+
+function currencyFromLocale(locale: string): CheckoutCurrency {
+  if (locale === 'en') return 'usd';
+  if (locale === 'no') return 'nok';
+  if (locale === 'da') return 'dkk';
+  if (locale === 'fi') return 'eur';
+  return 'sek';
+}
 
 const ROLES: {
   id: string;
@@ -68,7 +92,24 @@ type Step = 0 | 1 | 2 | 3;
 /** 3-step onboarding questionnaire (+ optional account gate when signed out). */
 export default function OnboardingForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { locale } = useLanguage();
   const { data: session, isPending } = authClient.useSession();
+
+  const selectedPlan = normalizeSignupPlan(searchParams.get('plan'));
+  const billingCycle = normalizeBillingCycle(searchParams.get('billing'));
+  const currencyFromUrl = searchParams.get('currency');
+  const [checkoutCurrency, setCheckoutCurrency] = useState<CheckoutCurrency>(() =>
+    currencyFromUrl
+      ? normalizeCheckoutCurrency(currencyFromUrl)
+      : currencyFromLocale(locale)
+  );
+
+  // Keep currency in sync when locale changes and URL didn't pin one.
+  useEffect(() => {
+    if (currencyFromUrl) return;
+    setCheckoutCurrency(currencyFromLocale(locale));
+  }, [locale, currencyFromUrl]);
 
   const [step, setStep] = useState<Step>(1);
   const [fullName, setFullName] = useState('');
@@ -87,32 +128,40 @@ export default function OnboardingForm() {
   const [loading, setLoading] = useState(false);
   const [verifyPending, setVerifyPending] = useState(false);
 
+  /** One-time session → form hydration so typing is never overwritten. */
+  const profileHydratedRef = useRef(false);
+
   // Unauthenticated users start on account creation (step 0).
   useEffect(() => {
     if (isPending) return;
     if (!session?.user) {
       setStep(0);
+      profileHydratedRef.current = false;
       return;
     }
     setStep((s) => (s === 0 ? 1 : s));
-    if (session.user.name && !fullName) {
+
+    if (profileHydratedRef.current) return;
+    profileHydratedRef.current = true;
+
+    if (session.user.name) {
       setFullName(session.user.name);
     }
     const metaName = (session.user as { workspaceName?: string | null })
       .workspaceName;
-    if (metaName && !workspaceName) {
+    if (metaName) {
       setWorkspaceName(metaName);
-      if (!brandName) setBrandName(metaName);
-    } else {
-      void import('@/lib/workspace-naming').then(({ peekPendingWorkspaceName }) => {
-        const pending = peekPendingWorkspaceName();
-        if (pending && !workspaceName) {
-          setWorkspaceName(pending);
-          if (!brandName) setBrandName(pending);
-        }
-      });
+      setBrandName((prev) => prev || metaName);
+      return;
     }
-  }, [isPending, session?.user, fullName, workspaceName, brandName]);
+    void import('@/lib/workspace-naming').then(({ peekPendingWorkspaceName }) => {
+      const pending = peekPendingWorkspaceName();
+      if (pending) {
+        setWorkspaceName(pending);
+        setBrandName((prev) => prev || pending);
+      }
+    });
+  }, [isPending, session?.user]);
 
   const progress = useMemo(() => {
     if (step === 0) return 0;
@@ -125,38 +174,70 @@ export default function OnboardingForm() {
     );
   };
 
-  const createAccount = async (e: FormEvent) => {
+  const continueToQuestionnaire = (e: FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
-    try {
-      const trimmedName = fullName.trim() || email.split('@')[0] || 'Creator';
-      const trimmedWorkspace = workspaceName.trim();
-      if (trimmedWorkspace.length < 2) {
-        setError('Workspace name is required');
-        setLoading(false);
-        return;
-      }
 
-      const { stashPendingWorkspaceName } = await import(
-        '@/lib/workspace-naming'
-      );
+    const trimmedName = fullName.trim();
+    const trimmedWorkspace = workspaceName.trim();
+    const trimmedEmail = email.trim();
+
+    if (trimmedName.length < 2) {
+      setError('Please enter your full name');
+      return;
+    }
+    if (trimmedWorkspace.length < 2) {
+      setError('Workspace name is required');
+      return;
+    }
+    if (!trimmedEmail.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    void import('@/lib/workspace-naming').then(({ stashPendingWorkspaceName }) => {
       stashPendingWorkspaceName(trimmedWorkspace);
+    });
+    setBrandName((prev) => prev || trimmedWorkspace);
+    setStep(1);
+  };
 
-      const { error: signUpError } = await authClient.signUp.email({
-        email: email.trim(),
-        password,
-        name: trimmedName,
-        workspaceName: trimmedWorkspace,
-        callbackURL: '/account/signin?verified=1',
-      } as Parameters<typeof authClient.signUp.email>[0] & {
-        workspaceName: string;
-      });
-      if (signUpError) {
-        setError(formatAuthError(signUpError, 'Could not create account'));
-        setLoading(false);
-        return;
-      }
+  const ensureAuthenticated = async (): Promise<boolean> => {
+    if (session?.user) return true;
+
+    const trimmedName = fullName.trim() || email.split('@')[0] || 'Creator';
+    const trimmedWorkspace = workspaceName.trim();
+    const trimmedEmail = email.trim();
+
+    const { stashPendingWorkspaceName } = await import('@/lib/workspace-naming');
+    stashPendingWorkspaceName(trimmedWorkspace);
+
+    const { data: signUpData, error: signUpError } = await authClient.signUp.email({
+      email: trimmedEmail,
+      password,
+      name: trimmedName,
+      workspaceName: trimmedWorkspace,
+      callbackURL: '/onboarding?plan=' + encodeURIComponent(selectedPlan),
+    } as Parameters<typeof authClient.signUp.email>[0] & {
+      workspaceName: string;
+    });
+
+    const alreadyExists =
+      Boolean(signUpError) &&
+      /already|exists|USER_ALREADY|duplicate/i.test(
+        formatAuthError(signUpError, '')
+      );
+
+    if (signUpError && !alreadyExists) {
+      setError(formatAuthError(signUpError, 'Could not create account'));
+      return false;
+    }
+
+    if (!signUpError) {
       try {
         const { ensureDefaultWorkspace } = await import(
           '@/lib/mock-workspace-profiles'
@@ -165,26 +246,88 @@ export default function OnboardingForm() {
       } catch {
         /* ignore */
       }
-      try {
-        await authClient.signOut();
-      } catch {
-        /* ignore */
+      // autoSignIn: true — signup usually returns a user/session immediately.
+      if (signUpData?.user) return true;
+    }
+
+    // Existing account (or signup without a session) → sign in with the same credentials.
+    const { error: signInError } = await authClient.signIn.email({
+      email: trimmedEmail,
+      password,
+    });
+
+    if (signInError) {
+      if (isUnverifiedEmailError(signInError)) {
+        setVerifyPending(true);
+        setStep(0);
+        setError(null);
+        toast.message(ACCOUNT_CREATED_VERIFY_EMAIL);
+        return false;
       }
-      toast.success(ACCOUNT_CREATED_VERIFY_EMAIL);
-      setVerifyPending(true);
+      setError(
+        alreadyExists
+          ? 'An account with this email already exists. Check your password, or log in first.'
+          : formatAuthError(signInError, 'Could not sign in')
+      );
+      setStep(0);
+      return false;
+    }
+
+    return true;
+  };
+
+  const redirectAfterOnboarding = async (plan: WorkspacePlan) => {
+    if (plan === 'starter') {
+      router.replace('/admin');
+      return;
+    }
+
+    const billingRes = await fetch('/api/billing/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        plan,
+        billing: billingCycle,
+        currency: checkoutCurrency,
+      }),
+    });
+    const billingJson = (await billingRes.json().catch(() => ({}))) as {
+      url?: string | null;
+      redirect?: string;
+      error?: string;
+      demo?: boolean;
+      message?: string;
+    };
+
+    if (!billingRes.ok) {
+      setError(billingJson.error || 'Could not start checkout');
       setLoading(false);
       return;
-    } catch (err) {
-      setError(formatAuthError(err, 'Could not create account'));
-    } finally {
-      setLoading(false);
     }
+
+    if (billingJson.url) {
+      window.location.href = billingJson.url;
+      return;
+    }
+
+    if (billingJson.demo && billingJson.message) {
+      toast.success(billingJson.message);
+    }
+
+    router.replace(billingJson.redirect || '/admin');
   };
 
   const submitOnboarding = async () => {
     setLoading(true);
     setError(null);
     try {
+      const authed = await ensureAuthenticated();
+      if (!authed) {
+        setLoading(false);
+        return;
+      }
+
       const resolvedBrand =
         brandName.trim() || workspaceName.trim() || fullName.trim();
       const res = await fetch('/api/onboarding', {
@@ -217,7 +360,7 @@ export default function OnboardingForm() {
         /* ignore */
       }
       await persistPlatformRole('creator');
-      router.replace(typeof data.redirect === 'string' ? data.redirect : '/admin');
+      await redirectAfterOnboarding(selectedPlan);
     } catch (err) {
       setError(formatAuthError(err, 'Could not save onboarding'));
       setLoading(false);
@@ -274,9 +417,16 @@ export default function OnboardingForm() {
           {verifyPending
             ? ACCOUNT_CREATED_VERIFY_EMAIL
             : step === 0
-              ? 'Then a quick 3-step questionnaire so we can tailor clikd: for you.'
+              ? 'Tell us who you are, then a quick 3-step questionnaire — payment comes last.'
               : 'Takes about a minute. You can change this later in Settings.'}
         </p>
+        {selectedPlan !== 'starter' && step > 0 ? (
+          <p className="mt-2 inline-flex items-center rounded-full bg-[#FCE7F3] text-[#2B2568] px-3 py-1.5 text-[11px] font-extrabold">
+            Selected plan: {PLAN_DISPLAY_NAME[selectedPlan]} ·{' '}
+            {billingCycle === 'yearly' ? 'Yearly' : 'Monthly'} ·{' '}
+            {checkoutCurrency.toUpperCase()}
+          </p>
+        ) : null}
       </div>
 
       {/* Progress */}
@@ -340,7 +490,7 @@ export default function OnboardingForm() {
         )}
 
         {step === 0 && !verifyPending && (
-          <form onSubmit={createAccount} className="space-y-4">
+          <form onSubmit={continueToQuestionnaire} className="space-y-4">
             <label className="block">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400">
                 Full name
@@ -349,6 +499,7 @@ export default function OnboardingForm() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                autoComplete="name"
                 className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#F472B6]/30"
                 placeholder="Ebba Brobeck"
               />
@@ -397,11 +548,9 @@ export default function OnboardingForm() {
             </label>
             <button
               type="submit"
-              disabled={loading}
-              className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-sm disabled:opacity-60"
+              className="w-full inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-sm"
             >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : null}
-              Continue
+              Continue to questionnaire
               <ArrowRight size={16} />
             </button>
             <p className="text-center text-xs text-slate-500 font-medium">
@@ -426,6 +575,7 @@ export default function OnboardingForm() {
               <input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                autoComplete="name"
                 className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#F472B6]/30"
                 placeholder="Your name"
               />
@@ -609,6 +759,48 @@ export default function OnboardingForm() {
                 ))}
               </div>
             </div>
+
+            {selectedPlan !== 'starter' ? (
+              <div>
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-400 mb-2">
+                  Payment currency
+                </p>
+                <p className="text-xs text-slate-500 font-medium mb-2">
+                  Choose how you want to be charged on Stripe.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {CHECKOUT_CURRENCIES.map(({ code, label }) => {
+                    const priced = getPlanPriceInCurrency({
+                      plan: selectedPlan,
+                      billing: billingCycle,
+                      currency: code,
+                    });
+                    const selected = checkoutCurrency === code;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => setCheckoutCurrency(code)}
+                        className={`text-left rounded-xl border px-3.5 py-3 min-h-[56px] transition-all ${
+                          selected
+                            ? 'border-[#F472B6] bg-[#F472B6]/5'
+                            : 'border-slate-200 hover:border-slate-300 bg-white'
+                        }`}
+                      >
+                        <p className="text-sm font-extrabold text-slate-900">
+                          {label}
+                        </p>
+                        <p className="text-xs font-medium text-slate-500 mt-0.5">
+                          {formatCheckoutPrice(priced.amount, code)} /{' '}
+                          {billingCycle === 'yearly' ? 'mo billed yearly' : 'mo'}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
             <div className="flex gap-2">
               <button
                 type="button"
@@ -625,7 +817,10 @@ export default function OnboardingForm() {
                 className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-[#0F172A] hover:bg-[#1a1848] text-white font-bold text-sm disabled:opacity-50"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : null}
-                Finish & open studio
+                Finish &{' '}
+                {selectedPlan === 'starter'
+                  ? 'open studio'
+                  : `pay in ${checkoutCurrency.toUpperCase()}`}
               </button>
             </div>
           </div>

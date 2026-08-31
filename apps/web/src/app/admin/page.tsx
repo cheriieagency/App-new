@@ -6,6 +6,7 @@ import { authClient } from '@/lib/auth-client';
 import { signOutAndRedirect } from '@/lib/sign-out-client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -108,6 +109,7 @@ import {
   type BioTheme,
 } from '@/lib/bio-theme';
 import BioBuilderDesignTab from '@/components/admin/BioBuilderDesignTab';
+import BioHandleInput from '@/components/admin/BioHandleInput';
 import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
 import {
   SOCIAL_BRAND_ICONS,
@@ -706,18 +708,33 @@ function MobilePreview({
     theme.coverImageUrl ||
     'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80';
   const chromeLight = isGlass || isFrosted;
-  const socialIcons = socialLinks.slice(0, 5).map((sl, i) => {
-    const plat = SOCIAL_PLATFORMS.find((p) => p.id === sl.platform) ?? SOCIAL_PLATFORMS[6];
-    return (
-      <div
-        key={i}
-        className="w-7 h-7 rounded-full flex items-center justify-center border border-white/15 bg-white/10 backdrop-blur-md"
-        style={{ color: plat.color }}
-      >
-        <SocialPlatformIcon id={plat.id} size={12} />
-      </div>
-    );
-  });
+  const socialIcons = socialLinks
+    .filter((sl) => Boolean(sl.platform && String(sl.url || '').trim()))
+    .slice(0, 8)
+    .map((sl, i) => {
+      const plat = SOCIAL_PLATFORMS.find((p) => p.id === sl.platform) ?? SOCIAL_PLATFORMS[6];
+      const href = String(sl.url || '').trim();
+      return (
+        <a
+          key={`${sl.platform}-${i}`}
+          href={href.startsWith('http') ? href : `https://${href}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-105"
+          style={{
+            color: plat.color,
+            background: chromeLight ? 'rgba(255,255,255,0.18)' : `${plat.color}14`,
+            border: `1px solid ${chromeLight ? 'rgba(255,255,255,0.28)' : `${plat.color}33`}`,
+            boxShadow: chromeLight ? undefined : '0 1px 2px rgba(15,23,42,0.06)',
+          }}
+          aria-label={plat.label}
+          title={plat.label}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <SocialPlatformIcon id={plat.id} size={14} />
+        </a>
+      );
+    });
 
   return (
     <div className="flex items-center justify-center py-2">
@@ -832,17 +849,18 @@ function MobilePreview({
                   >
                     @{handle || 'creator'}
                   </p>
+                  {/* Social icons always sit under the username in the phone preview */}
+                  {socialIcons.length > 0 && (
+                    <div className="flex items-center justify-center gap-2 mt-2.5 flex-wrap">
+                      {socialIcons}
+                    </div>
+                  )}
                   <p
                     className="text-[11px] font-medium leading-snug mt-1.5 px-1"
                     style={{ color: theme.mutedColor }}
                   >
                     {bioText || 'Bio text here...'}
                   </p>
-                  {theme.socialLayout === 'header' && socialIcons.length > 0 && (
-                    <div className="flex items-center justify-center gap-1.5 mt-2.5 flex-wrap">
-                      {socialIcons}
-                    </div>
-                  )}
                 </div>
 
                 <div className="px-3 pt-3 pb-2 space-y-2">
@@ -899,9 +917,16 @@ function MobilePreview({
                 </div>
               </div>
 
+              {/* Dock layout: extra social row at the bottom (header icons already show under @username) */}
               {theme.socialLayout === 'dock' && socialIcons.length > 0 && (
                 <div className="px-3 pb-1 flex-shrink-0">
-                  <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                  <div
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-2xl border ${
+                      chromeLight
+                        ? 'bg-white/10 backdrop-blur-md border-white/15'
+                        : 'bg-white/90 border-slate-200 shadow-sm'
+                    }`}
+                  >
                     {socialIcons}
                   </div>
                 </div>
@@ -1809,6 +1834,7 @@ export default function AdminPage() {
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [blocks, setBlocks] = useState<BioBlock[]>([]);
   const [bioHandle, setBioHandle] = useState('');
+  const [bioHandleAvailable, setBioHandleAvailable] = useState(true);
   const [bioDisplayName, setBioDisplayName] = useState('');
   const [bioBioText, setBioBioText] = useState('');
   const [bioAvatarUrl, setBioAvatarUrl] = useState('');
@@ -1952,6 +1978,7 @@ export default function AdminPage() {
     setDrawerSocialUrl('');
     setDrawerSocialPlatform('instagram');
     setAddDrawerOpen(false);
+    toast.success(`${platform?.label ?? 'Social'} link added`);
   };
 
   const addStoreProduct = () => {
@@ -2026,28 +2053,39 @@ export default function AdminPage() {
     setBioBioText(bio.bio_text);
     setBioAvatarUrl(bio.profile_photo || '');
     setBioTheme(normalizeBioTheme(bio.theme));
+    setSocialLinks(
+      Array.isArray(bio.social_links)
+        ? bio.social_links.filter(
+            (l) => l && typeof l.platform === 'string' && typeof l.url === 'string'
+          )
+        : []
+    );
     const t = window.setTimeout(() => {
       bioHydratingRef.current = false;
     }, 0);
     return () => window.clearTimeout(t);
   }, [activeWorkspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Persist Bio edits into the global workspace profile (instant tab sync).
-  // Theme-only patches must not rewrite workspace brand name — only bio.theme.
+  // Mirror Bio edits into in-memory workspace (instant preview / tab sync).
+  // Durable DB write only on Publish Changes / Preview — avoids races with publish.
   useEffect(() => {
     if (bioHydratingRef.current) return;
     const themeLabel =
       BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)?.label ||
       activeWorkspace.bio.theme_label;
-    updateActiveBio({
-      profile_photo: bioAvatarUrl || null,
-      display_name: bioDisplayName,
-      handle: bioHandle.replace(/^@/, ''),
-      bio_text: bioBioText,
-      theme: bioTheme,
-      theme_label: themeLabel,
-      blocks: blocks as WorkspaceBioBlock[],
-    });
+    void updateActiveBio(
+      {
+        profile_photo: bioAvatarUrl || null,
+        display_name: bioDisplayName,
+        handle: bioHandle.replace(/^@/, ''),
+        bio_text: bioBioText,
+        theme: bioTheme,
+        theme_label: themeLabel,
+        blocks: blocks as WorkspaceBioBlock[],
+        social_links: socialLinks,
+      },
+      { durable: false }
+    );
   }, [
     blocks,
     bioHandle,
@@ -2055,24 +2093,34 @@ export default function AdminPage() {
     bioBioText,
     bioAvatarUrl,
     bioTheme,
+    socialLinks,
     updateActiveBio,
   ]);
 
-  // Legacy API bio load only fills empty fields when workspace bio is blank.
+  // API bio hydrate — fill empty workspace fields only; never clobber existing socials.
   useEffect(() => {
-    if (!bioData || activeWorkspace.bio.blocks.length > 0) return;
-    if (bioData.blocks?.length) {
-      setBlocks(
-        bioData.blocks.map((b: Partial<BioBlock> & { id: string }) => normalizeBioBlock(b))
-      );
+    if (!bioData) return;
+    if (activeWorkspace.bio.blocks.length === 0) {
+      if (bioData.blocks?.length) {
+        setBlocks(
+          bioData.blocks.map((b: Partial<BioBlock> & { id: string }) => normalizeBioBlock(b))
+        );
+      }
+      if (bioData.handle) setBioHandle(bioData.handle);
+      if (bioData.display_name) setBioDisplayName(bioData.display_name);
+      if (bioData.bio_text) setBioBioText(bioData.bio_text);
+      if (bioData.avatar_url) setBioAvatarUrl(bioData.avatar_url);
+      if (bioData.theme) setBioTheme(normalizeBioTheme(bioData.theme));
     }
-    if (bioData.handle) setBioHandle(bioData.handle);
-    if (bioData.display_name) setBioDisplayName(bioData.display_name);
-    if (bioData.bio_text) setBioBioText(bioData.bio_text);
-    if (bioData.avatar_url) setBioAvatarUrl(bioData.avatar_url);
-    if (bioData.social_links?.length) setSocialLinks(bioData.social_links);
-    if (bioData.theme) setBioTheme(normalizeBioTheme(bioData.theme));
-  }, [bioData, activeWorkspace.bio.blocks.length]);
+    const workspaceSocials = activeWorkspace.bio.social_links ?? [];
+    if (
+      workspaceSocials.length === 0 &&
+      Array.isArray(bioData.social_links) &&
+      bioData.social_links.length > 0
+    ) {
+      setSocialLinks(bioData.social_links);
+    }
+  }, [bioData, activeWorkspace.bio.blocks.length, activeWorkspace.bio.social_links]);
 
   // Mutations
   const addEventMutation = useMutation({
@@ -2142,8 +2190,35 @@ export default function AdminPage() {
         .toLowerCase()
         .replace(/[^a-z0-9._-]/g, '') || 'creator';
 
-      // Persist into workspace profile before/alongside API save.
-      updateActiveBio({
+      if (!bioHandleAvailable) {
+        throw new Error(t('handleTaken', locale));
+      }
+
+      // Re-check right before publish so a race can't steal the handle.
+      const availRes = await fetch(
+        `/api/admin/bio/handle-availability?${new URLSearchParams({
+          handle: cleanHandle,
+          ...(activeWorkspaceId ? { workspaceId: activeWorkspaceId } : {}),
+        })}`,
+        { credentials: 'include', cache: 'no-store' }
+      );
+      const avail = (await availRes.json().catch(() => ({}))) as {
+        available?: boolean;
+        reason?: string;
+      };
+      if (availRes.ok && avail.available === false) {
+        throw new Error(
+          avail.reason === 'reserved'
+            ? t('handleReserved', locale)
+            : avail.reason === 'too_short'
+              ? t('handleTooShort', locale)
+              : avail.reason === 'invalid'
+                ? t('handleInvalid', locale)
+                : t('handleTaken', locale)
+        );
+      }
+
+      const bioPatch = {
         profile_photo: bioAvatarUrl || null,
         display_name: bioDisplayName,
         handle: cleanHandle,
@@ -2153,28 +2228,49 @@ export default function AdminPage() {
           BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)?.label ||
           activeWorkspace.bio.theme_label,
         blocks: blocks as WorkspaceBioBlock[],
-      });
+        social_links: socialLinks,
+      };
+
+      // Durable source of truth for public /bio/{handle} is workspaces.profile_data.
+      const workspaceOk = await updateActiveBio(bioPatch);
+      if (!workspaceOk) {
+        throw new Error(t('toastBioSaveFailed', locale));
+      }
 
       const r = await fetch('/api/admin/bio', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(activeWorkspaceId
+            ? {
+                'x-workspace-id': activeWorkspaceId,
+                'x-active-workspace-id': activeWorkspaceId,
+              }
+            : {}),
+        },
         body: JSON.stringify({
-          blocks,
-          handle: cleanHandle,
-          display_name: bioDisplayName,
-          bio_text: bioBioText,
+          ...bioPatch,
           avatar_url: bioAvatarUrl,
-          social_links: socialLinks,
-          theme: bioTheme,
+          workspaceId: activeWorkspaceId,
+          workspace_id: activeWorkspaceId,
         }),
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || 'Failed to publish');
-      return { ...data, handle: cleanHandle } as {
+      if (!r.ok) {
+        throw new Error(
+          (data as { error?: string }).error || t('toastPublishFailed', locale)
+        );
+      }
+      return {
+        ...(data as Record<string, unknown>),
+        handle: cleanHandle,
+        workspaceOk: true,
+      } as {
         success?: boolean;
         first_publish?: boolean;
         handle: string;
         demo?: boolean;
+        workspaceOk?: boolean;
       };
     },
     onSuccess: (data) => {
@@ -2184,7 +2280,6 @@ export default function AdminPage() {
       try {
         if (typeof window !== 'undefined') {
           const seen = window.localStorage.getItem(storageKey);
-          // Local flag covers demo mode + first-ever publish in this browser.
           if (!seen) {
             firstPublish = true;
             window.localStorage.setItem(storageKey, new Date().toISOString());
@@ -2201,6 +2296,11 @@ export default function AdminPage() {
       setPublishDialogHandle(handle);
       setPublishDialogOpen(true);
       queryClient.invalidateQueries({ queryKey: ['bio'] });
+      refreshWorkspaces();
+      toast.success(t('publishChanges', locale));
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('toastPublishFailed', locale));
     },
   });
 
@@ -3267,34 +3367,40 @@ export default function AdminPage() {
                       const cleanHandle = (bioHandle || activeWorkspace.handle || 'creator')
                         .replace(/^@/, '')
                         .trim();
-                      // Persist latest studio state so the new tab sees what you see.
-                      updateActiveBio({
-                        profile_photo: bioAvatarUrl || null,
-                        display_name: bioDisplayName,
-                        handle: cleanHandle,
-                        bio_text: bioBioText,
-                        theme: bioTheme,
-                        theme_label:
-                          BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)
-                            ?.label || activeWorkspace.bio.theme_label,
-                        blocks: blocks as WorkspaceBioBlock[],
-                      });
-                      window.open(
-                        `/bio/${encodeURIComponent(cleanHandle || 'creator')}`,
-                        '_blank',
-                        'noopener,noreferrer'
-                      );
+                      void (async () => {
+                        const ok = await updateActiveBio({
+                          profile_photo: bioAvatarUrl || null,
+                          display_name: bioDisplayName,
+                          handle: cleanHandle,
+                          bio_text: bioBioText,
+                          theme: bioTheme,
+                          theme_label:
+                            BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)
+                              ?.label || activeWorkspace.bio.theme_label,
+                          blocks: blocks as WorkspaceBioBlock[],
+                          social_links: socialLinks,
+                        });
+                        if (!ok) {
+                          toast.error(t('toastBioSaveFailed', locale));
+                          return;
+                        }
+                        window.open(
+                          `/bio/${encodeURIComponent(cleanHandle || 'creator')}`,
+                          '_blank',
+                          'noopener,noreferrer'
+                        );
+                      })();
                     }}
-                    className="h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 inline-flex items-center gap-1.5 hover:bg-slate-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[40px] rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
                     title={t('openPublicBioTitle', locale)}
                   >
-                    <ExternalLink size={13} /> {t('preview', locale)}
+                    <Eye size={13} /> {t('preview', locale)}
                   </button>
                   <button
                     type="button"
                     onClick={() => saveBioMutation.mutate()}
-                    disabled={saveBioMutation.isPending}
-                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-5 py-2.5 min-h-[40px] rounded-xl transition-all hover:opacity-95 ${
+                    disabled={saveBioMutation.isPending || !bioHandleAvailable}
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-5 py-2.5 min-h-[40px] rounded-xl transition-all hover:opacity-95 disabled:opacity-50 disabled:pointer-events-none ${
                       bioSaved
                         ? 'bg-emerald-600 text-white'
                         : 'bg-slate-900 text-white hover:bg-slate-800'
@@ -3619,16 +3725,17 @@ export default function AdminPage() {
                           </label>
                           <Input value={bioDisplayName} onChange={(e) => setBioDisplayName(e.target.value)} className="rounded-xl border-zinc-200 text-sm" />
                         </div>
-                        <div>
-                          <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
-                            Handle
-                          </label>
-                          <Input
-                            value={bioHandle}
-                            onChange={(e) => setBioHandle(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                            className="rounded-xl border-zinc-200 text-sm"
-                          />
-                        </div>
+                        <BioHandleInput
+                          value={bioHandle}
+                          onChange={setBioHandle}
+                          workspaceId={activeWorkspaceId || ''}
+                          locale={locale}
+                          onStatusChange={(status, available) => {
+                            // Don't disable Publish while the debounced check is in flight.
+                            if (status === 'checking') return;
+                            setBioHandleAvailable(available);
+                          }}
+                        />
                       </div>
                       <div>
                         <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">

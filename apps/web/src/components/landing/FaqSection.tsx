@@ -18,6 +18,15 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
+import {
+  ltAccent,
+  ltCardTitleLg,
+  ltCta,
+  ltEyebrow,
+  ltHeaderWrap,
+  ltSection,
+  ltSectionSub,
+} from '@/components/landing/landingType';
 
 type FaqCategory = 'all' | 'payments' | 'community' | 'vat' | 'workspace';
 
@@ -45,7 +54,7 @@ const FAQ_ITEMS: FaqItemDef[] = [
     qKey: 'faqVatQ',
     aKey: 'faqVatA',
     icon: Receipt,
-    iconWrap: 'bg-emerald-50 text-[#10B981]',
+    iconWrap: 'bg-[#E9D5FF]/50 text-[#2B2568]',
   },
   {
     id: 'import',
@@ -93,7 +102,7 @@ const FAQ_ITEMS: FaqItemDef[] = [
     qKey: 'faqTrialQ',
     aKey: 'faqTrialA',
     icon: Shield,
-    iconWrap: 'bg-emerald-50 text-[#10B981]',
+    iconWrap: 'bg-[#E9D5FF]/50 text-[#2B2568]',
   },
 ];
 
@@ -107,19 +116,13 @@ export function FaqSection() {
       aria-labelledby="faq-heading"
     >
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-8 sm:mb-10">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
-            {t('faqEyebrow', locale)}
-          </p>
-          <h2
-            id="faq-heading"
-            className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
-          >
-            {t('faqHeadline', locale)}
+        <div className={ltHeaderWrap}>
+          <p className={`${ltEyebrow} mb-3`}>{t('faqEyebrow', locale)}</p>
+          <h2 id="faq-heading" className={ltSection}>
+            {t('faqHeadline', locale)}{' '}
+            <span className={ltAccent}>{t('faqHeadlineAccent', locale)}</span>
           </h2>
-          <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
-            {t('faqSub', locale)}
-          </p>
+          <p className={ltSectionSub}>{t('faqSub', locale)}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-10 items-start">
@@ -144,17 +147,15 @@ export function FaqSection() {
             </div>
 
             <div className="text-left">
-              <p className="font-outfit font-extrabold text-2xl text-slate-900 tracking-tight">
-                {t('faqStillQuestion', locale)}
-              </p>
-              <p className="text-sm font-medium text-slate-600 mt-2 font-display">
+              <p className={ltCardTitleLg}>{t('faqStillQuestion', locale)}</p>
+              <p className="text-sm font-medium text-slate-600 mt-2 font-display leading-relaxed">
                 {t('faqStillSub', locale)}
               </p>
             </div>
 
             <a
               href="mailto:support@clikd.app"
-              className="mt-6 inline-flex items-center justify-center min-h-[44px] bg-[#2B2568] hover:bg-[#1a1848] text-white font-bold text-xs sm:text-sm px-6 py-2 rounded-xl shadow-md shadow-[#2B2568]/20 transition-all active:scale-[0.98]"
+              className={`mt-6 inline-flex items-center justify-center min-h-[44px] bg-[#2B2568] hover:bg-[#1a1848] text-white ${ltCta} px-6 py-2 rounded-xl shadow-md shadow-[#2B2568]/20 transition-all active:scale-[0.98]`}
             >
               {t('faqContactSupport', locale)}
             </a>
@@ -179,11 +180,7 @@ export function FaqSection() {
                     onClick={() => setOpenId(open ? null : item.id)}
                     className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4 min-h-[56px]"
                   >
-                    <span
-                      className={`flex-1 font-outfit font-extrabold text-sm sm:text-base tracking-tight ${
-                        open ? 'text-slate-900' : 'text-slate-900'
-                      }`}
-                    >
+                    <span className="flex-1 font-outfit font-bold text-base tracking-tight text-slate-900">
                       {t(item.qKey, locale)}
                     </span>
                     {open ? (
@@ -195,7 +192,7 @@ export function FaqSection() {
 
                   {open ? (
                     <div className="px-5 sm:px-6 pb-6 pt-0">
-                      <p className="text-xs sm:text-[13px] text-slate-700/90 font-medium leading-relaxed font-display">
+                      <p className="text-sm text-slate-600 font-medium leading-relaxed font-display">
                         {t(item.aKey, locale)}
                       </p>
                     </div>

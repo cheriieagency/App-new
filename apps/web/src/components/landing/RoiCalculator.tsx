@@ -5,6 +5,13 @@ import Link from 'next/link';
 import { Slider } from '@/components/ui/slider';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import {
+  ltCta,
+  ltEyebrow,
+  ltGradientPanel,
+  ltSection,
+  ltSectionSub,
+} from '@/components/landing/landingType';
 
 const FOLLOWER_MIN = 0;
 const FOLLOWER_MAX = 100000;
@@ -58,16 +65,11 @@ export function RoiCalculator() {
         <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-7 sm:p-10 lg:p-12">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
             <div>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
-                {t('roiEyebrow', locale)}
-              </p>
-              <h2
-                id="roi-heading"
-                className="font-outfit font-bold text-3xl sm:text-4xl text-slate-900 tracking-tight mb-3 leading-tight"
-              >
+              <p className={`${ltEyebrow} mb-3`}>{t('roiEyebrow', locale)}</p>
+              <h2 id="roi-heading" className={`${ltSection} mb-3`}>
                 {t('roiHeadline', locale)}
               </h2>
-              <p className="text-slate-600 font-medium mb-10 text-base sm:text-lg leading-relaxed max-w-md font-display">
+              <p className={`${ltSectionSub} mb-10 max-w-md`}>
                 {t('roiSub', locale)}
               </p>
 
@@ -143,32 +145,24 @@ export function RoiCalculator() {
               </div>
             </div>
 
-            <div className="relative rounded-2xl p-8 sm:p-10 overflow-hidden bg-[#0F172A] text-white border border-[#0F172A] shadow-[0_8px_40px_-12px_rgba(15,23,42,0.35)]">
-              <div
-                className="absolute -top-20 -right-16 w-56 h-56 rounded-full pointer-events-none"
-                style={{
-                  background:
-                    'radial-gradient(circle, rgba(244,114,182,0.28) 0%, transparent 68%)',
-                }}
-                aria-hidden
-              />
+            <div
+              className={`relative rounded-2xl p-8 sm:p-10 overflow-hidden ${ltGradientPanel}`}
+            >
               <div className="relative">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-4">
-                  {t('roiEstimatedRevenue', locale)}
-                </p>
-                <p className="font-outfit font-extrabold text-4xl sm:text-5xl tracking-tight text-white mb-4 tabular-nums">
+                <p className={`${ltEyebrow} mb-4`}>{t('roiEstimatedRevenue', locale)}</p>
+                <p className="font-outfit font-extrabold text-4xl sm:text-5xl tracking-tight text-slate-900 mb-4 tabular-nums">
                   {formatNum(monthlyIncome, locale)}
-                  <span className="text-lg font-bold text-slate-400 ml-1.5">SEK/mo</span>
+                  <span className="text-lg font-bold text-slate-500 ml-1.5">SEK/mo</span>
                 </p>
-                <p className="text-white font-extrabold leading-relaxed mb-3 max-w-sm font-display">
+                <p className="text-base text-slate-800 font-semibold leading-relaxed mb-3 max-w-sm font-display">
                   {earnLine}
                 </p>
-                <p className="text-slate-400 font-medium leading-relaxed mb-8 max-w-sm font-display">
+                <p className="text-sm text-slate-500 font-medium leading-relaxed mb-8 max-w-sm font-display">
                   {membersLine}
                 </p>
                 <Link
                   href="/onboarding"
-                  className="inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-xl font-bold text-sm text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]"
+                  className={`inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-xl ${ltCta} text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]`}
                 >
                   {t('landingCtaStartFree', locale)}
                 </Link>

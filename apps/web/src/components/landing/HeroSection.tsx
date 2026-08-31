@@ -19,6 +19,7 @@ import {
 } from '@/components/icons/SocialBrandIcons';
 import { useLanguage } from '@/lib/i18n';
 import OptimizedImage from '@/components/ui/OptimizedImage';
+import { ltAccent, ltCta, ltEyebrow, ltHero, ltHeroSub } from '@/components/landing/landingType';
 
 type PlannerView = 'calendar' | 'kanban' | 'feed' | 'analytics';
 type ChannelFilter = 'all' | 'instagram' | 'tiktok' | 'linkedin' | 'youtube';
@@ -47,9 +48,9 @@ const PLATFORM_CHIP: Record<
   { bg: string; Icon: typeof InstagramIcon }
 > = {
   instagram: { bg: 'bg-[#FCE7F3] text-[#BE185D] border-[#F9A8D4]/60', Icon: InstagramIcon },
-  tiktok: { bg: 'bg-[#EDE9FE] text-[#5B21B6] border-[#C4B5FD]/70', Icon: TikTokIcon },
-  linkedin: { bg: 'bg-[#FEF3C7] text-[#92400E] border-[#FCD34D]/70', Icon: LinkedInIcon },
-  youtube: { bg: 'bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]', Icon: YouTubeIcon },
+  tiktok: { bg: 'bg-[#E9D5FF]/70 text-[#2B2568] border-[#E9D5FF]', Icon: TikTokIcon },
+  linkedin: { bg: 'bg-[#E9D5FF]/50 text-[#2B2568] border-[#E9D5FF]', Icon: LinkedInIcon },
+  youtube: { bg: 'bg-slate-100 text-slate-700 border-slate-200', Icon: YouTubeIcon },
 };
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -129,7 +130,7 @@ function HeroPlannerMockup() {
         </div>
         <div className="flex-1 min-w-0 flex items-center justify-center">
           <div className="inline-flex items-center gap-1.5 max-w-full rounded-lg bg-white border border-slate-200/90 px-2.5 py-1 text-[10px] sm:text-[11px] font-mono text-slate-500 shadow-sm">
-            <Lock size={10} className="text-[#10B981] flex-shrink-0" strokeWidth={2.5} />
+            <Lock size={10} className="text-[#F472B6] flex-shrink-0" strokeWidth={2.5} />
             <span className="truncate">https://admin.clikd.app/planner</span>
           </div>
         </div>
@@ -440,32 +441,30 @@ export function HeroSection() {
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 lg:pt-24 pb-16 sm:pb-20">
         {/* Centered copy */}
         <div className="max-w-3xl mx-auto text-center">
-          <motion.div
+          <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="inline-flex items-center rounded-full bg-purple-50/80 border border-purple-200/80 px-4 py-1.5"
+            className={`${ltEyebrow} mb-3`}
           >
-            <span className="font-mono text-xs font-bold text-purple-900 tracking-wide">
-              {t('hero.badge')}
-            </span>
-          </motion.div>
+            {t('hero.badge')}
+          </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.06 }}
-            className="mt-6 text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight leading-[1.08] font-outfit text-center"
+            className={`mt-6 ${ltHero} text-center`}
           >
             <span className="block text-slate-900">{t('hero.headline1')}</span>
-            <span className="block text-[#F472B6]">{t('hero.headline2')}</span>
+            <span className={`block ${ltAccent}`}>{t('hero.headline2')}</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.12 }}
-            className="mt-5 text-base sm:text-lg text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto font-sans"
+            className={`${ltHeroSub} font-display`}
           >
             {t('hero.sub')}
           </motion.p>
@@ -478,7 +477,7 @@ export function HeroSection() {
           >
             <Link
               href="/onboarding"
-              className="inline-flex items-center justify-center min-h-[48px] bg-[#F472B6] hover:bg-[#e0529c] text-slate-950 font-black text-xs px-7 py-4 rounded-2xl shadow-sm transition-all transform hover:-translate-y-0.5"
+              className={`inline-flex items-center justify-center min-h-[48px] bg-[#F472B6] hover:bg-[#e0529c] text-slate-950 ${ltCta} px-7 py-4 rounded-2xl shadow-sm transition-all transform hover:-translate-y-0.5`}
             >
               {t('hero.ctaPrimary')}
             </Link>
@@ -489,7 +488,7 @@ export function HeroSection() {
                   .getElementById('creator-admin')
                   ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }
-              className="inline-flex items-center justify-center min-h-[48px] bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs px-7 py-4 rounded-2xl transition-all"
+              className={`inline-flex items-center justify-center min-h-[48px] bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 ${ltCta} px-7 py-4 rounded-2xl transition-all`}
             >
               {t('hero.ctaSecondary')}
             </button>

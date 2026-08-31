@@ -22,6 +22,7 @@ import { createAuthMiddleware } from 'better-auth/api';
 import { verifyPassword } from 'better-auth/crypto';
 import { bearer } from 'better-auth/plugins';
 import ws from 'ws';
+import sql from '@/app/api/utils/sql';
 import { shouldUseDemoAuth } from '@/lib/auth-env';
 import { sendAuthLinkEmail } from '@/lib/email/auth-mail';
 
@@ -133,6 +134,25 @@ async function verifyCompatiblePassword({
 const cookieSameSite = demoAuth ? ('lax' as const) : ('none' as const);
 const cookieSecure = demoAuth ? false : true;
 
+let authUserSchemaReady: Promise<void> | null = null;
+
+/** Heal missing better-auth user columns (e.g. workspaceName from signup). */
+async function ensureAuthUserSchema(): Promise<void> {
+  if (!pool) return;
+  if (!authUserSchemaReady) {
+    authUserSchemaReady = sql`
+      ALTER TABLE "user"
+        ADD COLUMN IF NOT EXISTS "workspaceName" text
+    `
+      .then(() => undefined)
+      .catch((error) => {
+        authUserSchemaReady = null;
+        console.warn('[auth] user schema heal failed', error);
+      });
+  }
+  await authUserSchemaReady;
+}
+
 export const auth = betterAuth({
   // Omit `database` in demo mode → better-auth memory adapter (local testing).
   ...(pool ? { database: pool } : {}),
@@ -140,9 +160,10 @@ export const auth = betterAuth({
   socialProviders,
   emailAndPassword: {
     enabled: true,
-    // Require a verified inbox when Resend can actually deliver the link.
-    requireEmailVerification: Boolean(process.env.RESEND_API_KEY?.trim()) && !demoAuth,
-    autoSignIn: false,
+    // Still send a verify email on signup, but do not block sign-in / onboarding
+    // checkout — otherwise every new account dies on "check your email".
+    requireEmailVerification: false,
+    autoSignIn: true,
     password: {
       verify: verifyCompatiblePassword,
     },
@@ -158,8 +179,8 @@ export const auth = betterAuth({
     },
   },
   emailVerification: {
-    sendOnSignUp: true,
-    autoSignInAfterVerification: false,
+    sendOnSignUp: Boolean(process.env.RESEND_API_KEY?.trim()) && !demoAuth,
+    autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
       await sendAuthLinkEmail({
         to: user.email,
@@ -176,6 +197,9 @@ export const auth = betterAuth({
     // often collect only email+password, so backfill a name from the email
     // local-part to keep signup working without a visible name field.
     before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === '/sign-up/email') {
+        await ensureAuthUserSchema();
+      }
       if (ctx.path !== '/sign-up/email') return;
       const body = ctx.body as { email?: unknown; name?: unknown } | undefined;
       if (!body || typeof body.email !== 'string') return;

@@ -18,6 +18,16 @@ import {
 } from '@/components/landing/CommunitySearchAutocomplete';
 import { useLanguage } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
+import {
+  ltAccent,
+  ltCardTitle,
+  ltCardTitleLg,
+  ltCta,
+  ltEyebrow,
+  ltGradientPanel,
+  ltSection,
+  ltSectionSub,
+} from '@/components/landing/landingType';
 
 export type CommunityCard = SearchableCommunity;
 
@@ -95,19 +105,12 @@ export function ShowcaseSection({
         {/* Header + search */}
         <div className="relative z-20 mb-8 flex flex-col gap-5">
           <div className="max-w-2xl">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
-              {t('discoverExplore', locale)}
-            </p>
-            <h2
-              id="communities-heading"
-              className="font-outfit font-bold text-4xl sm:text-5xl lg:text-[3.25rem] text-slate-900 tracking-tight leading-tight"
-            >
+            <p className={`${ltEyebrow} mb-3`}>{t('discoverExplore', locale)}</p>
+            <h2 id="communities-heading" className={ltSection}>
               {t('findNordicCommunity', locale)}{' '}
-              <span className="text-[#F472B6]">{t('findNordicCommunityAccent', locale)}</span>
+              <span className={ltAccent}>{t('findNordicCommunityAccent', locale)}</span>
             </h2>
-            <p className="mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display">
-              {t('discoverSub', locale)}
-            </p>
+            <p className={ltSectionSub}>{t('discoverSub', locale)}</p>
           </div>
           <CommunitySearchAutocomplete
             value={searchQuery}
@@ -152,58 +155,49 @@ export function ShowcaseSection({
               <div className="flex-1 h-px bg-slate-200/80" />
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl bg-[#0F172A] text-white p-6 sm:p-8 lg:p-10 shadow-[0_8px_40px_-12px_rgba(15,23,42,0.35)] border border-[#0F172A]">
-              <div
-                className="absolute -right-12 -top-12 w-96 h-96 rounded-full pointer-events-none"
-                style={{
-                  background:
-                    'radial-gradient(circle, rgba(244,114,182,0.22) 0%, transparent 68%)',
-                }}
-                aria-hidden
-              />
-
+            <div
+              className={`relative overflow-hidden rounded-2xl ${ltGradientPanel} p-6 sm:p-8 lg:p-10`}
+            >
               <div className="relative grid lg:grid-cols-[1.4fr_0.7fr] gap-8 items-center">
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-4">
                     <span className="inline-flex items-center text-xs font-bold bg-[#F472B6]/15 text-[#F472B6] border border-[#F472B6]/25 px-2.5 py-1 rounded-full">
                       #{categoryTag(hero.category, locale)}
                     </span>
-                    <span className="inline-flex items-center text-xs font-bold text-slate-200 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center text-xs font-bold text-[#2B2568] bg-white/80 border border-[#E9D5FF] px-2.5 py-1 rounded-full">
                       Sofia Bergström
                     </span>
-                    <span className="inline-flex items-center text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-400/20 px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center text-xs font-bold bg-white/80 text-[#2B2568] border border-[#E9D5FF] px-2.5 py-1 rounded-full">
                       {t('reviewsLabel', locale)}
                     </span>
                   </div>
 
                   {/* Community name/description are creator content — leave untranslated */}
-                  <h3 className="font-outfit text-2xl sm:text-3xl font-extrabold text-white mb-3 leading-tight tracking-tight">
-                    {hero.name}
-                  </h3>
-                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl mb-6 font-display">
+                  <h3 className={`${ltCardTitleLg} mb-3`}>{hero.name}</h3>
+                  <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl mb-6 font-display">
                     {hero.description}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-200">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
+                  <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-700">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E9D5FF] px-3 py-1.5">
                       <Users size={14} className="text-[#F472B6]" aria-hidden />
                       {formatMembers(hero.member_count, locale)} {t('activeMembersLabel', locale)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
-                      <Zap size={14} className="text-[#10B981]" aria-hidden />{' '}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E9D5FF] px-3 py-1.5">
+                      <Zap size={14} className="text-[#F472B6]" aria-hidden />{' '}
                       {t('instantAccessBadge', locale)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5">
-                      <BookOpen size={14} className="text-slate-300" aria-hidden />{' '}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E9D5FF] px-3 py-1.5">
+                      <BookOpen size={14} className="text-[#2B2568]" aria-hidden />{' '}
                       {t('coursesIncluded', locale)}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 flex items-center">
+                <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-[#E9D5FF] flex items-center shadow-sm">
                   <Link
                     href={`/communities/${hero.id}`}
-                    className="w-full bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-[0.98]"
+                    className={`w-full bg-[#F472B6] hover:bg-[#F472B6]/90 text-white ${ltCta} px-6 py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-[0.98]`}
                   >
                     {t('viewCommunity', locale)} →
                   </Link>
@@ -215,7 +209,7 @@ export function ShowcaseSection({
 
         {/* Trending grid */}
         <div className="flex items-center justify-between mb-5 gap-3">
-          <h3 className="font-outfit text-lg font-extrabold text-slate-900 tracking-tight">
+          <h3 className={ltCardTitle}>
             {searchQuery
               ? `${t('searchCommunitiesHeading', locale)} “${searchQuery}”`
               : t('trendingCommunities', locale)}
@@ -243,18 +237,18 @@ export function ShowcaseSection({
                 </span>
               </div>
               <div className="p-5 flex flex-col flex-1">
-                <h3 className="font-outfit text-base font-extrabold text-slate-900 mb-1 tracking-tight">
+                <h3 className="font-outfit text-lg font-bold text-slate-900 mb-1 tracking-tight">
                   {community.name}
                 </h3>
-                <p className="text-xs text-slate-500 font-medium line-clamp-2 mb-4 flex-1 font-display">
+                <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4 flex-1 font-display">
                   {community.description}
                 </p>
-                <p className="text-[11px] font-bold text-slate-500 mb-4 font-mono">
+                <p className="text-xs font-bold text-slate-500 mb-4 font-mono">
                   {formatMembers(community.member_count, locale)} {t('activeMembersLabel', locale)}
                 </p>
                 <Link
                   href={`/communities/${community.id}`}
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-[#0F172A] hover:bg-[#1a1848] text-white font-bold text-xs px-4 py-3 rounded-xl transition-colors"
+                  className={`inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-[#0F172A] hover:bg-[#1a1848] text-white ${ltCta} px-4 py-3 rounded-xl transition-colors`}
                 >
                   {t('joinArrow', locale)}
                 </Link>

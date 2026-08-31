@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { LandingHeader } from '@/components/landing/LandingHeader';
+import { WaitlistHeroSection } from '@/components/landing/WaitlistHeroSection';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { PlatformSuiteSection } from '@/components/landing/PlatformSuiteSection';
@@ -20,6 +21,12 @@ import type { SearchableCommunity } from '@/components/landing/CommunitySearchAu
 import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import {
+  ltCta,
+  ltEyebrow,
+  ltSection,
+  ltSectionSub,
+} from '@/components/landing/landingType';
 
 function filterCommunities(list: SearchableCommunity[], query: string): SearchableCommunity[] {
   const q = query.trim().toLowerCase();
@@ -113,6 +120,8 @@ export function LandingPageClient() {
             : null
         }
       />
+      {/* VIP waitlist signup stays as the top conversion block. */}
+      <WaitlistHeroSection />
       <HeroSection />
       <PlatformSuiteSection />
       <PlatformShowcaseSection />
@@ -142,19 +151,13 @@ export function LandingPageClient() {
       <section className="relative py-16 sm:py-24 text-center overflow-hidden bg-[#FAFAFA]">
         <div className="relative max-w-2xl mx-auto px-4 sm:px-6">
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] py-12 px-6 sm:px-10">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-3">
-              {t('getStartedEyebrow', locale)}
-            </p>
-            <h2 className="font-outfit font-bold text-3xl sm:text-4xl text-slate-900 mb-4 leading-tight tracking-tight">
-              {t('landingReadyHeadline', locale)}
-            </h2>
-            <p className="text-slate-600 mb-9 text-base sm:text-lg font-medium font-display leading-relaxed">
-              {t('landingReadySub', locale)}
-            </p>
+            <p className={`${ltEyebrow} mb-3`}>{t('getStartedEyebrow', locale)}</p>
+            <h2 className={`${ltSection} mb-4`}>{t('landingReadyHeadline', locale)}</h2>
+            <p className={`${ltSectionSub} mb-9`}>{t('landingReadySub', locale)}</p>
             <div className="flex items-center justify-center gap-3 flex-wrap">
               <Link
                 href="/onboarding"
-                className="flex items-center gap-2 min-h-12 px-8 rounded-xl font-extrabold text-sm text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]"
+                className={`flex items-center gap-2 min-h-12 px-8 rounded-xl ${ltCta} text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]`}
               >
                 {t('landingCtaStartFree', locale)} <ArrowRight size={14} />
               </Link>
@@ -163,7 +166,7 @@ export function LandingPageClient() {
                 onClick={() =>
                   document.getElementById('communities')?.scrollIntoView({ behavior: 'smooth' })
                 }
-                className="flex items-center gap-2 min-h-12 px-8 rounded-xl bg-white border border-slate-200/80 text-slate-800 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all"
+                className={`flex items-center gap-2 min-h-12 px-8 rounded-xl bg-white border border-slate-200/80 text-slate-800 ${ltCta} hover:bg-slate-50 hover:border-slate-300 transition-all`}
               >
                 {t('landingCtaExplore', locale)}
               </button>

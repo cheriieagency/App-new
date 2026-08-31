@@ -188,7 +188,17 @@ export async function PATCH(request: Request) {
       next.channels = body.channels as SocialPlatform[];
     }
     if (body.bio && typeof body.bio === 'object') {
-      next.bio = { ...next.bio, ...(body.bio as Partial<WorkspaceBioData>) };
+      const bioPatch = body.bio as Partial<WorkspaceBioData>;
+      next.bio = { ...next.bio, ...bioPatch };
+      // Keep top-level public handle in sync with bio handle (what /bio/{handle} matches).
+      if (typeof bioPatch.handle === 'string' && bioPatch.handle.trim()) {
+        const h = bioPatch.handle.trim().replace(/^@/, '');
+        next.handle = `@${h}`;
+        next.bio.handle = h;
+      }
+      if (bioPatch.profile_photo !== undefined) {
+        next.avatar_url = bioPatch.profile_photo;
+      }
     }
     if (body.profile && typeof body.profile === 'object') {
       Object.assign(next, body.profile as Partial<WorkspaceProfile>);

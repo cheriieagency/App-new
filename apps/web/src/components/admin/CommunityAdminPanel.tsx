@@ -31,6 +31,7 @@ import {
   Radio,
   Link2,
   Plus,
+  Compass,
 } from 'lucide-react';
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
@@ -54,10 +55,12 @@ import CreateCommunityModal from '@/components/admin/CreateCommunityModal';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
 import { useCommunities } from '@/hooks/useCommunities';
 import CommunityPostsTab from '@/components/admin/community/CommunityPostsTab';
+import AdminCommunityDiscoverPanel from '@/components/admin/community/AdminCommunityDiscoverPanel';
 import { toast } from 'sonner';
 
 export type CommunitySubTab =
   | 'overview'
+  | 'discover'
   | 'members'
   | 'classroom'
   | 'store'
@@ -753,6 +756,7 @@ export default function CommunityAdminPanel({
 
   const SUB_TABS: { key: CommunitySubTab; label: string; icon: React.ElementType }[] = [
     { key: 'overview', label: t('communityOverview', locale), icon: LayoutDashboard },
+    { key: 'discover', label: t('adminCommunityDiscover', locale), icon: Compass },
     { key: 'members', label: t('members', locale), icon: Users },
     { key: 'classroom', label: t('classroom', locale), icon: GraduationCap },
     { key: 'store', label: t('store', locale), icon: ShoppingBag },
@@ -788,8 +792,11 @@ export default function CommunityAdminPanel({
     </div>
   );
 
-  // Event / Live don't depend on community API — keep them reachable while loading.
-  if ((isLoading || communitiesLoading || isError || !data) && (subTab === 'event' || subTab === 'broadcast')) {
+  // Event / Live / Discover don't depend on owned-community API.
+  if (
+    (isLoading || communitiesLoading || isError || !data) &&
+    (subTab === 'event' || subTab === 'broadcast' || subTab === 'discover')
+  ) {
     return (
       <div className="space-y-5">
         <AdminPageHeader
@@ -799,6 +806,9 @@ export default function CommunityAdminPanel({
         {communitySubNav}
         {subTab === 'event' && (eventPanel ?? null)}
         {subTab === 'broadcast' && (broadcastPanel ?? null)}
+        {subTab === 'discover' && (
+          <AdminCommunityDiscoverPanel excludeCommunityId={communityId || null} />
+        )}
       </div>
     );
   }
@@ -849,15 +859,20 @@ export default function CommunityAdminPanel({
         <AdminPageHeader
           eyebrow={t('adminNavCommunity', locale)}
           title={t('adminNavCommunity', locale)}
-          description="No community yet — create one when you're ready."
+          description="No community yet — create one when you're ready, or join others as a member."
         />
-        <AdminEmptyState
-          icon={Users}
-          headline="Your community space is empty"
-          description="Create a community for this workspace to manage members, feed, classroom, and store."
-          ctaLabel="+ Create Community"
-          onCta={() => setCreateOpen(true)}
-        />
+        {communitySubNav}
+        {subTab === 'discover' ? (
+          <AdminCommunityDiscoverPanel excludeCommunityId={null} />
+        ) : (
+          <AdminEmptyState
+            icon={Users}
+            headline="Your community space is empty"
+            description="Create a community for this workspace to manage members, feed, classroom, and store — or switch to Discover & Join to browse communities as a member."
+            ctaLabel="+ Create Community"
+            onCta={() => setCreateOpen(true)}
+          />
+        )}
 
         <CreateCommunityModal
           open={createOpen}
@@ -957,6 +972,10 @@ export default function CommunityAdminPanel({
         </div>
         {communitySubNav}
       </div>
+
+      {subTab === 'discover' && (
+        <AdminCommunityDiscoverPanel excludeCommunityId={community.id} />
+      )}
 
       {/* Overview */}
       {subTab === 'overview' && (

@@ -16,9 +16,10 @@ import { motion } from 'motion/react';
 import { InstagramIcon, TikTokIcon } from '@/components/icons/SocialBrandIcons';
 import { useLanguage } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
+import { ltCardBody, ltCardTitle, ltCardTitleLg } from '@/components/landing/landingType';
 
 const BENTO =
-  'bg-white rounded-3xl p-8 border border-zinc-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-zinc-300 hover:-translate-y-[3px] hover:shadow-[0_16px_36px_-4px_rgba(15,23,42,0.06)] transition-all duration-[250ms] ease-[cubic-bezier(0.16,1,0.3,1)]';
+  'bg-white rounded-3xl p-8 border border-zinc-200/90 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-[#E9D5FF] hover:-translate-y-[3px] hover:shadow-[0_16px_36px_-4px_rgba(43,37,104,0.08)] transition-all duration-[250ms] ease-[cubic-bezier(0.16,1,0.3,1)]';
 
 function FeatureCard({
   icon: Icon,
@@ -58,12 +59,8 @@ function FeatureCard({
           <Icon size={24} strokeWidth={2} aria-hidden />
         </div>
         <div>
-          <h3 className="text-xl font-bold text-zinc-950 tracking-tight font-grotesk">
-            {t(titleKey, locale)}
-          </h3>
-          <p className="text-zinc-500 text-sm mt-2 leading-relaxed font-display">
-            {t(summaryKey, locale)}
-          </p>
+          <h3 className={ltCardTitle}>{t(titleKey, locale)}</h3>
+          <p className={`${ltCardBody} !text-slate-500`}>{t(summaryKey, locale)}</p>
         </div>
       </div>
       <div
@@ -71,7 +68,7 @@ function FeatureCard({
       >
         <span className="inline-flex items-center gap-1.5">
           {footerDot ? (
-            <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden />
+            <span className="w-2 h-2 rounded-full bg-[#F472B6]" aria-hidden />
           ) : null}
           {t(footerKey, locale)}
         </span>
@@ -108,19 +105,17 @@ export function PlatformSuiteSection() {
           >
             <div className="relative z-10 max-w-xl space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-zinc-950 text-white flex items-center justify-center shadow-md">
+                <div className="w-12 h-12 rounded-2xl bg-[#2B2568] text-white flex items-center justify-center shadow-md">
                   <Send size={24} strokeWidth={2} aria-hidden />
                 </div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200/80">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCE7F3] text-[#2B2568] text-xs font-bold border border-[#F472B6]/20">
+                  <span className="w-2 h-2 rounded-full bg-[#F472B6] animate-pulse" />
                   {t('suitePublishBadge', locale)}
                 </div>
               </div>
               <div>
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-zinc-950 tracking-tight font-grotesk">
-                  {t('suitePublishTitle', locale)}
-                </h3>
-                <p className="text-zinc-500 text-sm sm:text-base mt-2 leading-relaxed font-display">
+                <h3 className={ltCardTitleLg}>{t('suitePublishTitle', locale)}</h3>
+                <p className={`${ltCardBody} !mt-2 sm:text-base !text-slate-500`}>
                   {t('suitePublishSummary', locale)}
                 </p>
               </div>
@@ -128,33 +123,33 @@ export function PlatformSuiteSection() {
 
             <div className="mt-8 pt-6 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-3 relative z-10 text-xs">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[36px] rounded-xl font-bold bg-zinc-950 text-white">
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[36px] rounded-xl font-bold bg-[#2B2568] text-white">
                   <TikTokIcon size={16} className="text-white" />
                   {t('suiteTikTokDirect', locale)}
                 </span>
-                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[36px] rounded-xl font-bold bg-zinc-100 text-zinc-800 border border-zinc-200/70">
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[36px] rounded-xl font-bold bg-[#FCE7F3] text-[#2B2568] border border-[#F472B6]/20">
                   <InstagramIcon size={16} className="text-[#F472B6]" />
                   {t('suiteInstagramReel', locale)}
                 </span>
               </div>
-              <span className="text-emerald-700 font-bold font-mono">
+              <span className="text-[#F472B6] font-bold font-mono">
                 {t('suiteDirectApiStatus', locale)}
               </span>
             </div>
 
             <div
-              className="absolute -right-12 -bottom-12 w-64 h-64 bg-gradient-to-br from-pink-200/40 via-purple-100/20 to-transparent rounded-full blur-3xl pointer-events-none"
+              className="absolute -right-12 -bottom-12 w-64 h-64 bg-gradient-to-br from-[#FCE7F3]/80 via-[#E9D5FF]/40 to-transparent rounded-full blur-3xl pointer-events-none"
               aria-hidden
             />
           </motion.article>
 
           <FeatureCard
             icon={Mail}
-            iconWrap="bg-emerald-50 text-emerald-600 border-emerald-100"
+            iconWrap="bg-[#FCE7F3] text-[#F472B6] border-[#F472B6]/15"
             titleKey="suiteEmailTitle"
             summaryKey="suiteEmailSummary"
             footerKey="suiteEmailFooterVerified"
-            footerClass="text-emerald-700"
+            footerClass="text-[#2B2568]"
             footerRightKey="suiteEmailInboxRate"
             showChevron={false}
             footerDot
@@ -162,29 +157,29 @@ export function PlatformSuiteSection() {
 
           <FeatureCard
             icon={MessageSquare}
-            iconWrap="bg-blue-50 text-blue-600 border-blue-100"
+            iconWrap="bg-[#E9D5FF]/60 text-[#2B2568] border-[#E9D5FF]"
             titleKey="suiteInboxTitle"
             summaryKey="suiteInboxSummary"
             footerKey="suiteInboxTrigger"
-            footerClass="text-blue-700"
+            footerClass="text-[#2B2568]"
           />
 
           <FeatureCard
             icon={Home}
-            iconWrap="bg-pink-50 text-[#F472B6] border-pink-100"
+            iconWrap="bg-[#FCE7F3] text-[#F472B6] border-[#F472B6]/15"
             titleKey="suiteBioTitle"
             summaryKey="suiteBioSummary"
             footerKey="suiteBioCheckout"
-            footerClass="text-pink-700"
+            footerClass="text-[#F472B6]"
           />
 
           <FeatureCard
             icon={Users}
-            iconWrap="bg-purple-50 text-purple-600 border-purple-100"
+            iconWrap="bg-[#E9D5FF]/60 text-[#2B2568] border-[#E9D5FF]"
             titleKey="suiteCommunityTitle"
             summaryKey="suiteCommunitySummary"
             footerKey="suiteCommunityXp"
-            footerClass="text-purple-700"
+            footerClass="text-[#2B2568]"
           />
 
           <motion.article
@@ -196,23 +191,19 @@ export function PlatformSuiteSection() {
           >
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-3">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center border bg-sky-50 text-sky-600 border-sky-100">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center border bg-[#2B2568] text-white border-[#2B2568]">
                   <Layers size={24} strokeWidth={2} aria-hidden />
                 </div>
-                <span className="inline-flex items-center h-7 px-2.5 rounded-full bg-sky-50 text-sky-700 text-[10px] font-extrabold uppercase tracking-wider border border-sky-100">
+                <span className="inline-flex items-center h-7 px-2.5 rounded-full bg-[#E9D5FF]/70 text-[#2B2568] text-[10px] font-extrabold uppercase tracking-wider border border-[#E9D5FF]">
                   {t('suiteAdsNew', locale)}
                 </span>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-zinc-950 tracking-tight font-grotesk">
-                  {t('suiteAdsTitle', locale)}
-                </h3>
-                <p className="text-zinc-500 text-sm mt-2 leading-relaxed font-display">
-                  {t('suiteAdsSummary', locale)}
-                </p>
+                <h3 className={ltCardTitle}>{t('suiteAdsTitle', locale)}</h3>
+                <p className={`${ltCardBody} !text-slate-500`}>{t('suiteAdsSummary', locale)}</p>
               </div>
             </div>
-            <div className="pt-4 border-t border-zinc-100 flex items-center justify-between gap-2 text-xs font-bold text-sky-700">
+            <div className="pt-4 border-t border-zinc-100 flex items-center justify-between gap-2 text-xs font-bold text-[#2B2568]">
               <span>{t('suiteAdsFooter', locale)}</span>
               <ChevronRight size={16} strokeWidth={2} aria-hidden />
             </div>
@@ -226,14 +217,12 @@ export function PlatformSuiteSection() {
             className={`md:col-span-2 ${BENTO} flex flex-col justify-between space-y-6`}
           >
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center border bg-amber-50 text-amber-600 border-amber-100">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center border bg-[#FCE7F3] text-[#F472B6] border-[#F472B6]/15">
                 <BarChart3 size={24} strokeWidth={2} aria-hidden />
               </div>
               <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-zinc-950 tracking-tight font-grotesk">
-                  {t('suiteReportsTitle', locale)}
-                </h3>
-                <p className="text-zinc-500 text-sm sm:text-base mt-2 leading-relaxed font-display max-w-xl">
+                <h3 className={ltCardTitleLg}>{t('suiteReportsTitle', locale)}</h3>
+                <p className={`${ltCardBody} !mt-2 sm:text-base !text-slate-500 max-w-xl`}>
                   {t('suiteReportsSummary', locale)}
                 </p>
               </div>
@@ -244,12 +233,12 @@ export function PlatformSuiteSection() {
                 <span className="inline-flex items-center px-3 py-1.5 min-h-[36px] rounded-xl bg-zinc-100 text-zinc-800 text-xs font-bold">
                   {t('suiteReportsViews', locale)}
                 </span>
-                <span className="inline-flex items-center px-3 py-1.5 min-h-[36px] rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
+                <span className="inline-flex items-center px-3 py-1.5 min-h-[36px] rounded-xl bg-[#E9D5FF]/70 text-[#2B2568] text-xs font-bold border border-[#E9D5FF]">
                   {t('suiteReportsFollowers', locale)}
                 </span>
               </div>
             </div>
-            <div className="pt-4 border-t border-zinc-100 flex items-center justify-between gap-2 text-xs font-bold text-amber-700">
+            <div className="pt-4 border-t border-zinc-100 flex items-center justify-between gap-2 text-xs font-bold text-[#F472B6]">
               <span>{t('suiteReportsFooter', locale)}</span>
               <ArrowUpRight size={16} strokeWidth={2} aria-hidden />
             </div>

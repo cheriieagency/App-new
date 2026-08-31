@@ -2,35 +2,24 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, type DragEvent, type ElementType } from 'react';
+import { useEffect, useState, type DragEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  BarChart3,
-  CalendarDays,
   ChevronDown,
-  FolderKanban,
   GripVertical,
-  Home,
-  Image as ImageIcon,
-  Inbox,
-  Link2,
   Lock,
-  Mail,
-  Megaphone,
   Pencil,
   Plus,
-  Settings,
-  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import WorkspaceSelector from '@/components/planner/WorkspaceSelector';
 import CreateWorkspaceModal from '@/components/planner/CreateWorkspaceModal';
 import AdminPlanModal, { useAdminPlan } from '@/components/admin/AdminPlanModal';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { useAdminNav, type AdminSection, adminProjectsHref } from '@/components/admin/AdminNavContext';
+import { useAdminNav, adminProjectsHref } from '@/components/admin/AdminNavContext';
+import { ADMIN_NAV_ITEMS } from '@/components/admin/adminNavItems';
 import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { useLanguage } from '@/lib/i18n';
-import type { NestedKey } from '@/lib/i18n';
 import type { CampaignLabel } from '@/lib/mock-content-planner';
 import {
   MEDIA_LIBRARY_ROOT_ID,
@@ -54,28 +43,6 @@ function moveItemBefore(ids: string[], fromId: string, toId: string): string[] {
   next.splice(toIndex, 0, fromId);
   return next;
 }
-type NavItem = {
-  key: AdminSection;
-  labelKey: NestedKey;
-  icon: ElementType;
-  href: string;
-  badge?: string;
-};
-
-/** Clean labels matching the Clikd admin shell reference. */
-const NAV: NavItem[] = [
-  { key: 'home', labelKey: 'admin.home', icon: Home, href: '/admin?tab=home' },
-  { key: 'calendar', labelKey: 'admin.planner', icon: CalendarDays, href: '/planner' },
-  { key: 'media', labelKey: 'admin.mediaLibrary', icon: ImageIcon, href: '/admin?tab=media' },
-  { key: 'projects', labelKey: 'admin.projects', icon: FolderKanban, href: '/admin?tab=projects' },
-  { key: 'inbox', labelKey: 'admin.socialInbox', icon: Inbox, href: '/admin?tab=inbox' },
-  { key: 'analytics', labelKey: 'admin.analytics', icon: BarChart3, href: '/admin?tab=analytics' },
-  { key: 'ads', labelKey: 'admin.ads', icon: Megaphone, href: '/ads' },
-  { key: 'biobuilder', labelKey: 'admin.bioBuilder', icon: Link2, href: '/admin?tab=biobuilder' },
-  { key: 'community', labelKey: 'admin.community', icon: Users, href: '/admin?tab=community' },
-  { key: 'email', labelKey: 'admin.emailCrm', icon: Mail, href: '/admin?tab=email' },
-  { key: 'settings', labelKey: 'admin.settings', icon: Settings, href: '/admin?tab=settings' },
-];
 
 function planName(plan: WorkspacePlan) {
   return PLAN_DISPLAY_NAME[plan];
@@ -297,7 +264,7 @@ export default function AdminSidebar() {
 
   return (
     <>
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 z-40 w-64 flex-col justify-between bg-white border-r border-slate-200/80 text-slate-900 h-screen rounded-bl-[28px]">
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 w-64 flex-col justify-between bg-white border-r border-slate-200/80 text-slate-900 h-screen rounded-bl-[28px]">
         <div className="flex flex-col min-h-0 flex-1">
           <div className="px-4 pt-5 pb-4 space-y-4">
             <Link
@@ -324,7 +291,7 @@ export default function AdminSidebar() {
             className="flex-1 overflow-y-auto px-3 pt-2 pb-4 space-y-0.5"
             aria-label="Admin categories"
           >
-            {NAV.map(({ key, labelKey, icon: Icon, href, badge }) => {
+            {ADMIN_NAV_ITEMS.map(({ key, labelKey, icon: Icon, href }) => {
               const active =
                 key === 'calendar'
                   ? onPlanner || section === 'calendar'
@@ -822,17 +789,6 @@ export default function AdminSidebar() {
                       aria-label="Requires Creator"
                     />
                   ) : null}
-                  {badge && (
-                    <span
-                      className={`text-[11px] font-semibold min-w-[22px] h-[22px] px-1.5 rounded-full inline-flex items-center justify-center tabular-nums ${
-                        active
-                          ? 'bg-white/20 text-white'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {badge}
-                    </span>
-                  )}
                 </Link>
               );
             })}

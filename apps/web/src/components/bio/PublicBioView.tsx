@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Crown } from 'lucide-react';
 import {
+  SOCIAL_BRAND_ICONS,
+  type SocialBrandId,
+} from '@/components/icons/SocialBrandIcons';
+import {
   bioBlockSurfaceStyle,
   bioCanvasStyle,
   getBioFontFamily,
@@ -216,6 +220,9 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
     'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80';
   const avatarRadius = theme.avatarShape === 'squircle' ? '1.5rem' : '9999px';
   const fontFamily = getBioFontFamily(theme.fontId);
+  const socialLinks = (bio.social_links ?? []).filter(
+    (l) => l && String(l.platform || '').trim() && String(l.url || '').trim()
+  );
 
   // Register /r/{slug} destinations once so outbound link clicks are countable.
   useEffect(() => {
@@ -398,6 +405,43 @@ export default function PublicBioView({ profile }: { profile: WorkspaceProfile }
           >
             @{handle}
           </p>
+          {socialLinks.length > 0 ? (
+            <div className="flex items-center justify-center gap-2.5 mt-3 flex-wrap">
+              {socialLinks.slice(0, 8).map((sl, i) => {
+                const id = String(sl.platform) as SocialBrandId;
+                const Icon = SOCIAL_BRAND_ICONS[id] ?? SOCIAL_BRAND_ICONS.custom;
+                const href = String(sl.url).trim();
+                const colorMap: Partial<Record<SocialBrandId, string>> = {
+                  instagram: '#E1306C',
+                  facebook: '#1877F2',
+                  tiktok: '#010101',
+                  youtube: '#FF0000',
+                  twitter: '#000000',
+                  linkedin: '#0A66C2',
+                  spotify: '#1DB954',
+                  custom: '#6B7280',
+                };
+                const color = colorMap[id] ?? '#6B7280';
+                return (
+                  <a
+                    key={`${sl.platform}-${i}`}
+                    href={href.startsWith('http') ? href : `https://${href}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105"
+                    style={{
+                      color,
+                      background: chromeLight ? 'rgba(255,255,255,0.18)' : `${color}14`,
+                      border: `1px solid ${chromeLight ? 'rgba(255,255,255,0.28)' : `${color}33`}`,
+                    }}
+                    aria-label={String(sl.platform)}
+                  >
+                    <Icon size={16} />
+                  </a>
+                );
+              })}
+            </div>
+          ) : null}
           {bio.bio_text ? (
             <p
               className="text-sm font-medium leading-snug mt-2"

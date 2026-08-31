@@ -140,6 +140,7 @@ export type ExtraKey =
   | 'roiPayingMembers'
   | 'faqEyebrow'
   | 'faqHeadline'
+  | 'faqHeadlineAccent'
   | 'faqSub'
   | 'faqPaymentsQ'
   | 'faqPaymentsA'
@@ -394,6 +395,16 @@ export type ExtraKey =
   | 'adminNavAnalytics'
   | 'adminNavBio'
   | 'adminNavCommunity'
+  | 'adminCommunityDiscover'
+  | 'adminCommunityDiscoverEyebrow'
+  | 'adminCommunityDiscoverTitle'
+  | 'adminCommunityDiscoverSub'
+  | 'adminViewAsMember'
+  | 'adminMyMemberships'
+  | 'adminJoinedBadge'
+  | 'adminJoinFree'
+  | 'toastJoinedCommunity'
+  | 'toastJoinFailed'
   | 'adminNavEmail'
   | 'adminNavSettings'
   | 'peekIn'
@@ -423,6 +434,7 @@ export type ExtraKey =
   | 'tagMilestone'
   | 'classShort'
   | 'adminShort'
+  | 'navMore'
   | 'primaryMobileNav'
   | 'lastUpdated'
   | 'legalEyebrow'
@@ -1057,6 +1069,15 @@ export type ExtraKey =
   | 'toastWorkspaceSaveFailed'
   | 'toastWorkspaceDeleteFailed'
   | 'toastBioSaveFailed'
+  | 'handleChecking'
+  | 'handleAvailable'
+  | 'handleYours'
+  | 'handleTaken'
+  | 'handleReserved'
+  | 'handleTooShort'
+  | 'handleTooLong'
+  | 'handleInvalid'
+  | 'handleCheckFailed'
   // Classroom
   | 'toastLessonProgressFailed'
   | 'pickLessonHint'
@@ -1496,7 +1517,8 @@ export const EXTRA_EN: ExtraDict = {
   roiEarnLine: 'With just {pct}% conversion, you earn ${amount} / month',
   roiPayingMembers: 'Approx. {count} paying members at {price} SEK',
   faqEyebrow: 'Help & Frequently Asked Questions',
-  faqHeadline: "Got questions? We've got answers",
+  faqHeadline: 'Got questions?',
+  faqHeadlineAccent: "We've got answers",
   faqSub: 'Payments, bio, social tagging, VAT and migrating members.',
   faqPaymentsQ: 'How do mobile payments work?',
   faqPaymentsA:
@@ -1712,8 +1734,8 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   planP7: 'Social Inbox & Instagram DMs included',
   discoverExplore: 'Discover & Explore',
   findNordicCommunity: 'Find your next',
-  findNordicCommunityAccent: 'Nordic community',
-  discoverSub: 'Explore high-value communities, masterclasses, and digital hubs created by leading creators across Scandinavia.',
+  findNordicCommunityAccent: 'community',
+  discoverSub: 'Explore high-value communities, masterclasses, and digital hubs created by leading creators across the globe.',
   allCategoriesPill: 'All Categories',
   communityOfWeek: 'Community of the Week',
   trendingCommunities: 'Trending Communities',
@@ -1760,6 +1782,17 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   adminNavAnalytics: 'Analytics',
   adminNavBio: 'Bio Store',
   adminNavCommunity: 'Community',
+  adminCommunityDiscover: 'Discover & Join',
+  adminCommunityDiscoverEyebrow: 'Member view',
+  adminCommunityDiscoverTitle: 'Browse & join communities',
+  adminCommunityDiscoverSub:
+    'Find existing communities and join as a member — the same catalog members see on their dashboard.',
+  adminViewAsMember: 'Open member dashboard',
+  adminMyMemberships: 'Your memberships',
+  adminJoinedBadge: 'Joined',
+  adminJoinFree: 'Join free',
+  toastJoinedCommunity: "You're in — community joined",
+  toastJoinFailed: "Couldn't join community. Try again.",
   adminNavEmail: 'Email CRM',
   adminNavSettings: 'Settings',
   peekIn: 'Peek in',
@@ -1789,6 +1822,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   tagMilestone: '#Milestone',
   classShort: 'Class',
   adminShort: 'Admin',
+  navMore: 'More',
   primaryMobileNav: 'Primary mobile',
   lastUpdated: 'Last updated:',
   legalEyebrow: 'Legal',
@@ -2435,6 +2469,15 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   toastWorkspaceSaveFailed: 'Could not save workspace to database',
   toastWorkspaceDeleteFailed: 'Could not delete workspace in database',
   toastBioSaveFailed: 'Could not save bio to database',
+  handleChecking: 'Checking availability…',
+  handleAvailable: 'Handle is available',
+  handleYours: 'This is your current handle',
+  handleTaken: 'Handle is already taken',
+  handleReserved: 'This handle is reserved',
+  handleTooShort: 'At least 3 characters',
+  handleTooLong: 'Max 30 characters',
+  handleInvalid: 'Use letters, numbers, dots, _ or -',
+  handleCheckFailed: 'Could not check handle',
   toastLessonProgressFailed: 'Could not save lesson progress',
   pickLessonHint: 'Pick a lesson on the left',
   toastCourseSaved: 'Course saved',
@@ -2877,7 +2920,8 @@ export const EXTRA_SV: ExtraDict = {
   roiEarnLine: 'Med bara {pct}% konvertering tjänar du ${amount} / månad',
   roiPayingMembers: 'Ca {count} betalande medlemmar à {price} SEK',
   faqEyebrow: 'FAQ',
-  faqHeadline: 'Vanliga frågor',
+  faqHeadline: 'Vanliga',
+  faqHeadlineAccent: 'frågor',
   faqSub: 'Betalningar, bio, social tagging, moms och migrering av medlemmar.',
   faqPaymentsQ: 'Hur fungerar mobilbetalningar?',
   faqPaymentsA:
@@ -3092,8 +3136,8 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   planP7: 'Social Inbox & Instagram-DM:ar ingår',
   discoverExplore: 'Upptäck & utforska',
   findNordicCommunity: 'Hitta din nästa',
-  findNordicCommunityAccent: 'nordiska community',
-  discoverSub: 'Utforska high-value communities, masterclasses och digitala hubbar från ledande creators i Skandinavien.',
+  findNordicCommunityAccent: 'community',
+  discoverSub: 'Utforska high-value communities, masterclasses och digitala hubbar från ledande creators världen över.',
   allCategoriesPill: 'Alla kategorier',
   communityOfWeek: 'Veckans community',
   trendingCommunities: 'Trending communities',
@@ -3140,6 +3184,17 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   adminNavAnalytics: 'Analytics',
   adminNavBio: 'Bio Store',
   adminNavCommunity: 'Community',
+  adminCommunityDiscover: 'Upptäck & gå med',
+  adminCommunityDiscoverEyebrow: 'Medlemsvy',
+  adminCommunityDiscoverTitle: 'Bläddra & gå med i communities',
+  adminCommunityDiscoverSub:
+    'Hitta befintliga communities och gå med som medlem — samma katalog som medlemmar ser i sin dashboard.',
+  adminViewAsMember: 'Öppna medlemsdashboard',
+  adminMyMemberships: 'Dina medlemskap',
+  adminJoinedBadge: 'Medlem',
+  adminJoinFree: 'Gå med gratis',
+  toastJoinedCommunity: 'Du är med — community tillagd',
+  toastJoinFailed: 'Kunde inte gå med. Försök igen.',
   adminNavEmail: 'Email CRM',
   adminNavSettings: 'Inställningar',
   peekIn: 'Kika in',
@@ -3169,6 +3224,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   tagMilestone: '#Milstolpe',
   classShort: 'Klass',
   adminShort: 'Admin',
+  navMore: 'Mer',
   primaryMobileNav: 'Primär mobilnavigering',
   lastUpdated: 'Senast uppdaterad:',
   legalEyebrow: 'Juridiskt',
@@ -3815,6 +3871,15 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   toastWorkspaceSaveFailed: 'Kunde inte spara workspace till databasen',
   toastWorkspaceDeleteFailed: 'Kunde inte ta bort workspace i databasen',
   toastBioSaveFailed: 'Kunde inte spara bio till databasen',
+  handleChecking: 'Kontrollerar tillgänglighet…',
+  handleAvailable: 'Handtaget är ledigt',
+  handleYours: 'Detta är ditt nuvarande handle',
+  handleTaken: 'Handtaget är redan taget',
+  handleReserved: 'Detta handle är reserverat',
+  handleTooShort: 'Minst 3 tecken',
+  handleTooLong: 'Max 30 tecken',
+  handleInvalid: 'Använd bokstäver, siffror, punkt, _ eller -',
+  handleCheckFailed: 'Kunde inte kontrollera handle',
   toastLessonProgressFailed: 'Kunde inte spara lektionsprogress',
   pickLessonHint: 'Välj en lektion till vänster',
   toastCourseSaved: 'Kurs sparad',
@@ -4162,7 +4227,8 @@ export const EXTRA_NO: ExtraDict = {
   suiteSub:
     'Bytt ut fem fragmenterte abonnement med ett samlet studio. Direkte publisering, bio-storefront, community og e-post-CRM — med 100 % dataeierskap.',
   faqEyebrow: 'FAQ',
-  faqHeadline: 'Vanlige spørsmål',
+  faqHeadline: 'Vanlige',
+  faqHeadlineAccent: 'spørsmål',
   faqSub: 'Betalinger, bio, social tagging, MVA og migrering av medlemmer.',
   searchCommunitiesHeading: 'Søk communities',
   searchCommunitiesEyebrow: 'Oppdag',
@@ -4310,7 +4376,8 @@ export const EXTRA_DA: ExtraDict = {
   suiteHeadline: 'Dit komplette Creator Command Center',
   suiteSub:
     'Erstat fem fragmenterede abonnementer med ét samlet studio. Direkte publicering, bio-storefront, community og e-mail-CRM — med 100 % dataejerskab.',
-  faqHeadline: 'Ofte stillede spørgsmål',
+  faqHeadline: 'Ofte stillede',
+  faqHeadlineAccent: 'spørgsmål',
   faqSub: 'Betalinger, bio, social tagging, moms og migrering af medlemmer.',
   searchCommunitiesHeading: 'Søg communities',
   searchCommunitiesEyebrow: 'Opdag',
@@ -4507,7 +4574,8 @@ export const EXTRA_FI: ExtraDict = {
   roiEarnLine: 'Vain {pct} % konversiolla tienaat ${amount} / kk',
   roiPayingMembers: 'Noin {count} maksavaa jäsentä à {price} SEK',
   faqEyebrow: 'UKK',
-  faqHeadline: 'Usein kysytyt kysymykset',
+  faqHeadline: 'Usein kysytyt',
+  faqHeadlineAccent: 'kysymykset',
   faqSub: 'Maksut, bio, social tagging, ALV ja jäsenten migrointi.',
   faqPaymentsQ: 'Miten mobiilimaksut toimivat?',
   faqPaymentsA:
@@ -4664,6 +4732,7 @@ navFeatures: 'Ominaisuudet',
   tagMilestone: '#Virstanpylväs',
   classShort: 'Luokka',
   adminShort: 'Admin',
+  navMore: 'Lisää',
   primaryMobileNav: 'Ensisijainen mobiilinavigointi',
   lastUpdated: 'Viimeksi päivitetty:',
   legalEyebrow: 'Juridiikka',
@@ -5166,6 +5235,15 @@ navFeatures: 'Ominaisuudet',
   toastWorkspaceSaveFailed: 'Workspacen tallennus tietokantaan epäonnistui',
   toastWorkspaceDeleteFailed: 'Workspacen poisto tietokannasta epäonnistui',
   toastBioSaveFailed: 'Bion tallennus tietokantaan epäonnistui',
+  handleChecking: 'Tarkistetaan saatavuutta…',
+  handleAvailable: 'Käyttäjätunnus on vapaa',
+  handleYours: 'Tämä on nykyinen tunnuksesi',
+  handleTaken: 'Käyttäjätunnus on jo varattu',
+  handleReserved: 'Tämä tunnus on varattu järjestelmälle',
+  handleTooShort: 'Vähintään 3 merkkiä',
+  handleTooLong: 'Enintään 30 merkkiä',
+  handleInvalid: 'Käytä kirjaimia, numeroita, pistettä, _ tai -',
+  handleCheckFailed: 'Tunnuksen tarkistus epäonnistui',
   toastLessonProgressFailed: 'Oppitunnin edistymistä ei voitu tallentaa',
   pickLessonHint: 'Valitse oppitunti vasemmalta',
   toastCourseSaved: 'Kurssi tallennettu',

@@ -65,9 +65,14 @@ function isStubProfile(p: WorkspaceProfile): boolean {
   const emptyBio =
     !(p.bio?.blocks?.length) &&
     !String(p.bio?.bio_text || '').trim() &&
-    !p.bio?.profile_photo;
+    !p.bio?.profile_photo &&
+    !(p.bio?.social_links?.length) &&
+    !String(p.bio?.display_name || '').trim();
   const noChannels = !(p.channels?.length);
-  return isGenericWorkspaceName(p.name) && emptyBio && noChannels;
+  const genericHandle =
+    !String(p.handle || '').replace(/^@/, '').trim() ||
+    String(p.handle || '').replace(/^@/, '').toLowerCase() === 'creator';
+  return isGenericWorkspaceName(p.name) && emptyBio && noChannels && genericHandle;
 }
 
 function mergeProfile(
