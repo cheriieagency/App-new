@@ -71,9 +71,18 @@ export async function POST(request: Request) {
       }
 
       // Storage allows larger assets; data-URL fallback stays at 10 MB.
+      // Prefer /api/upload/presigned-url (R2) for videos / files over ~4.5 MB.
       const maxBytes = isSupabaseAdminConfigured() ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
       if (file.size > maxBytes) {
-        return Response.json({ error: 'File too large' }, { status: 413 });
+        return Response.json(
+          {
+            error: 'File too large',
+            message:
+              'Use Cloudflare R2 direct upload (/api/upload/presigned-url) for files over this limit.',
+            hint: 'Configure NEXT_PUBLIC_R2_PUBLIC_URL and R2 credentials in .env.local',
+          },
+          { status: 413 }
+        );
       }
 
       const buffer = Buffer.from(await file.arrayBuffer());

@@ -265,6 +265,47 @@ export const cronEnv = {
   requiredKeys: ['CRON_SECRET'] as const,
 };
 
+// ---------------------------------------------------------------------------
+// 10. Cloudflare R2 (direct browser uploads via S3-compatible presigned URLs)
+// ---------------------------------------------------------------------------
+export const r2Env = {
+  accountId: () => readEnv('CLOUDFLARE_R2_ACCOUNT_ID'),
+  accessKeyId: () => readEnv('CLOUDFLARE_R2_ACCESS_KEY_ID'),
+  secretAccessKey: () => readEnv('CLOUDFLARE_R2_SECRET_ACCESS_KEY'),
+  bucketName: () => readEnv('CLOUDFLARE_R2_BUCKET_NAME'),
+  /** Public CDN / r2.dev base URL (no trailing slash). Browser-safe. */
+  publicUrl: () => {
+    const raw =
+      readEnv('NEXT_PUBLIC_R2_PUBLIC_URL') ||
+      readEnv('CLOUDFLARE_R2_PUBLIC_URL');
+    if (!raw) return undefined;
+    // Reject unfilled placeholders like pub-xxxxxxxx.r2.dev
+    if (/x{4,}|YOUR_|CHANGE_ME|placeholder/i.test(raw)) return undefined;
+    return raw.replace(/\/$/, '');
+  },
+  requiredKeys: [
+    'CLOUDFLARE_R2_ACCOUNT_ID',
+    'CLOUDFLARE_R2_ACCESS_KEY_ID',
+    'CLOUDFLARE_R2_SECRET_ACCESS_KEY',
+    'CLOUDFLARE_R2_BUCKET_NAME',
+    'NEXT_PUBLIC_R2_PUBLIC_URL',
+  ] as const,
+  isConfigured: () =>
+    Boolean(
+      readEnv('CLOUDFLARE_R2_ACCOUNT_ID') &&
+        readEnv('CLOUDFLARE_R2_ACCESS_KEY_ID') &&
+        readEnv('CLOUDFLARE_R2_SECRET_ACCESS_KEY') &&
+        readEnv('CLOUDFLARE_R2_BUCKET_NAME') &&
+        (readEnv('NEXT_PUBLIC_R2_PUBLIC_URL') ||
+          readEnv('CLOUDFLARE_R2_PUBLIC_URL')) &&
+        !/x{4,}|YOUR_|CHANGE_ME|placeholder/i.test(
+          readEnv('NEXT_PUBLIC_R2_PUBLIC_URL') ||
+            readEnv('CLOUDFLARE_R2_PUBLIC_URL') ||
+            ''
+        )
+    ),
+};
+
 /** Aggregated export — prefer named groups above when importing. */
 export const env = {
   openai: openaiEnv,
@@ -279,4 +320,5 @@ export const env = {
   resend: resendEnv,
   vercel: vercelEnv,
   cron: cronEnv,
+  r2: r2Env,
 } as const;

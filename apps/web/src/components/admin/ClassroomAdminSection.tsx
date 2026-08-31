@@ -21,6 +21,7 @@ import {
 import { useLocale } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
+import UploadProgressBar from '@/components/common/UploadProgressBar';
 import {
   COURSE_CATEGORIES,
   registerManagedCourse,
@@ -72,7 +73,7 @@ export default function ClassroomAdminSection({
   const [lessonPdf, setLessonPdf] = useState<{ url: string; name: string } | null>(null);
   const [lessonVideoName, setLessonVideoName] = useState('');
   const [courseVideoName, setCourseVideoName] = useState('');
-  const [upload, { loading: uploading }] = useUpload();
+  const [upload, { loading: uploading, progress: uploadProgress }] = useUpload();
   const coverRef = useRef<HTMLInputElement>(null);
   const coursePdfRef = useRef<HTMLInputElement>(null);
   const courseVideoRef = useRef<HTMLInputElement>(null);
@@ -250,7 +251,7 @@ export default function ClassroomAdminSection({
   });
 
   const handleCover = async (file: File) => {
-    const result = await upload({ file });
+    const result = await upload({ file, folder: 'courses' });
     if (result.url) {
       setForm((f) => ({ ...f, cover_image: result.url! }));
       return;
@@ -262,7 +263,7 @@ export default function ClassroomAdminSection({
     if (file.type && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       return;
     }
-    const result = await upload({ file });
+    const result = await upload({ file, folder: 'courses' });
     if (result.url) {
       setLessonPdf({ url: result.url, name: file.name });
       return;
@@ -274,7 +275,7 @@ export default function ClassroomAdminSection({
     if (file.type && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       return;
     }
-    const result = await upload({ file });
+    const result = await upload({ file, folder: 'courses' });
     if (result.url) {
       setForm((f) => ({ ...f, pdf_url: result.url!, pdf_name: file.name }));
       return;
@@ -290,7 +291,11 @@ export default function ClassroomAdminSection({
     if (file.type && !file.type.startsWith('video/')) {
       return;
     }
-    const result = await upload({ file });
+    const result = await upload({ file, folder: 'courses' });
+    if (result.error && !result.url) {
+      toast.error(result.error);
+      return;
+    }
     const url = result.url || URL.createObjectURL(file);
     setForm((f) => ({ ...f, video_url: url }));
     setCourseVideoName(file.name);
@@ -300,7 +305,11 @@ export default function ClassroomAdminSection({
     if (file.type && !file.type.startsWith('video/')) {
       return;
     }
-    const result = await upload({ file });
+    const result = await upload({ file, folder: 'courses' });
+    if (result.error && !result.url) {
+      toast.error(result.error);
+      return;
+    }
     const url = result.url || URL.createObjectURL(file);
     setLessonVideo(url);
     setLessonVideoName(file.name);
@@ -617,6 +626,12 @@ export default function ClassroomAdminSection({
                 {t('addPdf', locale)}
               </button>
             </div>
+            {uploading ? (
+              <UploadProgressBar
+                progress={uploadProgress}
+                label="Uploading to cloud…"
+              />
+            ) : null}
             {form.video_url ? (
               <div className="flex items-center gap-2 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
                 <Video size={16} className="text-[var(--nc-coral)] flex-shrink-0" />

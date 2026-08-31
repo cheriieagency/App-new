@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { useLocale } from '@/lib/locale-context';
 import { t, tf } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
+import UploadProgressBar from '@/components/common/UploadProgressBar';
 import {
   mediaTypeBadge,
   nextMediaId,
@@ -34,6 +35,7 @@ import {
   type MediaAsset,
 } from '@/lib/mock-media-library';
 import GoogleDriveImportButton from '@/components/admin/GoogleDriveImportButton';
+import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 
 const MAX_ITEMS = 10;
 
@@ -60,13 +62,15 @@ export default function CarouselMediaUploader({
   compact?: boolean;
 }) {
   const { locale } = useLocale();
+  const workspace = useWorkspaceOptional();
+  const workspaceId = workspace?.activeWorkspace?.id;
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [upload, { loading: uploading }] = useUpload();
+  const [upload, { loading: uploading, progress: uploadProgress }] = useUpload();
 
   const room = Math.max(0, MAX_ITEMS - items.length);
   const atCap = room <= 0;
@@ -111,7 +115,11 @@ export default function CarouselMediaUploader({
 
       for (const file of picked) {
         const isVideo = file.type.startsWith('video/');
-        const result = await upload({ file });
+        const result = await upload({
+          file,
+          folder: isVideo ? 'videos' : 'posts',
+          workspaceId,
+        });
         if (result.error) {
           toast.error(result.error);
           continue;
@@ -129,7 +137,7 @@ export default function CarouselMediaUploader({
       }
       appendItems(next);
     },
-    [appendItems, atCap, room, upload, locale]
+    [appendItems, atCap, room, upload, locale, workspaceId]
   );
 
   const addFromLibrary = () => {
@@ -230,11 +238,12 @@ export default function CarouselMediaUploader({
         }`}
       >
         {uploading ? (
-          <Loader2
-            size={compact ? 18 : 22}
-            className="text-slate-400"
-            style={{ animation: 'spin 1s linear infinite' }}
-          />
+          <div className="w-full max-w-xs px-2">
+            <UploadProgressBar
+              progress={uploadProgress}
+              label="Uploading media…"
+            />
+          </div>
         ) : (
           <>
             <Upload size={compact ? 18 : 22} className="text-slate-300" />

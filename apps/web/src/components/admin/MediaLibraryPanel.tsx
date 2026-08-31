@@ -32,6 +32,7 @@ import {
 import type { CampaignLabel } from '@/lib/mock-content-planner';
 import GoogleDriveImportButton from '@/components/admin/GoogleDriveImportButton';
 import useUpload from '@/utils/useUpload';
+import UploadProgressBar from '@/components/common/UploadProgressBar';
 
 /* Swatches ordered by hue family so similar colors sit beside each other. */
 const COLORS = [
@@ -88,7 +89,7 @@ export default function MediaLibraryPanel() {
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [draggingAssetId, setDraggingAssetId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [upload, { loading: uploading }] = useUpload();
+  const [upload, { loading: uploading, progress: uploadProgress }] = useUpload();
   const creating = createMediaFolderOpen;
 
   const { data: foldersData } = useQuery<{ folders: MediaFolder[] }>({
@@ -319,7 +320,11 @@ export default function MediaLibraryPanel() {
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      const result = await upload({ file });
+      const result = await upload({
+        file,
+        folder: file.type.startsWith('video/') ? 'videos' : 'general',
+        workspaceId: activeWorkspace.id,
+      });
       if (!result.url) {
         throw new Error(result.error || 'Upload failed');
       }
@@ -508,7 +513,11 @@ export default function MediaLibraryPanel() {
     if (!files?.length) return;
     Array.from(files).forEach(async (file) => {
       try {
-        const result = await upload({ file });
+        const result = await upload({
+          file,
+          folder: file.type.startsWith('video/') ? 'videos' : 'general',
+          workspaceId: activeWorkspace.id,
+        });
         if (!result.url) throw new Error(result.error || 'Upload failed');
         const r = await fetch('/api/admin/media', {
           method: 'POST',
@@ -539,17 +548,26 @@ export default function MediaLibraryPanel() {
   };
 
   const deviceUploadButton = (
-    <button
-      type="button"
-      onClick={() => fileInputRef.current?.click()}
-      disabled={uploading || uploadMutation.isPending}
-      className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-extrabold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
-    >
-      <Upload size={14} />
-      {uploading || uploadMutation.isPending
-        ? 'Uploading…'
-        : 'Upload from device'}
-    </button>
+    <div className="flex flex-col items-stretch sm:items-end gap-2 min-w-0">
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading || uploadMutation.isPending}
+        className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-extrabold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+      >
+        <Upload size={14} />
+        {uploading || uploadMutation.isPending
+          ? 'Uploading…'
+          : 'Upload from device'}
+      </button>
+      {(uploading || uploadMutation.isPending) && uploadProgress > 0 ? (
+        <UploadProgressBar
+          progress={uploadProgress}
+          label="Uploading to cloud…"
+          className="w-full sm:w-48"
+        />
+      ) : null}
+    </div>
   );
 
   if (creating) {
