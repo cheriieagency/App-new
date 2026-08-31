@@ -746,12 +746,12 @@ export default function SocialInboxPanel() {
             </div>
           </div>
 
-          {/* Split pane */}
+          {/* Split pane — fixed height so thread list + chat scroll inside */}
           <div
-            className={`${adminCardClass} overflow-hidden grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] min-h-[560px]`}
+            className={`${adminCardClass} overflow-hidden grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] h-[min(72vh,720px)] min-h-[480px]`}
           >
-            <aside className="border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col min-h-0 bg-white">
-              <div className="flex-1 overflow-y-auto">
+            <aside className="border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col min-h-0 max-h-[40vh] lg:max-h-none bg-white overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                 {syncing && threads.length === 0 ? (
                   <div className="py-20 text-center text-slate-400 px-4">
                     <Loader2
@@ -852,10 +852,10 @@ export default function SocialInboxPanel() {
               </div>
             </aside>
 
-            <section className="flex flex-col min-h-[360px] bg-[#FAFAFA]/40">
+            <section className="flex flex-col min-h-0 h-full overflow-hidden bg-[#FAFAFA]/40">
               {active ? (
                 <>
-                  <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 bg-white flex items-center gap-3">
+                  <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 bg-white flex items-center gap-3 flex-shrink-0">
                     <Avatar
                       name={active.name}
                       url={active.avatar_url}
@@ -898,7 +898,7 @@ export default function SocialInboxPanel() {
                     </a>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-3">
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-5 space-y-3">
                     {active.messages.length === 0 ? (
                       <p className="text-sm text-slate-400 text-center py-12">
                         {t('inboxNoMessagesInThread', locale)}
@@ -935,7 +935,7 @@ export default function SocialInboxPanel() {
                   </div>
 
                   <form
-                    className="border-t border-slate-100 bg-white p-3"
+                    className="border-t border-slate-100 bg-white p-3 flex-shrink-0"
                     onSubmit={(e) => void onSend(e)}
                   >
                     <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50/80 pl-1.5 pr-1.5 py-1 focus-within:ring-2 focus-within:ring-[#2B2568]/12 focus-within:border-slate-300 focus-within:bg-white transition-shadow">

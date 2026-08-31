@@ -4,6 +4,7 @@
  * When DATABASE_URL is set, all CRUD hits Postgres (planner_posts).
  */
 
+import { cookies } from 'next/headers';
 import { requireApiSession } from '@/lib/auth/require-api-session';
 import {
   addPlannerComment,
@@ -30,9 +31,38 @@ import {
 } from '@/lib/planner/posts';
 import { parsePublishMode } from '@/lib/planner/publish-modes';
 import { parseMoreOptionsFromBody } from '@/lib/planner/more-options';
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  ACTIVE_WORKSPACE_COOKIE_ALIAS,
+} from '@/lib/social/oauth-workspace';
+import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 
 function useDb() {
   return Boolean(process.env.DATABASE_URL?.trim());
+}
+
+async function resolveWorkspaceId(
+  request: Request,
+  userId: string,
+  email?: string | null
+): Promise<string | null> {
+  const url = new URL(request.url);
+  const jar = await cookies();
+  const preferred =
+    url.searchParams.get('workspaceId')?.trim() ||
+    request.headers.get('x-workspace-id')?.trim() ||
+    request.headers.get('x-active-workspace-id')?.trim() ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ||
+    jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
+    null;
+
+  const access = await resolveStrictUserWorkspace({
+    userId,
+    preferredWorkspaceId: preferred,
+    email: email ?? null,
+  });
+  if (!access.ok) return preferred;
+  return access.workspaceId;
 }
 
 export async function GET(request: Request) {
@@ -52,11 +82,21 @@ export async function GET(request: Request) {
   }
 
   try {
-    const posts = await listDurablePlannerPosts({ userId, project });
+    const workspaceId = await resolveWorkspaceId(
+      request,
+      userId,
+      session.user.email
+    );
+    const posts = await listDurablePlannerPosts({
+      userId,
+      project,
+      workspaceId,
+    });
     return Response.json({
       posts,
       demo: false,
       owner_user_id: userId,
+      workspace_id: workspaceId,
     });
   } catch (error) {
     console.error('[GET /api/planner]', error);
@@ -74,6 +114,9 @@ export async function POST(request: Request) {
   const userId = session.user.id;
   const actor = session.user.name?.trim() || 'Creator';
   const durable = useDb();
+  const workspaceId = durable
+    ? await resolveWorkspaceId(request, userId, session.user.email)
+    : null;
 
   try {
     const body = await request.json();
@@ -85,7 +128,7 @@ export async function POST(request: Request) {
           id: String(body.id ?? ''),
           userId,
         });
-        const posts = await listDurablePlannerPosts({ userId });
+        const posts = await listDurablePlannerPosts({ userId, workspaceId });
         return Response.json({ ok, posts, demo: false });
       }
       const ok = deletePlannerPost(String(body.id ?? ''), userId);
@@ -103,7 +146,7 @@ export async function POST(request: Request) {
         if (!post) return Response.json({ error: 'Not found' }, { status: 404 });
         return Response.json({
           post,
-          posts: await listDurablePlannerPosts({ userId }),
+          posts: await listDurablePlannerPosts({ userId, workspaceId }),
           demo: false,
         });
       }
@@ -140,7 +183,7 @@ export async function POST(request: Request) {
         if (!post) return Response.json({ error: 'Not found' }, { status: 404 });
         return Response.json({
           post,
-          posts: await listDurablePlannerPosts({ userId }),
+          posts: await listDurablePlannerPosts({ userId, workspaceId }),
           demo: false,
         });
       }
@@ -173,7 +216,7 @@ export async function POST(request: Request) {
           },
         });
         if (!comment) return Response.json({ error: 'Failed' }, { status: 400 });
-        const posts = await listDurablePlannerPosts({ userId });
+        const posts = await listDurablePlannerPosts({ userId, workspaceId });
         return Response.json({
           comment,
           post: posts.find((p) => p.id === body.id),
@@ -286,12 +329,16 @@ export async function POST(request: Request) {
         : undefined,
       auto_post:
         body.auto_post !== undefined ? Boolean(body.auto_post) : undefined,
-      workspaceId:
-        typeof body.workspaceId === 'string'
-          ? body.workspaceId
-          : typeof body.workspace_id === 'string'
-            ? body.workspace_id
-            : null,
+      workspaceId: (() => {
+        const raw =
+          typeof body.workspaceId === 'string'
+            ? body.workspaceId
+            : typeof body.workspace_id === 'string'
+              ? body.workspace_id
+              : null;
+        const trimmed = typeof raw === 'string' ? raw.trim() : '';
+        return trimmed || workspaceId || null;
+      })(),
     };
 
     if (durable) {
@@ -304,7 +351,7 @@ export async function POST(request: Request) {
       }
       return Response.json({
         post,
-        posts: await listDurablePlannerPosts({ userId }),
+        posts: await listDurablePlannerPosts({ userId, workspaceId }),
         demo: false,
       });
     }

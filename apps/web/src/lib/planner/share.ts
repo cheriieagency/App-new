@@ -250,6 +250,7 @@ export async function saveAndEnablePlannerShare(input: {
   if (!input.platforms.length) return null;
 
   if (!useDb()) {
+    // Demo mode — only update content fields; preserve workflow when editing.
     const post = upsertPlannerPost(
       {
         id: input.postId || undefined,
@@ -259,8 +260,10 @@ export async function saveAndEnablePlannerShare(input: {
         platforms: input.platforms,
         project: input.project,
         media_items: input.media_items,
-        workflow: 'IDEA',
-        status: 'draft',
+        // Keep IDEA only for brand-new posts without an id.
+        ...(input.postId
+          ? {}
+          : { workflow: 'IDEA' as const, status: 'draft' as const }),
       },
       input.actor,
       input.userId
@@ -274,6 +277,14 @@ export async function saveAndEnablePlannerShare(input: {
     return { postId: post.id, token: shared.token, path: shared.path };
   }
 
+  // Durable — update content only; never reset workflow/schedule via Share.
+  const existing = input.postId
+    ? await getDurablePlannerPost({
+        id: input.postId,
+        userId: input.userId,
+      })
+    : null;
+
   const post = await upsertDurablePlannerPost(
     {
       id: input.postId || undefined,
@@ -283,9 +294,14 @@ export async function saveAndEnablePlannerShare(input: {
       platforms: input.platforms,
       project: input.project,
       media_items: input.media_items,
-      workflow: 'IDEA',
-      status: 'draft',
       workspaceId: input.workspaceId,
+      // Preserve schedule / publish state when sharing an existing post.
+      workflow: existing?.workflow ?? 'IDEA',
+      status: existing?.status ?? 'draft',
+      scheduled_at: existing?.scheduled_at ?? null,
+      published_at: existing?.published_at ?? null,
+      auto_post: existing?.auto_post ?? false,
+      publish_mode: existing?.publish_mode,
     },
     input.actor,
     input.userId

@@ -191,12 +191,23 @@ export default function PostStudioModal({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const workspaceCtx = useWorkspaceOptional();
-  const workspaceId = workspaceCtx?.activeWorkspace?.id || '';
+  const workspaceId =
+    workspaceCtx?.activeWorkspaceId?.trim() ||
+    workspaceCtx?.activeWorkspace?.id?.trim() ||
+    '';
   const { data: socialsData } = useSocialAccounts(open);
   const connectedPlatforms = useMemo(() => {
     const set = new Set<SocialPlatform>();
     for (const a of socialsData?.accounts || []) {
       if (a.connected) set.add(a.platform as SocialPlatform);
+    }
+    // TikTok Business maps to the same publish surface as TikTok.
+    if (
+      (socialsData?.accounts || []).some(
+        (a) => a.connected && a.platform === 'tiktok_business'
+      )
+    ) {
+      set.add('tiktok');
     }
     return set;
   }, [socialsData?.accounts]);
@@ -450,13 +461,38 @@ export default function PostStudioModal({
     }
 
     if (mode === 'post') {
-      const liveTargets = platforms.filter((p) =>
-        connectedPlatforms.has(p)
-      );
+      // Reminder mode does not need live OAuth tokens — skip the gate.
+      if (publishMode !== 'notification_reminder') {
+        const liveTargets = platforms.filter((p) =>
+          connectedPlatforms.has(p)
+        );
+        if (liveTargets.length === 0) {
+          toast.error(t('toastConnectSocialSettings', locale));
+          return;
+        }
+      }
+    }
+
+    if (mode === 'schedule') {
+      const liveTargets = platforms.filter((p) => connectedPlatforms.has(p));
       if (liveTargets.length === 0) {
         toast.error(t('toastConnectSocialSettings', locale));
         return;
       }
+      if (!workspaceId) {
+        toast.error('Select a workspace before scheduling auto-post.');
+        return;
+      }
+      if (liveTargets.length < platforms.length) {
+        toast.message(
+          `Will auto-post to: ${liveTargets.join(', ')}. Disconnect platforms stay selected but won't publish.`
+        );
+      }
+    }
+
+    if (mode === 'post' && publishMode !== 'notification_reminder' && !workspaceId) {
+      toast.error('Select a workspace before publishing.');
+      return;
     }
 
     setSaving(true);
@@ -576,6 +612,7 @@ export default function PostStudioModal({
         });
         const publishJson = (await publishRes.json().catch(() => ({}))) as {
           ok?: boolean;
+          partial?: boolean;
           message?: string;
           error?: string;
           error_log?: string;
@@ -606,7 +643,12 @@ export default function PostStudioModal({
           void queryClient.invalidateQueries({ queryKey: ['planner-campaign'] });
           return;
         }
-        if (publishMode === 'notification_reminder') {
+        if (publishJson.partial) {
+          toast.message(
+            publishJson.message ||
+              'Published to some platforms — check failed accounts in Settings → Socials.'
+          );
+        } else if (publishMode === 'notification_reminder') {
           const captionToCopy =
             publishJson.reminder?.caption ||
             [caption, hashtags].filter(Boolean).join('\n\n');

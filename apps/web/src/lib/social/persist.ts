@@ -203,56 +203,73 @@ export async function upsertSocialAccountRow(
   }
   const boundWorkspaceId = access.workspaceId;
 
-  // Workspace-scoped replace — always scoped to this user_id.
-  await sql`
-    DELETE FROM social_accounts
+  // Reconnect in place — preserve row id so history stays attached to the same slot.
+  const updated = await sql`
+    UPDATE social_accounts SET
+      platform_user_id = ${input.platformUserId},
+      platform_user_name = ${input.platformUserName},
+      display_name = ${displayName},
+      handle = ${handle},
+      avatar_url = ${input.avatarUrl ?? null},
+      access_token = ${input.accessToken},
+      refresh_token = ${input.refreshToken ?? null},
+      expires_at = ${expiresAt},
+      page_id = COALESCE(${input.pageId ?? null}, page_id),
+      page_name = COALESCE(${input.pageName ?? null}, page_name),
+      followers_count = COALESCE(${input.followersCount ?? null}, followers_count),
+      meta = ${metaJson},
+      connected_at = now(),
+      updated_at = now()
     WHERE user_id::text = ${userId}
       AND platform = ${input.platform}
       AND workspace_id::text = ${boundWorkspaceId}
+    RETURNING id
   `;
 
-  await sql`
-    INSERT INTO social_accounts (
-      user_id,
-      platform,
-      platform_user_id,
-      platform_user_name,
-      display_name,
-      handle,
-      avatar_url,
-      access_token,
-      refresh_token,
-      expires_at,
-      workspace_id,
-      page_id,
-      page_name,
-      followers_count,
-      meta,
-      connected_at,
-      updated_at,
-      created_at
-    )
-    VALUES (
-      ${userId},
-      ${input.platform},
-      ${input.platformUserId},
-      ${input.platformUserName},
-      ${displayName},
-      ${handle},
-      ${input.avatarUrl ?? null},
-      ${input.accessToken},
-      ${input.refreshToken ?? null},
-      ${expiresAt},
-      ${boundWorkspaceId},
-      ${input.pageId ?? null},
-      ${input.pageName ?? null},
-      ${input.followersCount ?? null},
-      ${metaJson},
-      now(),
-      now(),
-      now()
-    )
-  `;
+  if (!Array.isArray(updated) || updated.length === 0) {
+    await sql`
+      INSERT INTO social_accounts (
+        user_id,
+        platform,
+        platform_user_id,
+        platform_user_name,
+        display_name,
+        handle,
+        avatar_url,
+        access_token,
+        refresh_token,
+        expires_at,
+        workspace_id,
+        page_id,
+        page_name,
+        followers_count,
+        meta,
+        connected_at,
+        updated_at,
+        created_at
+      )
+      VALUES (
+        ${userId},
+        ${input.platform},
+        ${input.platformUserId},
+        ${input.platformUserName},
+        ${displayName},
+        ${handle},
+        ${input.avatarUrl ?? null},
+        ${input.accessToken},
+        ${input.refreshToken ?? null},
+        ${expiresAt},
+        ${boundWorkspaceId},
+        ${input.pageId ?? null},
+        ${input.pageName ?? null},
+        ${input.followersCount ?? null},
+        ${metaJson},
+        now(),
+        now(),
+        now()
+      )
+    `;
+  }
 
   return {
     platform: input.platform as ConnectedSocialAccount['platform'],
@@ -321,10 +338,14 @@ function mapRow(raw: Record<string, unknown>): ConnectedSocialAccount {
     (raw.platform_user_id as string) ||
     (raw.external_id as string) ||
     '';
+  const token = String(raw.access_token || '').trim();
+  // Row without a real token cannot publish — treat as disconnected in UI.
+  const hasPublishableToken =
+    Boolean(token) && !token.startsWith('mock_') && token !== 'demo';
 
   return {
     platform,
-    connected: true,
+    connected: hasPublishableToken,
     handle,
     display_name: name,
     avatar_url: (raw.avatar_url as string) || null,
@@ -466,6 +487,11 @@ export async function listLiveSocialAccountsForUser(input: {
   }
 }
 
+/**
+ * Soft-disconnect: clear tokens but keep the row (platform_user_id, handle, page).
+ * Posts / projects / media stay untouched — reconnect restores publishing on the same slot.
+ * Return shape keeps `deleted` for API compatibility with existing disconnect routes.
+ */
 export async function deleteSocialAccountRow(input: {
   userId: string;
   platform?: PersistablePlatform | null;
@@ -491,6 +517,9 @@ export async function deleteSocialAccountRow(input: {
   const workspaceId = input.workspaceId?.trim() || null;
   const platformUserId = input.platformUserId?.trim() || null;
   const platform = input.platform ?? null;
+  const disconnectedMeta = JSON.stringify({
+    disconnected_at: new Date().toISOString(),
+  });
 
   const collect = (rows: unknown): string[] =>
     Array.isArray(rows)
@@ -503,36 +532,56 @@ export async function deleteSocialAccountRow(input: {
           .filter(Boolean)
       : [];
 
+  const fromRows = (rows: unknown): { deleted: boolean; deletedIds: string[] } => {
+    const ids = collect(rows);
+    return { deleted: ids.length > 0, deletedIds: ids };
+  };
+
   // 1) Exact row by id — still enforce user_id ownership.
   if (accountId) {
     const rows = await sql`
-      DELETE FROM social_accounts
+      UPDATE social_accounts SET
+        access_token = '',
+        refresh_token = NULL,
+        expires_at = NULL,
+        meta = COALESCE(meta, '{}'::jsonb) || ${disconnectedMeta}::jsonb,
+        updated_at = now()
       WHERE id::text = ${accountId}
         AND user_id::text = ${userId}
       RETURNING id
     `;
-    const ids = collect(rows);
-    if (ids.length > 0) return { deleted: true, deletedIds: ids };
+    const result = fromRows(rows);
+    if (result.deleted) return result;
   }
 
-  // TikTok / workspace-first: delete exact (user, platform, workspace) row.
+  // TikTok / workspace-first: clear exact (user, platform, workspace) row.
   if (input.preferWorkspaceScoped && platform && workspaceId) {
     const rows = await sql`
-      DELETE FROM social_accounts
+      UPDATE social_accounts SET
+        access_token = '',
+        refresh_token = NULL,
+        expires_at = NULL,
+        meta = COALESCE(meta, '{}'::jsonb) || ${disconnectedMeta}::jsonb,
+        updated_at = now()
       WHERE user_id::text = ${userId}
         AND platform = ${platform}
         AND workspace_id::text = ${workspaceId}
       RETURNING id
     `;
-    const ids = collect(rows);
-    if (ids.length > 0) return { deleted: true, deletedIds: ids };
+    const result = fromRows(rows);
+    if (result.deleted) return result;
   }
 
   // 2) platform + platform_user_id (+ optional workspace)
   if (platform && platformUserId) {
     if (workspaceId) {
       const rows = await sql`
-        DELETE FROM social_accounts
+        UPDATE social_accounts SET
+          access_token = '',
+          refresh_token = NULL,
+          expires_at = NULL,
+          meta = COALESCE(meta, '{}'::jsonb) || ${disconnectedMeta}::jsonb,
+          updated_at = now()
         WHERE user_id::text = ${userId}
           AND platform = ${platform}
           AND workspace_id::text = ${workspaceId}
@@ -542,59 +591,63 @@ export async function deleteSocialAccountRow(input: {
           )
         RETURNING id
       `;
-      const ids = collect(rows);
-      if (ids.length > 0) return { deleted: true, deletedIds: ids };
+      const result = fromRows(rows);
+      if (result.deleted) return result;
     }
 
     const rows = await sql`
-      DELETE FROM social_accounts
+      UPDATE social_accounts SET
+        access_token = '',
+        refresh_token = NULL,
+        expires_at = NULL,
+        meta = COALESCE(meta, '{}'::jsonb) || ${disconnectedMeta}::jsonb,
+        updated_at = now()
       WHERE user_id::text = ${userId}
         AND platform = ${platform}
         AND platform_user_id = ${platformUserId}
       RETURNING id
     `;
-    const ids = collect(rows);
-    if (ids.length > 0) return { deleted: true, deletedIds: ids };
+    const result = fromRows(rows);
+    if (result.deleted) return result;
   }
 
-  // 3) platform + workspace (all matching rows for this user)
+  // 3) platform + workspace (matching rows for this user in this workspace only)
   if (platform && workspaceId) {
     const rows = await sql`
-      DELETE FROM social_accounts
+      UPDATE social_accounts SET
+        access_token = '',
+        refresh_token = NULL,
+        expires_at = NULL,
+        meta = COALESCE(meta, '{}'::jsonb) || ${disconnectedMeta}::jsonb,
+        updated_at = now()
       WHERE user_id::text = ${userId}
         AND platform = ${platform}
         AND workspace_id::text = ${workspaceId}
       RETURNING id
     `;
-    const ids = collect(rows);
-    if (ids.length > 0) return { deleted: true, deletedIds: ids };
+    const result = fromRows(rows);
+    if (result.deleted) return result;
   }
 
   // 3b) Orphan rows: platform with NULL / empty workspace for this user.
   if (platform) {
     const orphanRows = await sql`
-      DELETE FROM social_accounts
+      UPDATE social_accounts SET
+        access_token = '',
+        refresh_token = NULL,
+        expires_at = NULL,
+        meta = COALESCE(meta, '{}'::jsonb) || ${disconnectedMeta}::jsonb,
+        updated_at = now()
       WHERE user_id::text = ${userId}
         AND platform = ${platform}
         AND (workspace_id IS NULL OR workspace_id::text = '')
       RETURNING id
     `;
-    const orphanIds = collect(orphanRows);
-    if (orphanIds.length > 0) return { deleted: true, deletedIds: orphanIds };
+    const orphanResult = fromRows(orphanRows);
+    if (orphanResult.deleted) return orphanResult;
   }
 
-  // 4) Last resort: platform for this user (any workspace they own)
-  if (platform) {
-    const rows = await sql`
-      DELETE FROM social_accounts
-      WHERE user_id::text = ${userId}
-        AND platform = ${platform}
-      RETURNING id
-    `;
-    const ids = collect(rows);
-    return { deleted: ids.length > 0, deletedIds: ids };
-  }
-
+  // No last-resort wipe across all workspaces — that could disconnect every brand slot.
   return { deleted: false, deletedIds: [] };
 }
 

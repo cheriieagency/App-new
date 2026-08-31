@@ -148,6 +148,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         ok: result.ok,
+        partial: Boolean(result.partial),
         workspace_id: access.workspaceId,
         post_id: postId,
         publish_mode: result.publish_mode || publishMode,

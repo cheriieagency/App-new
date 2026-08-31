@@ -290,18 +290,50 @@ export async function listDurablePlannerPosts(input: {
   if (!process.env.DATABASE_URL?.trim()) return [];
   await ensurePlannerPostsSchema();
   const project = input.project?.trim();
-  const rows = project
-    ? await sql`
-        SELECT * FROM public.planner_posts
+  const workspaceId = input.workspaceId?.trim() || null;
+
+  // Bind legacy posts (NULL workspace) to the active workspace so nothing vanishes.
+  if (workspaceId) {
+    try {
+      await sql`
+        UPDATE public.planner_posts
+        SET workspace_id = ${workspaceId}
         WHERE user_id = ${input.userId}
-          AND project = ${project}
-        ORDER BY created_at DESC
-      `
-    : await sql`
-        SELECT * FROM public.planner_posts
-        WHERE user_id = ${input.userId}
-        ORDER BY created_at DESC
+          AND (workspace_id IS NULL OR workspace_id = '')
       `;
+    } catch (error) {
+      console.warn('[planner/posts] orphan workspace bind skipped', error);
+    }
+  }
+
+  const rows =
+    workspaceId && project
+      ? await sql`
+          SELECT * FROM public.planner_posts
+          WHERE user_id = ${input.userId}
+            AND workspace_id = ${workspaceId}
+            AND project = ${project}
+          ORDER BY created_at DESC
+        `
+      : workspaceId
+        ? await sql`
+            SELECT * FROM public.planner_posts
+            WHERE user_id = ${input.userId}
+              AND workspace_id = ${workspaceId}
+            ORDER BY created_at DESC
+          `
+        : project
+          ? await sql`
+              SELECT * FROM public.planner_posts
+              WHERE user_id = ${input.userId}
+                AND project = ${project}
+              ORDER BY created_at DESC
+            `
+          : await sql`
+              SELECT * FROM public.planner_posts
+              WHERE user_id = ${input.userId}
+              ORDER BY created_at DESC
+            `;
   return (rows || []).map((r) => rowToPost(r as Record<string, unknown>));
 }
 
@@ -382,6 +414,12 @@ export async function upsertDurablePlannerPost(
   const existing = input.id
     ? await getDurablePlannerPost({ id: input.id, userId })
     : null;
+
+  // Never let "" wipe a real workspace_id — COALESCE treats empty string as a value.
+  const workspaceIdForWrite =
+    typeof input.workspaceId === 'string' && input.workspaceId.trim()
+      ? input.workspaceId.trim()
+      : null;
 
   const workflow =
     input.workflow ||
@@ -515,7 +553,7 @@ export async function upsertDurablePlannerPost(
       subtasks, auto_post, activity, comments, created_by, created_at, updated_at
     ) VALUES (
       ${post.id},
-      ${input.workspaceId ?? null},
+      ${workspaceIdForWrite},
       ${userId},
       ${post.title},
       ${post.caption},

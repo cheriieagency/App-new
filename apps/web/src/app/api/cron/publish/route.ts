@@ -106,6 +106,21 @@ async function runCron() {
       });
     } catch (error) {
       console.error('[cron/publish] failed', post.id, error);
+      // Always finalize so the post does not stay stuck in IN_PROGRESS.
+      try {
+        await markPlannerPostPublishOutcome({
+          postId: post.id,
+          userId: post.user_id,
+          success: false,
+          errorLog:
+            error instanceof Error ? error.message : 'cron_publish_exception',
+          activityText: `Scheduled publish crashed: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        });
+      } catch (finalizeError) {
+        console.error('[cron/publish] finalize failed', post.id, finalizeError);
+      }
       results.push({
         postId: post.id,
         ok: false,

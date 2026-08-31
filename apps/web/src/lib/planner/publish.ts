@@ -75,6 +75,8 @@ export type PublishPlannerPostInput = {
 
 export type PublishPlannerPostResult = {
   ok: boolean;
+  /** True when some platforms published and others failed. */
+  partial?: boolean;
   results: PlatformPublishResult[];
   published_count: number;
   failed_count: number;
@@ -646,11 +648,13 @@ export async function publishPlannerPost(
   const published = results.filter((r) => r.ok);
   const failed = results.filter((r) => !r.ok && !r.skipped);
   const error_log = buildErrorLog(results);
-  const allTargetsSucceeded = failed.length === 0 && published.length > 0;
+  // Partial success still counts as published (content is live on some platforms).
+  const anyPublished = published.length > 0;
+  const allTargetsSucceeded = failed.length === 0 && anyPublished;
   const inboxNote = results.find((r) => r.note)?.note;
 
   const linkInBioUrl = normalizeOptionalUrl(input.linkInBioUrl);
-  if (published.length > 0 && linkInBioUrl) {
+  if (anyPublished && linkInBioUrl) {
     try {
       await updateLinkInBioOnPublish({
         workspaceId: input.workspaceId,
@@ -664,7 +668,8 @@ export async function publishPlannerPost(
   }
 
   return {
-    ok: allTargetsSucceeded,
+    ok: anyPublished,
+    partial: anyPublished && !allTargetsSucceeded,
     results,
     published_count: published.length,
     failed_count: failed.length,
@@ -673,9 +678,9 @@ export async function publishPlannerPost(
         (publishMode === 'tiktok_draft'
           ? 'Uploaded to TikTok drafts'
           : `Published to ${published.map((r) => r.platform).join(', ')}`)
-      : failed[0]?.error || published.length > 0
-        ? `Some platforms failed: ${failed.map((r) => r.platform).join(', ')}`
-        : 'Nothing was published',
+      : anyPublished
+        ? `Published to ${published.map((r) => r.platform).join(', ')}. Failed: ${failed.map((r) => r.platform).join(', ')}`
+        : failed[0]?.error || 'Nothing was published',
     error_log,
     publish_mode: publishMode,
   };
@@ -758,13 +763,19 @@ export async function publishAndFinalizePlannerPost(
         : mode === 'tiktok_draft'
           ? 'Uploaded to TikTok drafts / inbox'
           : result.ok
-            ? `Published to ${result.results.filter((r) => r.ok).map((r) => r.platform).join(', ')}`
+            ? result.partial
+              ? `Partially published: ${result.results.filter((r) => r.ok).map((r) => r.platform).join(', ')}`
+              : `Published to ${result.results.filter((r) => r.ok).map((r) => r.platform).join(', ')}`
             : `Publish failed: ${result.error_log || result.message}`;
     await markPlannerPostPublishOutcome({
       postId: input.postId.trim(),
       userId: input.userId,
       success: result.ok,
-      errorLog: result.error_log,
+      errorLog: result.partial
+        ? result.error_log
+        : result.ok
+          ? null
+          : result.error_log,
       activityText,
       successWorkflow:
         mode === 'notification_reminder'
