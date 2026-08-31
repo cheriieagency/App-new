@@ -355,6 +355,8 @@ async function publishVideoViaFileUpload(input: {
   mediaUrl: string;
   caption: string;
   creator: CreatorInfo | null;
+  /** Force TikTok inbox / drafts upload (skip Direct Post). */
+  asDraft?: boolean;
 }): Promise<TikTokPublishResult> {
   const file = await downloadMedia(input.mediaUrl);
   const mime =
@@ -382,43 +384,52 @@ async function publishVideoViaFileUpload(input: {
   let inbox = false;
   let raw: Record<string, unknown>;
 
-  try {
-    if (!input.creator) {
-      throw new TikTokApiError(
-        'Direct Post unavailable without creator_info',
-        'scope_not_authorized'
-      );
-    }
+  if (input.asDraft) {
     raw = await initVideoUpload(
       input.accessToken,
-      'https://open.tiktokapis.com/v2/post/publish/video/init/',
-      sourceInfo,
-      postInfo
+      'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/',
+      sourceInfo
     );
-  } catch (directError) {
-    const code =
-      directError instanceof TikTokApiError ? directError.code : '';
-    console.warn('[tiktok] Direct Post blocked — trying inbox upload', {
-      code,
-      error: directError instanceof Error ? directError.message : directError,
-    });
+    inbox = true;
+  } else {
     try {
+      if (!input.creator) {
+        throw new TikTokApiError(
+          'Direct Post unavailable without creator_info',
+          'scope_not_authorized'
+        );
+      }
       raw = await initVideoUpload(
         input.accessToken,
-        'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/',
-        sourceInfo
+        'https://open.tiktokapis.com/v2/post/publish/video/init/',
+        sourceInfo,
+        postInfo
       );
-      inbox = true;
-    } catch (inboxError) {
-      const inboxCode =
-        inboxError instanceof TikTokApiError ? inboxError.code : '';
-      if (
-        code === 'scope_not_authorized' ||
-        inboxCode === 'scope_not_authorized'
-      ) {
-        throw new Error(TIKTOK_POSTING_SCOPE_HELP);
+    } catch (directError) {
+      const code =
+        directError instanceof TikTokApiError ? directError.code : '';
+      console.warn('[tiktok] Direct Post blocked — trying inbox upload', {
+        code,
+        error: directError instanceof Error ? directError.message : directError,
+      });
+      try {
+        raw = await initVideoUpload(
+          input.accessToken,
+          'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/',
+          sourceInfo
+        );
+        inbox = true;
+      } catch (inboxError) {
+        const inboxCode =
+          inboxError instanceof TikTokApiError ? inboxError.code : '';
+        if (
+          code === 'scope_not_authorized' ||
+          inboxCode === 'scope_not_authorized'
+        ) {
+          throw new Error(TIKTOK_POSTING_SCOPE_HELP);
+        }
+        throw inboxError instanceof Error ? inboxError : directError;
       }
-      throw inboxError instanceof Error ? inboxError : directError;
     }
   }
 
@@ -540,6 +551,8 @@ export async function publishTikTokPost(input: {
   caption: string;
   kind?: TikTokPublishKind;
   extraImageUrls?: string[];
+  /** Upload to TikTok drafts / inbox instead of Direct Post. */
+  asDraft?: boolean;
 }): Promise<TikTokPublishResult> {
   const accessToken = input.accessToken.trim();
   const sourceMediaUrl = input.mediaUrl.trim();
@@ -574,7 +587,14 @@ export async function publishTikTokPost(input: {
       mediaUrl: sourceMediaUrl,
       caption,
       creator,
+      asDraft: Boolean(input.asDraft),
     });
+  }
+
+  if (input.asDraft) {
+    throw new Error(
+      'TikTok Draft mode requires a video. Photos cannot be saved as drafts via the Content Posting API.'
+    );
   }
 
   return publishPhotoPost({

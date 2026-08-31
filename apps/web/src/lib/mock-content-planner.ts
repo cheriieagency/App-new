@@ -93,6 +93,24 @@ export type PlannerPost = {
   media_url: string | null;
   media_type: MediaKind | null;
   media_items: PlannerMediaItem[];
+  /** Clean list of media HTTPS URLs (mirrors media_items.url). */
+  media_urls?: string[];
+  /** Rella-style publish workflow. */
+  publish_mode?: 'auto_publish' | 'notification_reminder' | 'tiktok_draft';
+  /** Optional trending sound name / notes for manual push mode. */
+  trending_sound_note?: string | null;
+  /** Up to 3 Instagram @usernames invited as collaborators. */
+  collaborators?: string[];
+  /** Auto-posted as the first comment after Instagram publish. */
+  first_comment?: string | null;
+  location_name?: string | null;
+  location_id?: string | null;
+  /** Updates Clikd Link in Bio redirect mapping on publish. */
+  link_in_bio_url?: string | null;
+  /** Internal Clikd tags for filtering in the workspace. */
+  post_tags?: string[];
+  /** Optional free-text campaign tracker (separate from campaign label ids). */
+  campaign_tag?: string | null;
   youtube?: YoutubeMeta | null;
   idea_title?: string;
   /** Brand workspace name (Team Workspace). */
@@ -891,6 +909,43 @@ export function upsertPlannerPost(
       media_url: media.media_url,
       media_type: media.media_type,
       media_items: media.media_items,
+      media_urls:
+        input.media_urls !== undefined
+          ? input.media_urls
+          : media.media_items.map((m) => m.url).filter(Boolean),
+      publish_mode: input.publish_mode ?? existing.publish_mode ?? 'auto_publish',
+      trending_sound_note:
+        input.trending_sound_note !== undefined
+          ? input.trending_sound_note
+          : existing.trending_sound_note ?? null,
+      collaborators:
+        input.collaborators !== undefined
+          ? input.collaborators
+          : existing.collaborators ?? [],
+      first_comment:
+        input.first_comment !== undefined
+          ? input.first_comment
+          : existing.first_comment ?? null,
+      location_name:
+        input.location_name !== undefined
+          ? input.location_name
+          : existing.location_name ?? null,
+      location_id:
+        input.location_id !== undefined
+          ? input.location_id
+          : existing.location_id ?? null,
+      link_in_bio_url:
+        input.link_in_bio_url !== undefined
+          ? input.link_in_bio_url
+          : existing.link_in_bio_url ?? null,
+      post_tags:
+        input.post_tags !== undefined
+          ? input.post_tags
+          : existing.post_tags ?? [],
+      campaign_tag:
+        input.campaign_tag !== undefined
+          ? input.campaign_tag
+          : existing.campaign_tag ?? null,
       youtube: input.youtube !== undefined ? input.youtube : existing.youtube,
       idea_title: input.idea_title ?? input.title ?? existing.idea_title,
       project: input.project ?? existing.project,
@@ -937,6 +992,17 @@ export function upsertPlannerPost(
     media_url: media.media_url,
     media_type: media.media_type,
     media_items: media.media_items,
+    media_urls:
+      input.media_urls ?? media.media_items.map((m) => m.url).filter(Boolean),
+    publish_mode: input.publish_mode ?? 'auto_publish',
+    trending_sound_note: input.trending_sound_note ?? null,
+    collaborators: input.collaborators ?? [],
+    first_comment: input.first_comment ?? null,
+    location_name: input.location_name ?? null,
+    location_id: input.location_id ?? null,
+    link_in_bio_url: input.link_in_bio_url ?? null,
+    post_tags: input.post_tags ?? [],
+    campaign_tag: input.campaign_tag ?? null,
     youtube: input.youtube ?? null,
     idea_title: input.idea_title ?? title,
     project: wsName,

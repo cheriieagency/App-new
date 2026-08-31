@@ -11,6 +11,12 @@ import {
   type MonthlyReportRow,
   type ReportMetrics,
 } from '@/lib/reports/persist';
+import {
+  normalizeReportPlatform,
+  platformMatchesReport,
+  sanitizeReportPlatforms,
+} from '@/lib/reports/platform-match';
+import { resolveWorkspaceDisplayName } from '@/lib/reports/workspace-name';
 
 export function previousCalendarMonth(ref = new Date()): {
   start: string;
@@ -18,10 +24,9 @@ export function previousCalendarMonth(ref = new Date()): {
   label: string;
 } {
   const y = ref.getUTCFullYear();
-  const m = ref.getUTCMonth(); // 0-indexed current month
-  // Previous month
+  const m = ref.getUTCMonth();
   const start = new Date(Date.UTC(y, m - 1, 1));
-  const end = new Date(Date.UTC(y, m, 0)); // last day of previous month
+  const end = new Date(Date.UTC(y, m, 0));
   const startIso = start.toISOString().slice(0, 10);
   const endIso = end.toISOString().slice(0, 10);
   const label = start.toLocaleString('en-US', {
@@ -37,6 +42,13 @@ function inRange(iso: string, start: string, end: string) {
   return d >= start && d <= end;
 }
 
+/** Higher fetch limits for monthly snapshots (analytics UI uses smaller defaults). */
+const REPORT_POST_LIMITS = {
+  instagram: 100,
+  facebook: 100,
+  tiktok: 50,
+};
+
 export async function collectReportMetrics(input: {
   userId: string;
   workspaceId: string;
@@ -44,16 +56,13 @@ export async function collectReportMetrics(input: {
   endDate: string;
   platforms?: string[];
 }): Promise<ReportMetrics> {
-  const allowed = new Set(
-    (input.platforms || ['instagram', 'facebook', 'tiktok']).map((p) =>
-      p.toLowerCase()
-    )
-  );
+  const allowed = new Set(sanitizeReportPlatforms(input.platforms));
 
   const live = await fetchLiveUnifiedPosts({
     userId: input.userId,
     workspaceId: input.workspaceId,
     sort: 'engagementRate',
+    postLimits: REPORT_POST_LIMITS,
   });
 
   const posts = live.posts.filter(
@@ -75,9 +84,25 @@ export async function collectReportMetrics(input: {
     userId: input.userId,
     workspaceId: input.workspaceId,
   });
-  const followerGrowth = accounts
-    .filter((a) => a.connected && allowed.has(a.platform))
-    .reduce((n, a) => n + (Number(a.follower_count) || 0), 0);
+
+  const followerMap = new Map<
+    string,
+    { platform: string; handle: string | null; count: number }
+  >();
+  for (const a of accounts) {
+    if (!a.connected || !platformMatchesReport(a.platform, allowed)) continue;
+    const norm = normalizeReportPlatform(a.platform);
+    const count = Number(a.follower_count) || 0;
+    const handle = a.handle || a.display_name || null;
+    const existing = followerMap.get(norm);
+    if (!existing || count > existing.count) {
+      followerMap.set(norm, { platform: norm, handle, count });
+    }
+  }
+  const followersByPlatform = [...followerMap.values()].sort((a, b) =>
+    a.platform.localeCompare(b.platform)
+  );
+  const totalFollowers = followersByPlatform.reduce((n, f) => n + f.count, 0);
 
   const byPlatform = new Map<
     string,
@@ -130,7 +155,10 @@ export async function collectReportMetrics(input: {
   return {
     views,
     engagementRate,
-    followerGrowth,
+    /** Total connected followers at snapshot time (legacy field name). */
+    followerGrowth: totalFollowers,
+    totalFollowers,
+    followersByPlatform,
     totalPosts: posts.length,
     likes,
     comments,
@@ -162,9 +190,12 @@ export async function buildAndSaveReport(input: {
     String(input.dateRangeLabel || '').trim() || `${startDate} - ${endDate}`;
   const title =
     String(input.title || '').trim() || 'Monthly Analytics Report';
-  const platforms = input.platforms?.length
-    ? input.platforms
-    : ['instagram', 'facebook', 'tiktok'];
+  const platforms = sanitizeReportPlatforms(input.platforms);
+
+  const workspaceName =
+    String(input.workspaceName || '').trim() ||
+    (await resolveWorkspaceDisplayName(input.workspaceId)) ||
+    'Workspace';
 
   const metrics = await collectReportMetrics({
     userId: input.userId,
@@ -177,7 +208,7 @@ export async function buildAndSaveReport(input: {
   let ai: AiInsights | null = null;
   if (input.includeAiAnalysis !== false) {
     ai = await generateReportAiInsights({
-      workspaceName: input.workspaceName || 'Workspace',
+      workspaceName,
       periodStart: startDate,
       periodEnd: endDate,
       platforms,
@@ -188,7 +219,7 @@ export async function buildAndSaveReport(input: {
   const report = await insertMonthlyReport({
     workspaceId: input.workspaceId,
     userId: input.userId,
-    workspaceName: input.workspaceName,
+    workspaceName,
     title,
     periodStart: startDate,
     periodEnd: endDate,

@@ -20,13 +20,24 @@ type SharePayload = {
     views: number;
     engagementRate: number;
     followerGrowth: number;
+    totalFollowers?: number;
+    followersByPlatform?: Array<{
+      platform: string;
+      handle: string | null;
+      count: number;
+    }>;
     totalPosts: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
     topPosts?: Array<{
       id: string;
       platform: string;
       title: string;
       mediaUrl?: string;
       impressions: number;
+      likes?: number;
+      comments?: number;
       engagementRate: number;
     }>;
     platformBreakdown?: Array<{
@@ -34,6 +45,8 @@ type SharePayload = {
       posts: number;
       views: number;
       engagementRate: number;
+      likes?: number;
+      comments?: number;
     }>;
   };
   aiInsights?: {
@@ -114,6 +127,10 @@ export default function PublicReportSharePage({
   }
 
   const m = data.metrics;
+  const totalFollowers = m.totalFollowers ?? m.followerGrowth;
+  const likes = m.likes ?? 0;
+  const comments = m.comments ?? 0;
+  const shares = m.shares ?? 0;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 print:bg-white print:text-slate-900">
@@ -150,7 +167,7 @@ export default function PublicReportSharePage({
           {[
             { label: 'Views', value: m.views.toLocaleString() },
             { label: 'Eng. rate', value: `${m.engagementRate}%` },
-            { label: 'Followers', value: m.followerGrowth.toLocaleString() },
+            { label: 'Followers', value: totalFollowers.toLocaleString() },
             { label: 'Total posts', value: String(m.totalPosts) },
           ].map((k) => (
             <div
@@ -166,6 +183,56 @@ export default function PublicReportSharePage({
             </div>
           ))}
         </section>
+
+        {(likes > 0 || comments > 0 || shares > 0) && (
+          <section className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Likes', value: likes.toLocaleString() },
+              { label: 'Comments', value: comments.toLocaleString() },
+              { label: 'Shares', value: shares.toLocaleString() },
+            ].map((k) => (
+              <div
+                key={k.label}
+                className="rounded-2xl bg-slate-900 border border-slate-800 p-4 text-center print:bg-slate-50 print:border-slate-200"
+              >
+                <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                  {k.label}
+                </p>
+                <p className="text-xl font-extrabold mt-2 tabular-nums tracking-tight">
+                  {k.value}
+                </p>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {(m.followersByPlatform || []).length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+              Audience snapshot
+            </h2>
+            <ul className="space-y-2">
+              {(m.followersByPlatform || []).map((f) => (
+                <li
+                  key={f.platform}
+                  className="rounded-2xl bg-slate-900 border border-slate-800 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 print:bg-slate-50 print:border-slate-200"
+                >
+                  <span className="capitalize font-bold">
+                    {f.platform}
+                    {f.handle ? (
+                      <span className="text-slate-500 font-normal ml-1">
+                        @{f.handle.replace(/^@/, '')}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="text-sm text-slate-400 print:text-slate-600 tabular-nums">
+                    {f.count.toLocaleString()} followers
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {(m.platformBreakdown || []).length > 0 && (
           <section className="space-y-3">
@@ -215,6 +282,7 @@ export default function PublicReportSharePage({
                     <p className="text-[11px] text-slate-500 mt-1 capitalize">
                       {p.platform} · {p.impressions.toLocaleString()} views ·{' '}
                       {p.engagementRate}% ER
+                      {p.likes != null ? ` · ${p.likes.toLocaleString()} likes` : ''}
                     </p>
                   </div>
                 </li>
@@ -238,6 +306,18 @@ export default function PublicReportSharePage({
                 </p>
                 <ul className="list-disc list-inside text-sm text-slate-300 print:text-slate-700 space-y-1">
                   {data.aiInsights.wins.map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {data.aiInsights.improvements?.length ? (
+              <div>
+                <p className="text-[11px] font-bold text-amber-400 print:text-amber-700 uppercase mb-1">
+                  Areas to improve
+                </p>
+                <ul className="list-disc list-inside text-sm text-slate-300 print:text-slate-700 space-y-1">
+                  {data.aiInsights.improvements.map((w) => (
                     <li key={w}>{w}</li>
                   ))}
                 </ul>

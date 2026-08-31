@@ -16,6 +16,7 @@ import {
   listMonthlyReports,
 } from '@/lib/reports/persist';
 import { buildAndSaveReport } from '@/lib/reports/build';
+import { sanitizeReportPlatforms } from '@/lib/reports/platform-match';
 
 async function readWorkspaceId(request: Request, bodyWorkspaceId?: unknown) {
   const jar = await cookies();
@@ -135,9 +136,11 @@ export async function POST(request: Request) {
     String(body.dateRangeLabel || body.date_range_label || '').trim() ||
     `${startDate} - ${endDate}`;
 
-  const platforms = Array.isArray(body.platforms)
-    ? body.platforms.map(String).filter(Boolean)
-    : ['instagram', 'facebook', 'tiktok'];
+  const platforms = sanitizeReportPlatforms(
+    Array.isArray(body.platforms)
+      ? body.platforms.map(String).filter(Boolean)
+      : undefined
+  );
 
   const title =
     String(body.title || '').trim() || 'Monthly Analytics Report';

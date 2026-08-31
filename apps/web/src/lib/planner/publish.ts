@@ -24,6 +24,18 @@ import {
   getDurablePlannerPost,
   markPlannerPostPublishOutcome,
 } from '@/lib/planner/posts';
+import {
+  parsePublishMode,
+  type PublishMode,
+} from '@/lib/planner/publish-modes';
+import { createPublishReminderJob } from '@/lib/planner/publish-reminders';
+import {
+  normalizeCollaborators,
+  normalizeOptionalText,
+  normalizeOptionalUrl,
+  normalizePostTags,
+} from '@/lib/planner/more-options';
+import { updateLinkInBioOnPublish } from '@/lib/planner/link-in-bio-on-publish';
 
 export type PlatformPublishResult = {
   platform: string;
@@ -45,9 +57,20 @@ export type PublishPlannerPostInput = {
   mediaUrl?: string;
   mediaType?: string;
   extraImageUrls?: string[];
+  mediaUrls?: string[];
   youtube?: YoutubeMeta | null;
   pinterestBoardId?: string;
   link?: string;
+  /** Rella-style publish workflow. */
+  publishMode?: PublishMode;
+  trendingSoundNote?: string;
+  collaborators?: string[];
+  firstComment?: string | null;
+  locationName?: string | null;
+  locationId?: string | null;
+  linkInBioUrl?: string | null;
+  postTags?: string[];
+  campaignTag?: string | null;
 };
 
 export type PublishPlannerPostResult = {
@@ -57,6 +80,14 @@ export type PublishPlannerPostResult = {
   failed_count: number;
   message: string;
   error_log: string | null;
+  publish_mode?: PublishMode;
+  reminder?: {
+    id: string;
+    deepLinks: { instagram: string; tiktok: string };
+    mediaUrls: string[];
+    caption: string;
+    trendingSoundNote: string | null;
+  };
 };
 
 type SocialAccountRow = {
@@ -219,9 +250,97 @@ export async function publishPlannerPost(
     }
   }
 
-  const results: PlatformPublishResult[] = [];
+  const publishMode = parsePublishMode(input.publishMode);
+  const trendingSoundNote = String(input.trendingSoundNote || '').trim();
+  const mediaUrls = Array.from(
+    new Set(
+      [
+        ...(Array.isArray(input.mediaUrls) ? input.mediaUrls : []),
+        ...(Array.isArray(input.extraImageUrls) ? input.extraImageUrls : []),
+        publicMediaUrl,
+      ]
+        .map((u) => String(u || '').trim())
+        .filter(Boolean)
+    )
+  );
 
-  for (const platform of platforms) {
+  // Rella notification mode — create a reminder job, do not auto-publish.
+  if (publishMode === 'notification_reminder') {
+    try {
+      const job = await createPublishReminderJob({
+        workspaceId: input.workspaceId,
+        userId: input.userId,
+        postId: input.postId,
+        caption: fullCaption || title,
+        trendingSoundNote: trendingSoundNote || null,
+        mediaUrls,
+        platforms,
+        scheduledAt: null,
+      });
+      return {
+        ok: true,
+        results: platforms.map((platform) => ({
+          platform,
+          ok: true,
+          skipped: true,
+          note: 'Manual push reminder created — use deep links to post with trending sound.',
+        })),
+        published_count: 0,
+        failed_count: 0,
+        message:
+          'Reminder saved. Download your media, copy the caption, and open Instagram/TikTok to post with your trending sound.',
+        error_log: null,
+        publish_mode: publishMode,
+        reminder: {
+          id: job.id,
+          deepLinks: job.deepLinks,
+          mediaUrls: job.mediaUrls,
+          caption: job.caption,
+          trendingSoundNote: job.trendingSoundNote,
+        },
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to create publish reminder';
+      return {
+        ok: false,
+        results: [],
+        published_count: 0,
+        failed_count: 0,
+        message,
+        error_log: message,
+        publish_mode: publishMode,
+      };
+    }
+  }
+
+  // TikTok Draft — only upload to TikTok inbox/drafts.
+  if (publishMode === 'tiktok_draft') {
+    const draftPlatforms = platforms.includes('tiktok')
+      ? ['tiktok']
+      : platforms;
+    // Reuse the normal loop below with publishMode flag for TikTok asDraft.
+    // Force platforms to tiktok when draft mode is selected.
+    if (!draftPlatforms.includes('tiktok')) {
+      return {
+        ok: false,
+        results: [],
+        published_count: 0,
+        failed_count: 0,
+        message: 'TikTok Draft mode requires TikTok as a selected platform.',
+        error_log: 'TikTok Draft mode requires TikTok as a selected platform.',
+        publish_mode: publishMode,
+      };
+    }
+  }
+
+  const results: PlatformPublishResult[] = [];
+  const effectivePlatforms =
+    publishMode === 'tiktok_draft' ? ['tiktok'] : platforms;
+
+  for (const platform of effectivePlatforms) {
     try {
       if (platform === 'pinterest') {
         if (!publicMediaUrl || mediaKind === 'video') {
@@ -400,14 +519,16 @@ export async function publishPlannerPost(
           caption: fullCaption || title,
           kind: mediaKind,
           extraImageUrls,
+          asDraft: publishMode === 'tiktok_draft',
         });
         results.push({
           platform,
           ok: true,
           id: published.id,
-          note: published.inbox
-            ? 'Sent to TikTok inbox — open the TikTok app to finish posting. Direct Post needs a Private TikTok account (or an audited app).'
-            : undefined,
+          note:
+            publishMode === 'tiktok_draft' || published.inbox
+              ? 'Saved to TikTok drafts / inbox — open the TikTok app to finish posting.'
+              : undefined,
         });
         continue;
       }
@@ -465,9 +586,23 @@ export async function publishPlannerPost(
           pageToken,
           publicMediaUrl,
           fullCaption || title,
-          mediaKind
+          {
+            mediaKind,
+            collaborators: normalizeCollaborators(input.collaborators),
+            locationId: normalizeOptionalText(input.locationId, 64),
+            firstComment: normalizeOptionalText(input.firstComment, 2200),
+          }
         );
-        results.push({ platform, ok: true, id: published.id });
+        results.push({
+          platform,
+          ok: true,
+          id: published.id,
+          note: published.firstCommentError
+            ? `Published; first comment failed: ${published.firstCommentError}`
+            : published.firstCommentId
+              ? 'Published with first comment'
+              : undefined,
+        });
         continue;
       }
 
@@ -514,6 +649,20 @@ export async function publishPlannerPost(
   const allTargetsSucceeded = failed.length === 0 && published.length > 0;
   const inboxNote = results.find((r) => r.note)?.note;
 
+  const linkInBioUrl = normalizeOptionalUrl(input.linkInBioUrl);
+  if (published.length > 0 && linkInBioUrl) {
+    try {
+      await updateLinkInBioOnPublish({
+        workspaceId: input.workspaceId,
+        userId: input.userId,
+        destinationUrl: linkInBioUrl,
+        title: title || 'Planner spotlight',
+      });
+    } catch (error) {
+      console.warn('[planner/publish] link-in-bio update failed', error);
+    }
+  }
+
   return {
     ok: allTargetsSucceeded,
     results,
@@ -521,11 +670,14 @@ export async function publishPlannerPost(
     failed_count: failed.length,
     message: allTargetsSucceeded
       ? inboxNote ||
-        `Published to ${published.map((r) => r.platform).join(', ')}`
+        (publishMode === 'tiktok_draft'
+          ? 'Uploaded to TikTok drafts'
+          : `Published to ${published.map((r) => r.platform).join(', ')}`)
       : failed[0]?.error || published.length > 0
         ? `Some platforms failed: ${failed.map((r) => r.platform).join(', ')}`
         : 'Nothing was published',
     error_log,
+    publish_mode: publishMode,
   };
 }
 
@@ -575,7 +727,19 @@ export async function publishPlannerPostById(input: {
     mediaUrl,
     mediaType,
     extraImageUrls,
+    mediaUrls: post.media_urls?.length
+      ? post.media_urls
+      : post.media_items.map((m) => m.url).filter(Boolean),
     youtube: post.youtube ?? null,
+    publishMode: parsePublishMode(post.publish_mode),
+    trendingSoundNote: post.trending_sound_note || undefined,
+    collaborators: post.collaborators ?? [],
+    firstComment: post.first_comment ?? null,
+    locationName: post.location_name ?? null,
+    locationId: post.location_id ?? null,
+    linkInBioUrl: post.link_in_bio_url ?? null,
+    postTags: post.post_tags ?? [],
+    campaignTag: post.campaign_tag ?? null,
   });
 }
 
@@ -584,17 +748,30 @@ export async function publishAndFinalizePlannerPost(
   input: PublishPlannerPostInput
 ): Promise<PublishPlannerPostResult> {
   const result = await publishPlannerPost(input);
+  const mode = result.publish_mode || parsePublishMode(input.publishMode);
 
   if (input.postId?.trim() && process.env.DATABASE_URL?.trim()) {
     await ensurePlannerPostsSchema();
+    const activityText =
+      mode === 'notification_reminder'
+        ? 'Manual push reminder created (trending sound workflow)'
+        : mode === 'tiktok_draft'
+          ? 'Uploaded to TikTok drafts / inbox'
+          : result.ok
+            ? `Published to ${result.results.filter((r) => r.ok).map((r) => r.platform).join(', ')}`
+            : `Publish failed: ${result.error_log || result.message}`;
     await markPlannerPostPublishOutcome({
       postId: input.postId.trim(),
       userId: input.userId,
       success: result.ok,
       errorLog: result.error_log,
-      activityText: result.ok
-        ? `Published to ${result.results.filter((r) => r.ok).map((r) => r.platform).join(', ')}`
-        : `Publish failed: ${result.error_log || result.message}`,
+      activityText,
+      successWorkflow:
+        mode === 'notification_reminder'
+          ? 'READY'
+          : mode === 'tiktok_draft'
+            ? 'READY'
+            : 'PUBLISHED',
     });
   }
 
@@ -612,6 +789,16 @@ export type DueScheduledPlannerPost = {
   media_url: string | null;
   media_type: string | null;
   media_items: Array<{ url: string; type: string }>;
+  media_urls: string[];
+  publish_mode: PublishMode;
+  trending_sound_note: string | null;
+  collaborators: string[];
+  first_comment: string | null;
+  location_name: string | null;
+  location_id: string | null;
+  link_in_bio_url: string | null;
+  post_tags: string[];
+  campaign_tag: string | null;
   youtube: YoutubeMeta | null;
 };
 
@@ -647,6 +834,16 @@ export async function claimDueScheduledPlannerPosts(
       media_url,
       media_type,
       media_items,
+      media_urls,
+      publish_mode,
+      trending_sound_note,
+      collaborators,
+      first_comment,
+      location_name,
+      location_id,
+      link_in_bio_url,
+      post_tags,
+      campaign_tag,
       youtube
   `;
 
@@ -663,6 +860,9 @@ export async function claimDueScheduledPlannerPosts(
           }))
           .filter((m) => m.url)
       : [];
+    const mediaUrls = Array.isArray(r.media_urls)
+      ? (r.media_urls as unknown[]).map((u) => String(u)).filter(Boolean)
+      : mediaItems.map((m) => m.url);
 
     return {
       id: String(r.id),
@@ -675,6 +875,23 @@ export async function claimDueScheduledPlannerPosts(
       media_url: r.media_url ? String(r.media_url) : null,
       media_type: r.media_type ? String(r.media_type) : null,
       media_items: mediaItems,
+      media_urls: mediaUrls,
+      publish_mode: parsePublishMode(r.publish_mode),
+      trending_sound_note:
+        typeof r.trending_sound_note === 'string'
+          ? r.trending_sound_note
+          : null,
+      collaborators: normalizeCollaborators(r.collaborators),
+      first_comment:
+        typeof r.first_comment === 'string' ? r.first_comment : null,
+      location_name:
+        typeof r.location_name === 'string' ? r.location_name : null,
+      location_id: typeof r.location_id === 'string' ? r.location_id : null,
+      link_in_bio_url:
+        typeof r.link_in_bio_url === 'string' ? r.link_in_bio_url : null,
+      post_tags: normalizePostTags(r.post_tags),
+      campaign_tag:
+        typeof r.campaign_tag === 'string' ? r.campaign_tag : null,
       youtube: (r.youtube as YoutubeMeta | null) ?? null,
     };
   });

@@ -32,6 +32,15 @@ export async function generateReportAiInsights(input: {
     )
     .join('\n');
 
+  const followerTotal =
+    input.metrics.totalFollowers ?? input.metrics.followerGrowth;
+  const followerLines = (input.metrics.followersByPlatform || [])
+    .map(
+      (f) =>
+        `- ${f.platform}${f.handle ? ` (@${f.handle.replace(/^@/, '')})` : ''}: ${f.count.toLocaleString()} followers`
+    )
+    .join('\n');
+
   const userContent = [
     `Brand: ${input.workspaceName}`,
     `Period: ${input.periodStart} → ${input.periodEnd}`,
@@ -40,9 +49,12 @@ export async function generateReportAiInsights(input: {
     'KPIs:',
     `- Views/Impressions: ${input.metrics.views}`,
     `- Engagement rate: ${input.metrics.engagementRate}%`,
-    `- Follower growth: ${input.metrics.followerGrowth}`,
-    `- Total posts: ${input.metrics.totalPosts}`,
-    `- Likes: ${input.metrics.likes}, Comments: ${input.metrics.comments}`,
+    `- Total connected followers (snapshot): ${followerTotal}`,
+    `- Total posts in period: ${input.metrics.totalPosts}`,
+    `- Likes: ${input.metrics.likes}, Comments: ${input.metrics.comments}, Shares: ${input.metrics.shares}`,
+    '',
+    'Followers by platform:',
+    followerLines || '(none connected)',
     '',
     'Platform breakdown:',
     platformLines || '(none)',

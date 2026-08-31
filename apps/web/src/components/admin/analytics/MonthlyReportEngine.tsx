@@ -38,12 +38,24 @@ type ReportRow = {
     views: number;
     engagementRate: number;
     followerGrowth: number;
+    totalFollowers?: number;
+    followersByPlatform?: Array<{
+      platform: string;
+      handle: string | null;
+      count: number;
+    }>;
     totalPosts: number;
+    likes?: number;
+    comments?: number;
+    shares?: number;
     topPosts?: Array<{
       id: string;
       platform: string;
       title: string;
+      mediaUrl?: string;
       impressions: number;
+      likes?: number;
+      comments?: number;
       engagementRate: number;
     }>;
     platformBreakdown?: Array<{
@@ -76,7 +88,7 @@ type AutomationConfig = {
   send_day_of_month?: number;
 };
 
-const PLATFORM_OPTIONS = ['instagram', 'facebook', 'tiktok', 'youtube'] as const;
+const PLATFORM_OPTIONS = ['instagram', 'facebook', 'tiktok'] as const;
 
 function shareUrl(token: string) {
   if (typeof window !== 'undefined') {
@@ -156,8 +168,14 @@ export default function MonthlyReportEngine() {
           cache: 'no-store',
         }
       );
-      if (!r.ok) throw new Error('Failed to load reports');
-      return r.json() as Promise<{ reports: ReportRow[] }>;
+      const json = (await r.json().catch(() => ({}))) as {
+        reports?: ReportRow[];
+        error?: string;
+      };
+      if (!r.ok) {
+        throw new Error(json.error || 'Failed to load reports');
+      }
+      return { reports: json.reports || [] };
     },
     enabled: Boolean(activeWorkspace.id),
   });
@@ -176,8 +194,14 @@ export default function MonthlyReportEngine() {
           cache: 'no-store',
         }
       );
-      if (!r.ok) throw new Error('Failed to load automation');
-      return r.json() as Promise<{ config: AutomationConfig }>;
+      const json = (await r.json().catch(() => ({}))) as {
+        config?: AutomationConfig;
+        error?: string;
+      };
+      if (!r.ok) {
+        throw new Error(json.error || 'Failed to load automation');
+      }
+      return { config: json.config as AutomationConfig };
     },
     enabled: Boolean(activeWorkspace.id),
   });
@@ -188,8 +212,16 @@ export default function MonthlyReportEngine() {
     if (!c) return;
     setAutoEnabled(Boolean(c.enabled));
     setAutoEmails((c.recipient_emails || []).join(', '));
+    const cleaned = (c.platforms?.length
+      ? c.platforms
+      : ['instagram', 'facebook', 'tiktok']
+    )
+      .map((p) => (p === 'tiktok_business' ? 'tiktok' : p))
+      .filter((p) =>
+        p === 'instagram' || p === 'facebook' || p === 'tiktok'
+      );
     setAutoPlatforms(
-      c.platforms?.length ? c.platforms : ['instagram', 'facebook', 'tiktok']
+      cleaned.length ? [...new Set(cleaned)] : ['instagram', 'facebook', 'tiktok']
     );
     setAutoNote(c.custom_email_note || '');
     setAutoSubject(
@@ -206,7 +238,12 @@ export default function MonthlyReportEngine() {
     mutationFn: async () => {
       const r = await fetch('/api/admin/reports', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspace.id,
+          'x-active-workspace-id': activeWorkspace.id,
+        },
+        credentials: 'include',
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
           workspace_id: activeWorkspace.id,
@@ -353,9 +390,9 @@ export default function MonthlyReportEngine() {
   const reports = reportsQuery.data?.reports || [];
   const previewReport =
     selectedReport ||
-    reports.find((r) => r.public_share_token === previewToken) ||
-    reports[0] ||
-    null;
+    (previewToken
+      ? reports.find((r) => r.public_share_token === previewToken) ?? null
+      : null);
 
   const tabs: { key: EngineTab; label: string; icon: React.ElementType }[] = [
     { key: 'directory', label: 'Saved Reports Directory', icon: FileText },
@@ -860,8 +897,11 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
   };
   const views = num(m.views);
   const engagementRate = num(m.engagementRate);
-  const followerGrowth = num(m.followerGrowth);
+  const totalFollowers = num(m.totalFollowers ?? m.followerGrowth);
   const totalPosts = num(m.totalPosts);
+  const likes = num(m.likes);
+  const comments = num(m.comments);
+  const shares = num(m.shares);
   const showAi = !report.hide_ai_on_public_link && report.ai_insights;
 
   return (
@@ -884,7 +924,7 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
         {[
           { label: 'Views', value: views.toLocaleString() },
           { label: 'Eng. rate', value: `${engagementRate}%` },
-          { label: 'Followers', value: followerGrowth.toLocaleString() },
+          { label: 'Followers', value: totalFollowers.toLocaleString() },
           { label: 'Posts', value: String(totalPosts) },
         ].map((k) => (
           <div
@@ -898,6 +938,54 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
           </div>
         ))}
       </div>
+
+      {(likes > 0 || comments > 0 || shares > 0) && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Likes', value: likes.toLocaleString() },
+            { label: 'Comments', value: comments.toLocaleString() },
+            { label: 'Shares', value: shares.toLocaleString() },
+          ].map((k) => (
+            <div
+              key={k.label}
+              className="rounded-xl bg-slate-900/80 border border-slate-800 px-3 py-2.5 text-center"
+            >
+              <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                {k.label}
+              </p>
+              <p className="text-lg font-extrabold mt-1 tabular-nums">{k.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(m.followersByPlatform || []).length > 0 && (
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+            Audience snapshot
+          </p>
+          <ul className="space-y-2">
+            {(m.followersByPlatform || []).map((f) => (
+              <li
+                key={f.platform}
+                className="flex justify-between text-sm rounded-xl bg-slate-900/80 border border-slate-800 px-3 py-2.5"
+              >
+                <span className="capitalize font-semibold">
+                  {f.platform}
+                  {f.handle ? (
+                    <span className="text-slate-500 font-normal ml-1">
+                      @{f.handle.replace(/^@/, '')}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="text-slate-400 tabular-nums">
+                  {f.count.toLocaleString()} followers
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {(m.platformBreakdown || []).length > 0 && (
         <div>
@@ -926,15 +1014,28 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
             Top posts
           </p>
           <ul className="space-y-2">
-            {(m.topPosts || []).slice(0, 5).map((p) => (
+            {(m.topPosts || []).slice(0, 8).map((p) => (
               <li
                 key={p.id}
-                className="rounded-xl bg-slate-900 border border-slate-800 px-3 py-2.5"
+                className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex gap-3"
               >
-                <p className="text-sm font-semibold truncate">{p.title}</p>
-                <p className="text-[11px] text-slate-500 mt-0.5 capitalize">
-                  {p.platform} · {p.impressions.toLocaleString()} views · {p.engagementRate}% ER
-                </p>
+                {p.mediaUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.mediaUrl}
+                    alt=""
+                    className="w-16 h-16 object-cover flex-shrink-0 bg-slate-800"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-slate-800 flex-shrink-0" />
+                )}
+                <div className="py-2.5 pr-3 min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{p.title}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 capitalize">
+                    {p.platform} · {p.impressions.toLocaleString()} views · {p.engagementRate}% ER
+                    {p.likes != null ? ` · ${p.likes.toLocaleString()} likes` : ''}
+                  </p>
+                </div>
               </li>
             ))}
           </ul>
@@ -942,13 +1043,49 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
       )}
 
       {showAi && report.ai_insights ? (
-        <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-4 space-y-2">
+        <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-4 space-y-3">
           <p className="text-xs font-bold text-[#F472B6] uppercase tracking-widest">
-            AI insights
+            Strategy notes
           </p>
           <p className="text-sm text-slate-200 leading-relaxed">
             {report.ai_insights.executiveSummary}
           </p>
+          {report.ai_insights.wins?.length ? (
+            <div>
+              <p className="text-[11px] font-bold text-emerald-400 uppercase mb-1">
+                Wins
+              </p>
+              <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
+                {report.ai_insights.wins.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {report.ai_insights.improvements?.length ? (
+            <div>
+              <p className="text-[11px] font-bold text-amber-400 uppercase mb-1">
+                Areas to improve
+              </p>
+              <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
+                {report.ai_insights.improvements.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {report.ai_insights.recommendations?.length ? (
+            <div>
+              <p className="text-[11px] font-bold text-sky-400 uppercase mb-1">
+                Recommendations
+              </p>
+              <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
+                {report.ai_insights.recommendations.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

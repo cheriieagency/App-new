@@ -28,6 +28,8 @@ import {
   rescheduleDurablePlannerPost,
   upsertDurablePlannerPost,
 } from '@/lib/planner/posts';
+import { parsePublishMode } from '@/lib/planner/publish-modes';
+import { parseMoreOptionsFromBody } from '@/lib/planner/more-options';
 
 function useDb() {
   return Boolean(process.env.DATABASE_URL?.trim());
@@ -257,6 +259,18 @@ export async function POST(request: Request) {
               ? 'image'
               : undefined,
       media_items,
+      media_urls: media_items?.map((m) => m.url).filter(Boolean),
+      publish_mode: parsePublishMode(body.publish_mode ?? body.publishMode),
+      trending_sound_note:
+        typeof body.trending_sound_note === 'string'
+          ? body.trending_sound_note
+          : typeof body.trendingSoundNote === 'string'
+            ? body.trendingSoundNote
+            : body.trending_sound_note === null ||
+                body.trendingSoundNote === null
+              ? null
+              : undefined,
+      ...parseMoreOptionsFromBody(body as Record<string, unknown>),
       youtube,
       idea_title:
         typeof body.idea_title === 'string' ? body.idea_title : undefined,

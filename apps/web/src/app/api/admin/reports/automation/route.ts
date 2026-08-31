@@ -15,6 +15,7 @@ import {
   getAutomationConfig,
   upsertAutomationConfig,
 } from '@/lib/reports/persist';
+import { sanitizeReportPlatforms } from '@/lib/reports/platform-match';
 
 async function readWorkspaceId(request: Request, bodyWorkspaceId?: unknown) {
   const jar = await cookies();
@@ -125,7 +126,7 @@ async function upsert(request: Request) {
     : undefined;
 
   const platforms = Array.isArray(body.platforms)
-    ? body.platforms.map(String).filter(Boolean)
+    ? sanitizeReportPlatforms(body.platforms.map(String).filter(Boolean))
     : undefined;
 
   const sendDayRaw = body.sendDayOfMonth ?? body.send_day_of_month;

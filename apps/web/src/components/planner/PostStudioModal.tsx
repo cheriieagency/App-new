@@ -10,7 +10,6 @@ import {
   FileText,
   FolderKanban,
   Hash,
-  Heart,
   ImageIcon,
   Loader2,
   Mail,
@@ -65,7 +64,6 @@ import {
 import useUpload from '@/utils/useUpload';
 import {
   PLANNER_TEAM,
-  PLATFORM_META,
   WORKFLOW_COLUMNS,
   getBrandWorkspace,
   nextSubtaskId,
@@ -91,6 +89,25 @@ import {
   saveFavoriteHashtags,
   type FavoriteHashtagSet,
 } from '@/lib/planner/favorite-hashtags';
+import {
+  PUBLISH_MODE_OPTIONS,
+  parsePublishMode,
+  type PublishMode,
+} from '@/lib/planner/publish-modes';
+import {
+  MoreOptionsSection,
+  type MoreOptionsValue,
+} from '@/components/planner/MoreOptionsSection';
+
+const EMPTY_MORE_OPTIONS: MoreOptionsValue = {
+  collaborators: [],
+  firstComment: '',
+  locationName: '',
+  locationId: '',
+  linkInBioUrl: '',
+  postTags: [],
+  campaignTag: '',
+};
 
 const WORKFLOW_LABEL_KEYS: Record<WorkflowStatus, TranslationKey> = {
   IDEA: 'workflowIdeas',
@@ -213,6 +230,10 @@ export default function PostStudioModal({
   const [campaignIds, setCampaignIds] = useState<string[]>([]);
   const [subtasks, setSubtasks] = useState<PlannerSubtask[]>([]);
   const [mediaItems, setMediaItems] = useState<PlannerMediaItem[]>([]);
+  const [publishMode, setPublishMode] = useState<PublishMode>('auto_publish');
+  const [trendingSoundNote, setTrendingSoundNote] = useState('');
+  const [moreOptions, setMoreOptions] =
+    useState<MoreOptionsValue>(EMPTY_MORE_OPTIONS);
   const [newTask, setNewTask] = useState('');
   const [comment, setComment] = useState('');
   const [commentImage, setCommentImage] = useState<string | null>(null);
@@ -231,7 +252,6 @@ export default function PostStudioModal({
   const [localActivity, setLocalActivity] = useState(post?.activity ?? []);
   const commentFileRef = useRef<HTMLInputElement>(null);
   const [upload, { loading: uploadingComment }] = useUpload();
-
   const activeBrand =
     getBrandWorkspace(project) ||
     workspaces.find((w) => w.name === project) ||
@@ -311,6 +331,17 @@ export default function PostStudioModal({
       setCampaignIds(post.campaigns ?? []);
       setSubtasks(post.subtasks);
       setMediaItems(post.media_items ?? []);
+      setPublishMode(parsePublishMode(post.publish_mode));
+      setTrendingSoundNote(post.trending_sound_note || '');
+      setMoreOptions({
+        collaborators: post.collaborators ?? [],
+        firstComment: post.first_comment || '',
+        locationName: post.location_name || '',
+        locationId: post.location_id || '',
+        linkInBioUrl: post.link_in_bio_url || '',
+        postTags: post.post_tags ?? [],
+        campaignTag: post.campaign_tag || '',
+      });
       setLocalComments(post.comments ?? []);
       setLocalActivity(post.activity ?? []);
       setWorkingPostId(post.id);
@@ -335,6 +366,9 @@ export default function PostStudioModal({
       setCampaignIds(defaultCampaignIds?.length ? [...defaultCampaignIds] : []);
       setSubtasks([]);
       setMediaItems([]);
+      setPublishMode('auto_publish');
+      setTrendingSoundNote('');
+      setMoreOptions(EMPTY_MORE_OPTIONS);
       setLocalComments([]);
       setLocalActivity([]);
       setWorkingPostId(null);
@@ -457,6 +491,19 @@ export default function PostStudioModal({
           media_items: mediaItems,
           media_url: mediaItems.find((m) => m.url)?.url || null,
           media_type: mediaItems.find((m) => m.url)?.type || null,
+          media_urls: mediaItems.map((m) => m.url).filter(Boolean),
+          publish_mode: publishMode,
+          trending_sound_note:
+            publishMode === 'notification_reminder'
+              ? trendingSoundNote.trim() || null
+              : null,
+          collaborators: moreOptions.collaborators,
+          first_comment: moreOptions.firstComment.trim() || null,
+          location_name: moreOptions.locationName.trim() || null,
+          location_id: moreOptions.locationId.trim() || null,
+          link_in_bio_url: moreOptions.linkInBioUrl.trim() || null,
+          post_tags: moreOptions.postTags,
+          campaign_tag: moreOptions.campaignTag.trim() || null,
           auto_post: mode === 'schedule' ? true : autoPost,
           scheduled_at:
             mode === 'schedule' && scheduledAt
@@ -486,6 +533,8 @@ export default function PostStudioModal({
         const extraImageUrls = mediaItems
           .filter((m) => m.url && m.type !== 'video' && m.url !== mediaUrl)
           .map((m) => m.url);
+        const mediaUrls = mediaItems.map((m) => m.url).filter(Boolean);
+
         const publishRes = await fetch('/api/planner/publish', {
           method: 'POST',
           headers: {
@@ -507,7 +556,20 @@ export default function PostStudioModal({
             title: derivedTitle,
             mediaUrl,
             mediaType,
+            mediaUrls,
             extraImageUrls,
+            publishMode,
+            trendingSoundNote:
+              publishMode === 'notification_reminder'
+                ? trendingSoundNote.trim() || undefined
+                : undefined,
+            collaborators: moreOptions.collaborators,
+            firstComment: moreOptions.firstComment.trim() || undefined,
+            locationName: moreOptions.locationName.trim() || undefined,
+            locationId: moreOptions.locationId.trim() || undefined,
+            linkInBioUrl: moreOptions.linkInBioUrl.trim() || undefined,
+            postTags: moreOptions.postTags,
+            campaignTag: moreOptions.campaignTag.trim() || undefined,
             imageUrl: mediaType === 'image' ? mediaUrl : undefined,
             videoUrl: mediaType === 'video' ? mediaUrl : undefined,
           }),
@@ -518,6 +580,12 @@ export default function PostStudioModal({
           error?: string;
           error_log?: string;
           results?: Array<{ platform: string; ok: boolean; error?: string }>;
+          reminder?: {
+            deepLinks?: { instagram?: string; tiktok?: string };
+            caption?: string;
+            mediaUrls?: string[];
+            trendingSoundNote?: string | null;
+          };
         };
         if (!publishRes.ok || !publishJson.ok) {
           const results = publishJson.results ?? [];
@@ -538,7 +606,24 @@ export default function PostStudioModal({
           void queryClient.invalidateQueries({ queryKey: ['planner-campaign'] });
           return;
         }
-        toast.success(publishJson.message || t('toastPostedSuccess', locale));
+        if (publishMode === 'notification_reminder') {
+          const captionToCopy =
+            publishJson.reminder?.caption ||
+            [caption, hashtags].filter(Boolean).join('\n\n');
+          if (captionToCopy.trim() && typeof navigator !== 'undefined') {
+            void navigator.clipboard.writeText(captionToCopy).catch(() => {});
+          }
+          toast.success(
+            publishJson.message ||
+              'Reminder saved — caption copied. Open Instagram/TikTok to post with your trending sound.'
+          );
+        } else if (publishMode === 'tiktok_draft') {
+          toast.success(
+            publishJson.message || 'Uploaded to TikTok drafts / inbox.'
+          );
+        } else {
+          toast.success(publishJson.message || t('toastPostedSuccess', locale));
+        }
       } else if (mode === 'schedule') {
         toast.success(t('toastSavedScheduled', locale));
       } else {
@@ -748,7 +833,7 @@ export default function PostStudioModal({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#F472B6] transition-colors"
+          className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
           title="Favourite hashtags"
           aria-label="Favourite hashtags"
         >
@@ -780,7 +865,7 @@ export default function PostStudioModal({
                   }}
                   className="flex-1 min-w-0 text-left rounded-lg px-2 py-2 hover:bg-slate-50 transition-colors"
                 >
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#F472B6]">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700">
                     <Hash size={10} />
                     Use
                   </span>
@@ -821,74 +906,47 @@ export default function PostStudioModal({
   );
 
   const editorPane = (
-    <div className="h-full overflow-y-auto px-4 sm:px-5 py-4 space-y-5">
-      {/* Row 1 — Target platforms */}
+    <div className="h-full overflow-y-auto px-4 sm:px-5 py-4 space-y-4">
+      {/* Platforms */}
       <div>
-        <FieldLabel>Target platforms</FieldLabel>
-        <p className="text-[11px] text-slate-500 font-medium mb-2">
-          Posts go live on connected accounts for this workspace. Deselect
-          Instagram/Facebook if you only want TikTok.
-        </p>
-        <div className="flex flex-wrap items-center gap-2.5">
+        <FieldLabel>Platforms</FieldLabel>
+        <div className="flex flex-wrap items-center gap-1.5">
           {PLATFORM_OPTIONS.map(({ key, label, Icon }) => {
             const active = platforms.includes(key);
             const connected = connectedPlatforms.has(key);
-            const color = PLATFORM_META[key]?.color || '#64748b';
             return (
               <button
                 key={key}
                 type="button"
                 onClick={() => togglePlatform(key)}
-                title={`${label}${connected ? ' · Live' : ' · Not connected'}`}
+                title={`${label}${connected ? ' · Connected' : ' · Not connected'}`}
                 aria-pressed={active}
-                className={`relative inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-full border transition-all ${
+                className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] px-2.5 rounded-md border text-xs font-medium transition-colors ${
                   active
-                    ? 'border-transparent shadow-sm scale-[1.02]'
-                    : 'border-slate-200 bg-white opacity-70 hover:opacity-100'
+                    ? 'border-slate-800 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
-                style={
-                  active
-                    ? {
-                        background: `color-mix(in srgb, ${color} 14%, white)`,
-                        boxShadow: `0 0 0 2px color-mix(in srgb, ${color} 45%, transparent)`,
-                        color,
-                      }
-                    : { color: '#64748b' }
-                }
               >
-                <Icon size={18} />
-                {active ? (
-                  <span
-                    className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-[#2B2568] text-white flex items-center justify-center ring-2 ring-white"
-                    aria-hidden
-                  >
-                    <Check size={9} strokeWidth={3} />
-                  </span>
-                ) : null}
-                {connected && !active ? (
-                  <span
-                    className="absolute top-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white"
-                    aria-hidden
-                  />
-                ) : null}
+                <Icon size={15} />
+                <span className="hidden sm:inline">{label}</span>
               </button>
             );
           })}
         </div>
-        <p className="mt-2 text-[11px] text-slate-400 font-medium">
-          Posts go live on connected accounts for this workspace.
+        <p className="mt-1.5 text-[11px] text-slate-400">
+          Only connected accounts for this workspace will publish.
         </p>
       </div>
 
-      {/* Row 2 — Caption & AI */}
+      {/* Caption */}
       <div>
         <FieldLabel>{t('studioCaption', locale)}</FieldLabel>
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-[#2B2568]/10 focus-within:border-slate-300 transition-shadow">
+        <div className="rounded-md border border-slate-200 bg-white overflow-hidden focus-within:border-slate-400 transition-colors">
           <Textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             placeholder="Write your caption…"
-            className="min-h-[120px] border-0 rounded-none resize-none text-sm shadow-none focus-visible:ring-0 px-3.5 pt-3.5 pb-2"
+            className="min-h-[120px] border-0 rounded-none resize-none text-sm shadow-none focus-visible:ring-0 px-3 pt-3 pb-2"
           />
           {(showHashtagField || hashtags.trim()) && (
             <div className="px-3 pb-2">
@@ -896,16 +954,16 @@ export default function PostStudioModal({
                 value={hashtags}
                 onChange={(e) => setHashtags(e.target.value)}
                 placeholder="#tips #creator #nordic"
-                className="h-9 rounded-lg border-slate-200 bg-slate-50/80 font-mono text-xs"
+                className="h-9 rounded-md border-slate-200 bg-white font-mono text-xs"
               />
             </div>
           )}
-          <div className="flex items-center gap-0.5 px-2 py-1.5 border-t border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-0.5 px-1.5 py-1 border-t border-slate-100">
             <button
               type="button"
               onClick={() => void polish()}
               disabled={polishing || !caption.trim()}
-              className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-semibold text-[#F472B6] hover:bg-[#FDF2F8] disabled:opacity-40 transition-colors"
+              className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-md text-[11px] font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-colors"
               title="AI polish"
             >
               {polishing ? (
@@ -919,15 +977,15 @@ export default function PostStudioModal({
             <button
               type="button"
               onClick={() => setShowHashtagField((v) => !v)}
-              className={`inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-lg transition-colors ${
+              className={`inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-md transition-colors ${
                 showHashtagField || hashtags.trim()
-                  ? 'text-[#F472B6] bg-[#FDF2F8]'
+                  ? 'text-slate-800 bg-slate-100'
                   : 'text-slate-500 hover:bg-slate-100'
               }`}
               title="Hashtags"
               aria-label="Hashtags"
             >
-              <Heart size={14} />
+              <Hash size={14} />
             </button>
             <button
               type="button"
@@ -941,7 +999,7 @@ export default function PostStudioModal({
                 setFavoriteHashtags(listFavoriteHashtags(workspaceId));
                 toast.success(t('toastSavedToFavourites', locale));
               }}
-              className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-lg text-slate-500 hover:bg-slate-100 hover:text-amber-500 disabled:opacity-40 transition-colors"
+              className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 transition-colors"
               title="Save favourite hashtags"
               aria-label="Save favourite"
             >
@@ -954,13 +1012,12 @@ export default function PostStudioModal({
         </div>
       </div>
 
-      {/* Row 3 — Media */}
+      {/* Media */}
       <div>
         <FieldLabel>Media</FieldLabel>
         {platforms.includes('tiktok') && !mediaItems.some((m) => m.url) ? (
-          <p className="mb-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-            TikTok cannot post caption-only. Upload a video (best) or a JPEG/WebP photo
-            before Publish.
+          <p className="mb-2 text-[11px] text-slate-500">
+            TikTok needs a video or photo before Publish.
           </p>
         ) : null}
         <CarouselMediaUploader
@@ -970,24 +1027,80 @@ export default function PostStudioModal({
         />
       </div>
 
-      {/* Row 4 — Schedule & status */}
+      {/* Publishing mode */}
+      <div>
+        <FieldLabel>Publishing mode</FieldLabel>
+        <div className="space-y-1">
+          {PUBLISH_MODE_OPTIONS.map((opt) => {
+            const selected = publishMode === opt.id;
+            return (
+              <label
+                key={opt.id}
+                className={`flex items-start gap-2.5 rounded-md border px-3 py-2.5 min-h-[44px] cursor-pointer transition-colors ${
+                  selected
+                    ? 'border-slate-400 bg-slate-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="publish-mode"
+                  className="mt-1 accent-slate-800"
+                  checked={selected}
+                  onChange={() => setPublishMode(opt.id)}
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-slate-900">
+                    {opt.title}
+                  </span>
+                  <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">
+                    {opt.description}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        {publishMode === 'notification_reminder' ? (
+          <label className="block mt-2">
+            <span className="block text-[11px] font-medium text-slate-500 mb-1">
+              Trending sound / notes
+            </span>
+            <input
+              type="text"
+              value={trendingSoundNote}
+              onChange={(e) => setTrendingSoundNote(e.target.value)}
+              placeholder="Song title or audio reference"
+              className="w-full h-10 min-h-[40px] px-3 rounded-md border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400"
+            />
+          </label>
+        ) : null}
+      </div>
+
+      <MoreOptionsSection
+        value={moreOptions}
+        onChange={setMoreOptions}
+        campaignSuggestions={campaignLabels.map((c) => c.name)}
+      />
+
+      {/* Schedule & status */}
       <div>
         <FieldLabel>Schedule & status</FieldLabel>
-        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:items-center">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
           <input
             type="datetime-local"
             value={scheduledAt}
             onChange={(e) => setScheduledAt(e.target.value)}
-            className="flex-1 min-w-[180px] h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800"
+            className="flex-1 min-w-[180px] h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800"
           />
-          <label className="inline-flex items-center justify-between gap-3 h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 sm:min-w-[148px]">
-            <span className="text-xs font-semibold text-slate-700">Auto-Post</span>
+          <label className="inline-flex items-center justify-between gap-3 h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 sm:min-w-[140px]">
+            <span className="text-xs font-medium text-slate-600">Auto-Post</span>
             <Switch checked={autoPost} onCheckedChange={setAutoPost} />
           </label>
           <select
             value={workflow}
             onChange={(e) => setWorkflow(e.target.value as WorkflowStatus)}
-            className="h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 sm:min-w-[160px]"
+            className="h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 sm:min-w-[160px]"
             aria-label={t('studioStatus', locale)}
           >
             {WORKFLOW_COLUMNS.map((c) => (
@@ -999,19 +1112,19 @@ export default function PostStudioModal({
         </div>
       </div>
 
-      {/* Advanced — subtasks, projects, favourites extras */}
-      <Accordion type="single" collapsible className="rounded-xl border border-slate-200 px-3.5">
+      {/* Advanced */}
+      <Accordion type="single" collapsible className="rounded-md border border-slate-200 px-3">
         <AccordionItem value="advanced" className="border-0">
-          <AccordionTrigger className="py-3.5 text-sm font-semibold text-slate-700 hover:no-underline">
+          <AccordionTrigger className="py-3 text-sm font-medium text-slate-600 hover:no-underline">
             Advanced settings
           </AccordionTrigger>
-          <AccordionContent className="pb-4 space-y-5">
+          <AccordionContent className="pb-4 space-y-4">
             <div>
               <FieldLabel>{t('teamWorkspaceBrand', locale)}</FieldLabel>
               <select
                 value={project}
                 onChange={(e) => setProject(e.target.value)}
-                className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800"
+                className="w-full h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800"
               >
                 {workspaces.map((w) => (
                   <option key={w.id} value={w.name}>
@@ -1023,7 +1136,7 @@ export default function PostStudioModal({
 
             <div>
               <FieldLabel>{t('studioAssignees', locale)}</FieldLabel>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {PLANNER_TEAM.map((a) => {
                   const active = assignees.some((x) => x.id === a.id);
                   return (
@@ -1031,19 +1144,19 @@ export default function PostStudioModal({
                       key={a.id}
                       type="button"
                       onClick={() => toggleAssignee(a)}
-                      className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] pl-1.5 pr-3 rounded-full border text-xs font-semibold transition-colors ${
+                      className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] pl-1.5 pr-2.5 rounded-md border text-xs font-medium transition-colors ${
                         active
-                          ? 'border-[#F472B6] bg-[#FDF2F8] text-slate-800'
+                          ? 'border-slate-800 bg-slate-900 text-white'
                           : 'border-slate-200 bg-white text-slate-500'
                       }`}
                     >
                       <img
                         src={a.avatar_url}
                         alt=""
-                        className="w-7 h-7 rounded-full object-cover"
+                        className="w-6 h-6 rounded-sm object-cover"
                       />
                       {a.name}
-                      {active && <Check size={12} className="text-[#F472B6]" />}
+                      {active ? <Check size={12} /> : null}
                     </button>
                   );
                 })}
@@ -1052,11 +1165,11 @@ export default function PostStudioModal({
 
             <div>
               <FieldLabel>{t('campaignLabels', locale)}</FieldLabel>
-              <p className="text-[11px] text-slate-400 font-medium mb-2 -mt-1">
+              <p className="text-[11px] text-slate-400 mb-2 -mt-1">
                 {t('campaignLabelsHint', locale)}
               </p>
               {creatingProject ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 space-y-3">
+                <div className="rounded-md border border-slate-200 p-3 space-y-3">
                   <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
                     <FolderKanban size={12} />
                     {t('newProject', locale)}
@@ -1066,7 +1179,7 @@ export default function PostStudioModal({
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder={t('projectNamePlaceholder', locale)}
                     autoFocus
-                    className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+                    className="w-full h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:border-slate-400"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newProjectName.trim()) {
                         e.preventDefault();
@@ -1084,9 +1197,9 @@ export default function PostStudioModal({
                         key={c}
                         type="button"
                         onClick={() => setNewProjectColor(c)}
-                        className={`w-8 h-8 min-h-[32px] rounded-full ${
+                        className={`w-7 h-7 min-h-[28px] rounded-md ${
                           newProjectColor === c
-                            ? 'ring-2 ring-offset-2 ring-slate-400'
+                            ? 'ring-2 ring-offset-1 ring-slate-500'
                             : ''
                         }`}
                         style={{ background: c }}
@@ -1101,7 +1214,7 @@ export default function PostStudioModal({
                         setCreatingProject(false);
                         setNewProjectName('');
                       }}
-                      className="h-11 min-h-[44px] px-3 rounded-xl text-xs font-semibold text-slate-500 hover:bg-white"
+                      className="h-10 min-h-[40px] px-3 rounded-md text-xs font-medium text-slate-500 hover:bg-slate-50"
                     >
                       {t('cancel', locale)}
                     </button>
@@ -1111,7 +1224,7 @@ export default function PostStudioModal({
                         !newProjectName.trim() || createProjectMutation.isPending
                       }
                       onClick={() => createProjectMutation.mutate()}
-                      className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl bg-slate-900 text-white text-xs font-semibold disabled:opacity-40"
+                      className="inline-flex items-center justify-center gap-1.5 h-10 min-h-[40px] px-3 rounded-md bg-slate-900 text-white text-xs font-medium disabled:opacity-40"
                     >
                       {createProjectMutation.isPending ? (
                         <Loader2 size={14} className="animate-spin" />
@@ -1123,32 +1236,21 @@ export default function PostStudioModal({
                   </div>
                 </div>
               ) : campaignLabels.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-4 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <FolderKanban
-                      size={18}
-                      className="text-slate-300 mt-0.5 flex-shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-700">
-                        {t('noProjectsYet', locale)}
-                      </p>
-                      <p className="text-[11px] text-slate-400 font-medium mt-0.5 leading-snug">
-                        {t('campaignLabelsHint', locale)}
-                      </p>
-                    </div>
-                  </div>
+                <div className="rounded-md border border-dashed border-slate-200 px-3 py-3 space-y-2">
+                  <p className="text-xs font-medium text-slate-700">
+                    {t('noProjectsYet', locale)}
+                  </p>
                   <button
                     type="button"
                     onClick={() => setCreatingProject(true)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-xl bg-[#2B2568] text-white text-xs font-semibold hover:bg-[#1a1848] transition-colors"
+                    className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50"
                   >
                     <Plus size={14} />
                     {t('createProject', locale)}
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {campaignLabels.map((c) => {
                     const active = campaignIds.includes(c.id);
                     return (
@@ -1156,25 +1258,25 @@ export default function PostStudioModal({
                         key={c.id}
                         type="button"
                         onClick={() => toggleCampaign(c.id)}
-                        className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-full border text-xs font-semibold transition-colors ${
+                        className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] px-2.5 rounded-md border text-xs font-medium transition-colors ${
                           active
-                            ? 'border-slate-900 bg-slate-900 text-white'
+                            ? 'border-slate-800 bg-slate-900 text-white'
                             : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
                         }`}
                       >
                         <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ background: active ? '#F472B6' : c.color }}
+                          className="w-1.5 h-1.5 rounded-sm flex-shrink-0"
+                          style={{ background: active ? '#fff' : c.color }}
                         />
                         {c.name}
-                        {active && <Check size={12} />}
+                        {active ? <Check size={12} /> : null}
                       </button>
                     );
                   })}
                   <button
                     type="button"
                     onClick={() => setCreatingProject(true)}
-                    className="inline-flex items-center gap-1 h-11 min-h-[44px] px-3 rounded-full border border-dashed border-slate-200 bg-white text-xs font-semibold text-slate-500 hover:border-slate-300 hover:text-slate-800 transition-colors"
+                    className="inline-flex items-center gap-1 h-10 min-h-[40px] px-2.5 rounded-md border border-dashed border-slate-200 bg-white text-xs font-medium text-slate-500 hover:border-slate-300 hover:text-slate-800 transition-colors"
                   >
                     <Plus size={12} />
                     {t('createProject', locale)}
@@ -1185,11 +1287,11 @@ export default function PostStudioModal({
 
             <div>
               <FieldLabel>{t('studioSubtasks', locale)}</FieldLabel>
-              <div className="space-y-1.5 mb-2">
+              <div className="space-y-1 mb-2">
                 {subtasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center gap-2 h-11 min-h-[44px] px-2 rounded-xl bg-slate-50 border border-slate-100"
+                    className="flex items-center gap-2 h-10 min-h-[40px] px-2 rounded-md border border-slate-200"
                   >
                     <Checkbox
                       checked={task.done}
@@ -1204,7 +1306,7 @@ export default function PostStudioModal({
                       }
                     />
                     <span
-                      className={`flex-1 text-sm font-semibold ${
+                      className={`flex-1 text-sm ${
                         task.done
                           ? 'line-through text-slate-400'
                           : 'text-slate-800'
@@ -1219,7 +1321,7 @@ export default function PostStudioModal({
                           prev.filter((t) => t.id !== task.id)
                         )
                       }
-                      className="h-10 w-10 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-300 hover:text-red-500"
+                      className="h-9 w-9 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-300 hover:text-slate-600"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -1244,7 +1346,7 @@ export default function PostStudioModal({
                     }
                   }}
                   placeholder="Add a subtask…"
-                  className="h-11 rounded-xl border-slate-200"
+                  className="h-10 rounded-md border-slate-200"
                 />
                 <button
                   type="button"
@@ -1260,7 +1362,7 @@ export default function PostStudioModal({
                     ]);
                     setNewTask('');
                   }}
-                  className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                  className="h-10 w-10 min-h-[40px] min-w-[40px] rounded-md border border-slate-200 hover:bg-slate-50 flex items-center justify-center"
                 >
                   <Plus size={16} />
                 </button>
@@ -1285,7 +1387,7 @@ export default function PostStudioModal({
             key={key}
             type="button"
             onClick={() => setChatVisibility(key)}
-            className={`flex-1 h-10 min-h-[40px] rounded-xl text-xs font-semibold transition-colors ${
+            className={`flex-1 h-10 min-h-[40px] rounded-md text-xs font-medium transition-colors ${
               chatVisibility === key
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-50 text-slate-500 hover:text-slate-700'
@@ -1308,7 +1410,7 @@ export default function PostStudioModal({
             <ul className="space-y-2.5">
               {[...filteredActivity].reverse().map((a) => (
                 <li key={a.id} className="flex gap-2 text-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#F472B6] mt-1.5 flex-shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-900 mt-1.5 flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-800">{a.text}</p>
                     <p className="text-[10px] text-slate-400 font-medium">
@@ -1337,7 +1439,7 @@ export default function PostStudioModal({
                   alt=""
                   className="w-7 h-7 rounded-full object-cover flex-shrink-0"
                 />
-                <div className="min-w-0 flex-1 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2">
+                <div className="min-w-0 flex-1 rounded-md border border-slate-200 px-3 py-2">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-xs font-semibold text-slate-800">
                       {c.author_name}
@@ -1442,7 +1544,7 @@ export default function PostStudioModal({
             type="button"
             onClick={() => void sendComment()}
             disabled={sending || (!comment.trim() && !commentImage)}
-            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F472B6] text-white flex items-center justify-center disabled:opacity-40"
+            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-slate-900 text-white flex items-center justify-center disabled:opacity-40"
           >
             <Send size={14} />
           </button>
@@ -1464,7 +1566,7 @@ export default function PostStudioModal({
             key={key}
             type="button"
             onClick={() => setSideTab(key)}
-            className={`flex-1 h-10 min-h-[40px] rounded-xl text-xs font-semibold transition-colors ${
+            className={`flex-1 h-10 min-h-[40px] rounded-md text-xs font-medium transition-colors ${
               sideTab === key
                 ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
                 : 'bg-transparent text-slate-500 hover:text-slate-700'
@@ -1505,23 +1607,23 @@ export default function PostStudioModal({
         className="p-0 gap-0 overflow-hidden flex flex-col border-0 sm:border border-slate-200/80 bg-white
           w-full max-w-none sm:max-w-[min(1200px,96vw)]
           h-[100dvh] max-h-[100dvh] sm:h-[min(880px,92vh)] sm:max-h-[92vh]
-          rounded-none sm:rounded-2xl
+          rounded-none sm:rounded-lg
           top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]"
       >
         {/* Header */}
-        <div className="flex items-center gap-2 px-3 sm:px-5 h-14 border-b border-slate-100 flex-shrink-0">
+        <div className="flex items-center gap-2 px-3 sm:px-5 h-14 border-b border-slate-200 flex-shrink-0">
           <DialogTitle className="sr-only">Post Studio</DialogTitle>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="lg:hidden h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-500 hover:bg-slate-100 flex items-center justify-center"
+            className="lg:hidden h-10 w-10 min-h-[40px] min-w-[40px] rounded-md text-slate-500 hover:bg-slate-100 flex items-center justify-center"
             aria-label="Close"
           >
             <X size={18} />
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-slate-400 truncate">{project}</p>
-            <p className="text-sm font-semibold text-slate-900 truncate">
+            <p className="text-sm font-medium text-slate-900 truncate">
               {derivedTitle || t('newPostDefault', locale)}
             </p>
           </div>
@@ -1530,13 +1632,13 @@ export default function PostStudioModal({
               <button
                 type="button"
                 disabled={!canShare && !shareCopied}
-                className="hidden sm:inline-flex h-11 min-h-[44px] px-3 rounded-xl text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 items-center gap-1.5 disabled:opacity-40 transition-colors"
+                className="hidden sm:inline-flex h-10 min-h-[40px] px-3 rounded-md text-xs font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 items-center gap-1.5 disabled:opacity-40 transition-colors"
                 title="Share with a client"
               >
                 {sharing ? (
                   <Loader2 size={13} className="animate-spin" />
                 ) : shareCopied ? (
-                  <Check size={13} className="text-emerald-600" />
+                  <Check size={13} className="text-slate-700" />
                 ) : (
                   <Share2 size={13} />
                 )}
@@ -1577,7 +1679,7 @@ export default function PostStudioModal({
               <Button
                 type="button"
                 disabled={saving || !caption.trim() || platforms.length === 0}
-                className="h-11 min-h-[44px] rounded-xl bg-[#F472B6] hover:opacity-90 text-white font-semibold px-3 sm:px-4 text-xs sm:text-sm gap-1.5"
+                className="h-10 min-h-[40px] rounded-md bg-slate-900 hover:bg-slate-800 text-white font-medium px-3 sm:px-4 text-xs sm:text-sm gap-1.5"
               >
                 {saving ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -1617,7 +1719,7 @@ export default function PostStudioModal({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold text-[#F472B6]"
+                className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold text-slate-700"
                 disabled={
                   saving ||
                   ![...platforms].some((p) => connectedPlatforms.has(p)) ||
@@ -1646,7 +1748,7 @@ export default function PostStudioModal({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="hidden lg:flex h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:bg-slate-100 items-center justify-center"
+            className="hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] rounded-md text-slate-400 hover:bg-slate-100 items-center justify-center"
             aria-label="Close"
           >
             <X size={18} />
@@ -1701,7 +1803,7 @@ export default function PostStudioModal({
                 type="button"
                 onClick={() => setMobilePane(key)}
                 className={`flex flex-col items-center justify-center gap-0.5 h-14 min-h-[56px] text-[10px] font-semibold ${
-                  mobilePane === key ? 'text-[#F472B6]' : 'text-slate-400'
+                  mobilePane === key ? 'text-slate-700' : 'text-slate-400'
                 }`}
               >
                 <Icon size={18} />
@@ -1728,7 +1830,7 @@ export default function PostStudioModal({
           if (!sharing) setEmailShareOpen(open);
         }}
       >
-        <DialogContent className="max-w-[min(420px,94vw)] rounded-2xl border-slate-200 z-[90]">
+        <DialogContent className="max-w-[min(420px,94vw)] rounded-lg border-slate-200 z-[90]">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-slate-900">
               Email client
@@ -1753,7 +1855,7 @@ export default function PostStudioModal({
                 value={emailTo}
                 onChange={(e) => setEmailTo(e.target.value)}
                 placeholder="client@brand.com"
-                className="h-11 min-h-[44px] rounded-xl border-slate-200 text-sm"
+                className="h-10 min-h-[40px] rounded-md border-slate-200 text-sm"
                 disabled={sharing}
               />
               <p className="mt-1 text-[11px] text-slate-400 font-medium">
@@ -1772,7 +1874,7 @@ export default function PostStudioModal({
                 value={emailNote}
                 onChange={(e) => setEmailNote(e.target.value)}
                 placeholder="Quick context for your client…"
-                className="min-h-[72px] rounded-xl border-slate-200 text-sm resize-none"
+                className="min-h-[72px] rounded-md border-slate-200 text-sm resize-none"
                 disabled={sharing}
               />
             </div>
@@ -1782,7 +1884,7 @@ export default function PostStudioModal({
               type="button"
               onClick={() => setEmailShareOpen(false)}
               disabled={sharing}
-              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              className="inline-flex items-center justify-center min-h-[40px] px-4 rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50"
             >
               Cancel
             </button>
@@ -1790,7 +1892,7 @@ export default function PostStudioModal({
               type="button"
               onClick={() => void emailShareLink()}
               disabled={sharing || !emailTo.trim() || !caption.trim()}
-              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-semibold hover:bg-[#1e1b4b] disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 min-h-[40px] px-4 rounded-md bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 disabled:opacity-50"
             >
               {sharing ? (
                 <Loader2 size={14} className="animate-spin" />

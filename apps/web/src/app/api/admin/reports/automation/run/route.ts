@@ -11,6 +11,7 @@ import {
 } from '@/lib/social/persist';
 import {
   assertReportWorkspaceAccess,
+  findReportForPeriod,
   getAutomationConfig,
   markAutomationSent,
 } from '@/lib/reports/persist';
@@ -74,20 +75,36 @@ export async function POST(request: Request) {
   const recipients = config?.recipient_emails || [];
 
   try {
-    const { report, metrics, ai } = await buildAndSaveReport({
+    const existing = await findReportForPeriod({
       userId: session.user.id,
       workspaceId,
-      workspaceName:
-        body.workspaceName != null ? String(body.workspaceName) : null,
-      title: `${period.label} performance report`,
-      startDate: period.start,
-      endDate: period.end,
-      dateRangeLabel: `${period.start} - ${period.end}`,
-      platforms,
-      includeAiAnalysis: true,
-      hideAiOnPublicLink: Boolean(config?.hide_ai_on_public_link),
-      isAutomated: true,
+      periodStart: period.start,
+      periodEnd: period.end,
     });
+
+    let report = existing;
+    let metrics = existing?.metrics;
+    let ai = existing?.ai_insights ?? null;
+
+    if (!existing) {
+      const built = await buildAndSaveReport({
+        userId: session.user.id,
+        workspaceId,
+        workspaceName:
+          body.workspaceName != null ? String(body.workspaceName) : null,
+        title: `${period.label} performance report`,
+        startDate: period.start,
+        endDate: period.end,
+        dateRangeLabel: `${period.start} - ${period.end}`,
+        platforms,
+        includeAiAnalysis: true,
+        hideAiOnPublicLink: Boolean(config?.hide_ai_on_public_link),
+        isAutomated: true,
+      });
+      report = built.report;
+      metrics = built.metrics;
+      ai = built.ai;
+    }
 
     if (!report) {
       return Response.json(
@@ -107,7 +124,8 @@ export async function POST(request: Request) {
           body.workspaceName != null ? String(body.workspaceName) : undefined,
       })) as Array<Record<string, unknown>>;
 
-      if (emails.length > 0) {
+      const emailSent = emails.some((e) => e.ok === true);
+      if (emailSent) {
         await markAutomationSent({
           userId: session.user.id,
           workspaceId,
@@ -123,9 +141,11 @@ export async function POST(request: Request) {
       metrics,
       aiInsights: ai,
       emails,
-      emailed: emails.length > 0,
-      message:
-        sendEmail && recipients.length === 0
+      emailed: emails.some((e) => e.ok === true),
+      duplicate: Boolean(existing),
+      message: existing
+        ? 'Report for this period already exists — reusing saved snapshot.'
+        : sendEmail && recipients.length === 0
           ? 'Report created. Save recipient emails to also send email.'
           : undefined,
     });

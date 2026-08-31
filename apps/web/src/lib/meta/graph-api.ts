@@ -203,9 +203,20 @@ async function waitForInstagramContainerReady(
   );
 }
 
+export type InstagramPublishOptions = {
+  mediaKind?: InstagramMediaKind;
+  /** Up to 3 Instagram usernames (no @) invited as collaborators. */
+  collaborators?: string[];
+  /** Facebook Places / Instagram location id for tagging. */
+  locationId?: string | null;
+  /** Posted via /{media-id}/comments right after media_publish. */
+  firstComment?: string | null;
+};
+
 /**
  * Publish an image or video/reel to an Instagram Business account.
  * 1) Create media container → 2) Poll until FINISHED → 3) media_publish.
+ * Optionally attaches collaborators + location_id, then posts first_comment.
  * `mediaUrl` must be a public HTTPS URL (e.g. Supabase Storage).
  */
 export async function publishInstagramPost(
@@ -213,15 +224,26 @@ export async function publishInstagramPost(
   accessToken: string,
   imageUrl: string,
   caption: string,
-  mediaKind?: InstagramMediaKind
-): Promise<PublishResult> {
+  mediaKindOrOptions?: InstagramMediaKind | InstagramPublishOptions
+): Promise<PublishResult & { firstCommentId?: string; firstCommentError?: string }> {
+  const options: InstagramPublishOptions =
+    typeof mediaKindOrOptions === 'string' || mediaKindOrOptions == null
+      ? { mediaKind: mediaKindOrOptions }
+      : mediaKindOrOptions;
+
   const mediaUrl = toVerifiedPublishMediaUrl(imageUrl.trim());
   if (!mediaUrl) {
     throw new Error('Instagram: media URL is empty');
   }
 
-  const isVideo = looksLikeVideoUrl(mediaUrl, mediaKind);
-  const payload: Record<string, string> = {
+  const isVideo = looksLikeVideoUrl(mediaUrl, options.mediaKind);
+  const collaborators = (options.collaborators || [])
+    .map((u) => String(u).trim().replace(/^@+/, '').toLowerCase())
+    .filter(Boolean)
+    .slice(0, 3);
+  const locationId = String(options.locationId || '').trim() || null;
+
+  const payload: Record<string, unknown> = {
     caption,
     access_token: accessToken,
   };
@@ -230,6 +252,12 @@ export async function publishInstagramPost(
     payload.video_url = mediaUrl;
   } else {
     payload.image_url = mediaUrl;
+  }
+  if (collaborators.length) {
+    payload.collaborators = collaborators;
+  }
+  if (locationId) {
+    payload.location_id = locationId;
   }
 
   let created: GraphContainerBody;
@@ -298,7 +326,59 @@ export async function publishInstagramPost(
     );
   }
 
-  return { id: publishedId, containerId };
+  const firstComment = String(options.firstComment || '').trim();
+  if (!firstComment) {
+    return { id: publishedId, containerId };
+  }
+
+  try {
+    const comment = await postInstagramMediaComment(
+      publishedId,
+      firstComment,
+      accessToken
+    );
+    return { id: publishedId, containerId, firstCommentId: comment.id };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to post first comment';
+    console.warn('[meta/first_comment] non-fatal', {
+      publishedId,
+      message,
+    });
+    return {
+      id: publishedId,
+      containerId,
+      firstCommentError: message,
+    };
+  }
+}
+
+/** Post a top-level comment on published Instagram media (first-comment workflow). */
+export async function postInstagramMediaComment(
+  mediaId: string,
+  message: string,
+  accessToken: string
+): Promise<{ id: string }> {
+  const text = message.trim();
+  if (!text) throw new Error('Instagram: first comment is empty');
+
+  const result = await graphPublishRequest(
+    `${GRAPH_BASE}/${encodeURIComponent(mediaId)}/comments`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        access_token: accessToken,
+      }),
+    },
+    'media comments'
+  );
+  const id = extractContainerId(result.data);
+  if (!id) {
+    throw new Error('Instagram did not return a comment id for first comment');
+  }
+  return { id };
 }
 
 /**
@@ -1225,17 +1305,38 @@ export type FacebookPagePostItem = {
 function flattenFbInsights(item: FacebookPagePostItem): FacebookPagePostItem {
   let impressions = 0;
   for (const metric of item.insights?.data ?? []) {
+    const name = String(metric.name || '');
+    // Prefer current Meta metrics; keep legacy names for older Graph responses.
     if (
-      metric.name === 'post_impressions_unique' ||
-      metric.name === 'post_impressions'
+      name === 'post_media_view' ||
+      name === 'post_total_media_view' ||
+      name === 'post_total_media_view_unique' ||
+      name === 'post_impressions' ||
+      name === 'post_impressions_unique'
     ) {
-      impressions = Number(metric.values?.[0]?.value) || impressions;
+      const value = Number(metric.values?.[0]?.value) || 0;
+      if (value > impressions) impressions = value;
     }
   }
   return { ...item, impressions };
 }
 
 const FB_POST_FIELDS_WITH_INSIGHTS = [
+  'id',
+  'message',
+  'created_time',
+  'full_picture',
+  'permalink_url',
+  'status_type',
+  'shares',
+  'likes.summary(true)',
+  'comments.summary(true)',
+  'attachments{media_type,type,media}',
+  // post_impressions was deprecated — post_media_view is the current replacement.
+  'insights.metric(post_media_view)',
+].join(',');
+
+const FB_POST_FIELDS_WITH_INSIGHTS_LEGACY = [
   'id',
   'message',
   'created_time',
@@ -1285,7 +1386,7 @@ export async function fetchFacebookPagePosts(
   pageAccessToken: string,
   limit = 25
 ): Promise<FacebookPagePostItem[]> {
-  // Prefer published_posts + insights; fall back to /feed or fields without insights.
+  // Prefer published_posts + current insights; fall back to legacy / basic / feed.
   try {
     const posts = await fetchFacebookEdge(
       pageId,
@@ -1296,7 +1397,20 @@ export async function fetchFacebookPagePosts(
     );
     if (posts.length > 0) return posts;
   } catch (error) {
-    console.warn('[graph] published_posts+insights failed', error);
+    console.warn('[graph] published_posts+post_media_view failed', error);
+  }
+
+  try {
+    const posts = await fetchFacebookEdge(
+      pageId,
+      'published_posts',
+      pageAccessToken,
+      FB_POST_FIELDS_WITH_INSIGHTS_LEGACY,
+      limit
+    );
+    if (posts.length > 0) return posts;
+  } catch (error) {
+    console.warn('[graph] published_posts+insights legacy failed', error);
   }
 
   try {

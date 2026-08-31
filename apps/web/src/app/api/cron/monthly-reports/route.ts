@@ -7,6 +7,7 @@
 
 import { cronEnv, missingEnvKeys, missingEnvResponse } from '@/lib/config/env';
 import {
+  findReportForPeriod,
   listEnabledAutomationsForDay,
   markAutomationSent,
 } from '@/lib/reports/persist';
@@ -70,21 +71,32 @@ async function runCron(request: Request) {
         ? `${period.label} performance report`
         : 'Monthly Analytics Report';
       const dateRangeLabel = `${period.start} - ${period.end}`;
-      const { report } = await buildAndSaveReport({
-        userId: config.user_id,
-        workspaceId: config.workspace_id,
-        workspaceName: null,
-        title,
-        startDate: period.start,
-        endDate: period.end,
-        dateRangeLabel,
-        platforms: config.platforms?.length
-          ? config.platforms
-          : ['instagram', 'facebook', 'tiktok'],
-        includeAiAnalysis: true,
-        hideAiOnPublicLink: config.hide_ai_on_public_link,
-        isAutomated: true,
-      });
+
+      let report =
+        (await findReportForPeriod({
+          userId: config.user_id,
+          workspaceId: config.workspace_id,
+          periodStart: period.start,
+          periodEnd: period.end,
+        })) ?? null;
+
+      if (!report) {
+        const built = await buildAndSaveReport({
+          userId: config.user_id,
+          workspaceId: config.workspace_id,
+          title,
+          startDate: period.start,
+          endDate: period.end,
+          dateRangeLabel,
+          platforms: config.platforms?.length
+            ? config.platforms
+            : ['instagram', 'facebook', 'tiktok'],
+          includeAiAnalysis: true,
+          hideAiOnPublicLink: config.hide_ai_on_public_link,
+          isAutomated: true,
+        });
+        report = built.report;
+      }
 
       if (!report) {
         results.push({
@@ -103,19 +115,25 @@ async function runCron(request: Request) {
         subjectTemplate: config.subject_template,
       });
 
-      await markAutomationSent({
-        userId: config.user_id,
-        workspaceId: config.workspace_id,
-        periodKey,
-      });
+      const emailSent = emails.some(
+        (e) => (e as { ok?: boolean }).ok === true
+      );
+      if (emailSent) {
+        await markAutomationSent({
+          userId: config.user_id,
+          workspaceId: config.workspace_id,
+          periodKey,
+        });
+      }
 
       results.push({
         userId: config.user_id,
         workspaceId: config.workspace_id,
-        ok: true,
+        ok: emailSent,
         reportId: report.id,
         token: report.public_share_token,
         emails,
+        ...(emailSent ? {} : { error: 'email_failed' }),
       });
     } catch (error) {
       console.warn(

@@ -69,9 +69,10 @@ async function loadWorkspaceAccounts(
 
 async function fetchInstagramPosts(
   igUserId: string,
-  token: string
+  token: string,
+  limit = 50
 ): Promise<UnifiedPostMetric[]> {
-  const media = await fetchInstagramMedia(igUserId, token, 50);
+  const media = await fetchInstagramMedia(igUserId, token, limit);
   return media.map((item) => {
     const likes = Number(item.like_count) || 0;
     const comments = Number(item.comments_count) || 0;
@@ -104,9 +105,10 @@ async function fetchInstagramPosts(
 
 async function fetchFacebookPosts(
   pageId: string,
-  token: string
+  token: string,
+  limit = 50
 ): Promise<UnifiedPostMetric[]> {
-  const posts = await fetchFacebookPagePosts(pageId, token, 50);
+  const posts = await fetchFacebookPagePosts(pageId, token, limit);
   return posts.map((item) => {
     const likes = Number(item.likes?.summary?.total_count) || 0;
     const comments = Number(item.comments?.summary?.total_count) || 0;
@@ -147,7 +149,13 @@ async function fetchFacebookPosts(
 
 async function fetchTikTokPosts(
   token: string,
-  ctx: { userId: string; workspaceId: string; refreshToken?: string | null; expiresAt?: string | null }
+  ctx: {
+    userId: string;
+    workspaceId: string;
+    refreshToken?: string | null;
+    expiresAt?: string | null;
+    limit?: number;
+  }
 ): Promise<UnifiedPostMetric[]> {
   const accessToken = await ensureFreshTikTokAccessToken({
     userId: ctx.userId,
@@ -156,7 +164,7 @@ async function fetchTikTokPosts(
     refreshToken: ctx.refreshToken,
     expiresAt: ctx.expiresAt,
   });
-  const videos = await fetchTikTokVideos(accessToken, 20);
+  const videos = await fetchTikTokVideos(accessToken, ctx.limit ?? 20);
   return videos.map((item) => {
     const likes = Number(item.like_count) || 0;
     const comments = Number(item.comment_count) || 0;
@@ -192,17 +200,38 @@ export type LivePostsAnalytics = {
   sort: 'engagementRate' | 'publishedAt';
 };
 
+export type UnifiedPostFetchLimits = {
+  instagram?: number;
+  facebook?: number;
+  tiktok?: number;
+};
+
 /** Pull + normalize live posts for the active workspace. */
 export async function fetchLiveUnifiedPosts(input: {
   userId: string;
   workspaceId: string;
   sort?: 'engagementRate' | 'publishedAt';
+  postLimits?: UnifiedPostFetchLimits;
 }): Promise<LivePostsAnalytics> {
   const sort = input.sort || 'engagementRate';
+  const limits = input.postLimits ?? {};
+  const igLimit = limits.instagram ?? 50;
+  const fbLimit = limits.facebook ?? 50;
+  const tiktokLimit = limits.tiktok ?? 20;
   const rows = await loadWorkspaceAccounts(input.userId, input.workspaceId);
   const byPlatform = new Map<string, TokenRow>();
   for (const row of rows) {
     if (!byPlatform.has(row.platform)) byPlatform.set(row.platform, row);
+  }
+
+  function tokenRowFor(platform: UnifiedPostPlatform): TokenRow | undefined {
+    const direct = byPlatform.get(platform);
+    if (direct?.access_token) return direct;
+    if (platform === 'tiktok') {
+      const business = byPlatform.get('tiktok_business');
+      if (business?.access_token) return business;
+    }
+    return direct;
   }
 
   const posts: UnifiedPostMetric[] = [];
@@ -212,7 +241,7 @@ export async function fetchLiveUnifiedPosts(input: {
 
   await Promise.all(
     platforms.map(async (platform) => {
-      const row = byPlatform.get(platform);
+      const row = tokenRowFor(platform);
       if (!row?.access_token) {
         accounts.push({
           platform,
@@ -240,17 +269,22 @@ export async function fetchLiveUnifiedPosts(input: {
       try {
         let batch: UnifiedPostMetric[] = [];
         if (platform === 'instagram' && row.platform_user_id) {
-          batch = await fetchInstagramPosts(row.platform_user_id, row.access_token);
+          batch = await fetchInstagramPosts(
+            row.platform_user_id,
+            row.access_token,
+            igLimit
+          );
         } else if (platform === 'facebook') {
           const pageId = row.page_id || row.platform_user_id;
           if (!pageId) throw new Error('Facebook Page id missing');
-          batch = await fetchFacebookPosts(pageId, row.access_token);
+          batch = await fetchFacebookPosts(pageId, row.access_token, fbLimit);
         } else if (platform === 'tiktok') {
           batch = await fetchTikTokPosts(row.access_token, {
             userId: input.userId,
             workspaceId: input.workspaceId,
             refreshToken: row.refresh_token,
             expiresAt: row.expires_at,
+            limit: tiktokLimit,
           });
         }
 

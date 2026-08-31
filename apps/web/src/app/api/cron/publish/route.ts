@@ -76,8 +76,20 @@ async function runCron() {
         title: post.title,
         mediaUrl,
         mediaType,
+        mediaUrls: post.media_urls?.length
+          ? post.media_urls
+          : post.media_items.map((m) => m.url).filter(Boolean),
         extraImageUrls,
         youtube: post.youtube,
+        publishMode: post.publish_mode,
+        trendingSoundNote: post.trending_sound_note || undefined,
+        collaborators: post.collaborators,
+        firstComment: post.first_comment,
+        locationName: post.location_name,
+        locationId: post.location_id,
+        linkInBioUrl: post.link_in_bio_url,
+        postTags: post.post_tags,
+        campaignTag: post.campaign_tag,
       });
 
       results.push({
@@ -85,10 +97,12 @@ async function runCron() {
         userId: post.user_id,
         workspaceId: post.workspace_id,
         ok: outcome.ok,
+        publish_mode: outcome.publish_mode || post.publish_mode,
         published_count: outcome.published_count,
         failed_count: outcome.failed_count,
         error_log: outcome.error_log,
         message: outcome.message,
+        reminder: outcome.reminder,
       });
     } catch (error) {
       console.error('[cron/publish] failed', post.id, error);

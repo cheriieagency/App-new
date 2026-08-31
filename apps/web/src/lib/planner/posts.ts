@@ -16,9 +16,19 @@ import type {
   WorkflowStatus,
   YoutubeMeta,
 } from '@/lib/mock-content-planner';
+import {
+  parsePublishMode,
+  type PublishMode,
+} from '@/lib/planner/publish-modes';
+import {
+  normalizeCollaborators,
+  normalizeOptionalText,
+  normalizeOptionalUrl,
+  normalizePostTags,
+} from '@/lib/planner/more-options';
 
 let schemaReady: Promise<void> | null = null;
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 5;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -103,6 +113,46 @@ export async function ensurePlannerPostsSchema(): Promise<void> {
           AND auto_post = true
           AND scheduled_at IS NOT NULL
     `);
+    await safeAlter('planner_posts_publish_mode', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS publish_mode text NOT NULL DEFAULT 'auto_publish'
+    `);
+    await safeAlter('planner_posts_trending_sound_note', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS trending_sound_note text
+    `);
+    await safeAlter('planner_posts_media_urls', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS media_urls jsonb NOT NULL DEFAULT '[]'::jsonb
+    `);
+    await safeAlter('planner_posts_collaborators', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS collaborators jsonb NOT NULL DEFAULT '[]'::jsonb
+    `);
+    await safeAlter('planner_posts_first_comment', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS first_comment text
+    `);
+    await safeAlter('planner_posts_location_name', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS location_name text
+    `);
+    await safeAlter('planner_posts_location_id', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS location_id text
+    `);
+    await safeAlter('planner_posts_link_in_bio_url', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS link_in_bio_url text
+    `);
+    await safeAlter('planner_posts_post_tags', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS post_tags jsonb NOT NULL DEFAULT '[]'::jsonb
+    `);
+    await safeAlter('planner_posts_campaign_tag', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS campaign_tag text
+    `);
 
     schemaVersionApplied = SCHEMA_VERSION;
   })().catch((error) => {
@@ -148,6 +198,33 @@ function rowToPost(row: Record<string, unknown>): PlannerPost {
         type: m.type === 'video' ? 'video' : 'image',
       } satisfies PlannerMediaItem;
     }),
+    media_urls: (() => {
+      const fromCol = asArray(row.media_urls, (u) =>
+        typeof u === 'string' && u.trim() ? u.trim() : null
+      );
+      if (fromCol.length) return fromCol;
+      return asArray(row.media_items, (item) => {
+        if (!item || typeof item !== 'object') return null;
+        const url = (item as Record<string, unknown>).url;
+        return typeof url === 'string' && url.trim() ? url.trim() : null;
+      });
+    })(),
+    publish_mode: parsePublishMode(row.publish_mode),
+    trending_sound_note:
+      typeof row.trending_sound_note === 'string'
+        ? row.trending_sound_note
+        : null,
+    collaborators: normalizeCollaborators(row.collaborators),
+    first_comment:
+      typeof row.first_comment === 'string' ? row.first_comment : null,
+    location_name:
+      typeof row.location_name === 'string' ? row.location_name : null,
+    location_id: typeof row.location_id === 'string' ? row.location_id : null,
+    link_in_bio_url:
+      typeof row.link_in_bio_url === 'string' ? row.link_in_bio_url : null,
+    post_tags: normalizePostTags(row.post_tags),
+    campaign_tag:
+      typeof row.campaign_tag === 'string' ? row.campaign_tag : null,
     youtube: (row.youtube as YoutubeMeta | null) ?? null,
     idea_title: typeof row.idea_title === 'string' ? row.idea_title : undefined,
     project: String(row.project ?? ''),
@@ -274,6 +351,16 @@ export type UpsertDurablePlannerPostInput = {
   media_url?: string | null;
   media_type?: PlannerPost['media_type'];
   media_items?: PlannerMediaItem[];
+  media_urls?: string[];
+  publish_mode?: PublishMode;
+  trending_sound_note?: string | null;
+  collaborators?: string[];
+  first_comment?: string | null;
+  location_name?: string | null;
+  location_id?: string | null;
+  link_in_bio_url?: string | null;
+  post_tags?: string[];
+  campaign_tag?: string | null;
   youtube?: YoutubeMeta | null;
   idea_title?: string;
   project?: string;
@@ -345,6 +432,50 @@ export async function upsertDurablePlannerPost(
       input.media_items !== undefined
         ? input.media_items
         : existing?.media_items ?? [],
+    media_urls: (() => {
+      if (input.media_urls !== undefined) return input.media_urls;
+      const items =
+        input.media_items !== undefined
+          ? input.media_items
+          : existing?.media_items ?? [];
+      return items.map((m) => m.url).filter(Boolean);
+    })(),
+    publish_mode:
+      input.publish_mode ??
+      existing?.publish_mode ??
+      'auto_publish',
+    trending_sound_note:
+      input.trending_sound_note !== undefined
+        ? input.trending_sound_note
+        : existing?.trending_sound_note ?? null,
+    collaborators:
+      input.collaborators !== undefined
+        ? normalizeCollaborators(input.collaborators)
+        : existing?.collaborators ?? [],
+    first_comment:
+      input.first_comment !== undefined
+        ? normalizeOptionalText(input.first_comment, 2200)
+        : existing?.first_comment ?? null,
+    location_name:
+      input.location_name !== undefined
+        ? normalizeOptionalText(input.location_name, 200)
+        : existing?.location_name ?? null,
+    location_id:
+      input.location_id !== undefined
+        ? normalizeOptionalText(input.location_id, 64)
+        : existing?.location_id ?? null,
+    link_in_bio_url:
+      input.link_in_bio_url !== undefined
+        ? normalizeOptionalUrl(input.link_in_bio_url)
+        : existing?.link_in_bio_url ?? null,
+    post_tags:
+      input.post_tags !== undefined
+        ? normalizePostTags(input.post_tags)
+        : existing?.post_tags ?? [],
+    campaign_tag:
+      input.campaign_tag !== undefined
+        ? normalizeOptionalText(input.campaign_tag, 120)
+        : existing?.campaign_tag ?? null,
     youtube:
       input.youtube !== undefined ? input.youtube : existing?.youtube ?? null,
     idea_title:
@@ -377,7 +508,10 @@ export async function upsertDurablePlannerPost(
     INSERT INTO public.planner_posts (
       id, workspace_id, user_id, title, caption, hashtags, platforms,
       workflow, status, scheduled_at, published_at, media_url, media_type,
-      media_items, youtube, idea_title, project, campaigns, assignees,
+      media_items, media_urls, publish_mode, trending_sound_note,
+      collaborators, first_comment, location_name, location_id,
+      link_in_bio_url, post_tags, campaign_tag,
+      youtube, idea_title, project, campaigns, assignees,
       subtasks, auto_post, activity, comments, created_by, created_at, updated_at
     ) VALUES (
       ${post.id},
@@ -394,6 +528,16 @@ export async function upsertDurablePlannerPost(
       ${post.media_url},
       ${post.media_type},
       ${JSON.stringify(post.media_items)},
+      ${JSON.stringify(post.media_urls ?? [])},
+      ${post.publish_mode ?? 'auto_publish'},
+      ${post.trending_sound_note ?? null},
+      ${JSON.stringify(post.collaborators ?? [])},
+      ${post.first_comment ?? null},
+      ${post.location_name ?? null},
+      ${post.location_id ?? null},
+      ${post.link_in_bio_url ?? null},
+      ${JSON.stringify(post.post_tags ?? [])},
+      ${post.campaign_tag ?? null},
       ${post.youtube ? JSON.stringify(post.youtube) : null},
       ${post.idea_title ?? null},
       ${post.project},
@@ -420,6 +564,16 @@ export async function upsertDurablePlannerPost(
       media_url = EXCLUDED.media_url,
       media_type = EXCLUDED.media_type,
       media_items = EXCLUDED.media_items,
+      media_urls = EXCLUDED.media_urls,
+      publish_mode = EXCLUDED.publish_mode,
+      trending_sound_note = EXCLUDED.trending_sound_note,
+      collaborators = EXCLUDED.collaborators,
+      first_comment = EXCLUDED.first_comment,
+      location_name = EXCLUDED.location_name,
+      location_id = EXCLUDED.location_id,
+      link_in_bio_url = EXCLUDED.link_in_bio_url,
+      post_tags = EXCLUDED.post_tags,
+      campaign_tag = EXCLUDED.campaign_tag,
       youtube = EXCLUDED.youtube,
       idea_title = EXCLUDED.idea_title,
       project = EXCLUDED.project,
@@ -542,6 +696,8 @@ export async function markPlannerPostPublishOutcome(input: {
   success: boolean;
   errorLog: string | null;
   activityText: string;
+  /** Override success workflow (default PUBLISHED). */
+  successWorkflow?: WorkflowStatus;
 }): Promise<void> {
   if (!process.env.DATABASE_URL?.trim()) return;
   await ensurePlannerPostsSchema();
@@ -564,12 +720,14 @@ export async function markPlannerPostPublishOutcome(input: {
   ].slice(-40);
 
   if (input.success) {
+    const workflow = input.successWorkflow || 'PUBLISHED';
+    const status = statusFromWorkflow(workflow);
     await sql`
       UPDATE public.planner_posts
       SET
-        workflow = 'PUBLISHED',
-        status = 'published',
-        published_at = ${now},
+        workflow = ${workflow},
+        status = ${status},
+        published_at = ${workflow === 'PUBLISHED' ? now : existing.published_at},
         error_log = NULL,
         activity = ${JSON.stringify(activity)},
         updated_at = ${now}

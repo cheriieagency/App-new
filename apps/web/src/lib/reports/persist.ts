@@ -17,7 +17,14 @@ export type AiInsights = {
 export type ReportMetrics = {
   views: number;
   engagementRate: number;
+  /** Legacy alias — total connected followers at snapshot time. */
   followerGrowth: number;
+  totalFollowers?: number;
+  followersByPlatform?: Array<{
+    platform: string;
+    handle: string | null;
+    count: number;
+  }>;
   totalPosts: number;
   likes: number;
   comments: number;
@@ -337,6 +344,49 @@ function mapAutomation(row: Record<string, unknown>): AutomationConfig {
     created_at: new Date(String(row.created_at)).toISOString(),
     updated_at: new Date(String(row.updated_at)).toISOString(),
   };
+}
+
+/** Find an existing report for the same user, workspace, and period. */
+export async function findReportForPeriod(input: {
+  userId: string;
+  workspaceId: string;
+  periodStart: string;
+  periodEnd: string;
+}): Promise<MonthlyReportRow | null> {
+  if (!process.env.DATABASE_URL?.trim()) return null;
+  await ensureReportsSchema();
+  const start = coerceDateIso(input.periodStart);
+  const end = coerceDateIso(input.periodEnd, new Date(start));
+  const userId = input.userId.trim();
+  const workspaceId = input.workspaceId.trim();
+  if (!userId || !workspaceId) return null;
+
+  let rows: unknown;
+  try {
+    rows = await sql`
+      SELECT *
+      FROM public.monthly_reports
+      WHERE user_id::text = ${userId}
+        AND workspace_id::text = ${workspaceId}
+        AND period_start = ${start}::date
+        AND period_end = ${end}::date
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+  } catch {
+    rows = await sql`
+      SELECT *
+      FROM public.monthly_reports
+      WHERE user_id = ${userId}
+        AND workspace_id = ${workspaceId}
+        AND period_start = ${start}::date
+        AND period_end = ${end}::date
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+  }
+  const row = (rows as Record<string, unknown>[])?.[0];
+  return row ? mapReport(row) : null;
 }
 
 /** List reports for ONE user inside ONE workspace only. */

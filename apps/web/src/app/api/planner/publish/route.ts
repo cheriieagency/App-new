@@ -1,6 +1,6 @@
 /**
  * POST /api/planner/publish
- * Publish a planner post to connected social accounts for the active workspace.
+ * Publish a planner post — auto_publish | notification_reminder | tiktok_draft.
  */
 
 import { cookies, headers } from 'next/headers';
@@ -11,6 +11,8 @@ import {
 } from '@/lib/social/persist';
 import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
 import { publishAndFinalizePlannerPost } from '@/lib/planner/publish';
+import { parsePublishMode } from '@/lib/planner/publish-modes';
+import { parseMoreOptionsFromBody } from '@/lib/planner/more-options';
 import type { YoutubeMeta } from '@/lib/mock-content-planner';
 
 export const maxDuration = 120;
@@ -25,11 +27,21 @@ type PublishBody = {
   mediaUrl?: unknown;
   videoUrl?: unknown;
   mediaType?: unknown;
+  mediaUrls?: unknown;
   title?: unknown;
   youtube?: unknown;
   pinterestBoardId?: unknown;
   link?: unknown;
   extraImageUrls?: unknown;
+  publishMode?: unknown;
+  trendingSoundNote?: unknown;
+  collaborators?: unknown;
+  firstComment?: unknown;
+  locationName?: unknown;
+  locationId?: unknown;
+  linkInBioUrl?: unknown;
+  postTags?: unknown;
+  campaignTag?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -86,6 +98,12 @@ export async function POST(request: Request) {
         ? body.postId.trim()
         : null;
 
+    const publishMode = parsePublishMode(body.publishMode);
+    const mediaUrls = Array.isArray(body.mediaUrls)
+      ? body.mediaUrls.map((u) => String(u)).filter(Boolean)
+      : [];
+    const more = parseMoreOptionsFromBody(body as Record<string, unknown>);
+
     const result = await publishAndFinalizePlannerPost({
       userId,
       workspaceId: access.workspaceId,
@@ -98,6 +116,7 @@ export async function POST(request: Request) {
         body.mediaUrl || body.imageUrl || body.videoUrl || ''
       ),
       mediaType: String(body.mediaType || ''),
+      mediaUrls,
       extraImageUrls: Array.isArray(body.extraImageUrls)
         ? body.extraImageUrls.map((u) => String(u)).filter(Boolean)
         : [],
@@ -110,6 +129,18 @@ export async function POST(request: Request) {
           ? body.pinterestBoardId
           : undefined,
       link: typeof body.link === 'string' ? body.link : undefined,
+      publishMode,
+      trendingSoundNote:
+        typeof body.trendingSoundNote === 'string'
+          ? body.trendingSoundNote
+          : undefined,
+      collaborators: more.collaborators,
+      firstComment: more.first_comment,
+      locationName: more.location_name,
+      locationId: more.location_id,
+      linkInBioUrl: more.link_in_bio_url,
+      postTags: more.post_tags,
+      campaignTag: more.campaign_tag,
     });
 
     const status = result.ok ? 200 : result.failed_count > 0 ? 502 : 400;
@@ -119,11 +150,13 @@ export async function POST(request: Request) {
         ok: result.ok,
         workspace_id: access.workspaceId,
         post_id: postId,
+        publish_mode: result.publish_mode || publishMode,
         results: result.results,
         published_count: result.published_count,
         failed_count: result.failed_count,
         error_log: result.error_log,
         message: result.message,
+        reminder: result.reminder,
         error: result.ok ? undefined : result.message,
       },
       { status }

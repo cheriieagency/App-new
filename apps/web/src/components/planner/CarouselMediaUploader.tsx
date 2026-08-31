@@ -164,11 +164,11 @@ export default function CarouselMediaUploader({
 
   const badge = mediaTypeBadge(items);
   const sourceBtn = compact
-    ? 'inline-flex items-center justify-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:pointer-events-none'
+    ? 'inline-flex items-center justify-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:pointer-events-none'
     : 'inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 bg-white text-[11px] font-extrabold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:pointer-events-none';
 
   return (
-    <div className={compact ? 'space-y-3' : 'space-y-3'}>
+    <div className={compact ? 'space-y-2' : 'space-y-3'}>
       {!compact ? (
         <div className="flex items-center justify-between gap-2">
           <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
@@ -184,9 +184,8 @@ export default function CarouselMediaUploader({
           </span>
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-medium text-slate-500">Media</p>
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
+        <div className="flex items-center justify-end">
+          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
             {items.length === 1 && items[0].type === 'video' ? (
               <Film size={12} />
             ) : (
@@ -220,14 +219,14 @@ export default function CarouselMediaUploader({
           setDragOver(false);
           void addFiles(e.dataTransfer.files);
         }}
-        className={`relative rounded-xl border border-dashed flex flex-col items-center justify-center gap-2 transition-colors px-3 ${
-          compact ? 'min-h-[100px] py-3' : 'min-h-[120px] py-4 border-2'
+        className={`relative rounded-md border border-dashed flex flex-col items-center justify-center gap-1.5 transition-colors px-3 ${
+          compact ? 'min-h-[88px] py-3' : 'min-h-[120px] py-4 border-2 rounded-xl'
         } ${
           atCap
             ? 'border-slate-100 bg-slate-50/80 opacity-60'
             : dragOver
-              ? 'border-[#F472B6] bg-[#FDF2F8]'
-              : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
+              ? 'border-slate-400 bg-slate-50'
+              : 'border-slate-200 hover:border-slate-300'
         }`}
       >
         {uploading ? (
@@ -239,11 +238,11 @@ export default function CarouselMediaUploader({
         ) : (
           <>
             <Upload size={compact ? 18 : 22} className="text-slate-300" />
-            <p className={`font-semibold text-slate-600 text-center ${compact ? 'text-xs' : 'text-sm'}`}>
+            <p className={`text-slate-600 text-center ${compact ? 'text-xs font-medium' : 'text-sm font-semibold'}`}>
               Single image, video, or carousel
             </p>
-            <p className="text-[11px] text-slate-400 font-medium text-center px-2">
-              Drag & drop — or choose a source below (max {MAX_ITEMS})
+            <p className="text-[11px] text-slate-400 text-center px-2">
+              Drag & drop or choose a source (max {MAX_ITEMS})
             </p>
           </>
         )}
@@ -328,10 +327,10 @@ export default function CarouselMediaUploader({
                   setDragIndex(null);
                   setOverIndex(null);
                 }}
-                className={`relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 bg-zinc-100 group ${
+                className={`relative flex-shrink-0 w-24 h-24 rounded-md overflow-hidden border bg-zinc-100 group ${
                   overIndex === index && dragIndex !== index
-                    ? 'border-[var(--nc-coral)]'
-                    : 'border-zinc-100'
+                    ? 'border-slate-500'
+                    : 'border-slate-200'
                 }`}
               >
                 {item.type === 'video' ? (
@@ -365,10 +364,10 @@ export default function CarouselMediaUploader({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="flex-shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-zinc-200 text-zinc-400 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] flex flex-col items-center justify-center gap-1"
+                className="flex-shrink-0 w-24 h-24 rounded-md border border-dashed border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-600 flex flex-col items-center justify-center gap-1"
               >
                 <Plus size={18} />
-                <span className="text-[10px] font-extrabold">Lägg till</span>
+                <span className="text-[10px] font-medium">Add</span>
               </button>
             )}
           </div>
@@ -396,7 +395,7 @@ export default function CarouselMediaUploader({
                   Media Library
                 </p>
                 <h3 className="font-clikd-wordmark font-extrabold text-lg text-zinc-900 mt-0.5 flex items-center gap-2">
-                  <FolderOpen size={18} className="text-[#F472B6]" />
+                  <FolderOpen size={18} className="text-slate-500" />
                   Brand assets
                 </h3>
                 <p className="text-xs text-zinc-500 font-medium mt-1">
@@ -468,7 +467,7 @@ export default function CarouselMediaUploader({
                           />
                         )}
                         {selected ? (
-                          <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-[#F472B6] text-white flex items-center justify-center">
+                          <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-md bg-slate-900 text-white flex items-center justify-center">
                             <Check size={12} strokeWidth={3} />
                           </span>
                         ) : null}
