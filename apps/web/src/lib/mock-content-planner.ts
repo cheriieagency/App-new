@@ -128,6 +128,10 @@ export type PlannerPost = {
   error_log?: string | null;
   /** Session user that owns this planner post (isolation). */
   owner_user_id?: string;
+  /** Clikd-authored vs imported from a connected social profile. */
+  source?: 'clikd' | 'platform';
+  /** Public URL on the social network (imported posts). */
+  permalink?: string | null;
 };
 
 /** Campaign / project label used to group scheduled content by initiative. */

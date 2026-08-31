@@ -2,21 +2,13 @@
 
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import {
-  Bookmark,
   CalendarDays,
   Check,
-  ChevronDown,
   Clapperboard,
   GripVertical,
-  Heart,
-  Images,
   Image as ImageIcon,
-  LayoutGrid,
+  Images,
   Lock,
-  Menu,
-  MoreHorizontal,
-  Plus,
-  UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { BrandWorkspace, PlannerPost, SocialPlatform } from '@/lib/mock-content-planner';
@@ -89,31 +81,6 @@ function scheduleTimesForCount(count: number): string[] {
   return Array.from({ length: count }, (_, i) => new Date(base + i * step).toISOString());
 }
 
-function Avatar({
-  workspace,
-  sizeClass,
-  ringClass,
-}: {
-  workspace: BrandWorkspace | null;
-  sizeClass: string;
-  ringClass?: string;
-}) {
-  return (
-    <div
-      className={`${sizeClass} rounded-full overflow-hidden flex-shrink-0 ${ringClass || ''}`}
-      style={{ background: workspace?.color || '#E11D48' }}
-    >
-      {workspace?.avatar_url ? (
-        <img src={workspace.avatar_url} alt="" className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center text-white font-black text-lg">
-          {(workspace?.name?.[0] || 'N').toUpperCase()}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function StatusCorner({
   isPublished,
   isScheduled,
@@ -152,7 +119,7 @@ function StatusCorner({
 
 export default function FeedGridPlanner({
   posts,
-  workspace,
+  workspace: _workspace,
   onOpen,
   onRefresh,
   /** When set from platform pills, drives IG/TT feed (hides local toggle). */
@@ -226,16 +193,6 @@ export default function FeedGridPlanner({
   const gridPosts = useMemo(() => [...published, ...scheduled], [published, scheduled]);
   const minTiles = 9;
   const tileCount = Math.max(minTiles, Math.ceil(gridPosts.length / 3) * 3 || 9);
-
-  const handle = workspace?.handle || '@creator';
-  const handleClean = handle.replace(/^@/, '');
-  const displayName = workspace?.name || 'Creator';
-  const followers = '48.2K';
-  const following = '312';
-  const likes = '1.2M';
-  const bioIg = 'Nordic creator · Digital products & live ✨';
-  const bioTt = 'Tips, reels & community growth 🚀';
-  const linkLabel = `linkin.bio/${handleClean}`;
 
   const parseDrag = (e: DragEvent): DragPayload | null => {
     try {
@@ -429,7 +386,7 @@ export default function FeedGridPlanner({
         }`}
       >
         <div
-          className={`rounded-[2rem] overflow-hidden flex flex-col h-[680px] ${
+          className={`rounded-[2rem] overflow-hidden flex flex-col h-[680px] min-h-0 ${
             dark ? 'bg-black text-white' : 'bg-white text-[#262626]'
           }`}
         >
@@ -462,275 +419,23 @@ export default function FeedGridPlanner({
   );
 
   const instagramFeed = (
-    <>
-      {/* Top nav — username row */}
-      <div className="h-11 px-3 flex items-center justify-between flex-shrink-0 border-b border-black/[0.06]">
-        <button type="button" className="w-9 h-9 flex items-center justify-center" aria-label="Add">
-          <Plus size={24} strokeWidth={1.75} />
-        </button>
-        <button type="button" className="flex items-center gap-1 min-w-0">
-          <span className="text-[15px] font-semibold tracking-tight truncate">{handleClean}</span>
-          <ChevronDown size={14} strokeWidth={2.5} className="opacity-70" />
-        </button>
-        <button type="button" className="w-9 h-9 flex items-center justify-center" aria-label="Menu">
-          <Menu size={22} strokeWidth={1.75} />
-        </button>
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-none">
+      <div className="grid grid-cols-3 gap-[1px] bg-[#dbdbdb]">
+        {Array.from({ length: tileCount }).map((_, index) =>
+          renderTile(index, { dark: false, aspect: 'aspect-[3/4]' })
+        )}
       </div>
-
-      <div className="flex-1 overflow-y-auto scrollbar-none">
-        {/* Profile header */}
-        <div className="px-3 pt-2 pb-2">
-          <div className="flex items-center gap-5">
-            <Avatar
-              workspace={workspace}
-              sizeClass="w-[78px] h-[78px]"
-              ringClass="ring-[1.5px] ring-[#dbdbdb] ring-offset-2"
-            />
-            <div className="flex-1 grid grid-cols-3 text-center">
-              <div>
-                <p className="text-[16px] font-semibold leading-none">{gridPosts.length}</p>
-                <p className="text-[12px] mt-0.5 text-[#262626]">{t('postsStatLabel', locale)}</p>
-              </div>
-              <div>
-                <p className="text-[16px] font-semibold leading-none">{followers}</p>
-                <p className="text-[12px] mt-0.5 text-[#262626]">{t('followersLabel', locale)}</p>
-              </div>
-              <div>
-                <p className="text-[16px] font-semibold leading-none">{following}</p>
-                <p className="text-[12px] mt-0.5 text-[#262626]">{t('followingLabel', locale)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-2.5">
-            <p className="text-[13px] font-semibold leading-tight">{displayName}</p>
-            <p className="text-[13px] leading-[17px] mt-0.5 whitespace-pre-line">{bioIg}</p>
-            <a
-              href={`https://linkin.bio/${handleClean}`}
-              onClick={(e) => e.preventDefault()}
-              className="text-[13px] font-semibold text-[#00376b] mt-0.5 inline-block"
-            >
-              {linkLabel}
-            </a>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex gap-1.5 mt-3">
-            <button
-              type="button"
-              className="flex-1 h-8 rounded-lg bg-[#efefef] text-[13px] font-semibold"
-            >
-              {t('editProfile', locale)}
-            </button>
-            <button
-              type="button"
-              className="flex-1 h-8 rounded-lg bg-[#efefef] text-[13px] font-semibold"
-            >
-              {t('shareProfileBtn', locale)}
-            </button>
-            <button
-              type="button"
-              className="h-8 w-8 rounded-lg bg-[#efefef] flex items-center justify-center"
-              aria-label="Suggested"
-            >
-              <UserPlus size={16} strokeWidth={2} />
-            </button>
-          </div>
-
-          {/* Highlights */}
-          <div className="flex gap-3.5 mt-4 overflow-x-auto scrollbar-none pb-1">
-            {['New', 'Tips', 'Live', 'Shop'].map((label, i) => (
-              <div key={label} className="flex flex-col items-center gap-1 w-[62px] flex-shrink-0">
-                <div
-                  className={`w-[58px] h-[58px] rounded-full p-[2px] ${
-                    i === 0 ? 'border border-dashed border-[#dbdbdb]' : 'bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px]'
-                  }`}
-                >
-                  <div className="w-full h-full rounded-full bg-white p-[2px]">
-                    <div
-                      className={`w-full h-full rounded-full overflow-hidden ${
-                        i === 0 ? 'bg-[#fafafa] flex items-center justify-center' : ''
-                      }`}
-                      style={
-                        i > 0
-                          ? {
-                              backgroundImage: `url(https://images.unsplash.com/photo-${
-                                ['1515886657613-9f3515b0c78f', '1495474472287-4d71bcdd2085', '1556742049-0cfed4f6a45d'][
-                                  i - 1
-                                ]
-                              }?w=120&q=80)`,
-                              backgroundSize: 'cover',
-                            }
-                          : undefined
-                      }
-                    >
-                      {i === 0 && <Plus size={18} className="text-[#262626]" strokeWidth={1.5} />}
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[11px] truncate w-full text-center">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-t border-[#dbdbdb] mt-1">
-          <button
-            type="button"
-            className="flex-1 h-11 flex items-center justify-center border-b-[1.5px] border-black"
-            aria-label="Posts grid"
-          >
-            <LayoutGrid size={22} strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            className="flex-1 h-11 flex items-center justify-center text-[#8e8e8e]"
-            aria-label="Reels"
-          >
-            <Clapperboard size={22} strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            className="flex-1 h-11 flex items-center justify-center text-[#8e8e8e]"
-            aria-label="Tagged"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="5" />
-              <circle cx="12" cy="10" r="2.5" />
-              <path d="M7 18c.8-2.2 2.7-3.5 5-3.5s4.2 1.3 5 3.5" />
-            </svg>
-          </button>
-        </div>
-
-        {/* 3-column grid — 3:4 tiles (portrait feed preview) */}
-        <div className="grid grid-cols-3 gap-[1px] bg-[#dbdbdb]">
-          {Array.from({ length: tileCount }).map((_, index) =>
-            renderTile(index, { dark: false, aspect: 'aspect-[3/4]' })
-          )}
-        </div>
-      </div>
-    </>
+    </div>
   );
 
   const tiktokFeed = (
-    <>
-      {/* Top nav */}
-      <div className="h-11 px-3 flex items-center justify-between flex-shrink-0">
-        <button type="button" className="w-9 h-9 flex items-center justify-center" aria-label="Add">
-          <Plus size={22} strokeWidth={2} />
-        </button>
-        <button type="button" className="flex items-center gap-1 min-w-0">
-          <span className="text-[16px] font-bold tracking-tight truncate text-[#161823]">
-            {handleClean}
-          </span>
-          <ChevronDown size={14} strokeWidth={2.5} className="text-[#161823]" />
-        </button>
-        <button
-          type="button"
-          className="w-9 h-9 flex items-center justify-center text-[#161823]"
-          aria-label="More"
-        >
-          <MoreHorizontal size={22} strokeWidth={2} />
-        </button>
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-none bg-white">
+      <div className="grid grid-cols-3 gap-[1px] bg-[#e3e3e4]">
+        {Array.from({ length: tileCount }).map((_, index) =>
+          renderTile(index, { dark: false, aspect: 'aspect-[3/4]' })
+        )}
       </div>
-
-      <div className="flex-1 overflow-y-auto scrollbar-none bg-white">
-        {/* Centered TikTok profile — light mode */}
-        <div className="flex flex-col items-center px-4 pt-1 pb-3">
-          <Avatar
-            workspace={workspace}
-            sizeClass="w-[92px] h-[92px]"
-            ringClass="ring-[1.5px] ring-[#e3e3e4]"
-          />
-          <p className="mt-3 text-[17px] font-bold tracking-tight text-[#161823]">
-            @{handleClean}
-          </p>
-
-          <div className="flex items-stretch justify-center gap-0 mt-3.5 w-full max-w-[280px]">
-            <div className="flex-1 text-center px-2">
-              <p className="text-[17px] font-bold leading-none text-[#161823]">{following}</p>
-              <p className="text-[12px] text-[#161823]/70 mt-1">{t('followingLabel', locale)}</p>
-            </div>
-            <div className="w-px bg-[#161823]/12 my-1" />
-            <div className="flex-1 text-center px-2">
-              <p className="text-[17px] font-bold leading-none text-[#161823]">{followers}</p>
-              <p className="text-[12px] text-[#161823]/70 mt-1">{t('followersLabel', locale)}</p>
-            </div>
-            <div className="w-px bg-[#161823]/12 my-1" />
-            <div className="flex-1 text-center px-2">
-              <p className="text-[17px] font-bold leading-none text-[#161823]">{likes}</p>
-              <p className="text-[12px] text-[#161823]/70 mt-1">{t('likesLabel', locale)}</p>
-            </div>
-          </div>
-
-          <div className="flex gap-2 mt-4 w-full max-w-[300px]">
-            <button
-              type="button"
-              className="flex-1 h-9 rounded-md bg-[#f1f1f2] text-[#161823] text-[14px] font-semibold"
-            >
-              {t('editProfile', locale)}
-            </button>
-            <button
-              type="button"
-              className="flex-1 h-9 rounded-md bg-[#f1f1f2] text-[#161823] text-[14px] font-semibold"
-            >
-              {t('shareProfileBtn', locale)}
-            </button>
-            <button
-              type="button"
-              className="h-9 w-9 rounded-md bg-[#f1f1f2] text-[#161823] flex items-center justify-center"
-              aria-label="Bookmark"
-            >
-              <Bookmark size={16} />
-            </button>
-          </div>
-
-          <p className="mt-3.5 text-[13px] text-center text-[#161823] leading-snug max-w-[280px]">
-            {bioTt}
-          </p>
-          <a
-            href={`https://linkin.bio/${handleClean}`}
-            onClick={(e) => e.preventDefault()}
-            className="mt-1.5 text-[13px] font-semibold text-[#fe2c55]"
-          >
-            {linkLabel}
-          </a>
-        </div>
-
-        {/* Tabs — Videos / Favorites / Liked */}
-        <div className="flex border-b border-[#e3e3e4]">
-          <button
-            type="button"
-            className="flex-1 h-11 flex items-center justify-center border-b-2 border-[#161823] text-[#161823]"
-            aria-label="Videos"
-          >
-            <LayoutGrid size={18} strokeWidth={2.25} />
-          </button>
-          <button
-            type="button"
-            className="flex-1 h-11 flex items-center justify-center text-[#161823]/35"
-            aria-label="Private"
-          >
-            <Lock size={18} strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            className="flex-1 h-11 flex items-center justify-center text-[#161823]/35"
-            aria-label="Liked"
-          >
-            <Heart size={18} strokeWidth={2} />
-          </button>
-        </div>
-
-        {/* TikTok video grid — taller tiles, tight gaps */}
-        <div className="grid grid-cols-3 gap-[1px] bg-[#e3e3e4]">
-          {Array.from({ length: tileCount }).map((_, index) =>
-            renderTile(index, { dark: false, aspect: 'aspect-[3/4]' })
-          )}
-        </div>
-      </div>
-    </>
+    </div>
   );
 
   return (

@@ -14,6 +14,7 @@ import CalendarTimeGrid from '@/components/planner/CalendarTimeGrid';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { PlannerPost } from '@/lib/mock-content-planner';
+import { isPlatformImportedPost } from '@/lib/planner/platform-posts';
 import { useLanguage } from '@/lib/locale-context';
 import { t, tf, localeTag } from '@/lib/i18n';
 
@@ -317,6 +318,7 @@ export default function ContentCalendar({
   const dropOnMonthDay = (day: Date, postId: string) => {
     if (!onReschedule) return;
     const post = posts.find((p) => p.id === postId);
+    if (post && isPlatformImportedPost(post)) return;
     const prev = post ? postDate(post) : null;
     const next = new Date(day);
     if (prev) {
@@ -422,9 +424,9 @@ export default function ContentCalendar({
               key={post.id}
               role="button"
               tabIndex={0}
-              draggable={Boolean(onReschedule)}
+              draggable={Boolean(onReschedule) && !isPlatformImportedPost(post)}
               onDragStart={(e) => {
-                if (!onReschedule) return;
+                if (!onReschedule || isPlatformImportedPost(post)) return;
                 e.stopPropagation();
                 e.dataTransfer.setData('text/planner-post-id', post.id);
                 e.dataTransfer.effectAllowed = 'move';
@@ -439,7 +441,11 @@ export default function ContentCalendar({
                   onSelectPost(post);
                 }
               }}
-              className="w-full rounded-md bg-[#E9D5FF]/45 border border-[#E9D5FF]/80 px-1.5 py-1 hover:bg-[#E9D5FF]/70 cursor-grab active:cursor-grabbing"
+              className={`w-full rounded-md bg-[#E9D5FF]/45 border border-[#E9D5FF]/80 px-1.5 py-1 hover:bg-[#E9D5FF]/70 ${
+                isPlatformImportedPost(post)
+                  ? 'cursor-pointer'
+                  : 'cursor-grab active:cursor-grabbing'
+              }`}
             >
               <div className="flex items-center gap-1 mb-0.5">
                 <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot(post)}`} />

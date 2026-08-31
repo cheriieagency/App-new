@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerE
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { PlatformIcon } from '@/components/planner/PlatformBadge';
 import type { PlannerPost } from '@/lib/mock-content-planner';
+import { isPlatformImportedPost } from '@/lib/planner/platform-posts';
 import { useLanguage } from '@/lib/locale-context';
 import { t, localeTag, type Locale } from '@/lib/i18n';
 
@@ -362,7 +363,8 @@ export default function CalendarTimeGrid({
   }, [showSidebar, posts, cursor]);
 
   const startDrag = (post: PlannerPost, e: ReactPointerEvent) => {
-    if (!onReschedule) {
+    // Platform-imported posts are read-only on the calendar — open permalink instead.
+    if (!onReschedule || isPlatformImportedPost(post)) {
       onSelectPost(post);
       return;
     }
@@ -562,9 +564,9 @@ export default function CalendarTimeGrid({
                   <button
                     type="button"
                     onClick={() => onSelectPost(post)}
-                    draggable={Boolean(onReschedule)}
+                    draggable={Boolean(onReschedule) && !isPlatformImportedPost(post)}
                     onDragStart={(e) => {
-                      if (!onReschedule) return;
+                      if (!onReschedule || isPlatformImportedPost(post)) return;
                       e.dataTransfer.setData('text/planner-post-id', post.id);
                       e.dataTransfer.effectAllowed = 'move';
                     }}

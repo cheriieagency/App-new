@@ -6,7 +6,6 @@ import {
   Heart,
   MessageCircle,
   MoreHorizontal,
-  Music2,
   Play,
   Send,
   Share2,
@@ -309,12 +308,13 @@ function TikTokPreview({
       {/* TikTok top bar: "Following | For You" tabs */}
       <div className="absolute top-9 inset-x-0 flex items-center justify-center gap-3">
         <span className="text-[10px] font-semibold text-white/50">Following</span>
-        <span className="text-[10px] font-extrabold text-white border-b-2 border-white pb-0.5">For You</span>
+        <span className="text-[10px] font-extrabold text-white border-b-2 border-white pb-0.5">
+          For You
+        </span>
       </div>
 
-      {/* Right action bar — compact, positioned lower */}
-      <div className="absolute right-2 bottom-14 flex flex-col items-center gap-2.5 text-white">
-        {/* Profile avatar with follow "+" badge */}
+      {/* Right action bar — sits near the bottom edge */}
+      <div className="absolute right-2 bottom-4 flex flex-col items-center gap-2 text-white">
         <div className="relative mb-0.5">
           <div className="w-8 h-8 rounded-full bg-zinc-400 border-[1.5px] border-white overflow-hidden">
             <div className="w-full h-full bg-gradient-to-br from-zinc-300 to-zinc-500" />
@@ -325,26 +325,25 @@ function TikTokPreview({
         </div>
 
         <div className="flex flex-col items-center gap-0.5">
-          <Heart size={18} strokeWidth={2} />
-          <span className="text-[8px] font-bold">12.4K</span>
+          <Heart size={20} strokeWidth={2} />
+          <span className="text-[9px] font-bold leading-none">12.4K</span>
         </div>
 
         <div className="flex flex-col items-center gap-0.5">
-          <MessageCircle size={18} strokeWidth={2} />
-          <span className="text-[8px] font-bold">842</span>
+          <MessageCircle size={20} strokeWidth={2} />
+          <span className="text-[9px] font-bold leading-none">842</span>
         </div>
 
         <div className="flex flex-col items-center gap-0.5">
-          <Bookmark size={16} strokeWidth={2} />
-          <span className="text-[8px] font-bold">1.1K</span>
+          <Bookmark size={18} strokeWidth={2} />
+          <span className="text-[9px] font-bold leading-none">1.1K</span>
         </div>
 
         <div className="flex flex-col items-center gap-0.5">
-          <Share2 size={16} strokeWidth={2} />
-          <span className="text-[8px] font-bold">Share</span>
+          <Share2 size={18} strokeWidth={2} />
+          <span className="text-[9px] font-bold leading-none">Share</span>
         </div>
 
-        {/* Spinning music disc */}
         <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-zinc-900 via-zinc-700 to-zinc-900 border-[2px] border-zinc-600 flex items-center justify-center">
           <div
             className="w-3 h-3 rounded-full bg-zinc-400"
@@ -353,14 +352,12 @@ function TikTokPreview({
         </div>
       </div>
 
-      {/* Bottom left: handle, caption, sound ticker */}
+      {/* Bottom left: handle + caption */}
       <div className="absolute left-2.5 right-12 bottom-3 text-white">
         <p className="text-[11px] font-extrabold mb-0.5 drop-shadow-sm">{handle}</p>
-        <p className="text-[10px] font-medium leading-snug line-clamp-2 mb-1.5 drop-shadow-sm">{caption}</p>
-        <div className="flex items-center gap-1 bg-white/10 rounded-full pl-1.5 pr-2.5 py-0.5 w-fit max-w-full">
-          <Music2 size={8} className="flex-shrink-0" />
-          <span className="text-[8px] font-semibold truncate">Original sound — {username.replace(/^@/, '')}</span>
-        </div>
+        <p className="text-[10px] font-medium leading-snug line-clamp-2 drop-shadow-sm">
+          {caption}
+        </p>
       </div>
 
       {/* Bottom nav bar — home indicator */}

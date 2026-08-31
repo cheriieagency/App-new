@@ -45,6 +45,10 @@ import {
   type SocialPlatform,
   type WorkflowStatus,
 } from '@/lib/mock-content-planner';
+import {
+  isPlatformImportedPost,
+  mergePlannerWithPlatformPosts,
+} from '@/lib/planner/platform-posts';
 
 const PLATFORM_ICONS: Record<
   SocialPlatform,
@@ -110,6 +114,30 @@ export default function ContentPlannerShell({
       return r.json();
     },
     enabled: !!session && !!activeWorkspace,
+  });
+
+  // Live posts already on IG / FB / TikTok (including ones not published via Clikd).
+  const { data: platformData } = useQuery<{ posts: PlannerPost[] }>({
+    queryKey: ['planner-platform-posts', activeWorkspaceId, project],
+    queryFn: async () => {
+      const qs = new URLSearchParams({
+        project,
+        ...(activeWorkspaceId ? { workspaceId: activeWorkspaceId } : {}),
+      });
+      const r = await fetch(`/api/planner/platform-posts?${qs}`, {
+        credentials: 'include',
+        headers: activeWorkspaceId
+          ? {
+              'x-workspace-id': activeWorkspaceId,
+              'x-active-workspace-id': activeWorkspaceId,
+            }
+          : undefined,
+      });
+      if (!r.ok) return { posts: [] };
+      return r.json();
+    },
+    enabled: !!session && !!activeWorkspaceId,
+    staleTime: 60_000,
   });
 
   const { data: teamData } = useQuery<{
@@ -225,7 +253,36 @@ export default function ContentPlannerShell({
     return list;
   }, [data?.posts, campaignId, platformFilter, search]);
 
+  /** Clikd posts + connected-profile publishes (calendar + feed grid). */
+  const mergedPosts = useMemo(() => {
+    let platformList = platformData?.posts ?? [];
+    if (platformFilter !== 'all') {
+      platformList = platformList.filter((p) =>
+        p.platforms.includes(platformFilter)
+      );
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      platformList = platformList.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          p.caption.toLowerCase().includes(q) ||
+          p.hashtags.toLowerCase().includes(q)
+      );
+    }
+    // Campaign-scoped views stay Clikd-only (platform imports have no campaign tags).
+    if (campaignId) return posts;
+    return mergePlannerWithPlatformPosts(posts, platformList);
+  }, [posts, platformData?.posts, platformFilter, search, campaignId]);
+
   const openStudio = (post?: PlannerPost | null) => {
+    // Platform-imported posts open on the network, not Post Studio.
+    if (post && isPlatformImportedPost(post)) {
+      if (post.permalink) {
+        window.open(post.permalink, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
     setActivePost(post ?? null);
     setDefaultScheduledAt(null);
     setStudioOpen(true);
@@ -415,7 +472,7 @@ export default function ContentPlannerShell({
         />
       ) : view === 'calendar' ? (
         <ContentCalendar
-          posts={posts.filter(
+          posts={mergedPosts.filter(
             (p) => p.workflow === 'SCHEDULED' || p.workflow === 'PUBLISHED' || p.scheduled_at
           )}
           view="month"
@@ -423,13 +480,19 @@ export default function ContentPlannerShell({
           onCursorChange={setCursor}
           onSelectPost={openStudio}
           onSelectDay={openStudioForDay}
-          onReschedule={(id, scheduledAt) =>
-            rescheduleMutation.mutate({ id, scheduledAt })
-          }
+          onReschedule={(id, scheduledAt) => {
+            if (
+              id.startsWith('platform:') ||
+              id.startsWith('meta-ig-')
+            ) {
+              return;
+            }
+            rescheduleMutation.mutate({ id, scheduledAt });
+          }}
         />
       ) : view === 'feed' && showFeedTab ? (
         <FeedGridPlanner
-          posts={posts}
+          posts={mergedPosts}
           workspace={workspaces.find((w) => w.id === activeWorkspaceId) ?? null}
           activePlatform={
             platformFilter === 'instagram' || platformFilter === 'tiktok'
@@ -440,7 +503,12 @@ export default function ContentPlannerShell({
           }
           onOpen={openStudio}
           onRefresh={async () => {
-            await queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['planner-posts'] }),
+              queryClient.invalidateQueries({
+                queryKey: ['planner-platform-posts'],
+              }),
+            ]);
           }}
         />
       ) : (
