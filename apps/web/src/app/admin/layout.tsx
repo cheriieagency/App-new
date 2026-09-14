@@ -12,9 +12,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <WorkspaceProvider>
       <AdminNavProvider>
-        <div className="min-h-screen bg-[#FAFAFA] text-slate-900 font-sans">
+        <div className="min-h-screen bg-[#F9F8F6] text-[#2C2621] font-sans">
           <AdminSidebar />
-          <div className="lg:pl-64 pb-16 lg:pb-0 bg-[#F8FAFC]/60 min-h-screen">
+          <div className="lg:pl-64 pb-16 lg:pb-0 bg-[#F9F8F6] min-h-screen">
             <SubscriptionGateBanner />
             {/* Always-on Comment-to-DM poll (20s) while creator is in admin. */}
             <CommentToDmAutoPoller />

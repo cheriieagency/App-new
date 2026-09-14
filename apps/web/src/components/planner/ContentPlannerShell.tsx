@@ -391,8 +391,8 @@ export default function ContentPlannerShell({
               onClick={() => setPlatformFilter('all')}
               className={`text-xs px-3.5 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 transition-colors ${
                 platformFilter === 'all'
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'bg-white text-slate-600 border border-slate-200/80 font-semibold hover:bg-slate-50'
+                  ? 'bg-[#2C3B2E] text-[#F9F8F6] font-medium'
+                  : 'bg-[#FFFFFF] text-[#8A857D] border border-[#E6E3DB] font-medium hover:bg-[#F0EFEA]'
               }`}
             >
               {t('allPlatforms', locale)}
@@ -410,13 +410,13 @@ export default function ContentPlannerShell({
                       setView('board');
                     }
                   }}
-                  className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 font-semibold transition-colors ${
+                  className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 font-medium transition-colors ${
                     active
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                      ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                      : 'bg-[#FFFFFF] text-[#8A857D] border border-[#E6E3DB] hover:bg-[#F0EFEA]'
                   }`}
                 >
-                  <Icon size={13} className={active ? 'text-white' : undefined} />
+                  <Icon size={13} className={active ? 'text-[#F9F8F6]' : undefined} />
                   {PLATFORM_META[p].label}
                 </button>
               );
@@ -424,22 +424,22 @@ export default function ContentPlannerShell({
           </div>
 
           {/* View tabs — Progress / Calendar / Table / … */}
-          <div className="flex gap-0.5 overflow-x-auto scrollbar-none p-1 rounded-xl bg-slate-100/80 border border-slate-200/80 w-fit max-w-full sm:ml-auto">
+          <div className="flex gap-0.5 overflow-x-auto scrollbar-none p-1 rounded-xl bg-transparent border border-[#E6E3DB] w-fit max-w-full sm:ml-auto">
             {viewTabs.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setView(key)}
-                className={`inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-lg text-xs transition-all flex-shrink-0 ${
+                className={`inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-lg text-xs transition-colors flex-shrink-0 ${
                   view === key
-                    ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                    : 'text-slate-500 font-medium hover:text-slate-800'
+                    ? 'bg-[#FFFFFF] text-[#2C2621] border border-[#E6E3DB] font-medium'
+                    : 'text-[#8A857D] font-normal hover:text-[#2C2621]'
                 }`}
               >
                 <Icon
                   size={13}
                   className={
-                    key === 'copilot' && view !== 'copilot' ? 'text-[#F472B6]' : undefined
+                    key === 'copilot' && view !== 'copilot' ? 'text-[#B85C38]' : undefined
                   }
                 />
                 {label}
@@ -461,8 +461,8 @@ export default function ContentPlannerShell({
       ) : view === 'notes' ? (
         <PlannerNotesPanel workspaceId={activeWorkspaceId} />
       ) : isLoading ? (
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-sm text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          {t('loadingPlanner', locale)}
+        <div className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl p-12 text-center">
+          <p className="font-playfair italic text-lg text-[#2C2621]">{t('loadingPlanner', locale)}</p>
         </div>
       ) : view === 'board' ? (
         <PlannerKanbanBoard
@@ -555,7 +555,7 @@ export default function ContentPlannerShell({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('searchPosts', locale)}
-            className="w-full bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-3 py-2.5 min-h-[44px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
+            className="w-full bg-[#FFFFFF] text-sm rounded-xl border border-[#E6E3DB] pl-10 pr-3 py-2.5 min-h-[44px] font-normal text-[#2C2621] placeholder:text-[#8A857D] focus:outline-none focus:ring-0 focus:border-[#8A857D]"
           />
         </div>
         {pageHeader}
@@ -578,7 +578,7 @@ export default function ContentPlannerShell({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('searchPosts', locale)}
-            className="w-full max-w-md bg-white text-sm rounded-xl border border-slate-200/90 pl-10 pr-14 py-2 min-h-[40px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
+            className="w-full max-w-md bg-[#FFFFFF] text-sm rounded-xl border border-[#E6E3DB] pl-10 pr-14 py-2 min-h-[40px] font-normal text-[#2C2621] placeholder:text-[#8A857D] focus:outline-none focus:ring-0 focus:border-[#8A857D]"
           />
           <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400">
             ⌘K
@@ -619,7 +619,7 @@ export default function ContentPlannerShell({
           <button
             type="button"
             onClick={() => openStudio(null)}
-            className="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-3.5 sm:px-4 py-2 min-h-[40px] rounded-xl transition-colors"
+            className="inline-flex items-center gap-1.5 bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] font-medium text-xs px-3.5 sm:px-4 py-2 min-h-[40px] rounded-xl transition-colors shadow-none"
           >
             <Plus size={14} strokeWidth={2.5} />
             <span className="hidden sm:inline">{t('createPost', locale)}</span>
@@ -638,7 +638,7 @@ export default function ContentPlannerShell({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('searchPosts', locale)}
-            className="w-full bg-white text-sm rounded-xl border border-slate-200/90 pl-9 pr-3 py-2.5 min-h-[44px] font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+            className="w-full bg-[#FFFFFF] text-sm rounded-xl border border-[#E6E3DB] pl-9 pr-3 py-2.5 min-h-[44px] font-normal text-[#2C2621] focus:outline-none focus:ring-0 focus:border-[#8A857D]"
           />
         </div>
       </div>

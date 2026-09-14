@@ -50,6 +50,9 @@ export function normalizeHomeShortcuts(
   return out.length > 0 ? out : [...fallback];
 }
 
+/** Shared editorial accent — soft forest wash + deep green ink. */
+const EDITORIAL_ACCENT = 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]';
+
 /** Display + accent metadata for each shortcut option. */
 export const HOME_SHORTCUT_META: Record<
   HomeShortcutKey,
@@ -58,51 +61,51 @@ export const HOME_SHORTCUT_META: Record<
   calendar: {
     labelKey: 'admin.shortcutPlanner',
     openKey: 'admin.shortcutPlannerOpen',
-    accent: 'bg-[#E9D5FF]/70 text-[#2B2568]',
+    accent: EDITORIAL_ACCENT,
   },
   media: {
     labelKey: 'admin.mediaLibrary',
     openKey: 'admin.shortcutOpen',
-    accent: 'bg-sky-50 text-sky-700',
+    accent: EDITORIAL_ACCENT,
   },
   projects: {
     labelKey: 'admin.projects',
     openKey: 'admin.shortcutOpen',
-    accent: 'bg-amber-50 text-amber-700',
+    accent: EDITORIAL_ACCENT,
   },
   inbox: {
     labelKey: 'admin.socialInbox',
     openKey: 'admin.shortcutOpen',
-    accent: 'bg-violet-50 text-violet-700',
+    accent: EDITORIAL_ACCENT,
   },
   analytics: {
     labelKey: 'admin.shortcutAnalytics',
     openKey: 'admin.shortcutAnalyticsOpen',
-    accent: 'bg-emerald-50 text-[#10B981]',
+    accent: EDITORIAL_ACCENT,
   },
   ads: {
     labelKey: 'admin.ads',
     openKey: 'admin.shortcutOpen',
-    accent: 'bg-orange-50 text-orange-700',
+    accent: EDITORIAL_ACCENT,
   },
   biobuilder: {
     labelKey: 'admin.shortcutBio',
     openKey: 'admin.shortcutBioOpen',
-    accent: 'bg-[#FCE7F3] text-[#F472B6]',
+    accent: EDITORIAL_ACCENT,
   },
   community: {
     labelKey: 'admin.community',
     openKey: 'admin.shortcutOpen',
-    accent: 'bg-indigo-50 text-indigo-700',
+    accent: EDITORIAL_ACCENT,
   },
   email: {
     labelKey: 'admin.emailCrm',
     openKey: 'admin.shortcutOpen',
-    accent: 'bg-rose-50 text-rose-700',
+    accent: EDITORIAL_ACCENT,
   },
   settings: {
     labelKey: 'admin.settings',
     openKey: 'admin.shortcutOpen',
-    accent: 'bg-slate-100 text-slate-700',
+    accent: EDITORIAL_ACCENT,
   },
 };

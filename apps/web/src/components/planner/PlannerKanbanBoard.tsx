@@ -38,37 +38,37 @@ const COLUMN_ICON: Record<
 > = {
   IDEA: {
     Icon: Lightbulb,
-    wrap: 'bg-amber-50 text-amber-600 border border-amber-200/80',
+    wrap: 'bg-[rgba(44,59,46,0.06)] text-[#2C3B2E] border border-[#E6E3DB]',
   },
   IN_PROGRESS: {
     Icon: PenLine,
-    wrap: 'bg-indigo-50 text-indigo-600 border border-indigo-200/80',
+    wrap: 'bg-[rgba(184,92,56,0.08)] text-[#B85C38] border border-[#E6E3DB]',
   },
   READY: {
     Icon: Eye,
-    wrap: 'bg-purple-50 text-purple-600 border border-purple-200/80',
+    wrap: 'bg-[#F0EFEA] text-[#8A857D] border border-[#E6E3DB]',
   },
   SCHEDULED: {
     Icon: CalendarCheck,
-    wrap: 'bg-emerald-50 text-emerald-600 border border-emerald-200/80',
+    wrap: 'bg-[rgba(44,59,46,0.06)] text-[#2C3B2E] border border-[#E6E3DB]',
   },
   PUBLISHED: {
     Icon: Rocket,
-    wrap: 'bg-cyan-50 text-cyan-600 border border-cyan-200/80',
+    wrap: 'bg-[rgba(44,59,46,0.06)] text-[#2C3B2E] border border-[#E6E3DB]',
   },
   FAILED: {
     Icon: TriangleAlert,
-    wrap: 'bg-red-50 text-red-600 border border-red-200/80',
+    wrap: 'bg-[rgba(184,92,56,0.08)] text-[#B85C38] border border-[#E6E3DB]',
   },
 };
 
 const COLUMN_BADGE: Record<WorkflowStatus, string> = {
-  IDEA: 'bg-amber-50 text-amber-700 border-amber-200/70',
-  IN_PROGRESS: 'bg-indigo-50 text-indigo-700 border-indigo-200/70',
-  READY: 'bg-purple-50 text-purple-700 border-purple-200/70',
-  SCHEDULED: 'bg-emerald-50 text-emerald-700 border-emerald-200/70',
-  PUBLISHED: 'bg-cyan-50 text-cyan-700 border-cyan-200/70',
-  FAILED: 'bg-red-50 text-red-700 border-red-200/70',
+  IDEA: 'bg-[rgba(44,59,46,0.06)] text-[#2C3B2E] border-[#E6E3DB]',
+  IN_PROGRESS: 'bg-[rgba(184,92,56,0.08)] text-[#B85C38] border-[#E6E3DB]',
+  READY: 'bg-[#F0EFEA] text-[#8A857D] border-[#E6E3DB]',
+  SCHEDULED: 'bg-[rgba(44,59,46,0.06)] text-[#2C3B2E] border-[#E6E3DB]',
+  PUBLISHED: 'bg-[rgba(44,59,46,0.06)] text-[#2C3B2E] border-[#E6E3DB]',
+  FAILED: 'bg-[rgba(184,92,56,0.08)] text-[#B85C38] border-[#E6E3DB]',
 };
 
 function formatShortDate(iso: string | null, locale: string) {
@@ -117,9 +117,9 @@ function KanbanCard({
         onDragStart(post.id);
       }}
       onClick={() => onOpen(post)}
-      className="w-full text-left bg-white border border-slate-200/90 rounded-2xl p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-md hover:border-slate-300 transition-all cursor-grab active:cursor-grabbing"
+      className="w-full text-left bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl p-4 shadow-none hover:bg-[#F0EFEA]/40 hover:border-[#DDD8CE] transition-colors cursor-grab active:cursor-grabbing"
     >
-      <div className="aspect-[16/10] bg-slate-100 rounded-xl overflow-hidden border border-slate-100 mb-3">
+      <div className="aspect-[16/10] bg-[#F0EFEA] rounded-lg overflow-hidden border border-[#E6E3DB] mb-4">
         {thumb ? (
           thumb.type === 'video' ? (
             <video src={thumb.url} className="w-full h-full object-cover" muted />
@@ -127,25 +127,25 @@ function KanbanCard({
             <img src={thumb.url} alt="" className="w-full h-full object-cover" />
           )
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200" />
+          <div className="w-full h-full bg-[#F0EFEA]" />
         )}
       </div>
 
-      <p className="font-bold text-xs text-slate-900 line-clamp-2 leading-snug mb-2">
+      <p className="font-inter font-medium text-xs text-[#2C2621] line-clamp-2 leading-snug mb-3">
         {post.title || post.idea_title || t('untitledPost', locale)}
       </p>
 
       {total > 0 && (
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+            <span className="text-[10px] font-medium text-[#8A857D] uppercase tracking-wide">
               {t('checklist', locale)}
             </span>
-            <span className="text-[10px] font-bold text-slate-500">{progress}</span>
+            <span className="text-[10px] font-medium text-[#8A857D]">{progress}</span>
           </div>
-          <div className="bg-slate-100 h-1.5 rounded-full overflow-hidden">
+          <div className="bg-[#F0EFEA] h-1 rounded-full overflow-hidden">
             <div
-              className="h-full rounded-full bg-slate-900 transition-[width] duration-300"
+              className="h-full rounded-full bg-[#2C3B2E] transition-[width] duration-300"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -166,12 +166,12 @@ function KanbanCard({
                 src={a.avatar_url}
                 alt={a.name}
                 title={a.name}
-                className="w-6 h-6 rounded-full border-2 border-white object-cover"
+                className="w-6 h-6 rounded-full border border-[#E6E3DB] object-cover"
               />
             ))}
           </div>
           {post.scheduled_at && (
-            <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">
+            <span className="text-[10px] font-medium text-[#8A857D] whitespace-nowrap">
               {formatShortDate(post.scheduled_at, localeTag(locale))}
             </span>
           )}
@@ -219,34 +219,34 @@ export default function PlannerKanbanBoard({
               setDraggingId(null);
               setOverCol(null);
             }}
-            className={`flex-shrink-0 w-[280px] sm:w-[300px] bg-slate-100/60 border rounded-3xl p-3.5 transition-colors ${
+            className={`flex-shrink-0 w-[280px] sm:w-[300px] bg-transparent border rounded-xl p-4 transition-colors ${
               isOver
-                ? 'border-slate-300 bg-slate-50'
-                : 'border-slate-200/80'
+                ? 'border-[#2C3B2E]/40 bg-[#F0EFEA]/50'
+                : 'border-[#E6E3DB]'
             }`}
           >
-            <div className="flex items-center gap-2.5 mb-3.5 px-0.5">
+            <div className="flex items-center gap-2.5 mb-4 px-0.5">
               <span
-                className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${wrap}`}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${wrap}`}
               >
-                <Icon size={15} strokeWidth={2.25} />
+                <Icon size={15} strokeWidth={1.5} />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-bold text-slate-900 truncate">{colLabel}</h3>
+                <h3 className="text-sm font-playfair font-medium text-[#2C2621] truncate">{colLabel}</h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span
-                    className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md border ${COLUMN_BADGE[col.key]}`}
+                    className={`text-[9px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${COLUMN_BADGE[col.key]}`}
                   >
                     {col.key}
                   </span>
-                  <span className="text-[11px] font-bold text-slate-400">
+                  <span className="text-[11px] font-medium text-[#8A857D]">
                     {columnPosts.length}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2.5 min-h-[120px]">
+            <div className="space-y-3 min-h-[120px]">
               {columnPosts.map((post) => (
                 <KanbanCard
                   key={post.id}
@@ -256,7 +256,9 @@ export default function PlannerKanbanBoard({
                 />
               ))}
               {columnPosts.length === 0 && (
-                <p className="text-xs text-slate-400 font-medium text-center py-10">—</p>
+                <p className="editorial-empty-title text-center py-12 text-base">
+                  No posts planned yet.
+                </p>
               )}
             </div>
           </div>

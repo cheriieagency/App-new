@@ -13,20 +13,13 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import type { BrandWorkspace, SocialPlatform } from '@/lib/mock-content-planner';
 import { profileAsBrandWorkspace } from '@/lib/mock-workspace-profiles';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { useSubscription } from '@/components/common/useSubscription';
 
-const CHANNELS: { key: SocialPlatform; label: string }[] = [
-  { key: 'instagram', label: 'Instagram' },
-  { key: 'facebook', label: 'Facebook' },
-  { key: 'tiktok', label: 'TikTok' },
-  { key: 'linkedin', label: 'LinkedIn' },
-  { key: 'youtube', label: 'YouTube' },
-  { key: 'pinterest', label: 'Pinterest' },
-];
+/** Default channels when creating a workspace (connect later in Settings → Socials). */
+const DEFAULT_CHANNELS: SocialPlatform[] = ['instagram', 'tiktok', 'linkedin'];
 
 export default function CreateWorkspaceModal({
   open,
@@ -45,24 +38,12 @@ export default function CreateWorkspaceModal({
   const { checkLimit, requestUpgrade, loading: planLoading } = useSubscription();
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
-  const [channels, setChannels] = useState<SocialPlatform[]>([
-    'instagram',
-    'tiktok',
-    'linkedin',
-  ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  const toggle = (p: SocialPlatform) => {
-    setChannels((prev) =>
-      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
-    );
-  };
 
   const resetForm = () => {
     setName('');
     setHandle('');
-    setChannels(['instagram', 'tiktok', 'linkedin']);
     setError('');
   };
 
@@ -80,6 +61,8 @@ export default function CreateWorkspaceModal({
         );
         return;
       }
+
+      const channels = DEFAULT_CHANNELS;
 
       // Primary path: WorkspaceContext persists locally + to /api/admin/workspaces.
       if (workspaceCtx) {
@@ -165,36 +148,13 @@ export default function CreateWorkspaceModal({
               className="h-11 rounded-xl border-zinc-200 font-mono text-sm"
             />
           </div>
-          <div>
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">
-              {t('connectedChannelsLabel')}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {CHANNELS.map(({ key, label }) => {
-                const checked = channels.includes(key);
-                return (
-                  <label
-                    key={key}
-                    className={`flex items-center gap-2 h-11 min-h-[44px] px-3 rounded-xl border text-xs font-extrabold cursor-pointer ${
-                      checked
-                        ? 'border-[var(--nc-coral)] bg-[color-mix(in_srgb,var(--nc-coral)_8%,white)]'
-                        : 'border-zinc-100 bg-zinc-50 text-zinc-500'
-                    }`}
-                  >
-                    <Checkbox checked={checked} onCheckedChange={() => toggle(key)} />
-                    {label}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
           {error && (
             <p className="text-xs font-bold text-red-500">{error}</p>
           )}
           <Button
             type="button"
             onClick={() => void submit()}
-            disabled={!name.trim() || channels.length === 0 || saving || planLoading}
+            disabled={!name.trim() || saving || planLoading}
             className="w-full h-11 min-h-[44px] rounded-xl bg-[var(--nc-coral)] text-white font-extrabold gap-2"
           >
             {saving ? (

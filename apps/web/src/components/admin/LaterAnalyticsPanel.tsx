@@ -215,7 +215,7 @@ const PLATFORM_ACCENT: Record<string, string> = {
   facebook: '#1877F2',
   youtube: '#FF0000',
   linkedin: '#0A66C2',
-  tiktok: '#0F172A',
+  tiktok: '#2C2621',
   pinterest: '#E60023',
 };
 
@@ -281,7 +281,7 @@ function PerformanceChart({
         <path
           d={smooth(visPts)}
           fill="none"
-          stroke="#CBD5E1"
+          stroke="#E6E3DB"
           strokeWidth="2"
           strokeDasharray="5 6"
           strokeLinecap="round"
@@ -289,15 +289,15 @@ function PerformanceChart({
         <path
           d={smooth(revPts)}
           fill="none"
-          stroke="#0F172A"
+          stroke="#2C3B2E"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         {last && (
           <>
-            <circle cx={last.x} cy={last.y} r="7" fill="#F472B6" stroke="#fff" strokeWidth="3" />
-            <circle cx={last.x} cy={last.y} r="12" fill="#F472B6" fillOpacity="0.15" />
+            <circle cx={last.x} cy={last.y} r="7" fill="#2C3B2E" stroke="#fff" strokeWidth="3" />
+            <circle cx={last.x} cy={last.y} r="12" fill="#2C3B2E" fillOpacity="0.15" />
           </>
         )}
       </svg>
@@ -305,7 +305,7 @@ function PerformanceChart({
         {days.map((d) => (
           <span
             key={d}
-            className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400"
+            className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]"
           >
             {d}
           </span>
@@ -1032,10 +1032,10 @@ export default function LaterAnalyticsPanel() {
                 key={key}
                 type="button"
                 onClick={() => setSub(key)}
-                className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
+                className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
                   active
-                    ? 'text-slate-900 bg-slate-100'
-                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'
+                    ? 'text-[#2C2621] bg-[rgba(44,59,46,0.08)]'
+                    : 'text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]'
                 }`}
               >
                 {label}
@@ -1068,22 +1068,22 @@ export default function LaterAnalyticsPanel() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200/90 bg-white text-xs font-semibold text-slate-600 inline-flex items-center gap-1.5 hover:bg-slate-50 transition-colors"
+                  className="h-10 min-h-[40px] px-3.5 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#8A857D] inline-flex items-center gap-1.5 hover:bg-[#F0EFEA] transition-colors"
                   aria-label={t('dateRangePresets', locale)}
                 >
-                  <CalendarDays size={14} className="text-slate-400" aria-hidden />
+                  <CalendarDays size={14} className="text-[#8A857D]" aria-hidden />
                   <span className="max-w-[140px] truncate">
                     {formatRangeLabel(dateRange, locale)}
                   </span>
-                  <ChevronDown size={14} className="text-slate-400" aria-hidden />
+                  <ChevronDown size={14} className="text-[#8A857D]" aria-hidden />
                 </button>
               </PopoverTrigger>
               <PopoverContent
                 align="end"
-                className="w-[min(320px,92vw)] rounded-2xl border-slate-200/90 bg-white p-0 shadow-xl"
+                className="w-[min(320px,92vw)] rounded-xl border-[#E6E3DB] bg-[#FFFFFF] p-0 shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]"
               >
                 <div className="px-4 pt-3.5 pb-2">
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
                     {t('dateRangePresets', locale)}
                   </p>
                 </div>
@@ -1106,10 +1106,10 @@ export default function LaterAnalyticsPanel() {
                           setDateRange(rangeFromPreset(key));
                           setRangeOpen(false);
                         }}
-                        className={`w-full h-10 min-h-[40px] px-3 rounded-xl text-left text-sm font-semibold transition-colors ${
+                        className={`w-full h-10 min-h-[40px] px-3 rounded-xl text-left text-sm font-medium transition-colors ${
                           selected
-                            ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
-                            : 'text-slate-600 hover:bg-slate-50'
+                            ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
+                            : 'text-[#8A857D] hover:bg-[#F0EFEA]'
                         }`}
                       >
                         {t(labelKey, locale)}
@@ -1118,13 +1118,13 @@ export default function LaterAnalyticsPanel() {
                   })}
                 </div>
 
-                <div className="border-t border-slate-100 px-4 py-3 space-y-3">
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                <div className="border-t border-[#E6E3DB] px-4 py-3 space-y-3">
+                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
                     {t('dateRangeCustom', locale)}
                   </p>
                   <div className="grid grid-cols-1 gap-2">
                     <label className="space-y-1">
-                      <span className="text-[11px] font-semibold text-slate-500">
+                      <span className="text-[11px] font-medium text-[#8A857D]">
                         {t('dateRangeFrom', locale)}
                       </span>
                       <input
@@ -1132,11 +1132,11 @@ export default function LaterAnalyticsPanel() {
                         value={draftFrom}
                         max={draftTo}
                         onChange={(e) => setDraftFrom(e.target.value)}
-                        className="w-full h-10 min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+                        className="w-full h-10 min-h-[40px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-0"
                       />
                     </label>
                     <label className="space-y-1">
-                      <span className="text-[11px] font-semibold text-slate-500">
+                      <span className="text-[11px] font-medium text-[#8A857D]">
                         {t('dateRangeTo', locale)}
                       </span>
                       <input
@@ -1145,7 +1145,7 @@ export default function LaterAnalyticsPanel() {
                         min={draftFrom}
                         max={toDateInputValue(new Date())}
                         onChange={(e) => setDraftTo(e.target.value)}
-                        className="w-full h-10 min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+                        className="w-full h-10 min-h-[40px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-0"
                       />
                     </label>
                   </div>
@@ -1160,7 +1160,7 @@ export default function LaterAnalyticsPanel() {
                       });
                       setRangeOpen(false);
                     }}
-                    className="w-full h-10 min-h-[40px] rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors disabled:opacity-40"
+                    className="w-full h-10 min-h-[40px] rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-xs font-medium transition-colors disabled:opacity-40"
                   >
                     {t('dateRangeApply', locale)}
                   </button>
@@ -1170,7 +1170,7 @@ export default function LaterAnalyticsPanel() {
             <button
               type="button"
               onClick={() => setExportOpen(true)}
-              className="h-10 min-h-[40px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+              className="h-10 min-h-[40px] px-4 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
             >
               <Download size={13} /> {t('exportLabel', locale)}
             </button>
@@ -1194,7 +1194,7 @@ export default function LaterAnalyticsPanel() {
             return (
               <div
                 key={`${account.platform}-${account.handle || account.external_id || 'row'}`}
-                className="rounded-2xl border border-slate-200/80 bg-white px-3.5 py-3 flex items-center gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+                className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3.5 py-3 flex items-center gap-3 shadow-none"
               >
                 {avatar ? (
                   <OptimizedImage
@@ -1203,26 +1203,26 @@ export default function LaterAnalyticsPanel() {
                     width={44}
                     height={44}
                     sizes="44px"
-                    className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full object-cover border-2 border-[#E9D5FF]"
+                    className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full object-cover border-2 border-[#E6E3DB]"
                   />
                 ) : (
-                  <span className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-slate-100 inline-flex items-center justify-center text-slate-700">
+                  <span className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-[#F0EFEA] inline-flex items-center justify-center text-[#2C2621]">
                     <Icon size={18} />
                   </span>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                     {PLATFORM_LABEL[account.platform] || account.platform}
                   </p>
-                  <p className="text-sm font-extrabold text-slate-900 truncate">
+                  <p className="text-sm font-medium text-[#2C2621] truncate">
                     {handle || PLATFORM_LABEL[account.platform] || account.platform}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                     {t('kpiFollowers', locale)}
                   </p>
-                  <p className="text-base font-extrabold tabular-nums text-slate-900">
+                  <p className="text-base font-medium tabular-nums text-[#2C2621]">
                     {formatCompact(followers, locale)}
                   </p>
                 </div>
@@ -1264,10 +1264,10 @@ export default function LaterAnalyticsPanel() {
                   window.history.replaceState({}, '', next);
                 }
               }}
-              className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0 ${
+              className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
                 active
-                  ? 'text-slate-900 bg-slate-100'
-                  : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'
+                  ? 'text-[#2C2621] bg-[rgba(44,59,46,0.08)]'
+                  : 'text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]'
               }`}
             >
               {label}
@@ -1417,72 +1417,72 @@ function LinkInBioAnalyticsTab({
     <div className="space-y-4 sm:space-y-5">
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <div className={adminKpiClass}>
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
             {t('colClicks', locale)}
           </p>
-          <p className="mt-2 font-clikd-wordmark font-extrabold text-2xl text-slate-900 tabular-nums tracking-tight">
+          <p className="mt-2 font-playfair font-medium text-2xl text-[#2C2621] tabular-nums tracking-tight">
             {formatCompact(totalClicks, locale)}
           </p>
-          <p className="mt-2 text-[11px] font-medium text-slate-400">
+          <p className="mt-2 text-[11px] font-medium text-[#8A857D]">
             {tf('linkInBioSub', locale, { range: rangeLabel })}
           </p>
         </div>
         <div className={adminKpiClass}>
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
             {t('uniqueCol', locale)}
           </p>
-          <p className="mt-2 font-clikd-wordmark font-extrabold text-2xl text-slate-900 tabular-nums tracking-tight">
+          <p className="mt-2 font-playfair font-medium text-2xl text-[#2C2621] tabular-nums tracking-tight">
             {formatCompact(totalUnique, locale)}
           </p>
-          <p className="mt-2 text-[11px] font-medium text-slate-400">
+          <p className="mt-2 text-[11px] font-medium text-[#8A857D]">
             {t('linkInBioConversionHint', locale)}
           </p>
         </div>
         <div className={adminKpiClass}>
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
             {t('linkInBioUniqueRate', locale)}
           </p>
-          <p className="mt-2 font-clikd-wordmark font-extrabold text-2xl text-slate-900 tabular-nums tracking-tight">
+          <p className="mt-2 font-playfair font-medium text-2xl text-[#2C2621] tabular-nums tracking-tight">
             {uniqueRate}%
           </p>
-          <p className="mt-2 text-[11px] font-medium text-slate-400">
+          <p className="mt-2 text-[11px] font-medium text-[#8A857D]">
             {totalClicks > 0
               ? `${formatCompact(totalUnique, locale)} / ${formatCompact(totalClicks, locale)}`
               : '—'}
           </p>
         </div>
         <div className={adminKpiClass}>
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
             {t('linkInBioTopLink', locale)}
           </p>
-          <p className="mt-2 font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight truncate">
+          <p className="mt-2 font-playfair font-medium text-lg text-[#2C2621] tracking-tight truncate">
             {top?.title ?? '—'}
           </p>
-          <p className="mt-2 text-[11px] font-mono text-slate-400 truncate">
+          <p className="mt-2 text-[11px] font-mono text-[#8A857D] truncate">
             {top ? `/r/${top.slug}` : '—'}
           </p>
         </div>
       </div>
 
       <div className={`${adminCardClass} overflow-hidden`}>
-        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB]">
           <div>
-            <h3 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
-              <Link2 size={14} className="text-[#F472B6]" aria-hidden />
+            <h3 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
+              <Link2 size={14} className="text-[#2C3B2E]" aria-hidden />
               {t('linkinBioAnalyticsTitle', locale)}
             </h3>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+            <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
               {tf('clicksTotalBioUtm', locale, { n: totalClicks })}
             </p>
           </div>
         </div>
 
         {ranked.length === 0 ? (
-          <p className="py-14 text-center text-sm text-slate-400 font-medium">
+          <p className="py-14 text-center text-sm text-[#8A857D] font-medium">
             {t('addProductsForLinkPerf', locale)}
           </p>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[#E6E3DB]">
             {ranked.map((row, i) => {
               const share = Math.round((row.clicks / maxClicks) * 100);
               const clickShare =
@@ -1490,52 +1490,52 @@ function LinkInBioAnalyticsTab({
               return (
                 <div
                   key={row.slug}
-                  className="px-4 sm:px-5 py-3.5 flex items-center gap-3 min-h-[72px] hover:bg-slate-50/70 transition-colors"
+                  className="px-4 sm:px-5 py-3.5 flex items-center gap-3 min-h-[72px] hover:bg-[#F0EFEA]/70 transition-colors"
                 >
                   <span
-                    className={`w-6 h-6 min-h-[24px] min-w-[24px] rounded-md text-[11px] font-extrabold tabular-nums inline-flex items-center justify-center flex-shrink-0 ${
+                    className={`w-6 h-6 min-h-[24px] min-w-[24px] rounded-md text-[11px] font-medium tabular-nums inline-flex items-center justify-center flex-shrink-0 ${
                       i === 0
-                        ? 'bg-[#F472B6] text-white'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                        : 'bg-[#F0EFEA] text-[#8A857D]'
                     }`}
                   >
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">
+                      <p className="text-sm font-medium text-[#2C2621] truncate">
                         {row.title}
                       </p>
-                      <span className="hidden sm:inline text-[10px] font-mono font-medium text-slate-400 flex-shrink-0">
+                      <span className="hidden sm:inline text-[10px] font-mono font-medium text-[#8A857D] flex-shrink-0">
                         /r/{row.slug}
                       </span>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <div className="h-1.5 flex-1 max-w-[220px] rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-1.5 flex-1 max-w-[220px] rounded-full bg-[#F0EFEA] overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-[#1a1848]"
+                          className="h-full rounded-full bg-[#243228]"
                           style={{ width: `${share}%` }}
                         />
                       </div>
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 flex-shrink-0">
+                      <span className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] flex-shrink-0">
                         {clickShare}% {t('linkInBioClickShare', locale)}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 sm:gap-5 flex-shrink-0 text-right">
                     <div>
-                      <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                      <p className="text-[9px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                         {t('colClicks', locale)}
                       </p>
-                      <p className="text-sm font-extrabold tabular-nums text-slate-900">
+                      <p className="text-sm font-medium tabular-nums text-[#2C2621]">
                         {formatCompact(row.clicks, locale)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                      <p className="text-[9px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                         {t('uniqueCol', locale)}
                       </p>
-                      <p className="text-sm font-extrabold tabular-nums text-slate-900">
+                      <p className="text-sm font-medium tabular-nums text-[#2C2621]">
                         {formatCompact(row.unique, locale)}
                       </p>
                     </div>
@@ -1603,7 +1603,7 @@ function AnalyticsOverviewTab({
       label: t('metricLikes', locale),
       value: data.likes,
       pct: Math.round((data.likes / totalEngagement) * 100),
-      color: '#F472B6',
+      color: '#2C3B2E',
       icon: Heart,
     },
     {
@@ -1611,7 +1611,7 @@ function AnalyticsOverviewTab({
       label: t('metricComments', locale),
       value: data.comments,
       pct: Math.round((data.comments / totalEngagement) * 100),
-      color: '#1a1848',
+      color: '#2C3B2E',
       icon: MessageCircle,
     },
     {
@@ -1619,7 +1619,7 @@ function AnalyticsOverviewTab({
       label: t('metricShares', locale),
       value: data.shares,
       pct: Math.round((data.shares / totalEngagement) * 100),
-      color: '#10B981',
+      color: '#2C3B2E',
       icon: Share2,
     },
     {
@@ -1627,7 +1627,7 @@ function AnalyticsOverviewTab({
       label: t('metricSaves', locale),
       value: data.saves,
       pct: Math.round((data.saves / totalEngagement) * 100),
-      color: '#9089F0',
+      color: '#8A857D',
       icon: BookOpen,
     },
   ];
@@ -1640,22 +1640,22 @@ function AnalyticsOverviewTab({
           return (
             <div key={m.key} className={adminKpiClass}>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
                   {m.label}
                 </p>
-                <Icon size={14} className="text-slate-300" aria-hidden />
+                <Icon size={14} className="text-[#8A857D]" aria-hidden />
               </div>
               {loading && m.key !== 'followers' ? (
                 <div
-                  className="mt-3 h-8 w-24 rounded-lg bg-slate-100 animate-pulse"
+                  className="mt-3 h-8 w-24 rounded-lg bg-[#F0EFEA] animate-pulse"
                   aria-hidden
                 />
               ) : (
-                <p className="mt-3 font-clikd-wordmark font-extrabold text-[26px] sm:text-[28px] leading-none text-slate-900 tracking-tight tabular-nums">
+                <p className="mt-3 font-playfair font-medium text-[26px] sm:text-[28px] leading-none text-[#2C2621] tracking-tight tabular-nums">
                   {m.value}
                 </p>
               )}
-              <p className="mt-3 text-xs font-bold tabular-nums text-emerald-600">{m.delta}</p>
+              <p className="mt-3 text-xs font-medium tabular-nums text-[#2C3B2E]">{m.delta}</p>
             </div>
           );
         })}
@@ -1663,10 +1663,10 @@ function AnalyticsOverviewTab({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         <div className={`${adminCardClass} p-5 sm:p-6 lg:col-span-1`}>
-          <h3 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
+          <h3 className="font-playfair font-medium text-base text-[#2C2621]">
             {t('metricEngagementRate', locale)}
           </h3>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-[#8A857D] mt-1">
             {tf('engagementRateHint', locale, {
               name: workspaceName,
               range: rangeLabel,
@@ -1675,22 +1675,22 @@ function AnalyticsOverviewTab({
           <div className="mt-6 flex items-end gap-2">
             {loading ? (
               <div
-                className="h-14 w-28 rounded-xl bg-slate-100 animate-pulse"
+                className="h-14 w-28 rounded-xl bg-[#F0EFEA] animate-pulse"
                 aria-hidden
               />
             ) : (
               <>
-                <p className="font-clikd-wordmark font-extrabold text-5xl sm:text-6xl leading-none text-slate-900 tabular-nums tracking-tight">
+                <p className="font-playfair font-medium text-5xl sm:text-6xl leading-none text-[#2C2621] tabular-nums tracking-tight">
                   {data.engagementRate}
                 </p>
-                <span className="text-2xl font-extrabold text-slate-400 mb-1">%</span>
+                <span className="text-2xl font-medium text-[#8A857D] mb-1">%</span>
               </>
             )}
           </div>
           {typeof data.erDelta === 'number' ? (
             <p
-              className={`mt-3 text-xs font-semibold ${
-                data.erDelta >= 0 ? 'text-emerald-600' : 'text-rose-500'
+              className={`mt-3 text-xs font-medium ${
+                data.erDelta >= 0 ? 'text-[#2C3B2E]' : 'text-rose-500'
               }`}
             >
               {tf('engagementRateTrend', locale, {
@@ -1698,13 +1698,13 @@ function AnalyticsOverviewTab({
               })}
             </p>
           ) : null}
-          <div className="mt-5 h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div className="mt-5 h-2 rounded-full bg-[#F0EFEA] overflow-hidden">
             <div
-              className="h-full rounded-full bg-[#F472B6]"
+              className="h-full rounded-full bg-[#2C3B2E]"
               style={{ width: `${Math.min(100, data.engagementRate * 12)}%` }}
             />
           </div>
-          <p className="mt-2 text-[11px] font-medium text-slate-400">
+          <p className="mt-2 text-[11px] font-medium text-[#8A857D]">
             {t('engagementRateFormula', locale)}
           </p>
         </div>
@@ -1712,24 +1712,24 @@ function AnalyticsOverviewTab({
         <div className={`${adminCardClass} p-5 sm:p-6 lg:col-span-2`}>
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-5">
             <div>
-              <h3 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
+              <h3 className="font-playfair font-medium text-base text-[#2C2621]">
                 {t('engagementSummaryTitle', locale)}
               </h3>
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-sm text-[#8A857D] mt-1">
                 {t('engagementSummarySub', locale)}
               </p>
             </div>
             <div className="text-left sm:text-right">
-              <p className="font-clikd-wordmark font-extrabold text-2xl text-slate-900 tabular-nums">
+              <p className="font-playfair font-medium text-2xl text-[#2C2621] tabular-nums">
                 {formatCompact(totalEngagement, locale)}
               </p>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                 {t('totalEngagement', locale)}
               </p>
             </div>
           </div>
 
-          <div className="flex h-3 rounded-full overflow-hidden bg-slate-100 mb-5">
+          <div className="flex h-3 rounded-full overflow-hidden bg-[#F0EFEA] mb-5">
             {engagementBreakdown.map((row) => (
               <div
                 key={row.key}
@@ -1746,7 +1746,7 @@ function AnalyticsOverviewTab({
               return (
                 <div
                   key={row.key}
-                  className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3.5 flex items-center gap-3 min-h-[56px]"
+                  className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 px-4 py-3.5 flex items-center gap-3 min-h-[56px]"
                 >
                   <span
                     className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-xl inline-flex items-center justify-center flex-shrink-0"
@@ -1755,12 +1755,12 @@ function AnalyticsOverviewTab({
                     <Icon size={16} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-800">{row.label}</p>
-                    <p className="text-[11px] font-medium text-slate-400">
+                    <p className="text-sm font-medium text-[#2C2621]">{row.label}</p>
+                    <p className="text-[11px] font-medium text-[#8A857D]">
                       {tf('pctOfEngagement', locale, { n: String(row.pct) })}
                     </p>
                   </div>
-                  <p className="text-base font-extrabold tabular-nums text-slate-900 flex-shrink-0">
+                  <p className="text-base font-medium tabular-nums text-[#2C2621] flex-shrink-0">
                     {formatCompact(row.value, locale)}
                   </p>
                 </div>
@@ -1779,14 +1779,14 @@ function AnalyticsOverviewTab({
           const Icon = m.icon;
           return (
             <div key={m.label} className={`${adminCardClass} p-4 sm:p-5 flex items-center gap-3`}>
-              <span className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl bg-slate-100 text-slate-600 inline-flex items-center justify-center flex-shrink-0">
+              <span className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl bg-[#F0EFEA] text-[#8A857D] inline-flex items-center justify-center flex-shrink-0">
                 <Icon size={18} />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                   {m.label}
                 </p>
-                <p className="text-xl font-extrabold tabular-nums text-slate-900">
+                <p className="text-xl font-medium tabular-nums text-[#2C2621]">
                   {formatCompact(m.value, locale)}
                 </p>
               </div>
@@ -1820,24 +1820,24 @@ function PostPerfRowItem({
     tone === 'best'
       ? Math.min(100, (post.er / maxEr) * 100)
       : Math.min(100, Math.max(8, Math.log10(maxViews + 1) * 28));
-  const barColor = tone === 'best' ? '#10B981' : '#6366F1';
+  const barColor = tone === 'best' ? '#2C3B2E' : '#8A857D';
 
   return (
     <button
       type="button"
       onClick={() => onSelect(post)}
-      className="w-full text-left flex items-center gap-3 px-3 py-2.5 min-h-[64px] hover:bg-slate-50/80 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#F472B6]/40"
+      className="w-full text-left flex items-center gap-3 px-3 py-2.5 min-h-[64px] hover:bg-[#F0EFEA]/80 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2C3B2E]/25"
     >
       <span
-        className={`w-6 h-6 min-h-[24px] min-w-[24px] rounded-md text-[11px] font-extrabold tabular-nums inline-flex items-center justify-center flex-shrink-0 ${
+        className={`w-6 h-6 min-h-[24px] min-w-[24px] rounded-md text-[11px] font-medium tabular-nums inline-flex items-center justify-center flex-shrink-0 ${
           tone === 'best'
-            ? 'bg-emerald-500 text-white'
-            : 'bg-indigo-500 text-white'
+            ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+            : 'bg-[#8A857D] text-[#F9F8F6]'
         }`}
       >
         {rank}
       </span>
-      <div className="relative w-12 h-12 min-h-[48px] min-w-[48px] rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+      <div className="relative w-12 h-12 min-h-[48px] min-w-[48px] rounded-xl overflow-hidden bg-[#F0EFEA] flex-shrink-0">
         <OptimizedImage
           src={post.image}
           alt=""
@@ -1847,19 +1847,19 @@ function PostPerfRowItem({
         />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-900 truncate">{post.title}</p>
+        <p className="text-sm font-medium text-[#2C2621] truncate">{post.title}</p>
           <div className="mt-1.5 flex items-center gap-2">
-          <div className="h-1.5 flex-1 max-w-[140px] rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-1.5 flex-1 max-w-[140px] rounded-full bg-[#F0EFEA] overflow-hidden">
             <div
               className="h-full rounded-full"
               style={{ width: `${barPct}%`, background: barColor }}
             />
           </div>
           <span
-            className={`text-[11px] font-extrabold tabular-nums flex-shrink-0 px-1.5 py-0.5 rounded-md ${
+            className={`text-[11px] font-medium tabular-nums flex-shrink-0 px-1.5 py-0.5 rounded-md ${
               tone === 'best'
-                ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-indigo-50 text-indigo-700'
+                ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
+                : 'bg-[rgba(44,59,46,0.06)] text-[#2C3B2E]'
             }`}
           >
             {tone === 'best'
@@ -1870,26 +1870,26 @@ function PostPerfRowItem({
       </div>
       <div className="hidden md:flex items-center gap-4 flex-shrink-0 text-right">
         <div>
-          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+          <p className="text-[9px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
             {t(reachLabelKey, locale)}
           </p>
-          <p className="text-xs font-extrabold tabular-nums text-slate-800">
+          <p className="text-xs font-medium tabular-nums text-[#2C2621]">
             {formatCompact(post.impressions, locale)}
           </p>
         </div>
         <div>
-          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+          <p className="text-[9px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
             {t('metricLikes', locale)}
           </p>
-          <p className="text-xs font-extrabold tabular-nums text-slate-800">
+          <p className="text-xs font-medium tabular-nums text-[#2C2621]">
             {formatCompact(post.likes, locale)}
           </p>
         </div>
         <div>
-          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+          <p className="text-[9px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
             {t('metricComments', locale)}
           </p>
-          <p className="text-xs font-extrabold tabular-nums text-slate-800">
+          <p className="text-xs font-medium tabular-nums text-[#2C2621]">
             {formatCompact(post.comments, locale)}
           </p>
         </div>
@@ -1991,7 +1991,7 @@ function ContentPerformanceTab({
         return {
           key,
           label: PLATFORM_LABEL[key] || key,
-          accent: PLATFORM_ACCENT[key] || '#0F172A',
+          accent: PLATFORM_ACCENT[key] || '#2C3B2E',
           Icon: PLATFORM_ICON[key] || InstagramIcon,
           count: sorted.length,
           best,
@@ -2011,7 +2011,7 @@ function ContentPerformanceTab({
       {pills.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {pills.map((account) => {
-            const accent = PLATFORM_ACCENT[account.platform] || '#0F172A';
+            const accent = PLATFORM_ACCENT[account.platform] || '#2C3B2E';
             const Icon = PLATFORM_ICON[account.platform] || InstagramIcon;
             const muted =
               account.status === 'disconnected' ||
@@ -2020,10 +2020,10 @@ function ContentPerformanceTab({
             return (
               <div
                 key={account.platform}
-                className={`inline-flex items-center gap-2 min-h-11 px-3 rounded-xl border text-sm font-semibold ${
+                className={`inline-flex items-center gap-2 min-h-11 px-3 rounded-xl border text-sm font-medium ${
                   muted
-                    ? 'bg-slate-50 border-slate-200 text-slate-500'
-                    : 'bg-white border-slate-200 text-slate-800'
+                    ? 'bg-[#F0EFEA] border-[#E6E3DB] text-[#8A857D]'
+                    : 'bg-[#FFFFFF] border-[#E6E3DB] text-[#2C2621]'
                 }`}
               >
                 <span
@@ -2037,7 +2037,7 @@ function ContentPerformanceTab({
                   {formatAccountPillLabel(account)}
                 </span>
                 {account.status === 'ok' && (
-                  <span className="text-[10px] font-mono font-bold tabular-nums text-slate-400">
+                  <span className="text-[10px] font-mono font-medium tabular-nums text-[#8A857D]">
                     {account.post_count}
                   </span>
                 )}
@@ -2045,12 +2045,12 @@ function ContentPerformanceTab({
                   account.status === 'disconnected' ? (
                     <a
                       href="/admin/settings/socials"
-                      className="text-[10px] font-mono font-bold uppercase tracking-wider text-pink-600 hover:text-pink-700 underline-offset-2 hover:underline"
+                      className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#2C3B2E] hover:text-[#243228] underline-offset-2 hover:underline"
                     >
                       Connect
                     </a>
                   ) : (
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600">
+                    <span className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#B85C38]">
                       —
                     </span>
                   )
@@ -2061,17 +2061,17 @@ function ContentPerformanceTab({
         </div>
       )}
 
-      <p className="text-sm font-medium text-slate-500">
+      <p className="text-sm font-medium text-[#8A857D]">
         {tf(compareKey, locale, { range: rangeLabel })}
       </p>
 
       {loading && byPlatform.every((g) => g.count === 0) ? (
-        <div className={`${adminCardClass} px-4 py-10 text-center text-sm text-slate-400`}>
+        <div className={`${adminCardClass} px-4 py-10 text-center text-sm text-[#8A857D]`}>
           Loading posts…
         </div>
       ) : byPlatform.length === 0 ? (
         <div className={`${adminCardClass} px-4 py-8 text-center`}>
-          <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-100 text-sm font-semibold text-amber-800">
+          <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-sm font-medium text-[#B85C38]">
             Connect account or publish content to view analytics
           </p>
         </div>
@@ -2087,10 +2087,10 @@ function ContentPerformanceTab({
                 <group.Icon size={16} className="text-white" />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-extrabold text-slate-900 leading-tight">
+                <h3 className="text-sm font-medium text-[#2C2621] leading-tight">
                   {group.label}
                 </h3>
-                <p className="text-[11px] font-medium text-slate-400 tabular-nums">
+                <p className="text-[11px] font-medium text-[#8A857D] tabular-nums">
                   {group.count > 0 ? group.count : group.message}
                 </p>
               </div>
@@ -2098,26 +2098,26 @@ function ContentPerformanceTab({
 
             {group.count === 0 ? (
               <div className={`${adminCardClass} px-4 py-6`}>
-                <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-100 text-xs sm:text-sm font-semibold text-amber-800">
+                <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-xs sm:text-sm font-medium text-[#B85C38]">
                   Connect account or publish content to view analytics
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div className={`${adminCardClass} overflow-hidden`}>
-                  <div className="px-3.5 py-3 border-b border-slate-100">
-                    <h4 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
+                  <div className="px-3.5 py-3 border-b border-[#E6E3DB]">
+                    <h4 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
                       <span
-                        className="w-2 h-2 rounded-full bg-emerald-500"
+                        className="w-2 h-2 rounded-full bg-[#2C3B2E]"
                         aria-hidden
                       />
                       {t('bestPerformingPosts', locale)}
                     </h4>
-                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                    <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
                       {t('bestPerformingSub', locale)}
                     </p>
                   </div>
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-[#E6E3DB]">
                     {group.best.map((post, i) => (
                       <PostPerfRowItem
                         key={post.id}
@@ -2133,21 +2133,21 @@ function ContentPerformanceTab({
                 </div>
 
                 <div className={`${adminCardClass} overflow-hidden`}>
-                  <div className="px-3.5 py-3 border-b border-slate-100">
-                    <h4 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
+                  <div className="px-3.5 py-3 border-b border-[#E6E3DB]">
+                    <h4 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
                       <span
-                        className="w-2 h-2 rounded-full bg-indigo-500"
+                        className="w-2 h-2 rounded-full bg-[#8A857D]"
                         aria-hidden
                       />
                       {t('mostViewedPosts', locale)}
                     </h4>
-                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                    <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
                       {t('mostViewedSub', locale)}
                     </p>
                   </div>
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-[#E6E3DB]">
                     {group.mostViewed.length === 0 ? (
-                      <p className="px-3.5 py-8 text-sm text-slate-400 text-center">
+                      <p className="px-3.5 py-8 text-sm text-[#8A857D] text-center">
                         —
                       </p>
                     ) : (
@@ -2280,10 +2280,10 @@ function HashtagsAnalyticsTab({
           },
         ].map((m) => (
           <div key={m.label} className={adminKpiClass}>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
               {m.label}
             </p>
-            <p className="mt-2 font-clikd-wordmark font-extrabold text-xl sm:text-2xl text-slate-900 tabular-nums tracking-tight">
+            <p className="mt-2 font-playfair font-medium text-xl sm:text-2xl text-[#2C2621] tabular-nums tracking-tight">
               {m.value}
             </p>
           </div>
@@ -2291,12 +2291,12 @@ function HashtagsAnalyticsTab({
       </div>
 
       <div className={`${adminCardClass} overflow-hidden`}>
-        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100">
-          <h3 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
-            <Hash size={14} className="text-[#F472B6]" aria-hidden />
+        <div className="px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB]">
+          <h3 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
+            <Hash size={14} className="text-[#2C3B2E]" aria-hidden />
             {t('hashtagsUsedTitle', locale)}
           </h3>
-          <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+          <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
             {tf('hashtagsUsedSub', locale, { range: rangeLabel })}
           </p>
         </div>
@@ -2304,7 +2304,7 @@ function HashtagsAnalyticsTab({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left">
             <thead>
-              <tr className="border-b border-slate-100">
+              <tr className="border-b border-[#E6E3DB]">
                 {[
                   t('hashtagColTag', locale),
                   t('hashtagColPosts', locale),
@@ -2314,7 +2314,7 @@ function HashtagsAnalyticsTab({
                 ].map((h) => (
                   <th
                     key={h}
-                    className="px-4 sm:px-5 py-2.5 text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400"
+                    className="px-4 sm:px-5 py-2.5 text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]"
                   >
                     {h}
                   </th>
@@ -2326,7 +2326,7 @@ function HashtagsAnalyticsTab({
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-4 sm:px-5 py-10 text-sm text-slate-400 text-center"
+                    className="px-4 sm:px-5 py-10 text-sm text-[#8A857D] text-center"
                   >
                     Loading hashtags…
                   </td>
@@ -2334,7 +2334,7 @@ function HashtagsAnalyticsTab({
               ) : used.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 sm:px-5 py-10 text-center">
-                    <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-amber-50 border border-amber-100 text-sm font-semibold text-amber-800">
+                    <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-sm font-medium text-[#B85C38]">
                       No hashtags in recent posts yet — publish with #tags or generate AI ideas below
                     </p>
                   </td>
@@ -2343,42 +2343,42 @@ function HashtagsAnalyticsTab({
                 used.map((h) => (
                   <tr
                     key={h.tag}
-                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70"
+                    className="border-b border-[#E6E3DB] last:border-0 hover:bg-[#F0EFEA]/70"
                   >
                     <td className="px-4 sm:px-5 py-3">
-                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1a1848]">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2C3B2E]">
                         <span
-                          className="w-1.5 h-1.5 rounded-full bg-[#F472B6]"
+                          className="w-1.5 h-1.5 rounded-full bg-[#2C3B2E]"
                           aria-hidden
                         />
                         {h.tag}
                       </span>
-                      <span className="ml-2 inline-flex items-center h-6 min-h-[24px] px-1.5 rounded-md bg-slate-100 text-[10px] font-mono font-bold tabular-nums text-slate-500">
+                      <span className="ml-2 inline-flex items-center h-6 min-h-[24px] px-1.5 rounded-md bg-[#F0EFEA] text-[10px] font-mono font-medium tabular-nums text-[#8A857D]">
                         {h.posts}
                       </span>
-                      <div className="mt-1.5 h-1 max-w-[120px] rounded-full bg-slate-100 overflow-hidden">
+                      <div className="mt-1.5 h-1 max-w-[120px] rounded-full bg-[#F0EFEA] overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-[#1a1848]"
+                          className="h-full rounded-full bg-[#243228]"
                           style={{
                             width: `${(h.reach / maxReach) * 100}%`,
                           }}
                         />
                       </div>
                     </td>
-                    <td className="px-4 sm:px-5 py-3 text-sm font-semibold tabular-nums text-slate-800">
+                    <td className="px-4 sm:px-5 py-3 text-sm font-medium tabular-nums text-[#2C2621]">
                       {h.posts}
                     </td>
-                    <td className="px-4 sm:px-5 py-3 text-sm font-semibold tabular-nums text-slate-800">
+                    <td className="px-4 sm:px-5 py-3 text-sm font-medium tabular-nums text-[#2C2621]">
                       {formatCompact(h.reach, locale)}
                     </td>
-                    <td className="px-4 sm:px-5 py-3 text-sm font-extrabold tabular-nums text-slate-900">
+                    <td className="px-4 sm:px-5 py-3 text-sm font-medium tabular-nums text-[#2C2621]">
                       {h.engagementRate.toFixed(1)}%
                     </td>
                     <td className="px-4 sm:px-5 py-3">
                       <span
-                        className={`inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg text-xs font-bold tabular-nums ${
+                        className={`inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg text-xs font-medium tabular-nums ${
                           h.trend >= 0
-                            ? 'bg-emerald-50 text-emerald-700'
+                            ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
                             : 'bg-rose-50 text-rose-600'
                         }`}
                       >
@@ -2395,13 +2395,13 @@ function HashtagsAnalyticsTab({
       </div>
 
       <div className={`${adminCardClass} overflow-hidden`}>
-        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h3 className="text-sm font-extrabold text-slate-900 inline-flex items-center gap-2">
-              <Sparkles size={14} className="text-[#F472B6]" aria-hidden />
+            <h3 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
+              <Sparkles size={14} className="text-[#2C3B2E]" aria-hidden />
               {t('aiHashtagIdeasTitle', locale)}
             </h3>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+            <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
               {t('aiHashtagIdeasSub', locale)}
             </p>
           </div>
@@ -2409,7 +2409,7 @@ function HashtagsAnalyticsTab({
             type="button"
             onClick={() => void regenerate()}
             disabled={generating}
-            className="h-11 min-h-[44px] px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 self-start"
+            className="h-11 min-h-[44px] px-3.5 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-xs font-medium inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 self-start"
           >
             <Sparkles size={13} />
             {generating
@@ -2426,11 +2426,11 @@ function HashtagsAnalyticsTab({
 
         <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-3 gap-3">
           {generating && ideas.length === 0 ? (
-            <p className="text-sm text-slate-400 md:col-span-3 text-center py-6">
+            <p className="text-sm text-[#8A857D] md:col-span-3 text-center py-6">
               Generating hashtag sets…
             </p>
           ) : ideas.length === 0 ? (
-            <p className="text-sm text-slate-400 md:col-span-3 text-center py-6">
+            <p className="text-sm text-[#8A857D] md:col-span-3 text-center py-6">
               Tap Generate ideas to create High Reach, Niche, and Low Competition sets with OpenAI
             </p>
           ) : (
@@ -2440,19 +2440,19 @@ function HashtagsAnalyticsTab({
               return (
                 <div
                   key={id}
-                  className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3.5 flex flex-col gap-3"
+                  className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-3.5 flex flex-col gap-3"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-bold text-slate-800">
+                    <p className="text-xs font-medium text-[#2C2621]">
                       {set.title}
                     </p>
                     <button
                       type="button"
                       onClick={() => void copySet(id, set.tags)}
-                      className="h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-semibold text-slate-600 hover:bg-white hover:text-slate-900 inline-flex items-center gap-1 transition-colors border border-transparent hover:border-slate-200"
+                      className="h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-medium text-[#8A857D] hover:bg-[#FFFFFF] hover:text-[#2C2621] inline-flex items-center gap-1 transition-colors border border-transparent hover:border-[#E6E3DB]"
                     >
                       {copied ? (
-                        <Check size={12} className="text-emerald-600" />
+                        <Check size={12} className="text-[#2C3B2E]" />
                       ) : (
                         <Copy size={12} />
                       )}
@@ -2465,7 +2465,7 @@ function HashtagsAnalyticsTab({
                     {set.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-[#1a1848]"
+                        className="inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg bg-[#FFFFFF] border border-[#E6E3DB] text-[11px] font-medium text-[#2C3B2E]"
                       >
                         {tag}
                       </span>
@@ -2498,21 +2498,21 @@ function DemoBarList({
   emptyLabel: string;
 }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-slate-400 py-2">{emptyLabel}</p>;
+    return <p className="text-sm text-[#8A857D] py-2">{emptyLabel}</p>;
   }
   return (
     <ul className="space-y-2.5">
       {rows.map((row) => (
         <li key={row.key}>
           <div className="flex items-center justify-between gap-2 text-sm">
-            <span className="font-semibold text-slate-800 truncate">{row.label}</span>
-            <span className="tabular-nums font-extrabold text-slate-900 flex-shrink-0">
+            <span className="font-medium text-[#2C2621] truncate">{row.label}</span>
+            <span className="tabular-nums font-medium text-[#2C2621] flex-shrink-0">
               {row.pct}%
             </span>
           </div>
-          <div className="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div className="mt-1 h-2 rounded-full bg-[#F0EFEA] overflow-hidden">
             <div
-              className="h-full rounded-full bg-[#F472B6]"
+              className="h-full rounded-full bg-[#2C3B2E]"
               style={{ width: `${Math.min(100, Math.max(2, row.pct))}%` }}
             />
           </div>
@@ -2533,12 +2533,12 @@ function ActiveHoursChart({ hours, locale }: { hours: number[]; locale: Locale }
           return (
             <div
               key={hour}
-              className="flex-1 min-w-0 rounded-t-sm bg-[#2B2568]/15 hover:bg-[#F472B6]/70 transition-colors"
+              className="flex-1 min-w-0 rounded-t-sm bg-[#2C3B2E]/15 hover:bg-[#2C3B2E]/70 transition-colors"
               style={{
                 height: `${h}%`,
                 background:
                   hour === peak && value > 0
-                    ? '#F472B6'
+                    ? '#2C3B2E'
                     : undefined,
               }}
               title={`${String(hour).padStart(2, '0')}:00 · ${value}`}
@@ -2546,7 +2546,7 @@ function ActiveHoursChart({ hours, locale }: { hours: number[]; locale: Locale }
           );
         })}
       </div>
-      <div className="flex justify-between mt-2 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+      <div className="flex justify-between mt-2 text-[10px] font-mono font-medium text-[#8A857D] uppercase tracking-wider">
         <span>00</span>
         <span>06</span>
         <span>12</span>
@@ -2554,9 +2554,9 @@ function ActiveHoursChart({ hours, locale }: { hours: number[]; locale: Locale }
         <span>23</span>
       </div>
       {peak >= 0 && hours[peak] > 0 ? (
-        <p className="text-xs text-slate-500 font-medium mt-2">
+        <p className="text-xs text-[#8A857D] font-medium mt-2">
           {t('audienceActiveTimesHint', locale)} · peak{' '}
-          <span className="font-bold text-slate-800">
+          <span className="font-medium text-[#2C2621]">
             {String(peak).padStart(2, '0')}:00
           </span>
         </p>
@@ -2592,7 +2592,7 @@ function AudienceInsights({
     facebook: '#1877F2',
     youtube: '#FF0000',
     linkedin: '#0A66C2',
-    tiktok: '#0F172A',
+    tiktok: '#2C2621',
     pinterest: '#E60023',
   };
 
@@ -2668,54 +2668,54 @@ function AudienceInsights({
   return (
     <div className="space-y-4 sm:space-y-5">
       <div className={`${adminCardClass} p-5 sm:p-6`}>
-        <h3 className="font-clikd-wordmark font-extrabold text-base text-slate-900 mb-4">
+        <h3 className="font-playfair font-medium text-base text-[#2C2621] mb-4">
           {t('analyticsAudience', locale)} · {workspaceName}
         </h3>
 
         {/* Total across all platforms + accounts + reach */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-xl bg-slate-900 text-white p-4 sm:p-5">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-white/60">
+          <div className="rounded-xl bg-[#2C3B2E] text-[#F9F8F6] p-4 sm:p-5">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#F9F8F6]/60">
               {t('totalFollowersAll', locale)}
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold mt-1 tabular-nums">
+            <p className="text-2xl sm:text-3xl font-medium mt-1 tabular-nums">
               {formatCompact(followerTotal, locale)}
             </p>
-            <p className="text-xs text-white/55 font-medium mt-1">
+            <p className="text-xs text-[#F9F8F6]/55 font-medium mt-1">
               {accountRows.length} {t('accounts', locale).toLowerCase()}
             </p>
           </div>
-          <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 sm:p-5">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+          <div className="rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] p-4 sm:p-5">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               {t('accounts', locale)}
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
+            <p className="text-2xl sm:text-3xl font-medium text-[#2C2621] mt-1 tabular-nums">
               {accountCount || accountRows.length}
             </p>
           </div>
-          <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 sm:p-5">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+          <div className="rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] p-4 sm:p-5">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               {t('reach7d', locale)}
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
+            <p className="text-2xl sm:text-3xl font-medium text-[#2C2621] mt-1 tabular-nums">
               {formatCompact(reach, locale)}
             </p>
           </div>
         </div>
 
         {/* Separated followers per connected account */}
-        <div className="mt-5 pt-5 border-t border-slate-100">
+        <div className="mt-5 pt-5 border-t border-[#E6E3DB]">
           <div className="flex items-end justify-between gap-3 mb-3">
-            <h4 className="font-clikd-wordmark font-extrabold text-sm text-slate-900">
+            <h4 className="font-playfair font-medium text-sm text-[#2C2621]">
               {t('followersPerAccount', locale)}
             </h4>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               {t('shareOfAudience', locale)}
             </p>
           </div>
 
           {accountRows.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-6">—</p>
+            <p className="font-playfair italic text-base text-[#8A857D] text-center py-8">No accounts connected yet.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {accountRows.map((row) => {
@@ -2724,13 +2724,13 @@ function AudienceInsights({
                 return (
                   <div
                     key={row.key}
-                    className="rounded-xl border border-slate-200/80 bg-white p-4 flex flex-col gap-3 min-h-[44px]"
+                    className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-4 flex flex-col gap-3 min-h-[44px]"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
-                        className="relative w-10 h-10 min-h-[40px] min-w-[40px] rounded-full border border-slate-100 inline-flex items-center justify-center flex-shrink-0 overflow-hidden bg-slate-50"
+                        className="relative w-10 h-10 min-h-[40px] min-w-[40px] rounded-full border border-[#E6E3DB] inline-flex items-center justify-center flex-shrink-0 overflow-hidden bg-[#F0EFEA]"
                         style={{
-                          color: PLATFORM_COLORS[row.platform] || '#1a1848',
+                          color: PLATFORM_COLORS[row.platform] || '#2C3B2E',
                         }}
                       >
                         {row.avatar_url ? (
@@ -2746,10 +2746,10 @@ function AudienceInsights({
                         )}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-extrabold text-slate-900 truncate">
+                        <p className="text-sm font-medium text-[#2C2621] truncate">
                           {row.label}
                         </p>
-                        <p className="text-xs text-slate-500 font-mono truncate">
+                        <p className="text-xs text-[#8A857D] font-mono truncate">
                           {row.handle ||
                             row.display_name ||
                             PLATFORM_LABEL[row.platform] ||
@@ -2758,22 +2758,22 @@ function AudienceInsights({
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                      <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                         {t('kpiFollowers', locale)}
                       </p>
-                      <p className="text-xl font-extrabold text-slate-900 tabular-nums mt-0.5">
+                      <p className="text-xl font-medium text-[#2C2621] tabular-nums mt-0.5">
                         {formatCompact(row.followers, locale)}
                       </p>
-                      <div className="mt-2 h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="mt-2 h-2 rounded-full bg-[#F0EFEA] overflow-hidden">
                         <div
                           className="h-full rounded-full transition-[width] duration-500"
                           style={{
                             width: `${Math.min(100, Math.max(row.followers > 0 ? 3 : 0, pct))}%`,
-                            background: PLATFORM_COLORS[row.platform] || '#1a1848',
+                            background: PLATFORM_COLORS[row.platform] || '#2C3B2E',
                           }}
                         />
                       </div>
-                      <p className="text-[11px] font-semibold text-slate-500 mt-1 tabular-nums">
+                      <p className="text-[11px] font-medium text-[#8A857D] mt-1 tabular-nums">
                         {pct}%
                       </p>
                     </div>
@@ -2788,10 +2788,10 @@ function AudienceInsights({
       <div className={`${adminCardClass} p-5 sm:p-6`}>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
           <div>
-            <h4 className="font-clikd-wordmark font-extrabold text-base text-slate-900">
+            <h4 className="font-playfair font-medium text-base text-[#2C2621]">
               {t('audienceDemographics', locale)}
             </h4>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-[#8A857D] mt-1">
               {demoPlatform === 'all' &&
               (demographics?.platforms_with_data?.length ?? 0) > 1
                 ? t('demographicsAllPlatforms', locale)
@@ -2809,26 +2809,26 @@ function AudienceInsights({
             <button
               type="button"
               onClick={() => setDemoPlatform('all')}
-              className={`min-h-11 px-3.5 rounded-xl text-sm font-semibold border transition-colors ${
+              className={`min-h-11 px-3.5 rounded-xl text-sm font-medium border transition-colors ${
                 demoPlatform === 'all'
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                  ? 'bg-[#2C3B2E] text-[#F9F8F6] border-[#2C3B2E]'
+                  : 'bg-[#FFFFFF] text-[#8A857D] border-[#E6E3DB] hover:border-[#E6E3DB]'
               }`}
             >
               {t('demographicsAllPlatforms', locale)}
             </button>
             {platformSlices.map((slice) => {
               const selected = demoPlatform === slice.platform;
-              const color = PLATFORM_COLORS[slice.platform] || '#0F172A';
+              const color = PLATFORM_COLORS[slice.platform] || '#2C3B2E';
               return (
                 <button
                   key={slice.platform}
                   type="button"
                   onClick={() => setDemoPlatform(slice.platform)}
-                  className={`min-h-11 px-3.5 rounded-xl text-sm font-semibold border transition-colors inline-flex items-center gap-2 ${
+                  className={`min-h-11 px-3.5 rounded-xl text-sm font-medium border transition-colors inline-flex items-center gap-2 ${
                     selected
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      ? 'bg-[#2C3B2E] text-[#F9F8F6] border-[#2C3B2E]'
+                      : 'bg-[#FFFFFF] text-[#8A857D] border-[#E6E3DB] hover:border-[#E6E3DB]'
                   }`}
                 >
                   <span
@@ -2840,7 +2840,7 @@ function AudienceInsights({
                   {!slice.available && (
                     <span
                       className={`text-[10px] font-mono uppercase tracking-wide ${
-                        selected ? 'text-white/60' : 'text-slate-400'
+                        selected ? 'text-white/60' : 'text-[#8A857D]'
                       }`}
                     >
                       —
@@ -2854,7 +2854,7 @@ function AudienceInsights({
 
         {!activeDemo?.available ? (
           <div className="space-y-3 py-2">
-            <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">
+            <p className="text-sm text-[#8A857D] leading-relaxed max-w-2xl">
               {activeDemo?.message ||
                 demographics?.message ||
                 t('demographicsUnavailable', locale)}
@@ -2864,7 +2864,7 @@ function AudienceInsights({
                 {platformSlices.map((slice) => (
                   <li
                     key={slice.platform}
-                    className="text-xs text-slate-500 leading-relaxed flex gap-2"
+                    className="text-xs text-[#8A857D] leading-relaxed flex gap-2"
                   >
                     <span
                       className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
@@ -2874,7 +2874,7 @@ function AudienceInsights({
                       }}
                     />
                     <span>
-                      <span className="font-semibold text-slate-700">
+                      <span className="font-medium text-[#2C2621]">
                         {PLATFORM_LABEL[slice.platform] || slice.platform}
                       </span>
                       {': '}
@@ -2891,7 +2891,7 @@ function AudienceInsights({
           <div className="space-y-6">
             {demoPlatform === 'all' &&
               platformSlices.some((s) => !s.available && s.message) && (
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <p className="text-xs text-[#8A857D] leading-relaxed">
                   {platformSlices
                     .filter((s) => !s.available && s.message)
                     .map(
@@ -2903,20 +2903,20 @@ function AudienceInsights({
               )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+                <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                   {t('audienceTopCountries', locale)}
                 </p>
                 <DemoBarList rows={activeDemo.countries} emptyLabel="—" />
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+                <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                   {t('audienceTopCities', locale)}
                 </p>
                 <DemoBarList rows={activeDemo.cities} emptyLabel="—" />
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+                <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                   {t('audienceGender', locale)}
                 </p>
                 <DemoBarList
@@ -2932,16 +2932,16 @@ function AudienceInsights({
                   emptyLabel="—"
                 />
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+                <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                   {t('audienceAge', locale)}
                 </p>
                 <DemoBarList rows={activeDemo.ages} emptyLabel="—" />
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-3">
+            <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+              <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                 {t('audienceActiveTimes', locale)}
               </p>
               {activeDemo.active_hours.some((n) => n > 0) ? (
@@ -2950,7 +2950,7 @@ function AudienceInsights({
                   locale={locale}
                 />
               ) : (
-                <p className="text-sm text-slate-400 py-2">—</p>
+                <p className="text-sm text-[#8A857D] py-2">—</p>
               )}
             </div>
           </div>

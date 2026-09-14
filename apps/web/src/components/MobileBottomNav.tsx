@@ -106,7 +106,7 @@ function CreatorBottomNav({
 
   const tabClass = (active: boolean) =>
     `flex flex-col items-center justify-center gap-0.5 min-h-[44px] flex-1 px-1 rounded-xl transition-colors ${
-      active ? 'text-[#2B2568]' : 'text-slate-400 hover:text-slate-700'
+      active ? 'text-[#2C3B2E]' : 'text-[#8A857D] hover:text-[#2C2621]'
     }`;
 
   return (
@@ -115,7 +115,7 @@ function CreatorBottomNav({
         <div className="lg:hidden fixed inset-0 z-[60]" role="presentation">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-[#2C2621]/25"
             aria-label="Close"
             onClick={() => setMoreOpen(false)}
           />
@@ -123,10 +123,10 @@ function CreatorBottomNav({
             role="dialog"
             aria-modal="true"
             aria-label={t('navMore', locale)}
-            className="absolute bottom-16 left-0 right-0 mx-2 mb-2 rounded-2xl border border-slate-200/90 bg-white shadow-[0_-8px_40px_rgba(15,23,42,0.12)] overflow-hidden"
+            className="absolute bottom-16 left-0 right-0 mx-2 mb-2 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)] overflow-hidden"
           >
-            <div className="px-4 pt-3 pb-2 border-b border-slate-100">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6]">
+            <div className="px-4 pt-4 pb-3 border-b border-[#E6E3DB]">
+              <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                 {t('navMore', locale)}
               </p>
             </div>
@@ -142,15 +142,15 @@ function CreatorBottomNav({
                       onClick={() => setMoreOpen(false)}
                       className={`flex items-center gap-3 min-h-[48px] px-4 transition-colors ${
                         active
-                          ? 'bg-[#FCE7F3]/70 text-[#2B2568] font-semibold'
-                          : 'text-slate-700 hover:bg-slate-50 font-medium'
+                          ? 'bg-[#F0EFEA] text-[#2C2621] font-medium'
+                          : 'text-[#8A857D] hover:bg-[#F0EFEA]/60 hover:text-[#2C2621] font-normal'
                       }`}
                       aria-current={active ? 'page' : undefined}
                     >
                       <Icon
                         size={18}
-                        strokeWidth={active ? 2.4 : 2}
-                        className={active ? 'text-[#F472B6]' : 'text-slate-400'}
+                        strokeWidth={1.5}
+                        className={active ? 'text-[#2C3B2E]' : 'text-[#8A857D]'}
                         aria-hidden
                       />
                       <span className="text-sm tracking-tight">{label}</span>
@@ -164,7 +164,7 @@ function CreatorBottomNav({
       ) : null}
 
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(15,23,42,0.04)]"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-[#F9F8F6]/95 border-t border-[#E6E3DB]"
         aria-label={t('primaryMobileNav', locale)}
       >
         {primaryItems.map((item) => {
@@ -181,11 +181,11 @@ function CreatorBottomNav({
             >
               <Icon
                 size={20}
-                strokeWidth={active ? 2.4 : 2}
-                className={active ? 'text-[#F472B6]' : undefined}
+                strokeWidth={1.5}
+                className={active ? 'text-[#2C3B2E]' : undefined}
                 aria-hidden
               />
-              <span className="text-[10px] font-bold tracking-tight truncate max-w-full px-0.5">
+              <span className="text-[10px] font-medium tracking-tight truncate max-w-full px-0.5">
                 {label}
               </span>
             </Link>
@@ -201,11 +201,11 @@ function CreatorBottomNav({
         >
           <Ellipsis
             size={20}
-            strokeWidth={moreOpen || moreActive ? 2.4 : 2}
-            className={moreOpen || moreActive ? 'text-[#F472B6]' : undefined}
+            strokeWidth={1.5}
+            className={moreOpen || moreActive ? 'text-[#2C3B2E]' : undefined}
             aria-hidden
           />
-          <span className="text-[10px] font-bold tracking-tight">{t('navMore', locale)}</span>
+          <span className="text-[10px] font-medium tracking-tight">{t('navMore', locale)}</span>
         </button>
       </nav>
     </>
@@ -235,7 +235,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(15,23,42,0.04)]"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 flex items-center justify-around bg-[#F9F8F6]/95 border-t border-[#E6E3DB]"
       aria-label={t('primaryMobileNav', locale)}
     >
       {MEMBER_TABS.map((item) => {
@@ -246,17 +246,17 @@ export function MobileBottomNav() {
             key={item.href}
             href={item.href}
             className={`flex flex-col items-center justify-center gap-0.5 min-h-[44px] min-w-[56px] px-2 rounded-xl transition-colors ${
-              active ? 'text-[#2B2568]' : 'text-slate-400 hover:text-slate-700'
+              active ? 'text-[#2C3B2E]' : 'text-[#8A857D] hover:text-[#2C2621]'
             }`}
             aria-current={active ? 'page' : undefined}
           >
             <Icon
               size={20}
-              strokeWidth={active ? 2.4 : 2}
-              className={active ? 'text-[#F472B6]' : undefined}
+              strokeWidth={1.5}
+              className={active ? 'text-[#2C3B2E]' : undefined}
               aria-hidden
             />
-            <span className="text-[10px] font-bold tracking-tight">{t(item.key, locale)}</span>
+            <span className="text-[10px] font-medium tracking-tight">{t(item.key, locale)}</span>
           </Link>
         );
       })}

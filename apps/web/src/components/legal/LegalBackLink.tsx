@@ -9,7 +9,7 @@ export default function LegalBackLink() {
   return (
     <Link
       href="/"
-      className="text-sm font-bold text-slate-600 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
+      className="text-sm font-medium text-[#8A857D] hover:text-[#2C3B2E] transition-colors min-h-11 inline-flex items-center"
     >
       {t('legal.backToHome')}
     </Link>

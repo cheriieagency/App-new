@@ -169,10 +169,10 @@ function SectionBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="py-6 border-b border-slate-100 last:border-0">
-      <h3 className="text-base font-extrabold text-slate-900 tracking-tight">{title}</h3>
+    <section className="py-6 border-b border-[#E6E3DB] last:border-0">
+      <h3 className="text-base font-medium text-[#2C2621] tracking-tight">{title}</h3>
       {subtitle ? (
-        <p className="text-sm text-slate-500 font-medium mt-0.5 mb-4">{subtitle}</p>
+        <p className="text-sm text-[#8A857D] font-medium mt-0.5 mb-4">{subtitle}</p>
       ) : (
         <div className="mb-4" />
       )}
@@ -416,50 +416,50 @@ export default function AdminSettingsPanel() {
         key={item.id}
         type="button"
         onClick={() => setTab(item.id)}
-        className={`w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-sm font-semibold transition-colors ${
+        className={`w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-sm font-medium transition-colors ${
           active
-            ? 'bg-slate-100 text-slate-900'
-            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            ? 'bg-[rgba(44,59,46,0.08)] text-[#2C2621] border-l-2 border-[#2C3B2E]'
+            : 'text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C2621] border-l-2 border-transparent'
         }`}
       >
-        <Icon size={15} className={active ? 'text-slate-700' : 'text-slate-400'} />
+        <Icon size={15} className={active ? 'text-[#2C3B2E]' : 'text-[#8A857D]'} />
         {t(item.labelKey, locale)}
       </button>
     );
   };
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden min-h-[calc(100vh-8rem)]">
+    <div className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl shadow-none overflow-hidden min-h-[calc(100vh-8rem)]">
       <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] min-h-[inherit]">
-        <aside className="border-b lg:border-b-0 lg:border-r border-slate-100 bg-[#FAFAFA] p-4 flex flex-col gap-5">
+        <aside className="border-b lg:border-b-0 lg:border-r border-[#E6E3DB] bg-[#F9F8F6] p-4 flex flex-col gap-5">
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1.5">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D] px-3 mb-1.5">
               {t('settingsNavProfile', locale)}
             </p>
             <div className="space-y-0.5">{PROFILE_NAV.map(navBtn)}</div>
           </div>
 
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-1.5">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D] px-3 mb-1.5">
               {t('settingsOrg', locale)}
             </p>
             <div className="space-y-0.5">{ORG_NAV.map(navBtn)}</div>
           </div>
 
           <div className="mt-auto pt-2">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-3 mb-2">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D] px-3 mb-2">
               {t('settingsWorkspaces', locale)}
             </p>
             <div className="relative mb-2">
               <Search
                 size={13}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A857D]"
               />
               <input
                 value={spaceQuery}
                 onChange={(e) => setSpaceQuery(e.target.value)}
                 placeholder={t('settingsSearchWorkspaces', locale)}
-                className="w-full h-10 min-h-[40px] pl-9 pr-3 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-slate-300"
+                className="w-full h-10 min-h-[40px] pl-9 pr-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#2C2621] placeholder:text-[#8A857D] focus:outline-none focus:border-[#E6E3DB]"
               />
             </div>
             <div className="space-y-0.5 max-h-40 overflow-y-auto mb-2">
@@ -471,11 +471,11 @@ export default function AdminSettingsPanel() {
                     setActiveWorkspaceId(w.id);
                     setTab('spaces');
                   }}
-                  className="w-full flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-semibold text-slate-600 hover:bg-white transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-semibold text-[#8A857D] hover:bg-[#FFFFFF] transition-colors text-left"
                 >
                   <span
-                    className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-                    style={{ background: w.color || '#1a1848' }}
+                    className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-medium text-[#F9F8F6] flex-shrink-0"
+                    style={{ background: w.color || '#2C3B2E' }}
                   >
                     {w.name[0]}
                   </span>
@@ -486,29 +486,29 @@ export default function AdminSettingsPanel() {
             <button
               type="button"
               onClick={() => setCreateWsOpen(true)}
-              className="w-full flex items-center gap-2 h-10 min-h-[40px] px-3 rounded-xl text-sm font-semibold text-[#1a1848] hover:bg-[#E9D5FF]/40 transition-colors"
+              className="w-full flex items-center gap-2 h-10 min-h-[40px] px-3 rounded-xl text-sm font-semibold text-[#2C3B2E] hover:bg-[rgba(44,59,46,0.08)] transition-colors"
             >
-              <Plus size={14} className="text-[#F472B6]" />
+              <Plus size={14} className="text-[#2C3B2E]" />
               {t('settingsNewWorkspace', locale)}
             </button>
           </div>
         </aside>
 
-        <div className="flex flex-col min-w-0 bg-white">
-          <div className="flex items-center justify-between gap-3 px-5 sm:px-7 py-4 border-b border-slate-100">
+        <div className="flex flex-col min-w-0 bg-[#FFFFFF]">
+          <div className="flex items-center justify-between gap-3 px-5 sm:px-7 py-4 border-b border-[#E6E3DB]">
             <div className="flex items-center gap-3 min-w-0">
               {ORG_NAV.some((n) => n.id === tab) ? (
                 <div className="min-w-0">
-                  <p className="text-lg font-extrabold text-slate-900 tracking-tight">
+                  <p className="font-playfair text-lg font-medium text-[#2C2621] tracking-tight">
                     {t('settingsOrgTitle', locale)}
                   </p>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  <p className="text-xs text-[#8A857D] font-medium mt-0.5">
                     {t('settingsOrgSub', locale)}
                   </p>
                 </div>
               ) : (
                 <>
-                  <div className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl bg-[#1a1848] text-white flex items-center justify-center text-sm font-extrabold flex-shrink-0 overflow-hidden">
+                  <div className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl bg-[#2C3B2E] text-[#F9F8F6] flex items-center justify-center text-sm font-medium flex-shrink-0 overflow-hidden">
                     {session?.user?.image ? (
                       <img
                         src={session.user.image}
@@ -520,8 +520,8 @@ export default function AdminSettingsPanel() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-extrabold text-slate-900 truncate">{userName}</p>
-                    <p className="text-xs font-medium text-slate-500 truncate">{userEmail}</p>
+                    <p className="text-sm font-medium text-[#2C2621] truncate">{userName}</p>
+                    <p className="text-xs font-medium text-[#8A857D] truncate">{userEmail}</p>
                   </div>
                 </>
               )}
@@ -529,7 +529,7 @@ export default function AdminSettingsPanel() {
             <button
               type="button"
               onClick={closeSettings}
-              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-slate-50 inline-flex items-center justify-center text-slate-400"
+              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-[#F0EFEA] inline-flex items-center justify-center text-[#8A857D]"
               aria-label={t('settingsClose', locale)}
             >
               <X size={18} />
@@ -537,7 +537,7 @@ export default function AdminSettingsPanel() {
           </div>
 
           {savedFlash ? (
-            <div className="mx-5 sm:mx-7 mt-4 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-800 px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 self-start">
+            <div className="mx-5 sm:mx-7 mt-4 rounded-xl border border-emerald-100 bg-[rgba(44,59,46,0.08)] text-emerald-800 px-3 py-2 text-xs font-semibold inline-flex items-center gap-1.5 self-start">
               <Check size={12} /> {savedFlash}
             </div>
           ) : null}
@@ -576,7 +576,7 @@ export default function AdminSettingsPanel() {
                   <button
                     type="button"
                     onClick={() => setCreateWsOpen(true)}
-                    className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
+                    className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] transition-colors"
                   >
                     <Plus size={14} />
                     {t('settingsAddWorkspace', locale)}
@@ -593,16 +593,16 @@ export default function AdminSettingsPanel() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <span
-                              className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center text-sm font-extrabold text-white flex-shrink-0"
-                              style={{ background: ws.color || '#1a1848' }}
+                              className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center text-sm font-medium text-white flex-shrink-0"
+                              style={{ background: ws.color || '#243228' }}
                             >
                               {ws.name[0]}
                             </span>
                             <div className="min-w-0">
-                              <p className="text-sm font-extrabold text-slate-900 truncate">
+                              <p className="text-sm font-medium text-[#2C2621] truncate">
                                 {ws.name}
                               </p>
-                              <p className="text-xs font-mono font-bold text-slate-400">
+                              <p className="text-xs font-mono font-medium text-[#8A857D]">
                                 @{ws.handle.replace(/^@/, '')}
                               </p>
                             </div>
@@ -610,7 +610,7 @@ export default function AdminSettingsPanel() {
                           <button
                             type="button"
                             onClick={() => setActiveWorkspaceId(ws.id)}
-                            className="text-[10px] font-bold uppercase tracking-wide text-[#F472B6] hover:text-[#2B2568] flex-shrink-0 min-h-[44px] px-2"
+                            className="text-[10px] font-medium uppercase tracking-wide text-[#2C3B2E] hover:text-[#2C3B2E] flex-shrink-0 min-h-[44px] px-2"
                           >
                             {activeWorkspace.id === ws.id
                               ? t('settingsPlanActive', locale)
@@ -619,14 +619,14 @@ export default function AdminSettingsPanel() {
                         </div>
 
                         <div>
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
+                          <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
                             {t('settingsWorkspaceChannels', locale)}
                           </p>
                           <div className="flex flex-wrap gap-1.5">
                             {(ws.channels ?? []).map((ch) => (
                               <span
                                 key={ch}
-                                className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 capitalize"
+                                className="inline-flex items-center rounded-full bg-[#F0EFEA] px-2.5 py-1 text-[10px] font-medium text-[#8A857D] capitalize"
                               >
                                 {PLATFORM_META[ch]?.label || ch}
                               </span>
@@ -635,11 +635,11 @@ export default function AdminSettingsPanel() {
                         </div>
 
                         <div>
-                          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
+                          <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
                             {t('settingsWorkspaceMembers', locale)}
                           </p>
                           {members.length === 0 ? (
-                            <p className="text-xs text-slate-400 font-medium">
+                            <p className="text-xs text-[#8A857D] font-medium">
                               {t('settingsNoMembers', locale)}
                             </p>
                           ) : (
@@ -647,22 +647,22 @@ export default function AdminSettingsPanel() {
                               {members.map((m) => (
                                 <li
                                   key={m.id}
-                                  className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5 min-h-[48px]"
+                                  className="flex items-center gap-3 rounded-xl border border-[#E6E3DB] px-3 py-2.5 min-h-[48px]"
                                 >
                                   <img
                                     src={m.avatar_url}
                                     alt=""
-                                    className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0"
+                                    className="w-8 h-8 rounded-full bg-[#F0EFEA] flex-shrink-0"
                                   />
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-slate-800 truncate">
+                                    <p className="text-sm font-medium text-[#2C2621] truncate">
                                       {m.name}
                                     </p>
-                                    <p className="text-[11px] text-slate-400 font-medium truncate">
+                                    <p className="text-[11px] text-[#8A857D] font-medium truncate">
                                       {m.email}
                                     </p>
                                   </div>
-                                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 capitalize">
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D] bg-[#F0EFEA] border border-[#E6E3DB] rounded-lg px-2 py-1 capitalize">
                                     {m.role}
                                   </span>
                                 </li>
@@ -686,16 +686,16 @@ export default function AdminSettingsPanel() {
                   <button
                     type="button"
                     onClick={() => setSection('email')}
-                    className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA] transition-colors"
                   >
                     <Mail size={14} />
                     {t('settingsOpenEmailCrm', locale)}
                   </button>
                 </div>
                 {(emailData?.automations ?? []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-10 text-center">
-                    <Zap size={20} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-sm font-bold text-slate-700">
+                  <div className="rounded-xl border border-dashed border-[#E6E3DB] bg-[#F0EFEA]/80 px-5 py-10 text-center">
+                    <Zap size={20} className="mx-auto text-[#E6E3DB] mb-2" />
+                    <p className="text-sm font-medium text-[#2C2621]">
                       {t('settingsNoWorkflows', locale)}
                     </p>
                   </div>
@@ -708,14 +708,14 @@ export default function AdminSettingsPanel() {
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-extrabold text-slate-900">
+                            <p className="text-sm font-medium text-[#2C2621]">
                               {auto.name}
                             </p>
                             <span
-                              className={`text-[10px] font-bold uppercase tracking-wide rounded-lg px-2 py-0.5 ${
+                              className={`text-[10px] font-medium uppercase tracking-wide rounded-lg px-2 py-0.5 ${
                                 auto.status === 'active'
-                                  ? 'bg-emerald-50 text-emerald-700'
-                                  : 'bg-slate-100 text-slate-500'
+                                  ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
+                                  : 'bg-[#F0EFEA] text-[#8A857D]'
                               }`}
                             >
                               {auto.status === 'active'
@@ -723,10 +723,10 @@ export default function AdminSettingsPanel() {
                                 : t('settingsWorkflowPaused', locale)}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500 font-medium mt-1">
+                          <p className="text-xs text-[#8A857D] font-medium mt-1">
                             {auto.trigger_label || auto.description}
                           </p>
-                          <p className="text-[11px] text-slate-400 font-medium mt-1.5">
+                          <p className="text-[11px] text-[#8A857D] font-medium mt-1.5">
                             {tf('settingsWorkflowSent', locale, {
                               n: auto.sent_count,
                             })}
@@ -749,13 +749,13 @@ export default function AdminSettingsPanel() {
             {tab === 'billing' && (
               <>
                 {/* Subscriptions — current plan + manage */}
-                <section className="py-6 border-b border-slate-100">
+                <section className="py-6 border-b border-[#E6E3DB]">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                     <div>
-                      <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+                      <h3 className="text-base font-medium text-[#2C2621] tracking-tight">
                         {t('settingsSubscriptions', locale)}
                       </h3>
-                      <p className="text-sm text-slate-500 font-medium mt-0.5">
+                      <p className="text-sm text-[#8A857D] font-medium mt-0.5">
                         {t('settingsSubscriptionsSub', locale)}
                       </p>
                     </div>
@@ -763,64 +763,64 @@ export default function AdminSettingsPanel() {
                       href="https://billing.stripe.com"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center h-10 min-h-[40px] px-4 rounded-xl bg-[#6366F1] text-white text-xs font-bold hover:bg-[#4F46E5] transition-colors flex-shrink-0"
+                      className="inline-flex items-center justify-center h-10 min-h-[40px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] transition-colors flex-shrink-0"
                     >
                       {t('settingsManageSubscriptions', locale)}
                     </a>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-5">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
                       <div>
-                        <p className="text-base font-extrabold text-slate-900">
+                        <p className="text-base font-medium text-[#2C2621]">
                           clikd: {currentPlanName}
                         </p>
-                        <p className="text-sm text-slate-500 font-medium mt-0.5">
+                        <p className="text-sm text-[#8A857D] font-medium mt-0.5">
                           {tf('settingsPlanSince', locale, { date: planSinceStamp })}
                         </p>
                       </div>
-                      <span className="inline-flex items-center self-start rounded-full bg-slate-900 text-white text-[11px] font-bold px-3 py-1.5">
+                      <span className="inline-flex items-center self-start rounded-full bg-[#2C3B2E] text-[#F9F8F6] text-[11px] font-medium px-3 py-1.5">
                         {tf('settingsTrialEnds', locale, { date: trialEndsStamp })}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-slate-100">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-[#E6E3DB]">
                       <div>
-                        <p className="text-[11px] font-semibold text-slate-400 mb-1">
+                        <p className="text-[11px] font-semibold text-[#8A857D] mb-1">
                           {t('settingsBillingMembers', locale)}
                         </p>
-                        <p className="text-sm font-bold text-slate-900">{seatCount}</p>
+                        <p className="text-sm font-medium text-[#2C2621]">{seatCount}</p>
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold text-slate-400 mb-1">
+                        <p className="text-[11px] font-semibold text-[#8A857D] mb-1">
                           {t('settingsUnitPrice', locale)}
                         </p>
-                        <p className="text-sm font-bold text-slate-900">0 SEK</p>
+                        <p className="text-sm font-medium text-[#2C2621]">0 SEK</p>
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold text-slate-400 mb-1">
+                        <p className="text-[11px] font-semibold text-[#8A857D] mb-1">
                           {t('settingsBillingInterval', locale)}
                         </p>
-                        <p className="text-sm font-bold text-slate-900">
+                        <p className="text-sm font-medium text-[#2C2621]">
                           {t('settingsIntervalMonth', locale)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold text-slate-400 mb-1">
+                        <p className="text-[11px] font-semibold text-[#8A857D] mb-1">
                           {t('settingsNextInvoice', locale)}
                         </p>
-                        <p className="text-sm font-bold text-slate-900">{nextInvoiceStamp}</p>
+                        <p className="text-sm font-medium text-[#2C2621]">{nextInvoiceStamp}</p>
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold text-slate-400 mb-1">
+                        <p className="text-[11px] font-semibold text-[#8A857D] mb-1">
                           {t('settingsFirstCharge', locale)}
                         </p>
-                        <p className="text-sm font-bold text-slate-900">0 SEK</p>
+                        <p className="text-sm font-medium text-[#2C2621]">0 SEK</p>
                       </div>
                     </div>
                   </div>
 
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mt-5 mb-2">
+                  <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D] mt-5 mb-2">
                     {t('settingsAvailablePlans', locale)}
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -829,21 +829,21 @@ export default function AdminSettingsPanel() {
                       return (
                       <div
                         key={tier.id}
-                        className={`rounded-2xl border p-4 ${
+                        className={`rounded-xl border p-4 ${
                           isCurrent
-                            ? 'border-slate-900 bg-slate-50'
-                            : 'border-slate-200/80 bg-white'
+                            ? 'border-[#2C3B2E] bg-[#F0EFEA]'
+                            : 'border-[#E6E3DB] bg-[#FFFFFF]'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm font-extrabold text-slate-900">{tier.name}</p>
+                          <p className="text-sm font-medium text-[#2C2621]">{tier.name}</p>
                           {isCurrent && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#2C3B2E]">
                               <Check size={11} /> {t('settingsPlanActive', locale)}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs font-medium text-slate-600">
+                        <p className="text-xs font-medium text-[#8A857D]">
                           {tier.socialSets} Social Set{tier.socialSets > 1 ? 's' : ''} /{' '}
                           {tier.profiles} Profiles
                         </p>
@@ -851,13 +851,13 @@ export default function AdminSettingsPanel() {
                           {tier.highlights.map((line) => (
                             <li
                               key={line}
-                              className="text-[11px] font-medium text-slate-500 leading-snug"
+                              className="text-[11px] font-medium text-[#8A857D] leading-snug"
                             >
                               · {line}
                             </li>
                           ))}
                         </ul>
-                        <p className="text-[11px] font-mono font-bold text-slate-400 mt-2 uppercase tracking-wide">
+                        <p className="text-[11px] font-mono font-medium text-[#8A857D] mt-2 uppercase tracking-wide">
                           {tier.price}
                         </p>
                       </div>
@@ -867,20 +867,20 @@ export default function AdminSettingsPanel() {
                 </section>
 
                 {/* Billing details */}
-                <section className="py-6 border-b border-slate-100">
-                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+                <section className="py-6 border-b border-[#E6E3DB]">
+                  <h3 className="text-base font-medium text-[#2C2621] tracking-tight">
                     {t('settingsBillingDetails', locale)}
                   </h3>
-                  <p className="text-sm text-slate-500 font-medium mt-0.5 mb-4">
+                  <p className="text-sm text-[#8A857D] font-medium mt-0.5 mb-4">
                     {t('settingsBillingDetailsSub', locale)}
                   </p>
 
                   <div className="space-y-3">
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 flex items-start justify-between gap-3">
+                    <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900">{billingName}</p>
-                        <p className="text-sm text-slate-500 font-medium mt-0.5">{userEmail}</p>
-                        <p className="text-sm text-slate-500 font-medium mt-0.5">{billingAddress}</p>
+                        <p className="text-sm font-medium text-[#2C2621]">{billingName}</p>
+                        <p className="text-sm text-[#8A857D] font-medium mt-0.5">{userEmail}</p>
+                        <p className="text-sm text-[#8A857D] font-medium mt-0.5">{billingAddress}</p>
                       </div>
                       <button
                         type="button"
@@ -888,21 +888,21 @@ export default function AdminSettingsPanel() {
                           setTab('profile');
                           flash(t('settingsEdit', locale));
                         }}
-                        className="text-sm font-semibold text-slate-700 hover:text-slate-900 flex-shrink-0 min-h-[44px] px-1"
+                        className="text-sm font-semibold text-[#2C2621] hover:text-[#2C2621] flex-shrink-0 min-h-[44px] px-1"
                       >
                         {t('settingsEdit', locale)}
                       </button>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 flex items-start justify-between gap-3">
+                    <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900">
+                        <p className="text-sm font-medium text-[#2C2621]">
                           {t('settingsPaymentMethodLabel', locale)}
                         </p>
-                        <p className="text-sm text-slate-500 font-medium mt-0.5">
+                        <p className="text-sm text-[#8A857D] font-medium mt-0.5">
                           {t('settingsCardMastercard', locale)}
                         </p>
-                        <p className="text-xs text-slate-400 font-medium mt-1">
+                        <p className="text-xs text-[#8A857D] font-medium mt-1">
                           {t('settingsRenewalDate', locale)}: {renewalLabel}
                         </p>
                       </div>
@@ -910,20 +910,20 @@ export default function AdminSettingsPanel() {
                         href="https://billing.stripe.com"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-semibold text-slate-700 hover:text-slate-900 flex-shrink-0 min-h-[44px] px-1 inline-flex items-center"
+                        className="text-sm font-semibold text-[#2C2621] hover:text-[#2C2621] flex-shrink-0 min-h-[44px] px-1 inline-flex items-center"
                       >
                         {t('settingsEdit', locale)}
                       </a>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 flex items-center justify-between gap-3">
-                      <p className="text-sm text-slate-500 font-medium">
+                    <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 flex items-center justify-between gap-3">
+                      <p className="text-sm text-[#8A857D] font-medium">
                         {t('settingsNoTaxId', locale)}
                       </p>
                       <button
                         type="button"
                         onClick={() => flash(t('settingsAddTaxId', locale))}
-                        className="text-sm font-semibold text-slate-700 hover:text-slate-900 flex-shrink-0 min-h-[44px] px-1"
+                        className="text-sm font-semibold text-[#2C2621] hover:text-[#2C2621] flex-shrink-0 min-h-[44px] px-1"
                       >
                         {t('settingsAddTaxId', locale)}
                       </button>
@@ -932,28 +932,28 @@ export default function AdminSettingsPanel() {
                 </section>
 
                 {/* Invoice history */}
-                <section className="py-6 border-b border-slate-100 last:border-0">
-                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+                <section className="py-6 border-b border-[#E6E3DB] last:border-0">
+                  <h3 className="text-base font-medium text-[#2C2621] tracking-tight">
                     {t('settingsInvoiceHistory', locale)}
                   </h3>
-                  <p className="text-sm text-slate-500 font-medium mt-0.5 mb-4">
+                  <p className="text-sm text-[#8A857D] font-medium mt-0.5 mb-4">
                     {t('settingsInvoiceHistorySub', locale)}
                   </p>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100">
+                  <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] divide-y divide-[#E6E3DB]">
                     <div className="flex items-center gap-3 px-4 py-3.5 min-h-[56px]">
-                      <p className="text-sm font-semibold text-slate-500 w-[110px] flex-shrink-0">
+                      <p className="text-sm font-semibold text-[#8A857D] w-[110px] flex-shrink-0">
                         {invoiceDateStamp}
                       </p>
-                      <p className="text-sm font-medium text-slate-800 flex-1 min-w-0 truncate">
+                      <p className="text-sm font-medium text-[#2C2621] flex-1 min-w-0 truncate">
                         {t('settingsInvoiceTrial', locale)}
                       </p>
-                      <p className="text-sm font-bold text-slate-900 flex-shrink-0">$0.00</p>
+                      <p className="text-sm font-medium text-[#2C2621] flex-shrink-0">$0.00</p>
                       <a
                         href="https://billing.stripe.com"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 inline-flex items-center justify-center flex-shrink-0"
+                        className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-lg text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA] inline-flex items-center justify-center flex-shrink-0"
                         aria-label={t('settingsInvoiceHistory', locale)}
                       >
                         <ExternalLink size={15} />
@@ -975,7 +975,7 @@ export default function AdminSettingsPanel() {
                   <button
                     type="button"
                     onClick={() => setInviteOpen((v) => !v)}
-                    className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3.5 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA] transition-colors"
                   >
                     <UserPlus size={14} />
                     {t('settingsInviteMember', locale)}
@@ -985,10 +985,10 @@ export default function AdminSettingsPanel() {
                 {inviteOpen && (
                   <div className={`${adminCardClass} p-4 mb-4 space-y-3`}>
                     <div>
-                      <p className="text-sm font-extrabold text-slate-900">
+                      <p className="text-sm font-medium text-[#2C2621]">
                         {t('settingsInviteTitle', locale)}
                       </p>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      <p className="text-xs text-[#8A857D] font-medium mt-0.5">
                         {t('settingsInviteHint', locale)}
                       </p>
                     </div>
@@ -997,19 +997,19 @@ export default function AdminSettingsPanel() {
                         value={inviteName}
                         onChange={(e) => setInviteName(e.target.value)}
                         placeholder={t('displayName', locale)}
-                        className="h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none focus:border-slate-400"
+                        className="h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-medium focus:outline-none focus:border-[#2C3B2E]"
                       />
                       <input
                         type="email"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
                         placeholder={t('email', locale)}
-                        className="h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none focus:border-slate-400"
+                        className="h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-medium focus:outline-none focus:border-[#2C3B2E]"
                       />
                       <select
                         value={inviteRole}
                         onChange={(e) => setInviteRole(e.target.value as TeamRole)}
-                        className="h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none"
+                        className="h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-medium focus:outline-none"
                       >
                         {TEAM_ROLE_OPTIONS.filter((o) => o.value !== 'owner').map(
                           (o) => (
@@ -1022,7 +1022,7 @@ export default function AdminSettingsPanel() {
                       <select
                         value={inviteSpace}
                         onChange={(e) => setInviteSpace(e.target.value)}
-                        className="h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-medium focus:outline-none"
+                        className="h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-medium focus:outline-none"
                       >
                         <option value="all">{t('settingsAllSpaces', locale)}</option>
                         {brandWorkspaces.map((ws) => (
@@ -1036,7 +1036,7 @@ export default function AdminSettingsPanel() {
                       <button
                         type="button"
                         onClick={() => setInviteOpen(false)}
-                        className="h-10 min-h-[40px] px-3.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50"
+                        className="h-10 min-h-[40px] px-3.5 rounded-xl text-xs font-medium text-[#8A857D] hover:bg-[#F0EFEA]"
                       >
                         {t('cancel', locale)}
                       </button>
@@ -1044,7 +1044,7 @@ export default function AdminSettingsPanel() {
                         type="button"
                         disabled={!inviteEmail.includes('@') || inviteMutation.isPending}
                         onClick={() => inviteMutation.mutate()}
-                        className="h-10 min-h-[40px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] disabled:opacity-50"
+                        className="h-10 min-h-[40px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] disabled:opacity-50"
                       >
                         {t('settingsInviteSend', locale)}
                       </button>
@@ -1069,14 +1069,14 @@ export default function AdminSettingsPanel() {
                             setSelectedMemberId(m.id);
                           }
                         }}
-                        className={`relative flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border bg-white px-3.5 py-3 min-h-[64px] transition-colors cursor-pointer ${
+                        className={`relative flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border bg-[#FFFFFF] px-3.5 py-3 min-h-[64px] transition-colors cursor-pointer ${
                           selected
-                            ? 'border-slate-200 shadow-sm'
-                            : 'border-slate-200/80 hover:border-slate-300'
+                            ? 'border-[#E6E3DB] shadow-none'
+                            : 'border-[#E6E3DB] hover:border-[#E6E3DB]'
                         }`}
                       >
                         {selected && (
-                          <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-[#6366F1]" />
+                          <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-[#2C3B2E]" />
                         )}
 
                         <div className="flex items-center gap-3 min-w-0 flex-1 pl-1">
@@ -1084,25 +1084,25 @@ export default function AdminSettingsPanel() {
                             <img
                               src={m.avatar_url}
                               alt=""
-                              className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-full object-cover flex-shrink-0 bg-[#6366F1]"
+                              className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-full object-cover flex-shrink-0 bg-[#2C3B2E]"
                             />
                           ) : (
-                            <div className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-full bg-[#6366F1] text-white flex items-center justify-center text-sm font-extrabold flex-shrink-0">
+                            <div className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-full bg-[#2C3B2E] text-[#F9F8F6] flex items-center justify-center text-sm font-medium flex-shrink-0">
                               {avatarLetter}
                             </div>
                           )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-extrabold text-slate-900 truncate">
+                              <p className="text-sm font-medium text-[#2C2621] truncate">
                                 {m.name}
                               </p>
                               {m.status === 'pending' && (
-                                <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md">
+                                <span className="text-[10px] font-medium uppercase tracking-wide text-amber-600 bg-[rgba(184,92,56,0.08)] px-1.5 py-0.5 rounded-md">
                                   {t('settingsMemberPending', locale)}
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-slate-400 font-medium truncate">
+                            <p className="text-xs text-[#8A857D] font-medium truncate">
                               {m.email}
                             </p>
                           </div>
@@ -1117,7 +1117,7 @@ export default function AdminSettingsPanel() {
                                 setSpaceMenuId((id) => (id === m.id ? null : m.id));
                                 setRoleMenuId(null);
                               }}
-                              className="inline-flex items-center justify-center gap-1 h-9 min-h-[36px] w-[118px] px-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                              className="inline-flex items-center justify-center gap-1 h-9 min-h-[36px] w-[118px] px-2.5 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-semibold text-[#8A857D] hover:bg-[#F0EFEA]"
                             >
                               <span className="truncate">
                                 {access === 'all'
@@ -1127,7 +1127,7 @@ export default function AdminSettingsPanel() {
                               <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
                             </button>
                             {spaceMenuId === m.id && (
-                              <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden py-1">
+                              <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] shadow-xl overflow-hidden py-1">
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1138,7 +1138,7 @@ export default function AdminSettingsPanel() {
                                     }));
                                     setSpaceMenuId(null);
                                   }}
-                                  className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                  className="w-full text-left px-3 py-2.5 text-xs font-semibold text-[#2C2621] hover:bg-[#F0EFEA]"
                                 >
                                   {t('settingsAllSpaces', locale)}
                                 </button>
@@ -1154,7 +1154,7 @@ export default function AdminSettingsPanel() {
                                       }));
                                       setSpaceMenuId(null);
                                     }}
-                                    className="w-full text-left px-3 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                    className="w-full text-left px-3 py-2.5 text-xs font-semibold text-[#2C2621] hover:bg-[#F0EFEA]"
                                   >
                                     {ws.name}
                                   </button>
@@ -1172,7 +1172,7 @@ export default function AdminSettingsPanel() {
                                 setSpaceMenuId(null);
                               }}
                               disabled={m.role === 'owner'}
-                              className="inline-flex items-center justify-center gap-1.5 h-9 min-h-[36px] w-[118px] px-2.5 rounded-full bg-[#6366F1] text-white text-xs font-bold hover:bg-[#4F46E5] disabled:opacity-90 shadow-sm"
+                              className="inline-flex items-center justify-center gap-1.5 h-9 min-h-[36px] w-[118px] px-2.5 rounded-full bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] disabled:opacity-90 shadow-none"
                             >
                               <Shield size={12} strokeWidth={2.5} className="flex-shrink-0" />
                               <span className="truncate">{roleLabel(m.role)}</span>
@@ -1183,7 +1183,7 @@ export default function AdminSettingsPanel() {
                               )}
                             </button>
                             {roleMenuId === m.id && m.role !== 'owner' && (
-                              <div className="absolute right-0 top-full mt-1.5 z-20 w-44 rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden py-1">
+                              <div className="absolute right-0 top-full mt-1.5 z-20 w-44 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] shadow-xl overflow-hidden py-1">
                                 {TEAM_ROLE_OPTIONS.filter((o) => o.value !== 'owner').map(
                                   (o) => (
                                     <button
@@ -1196,10 +1196,10 @@ export default function AdminSettingsPanel() {
                                           role: o.value,
                                         });
                                       }}
-                                      className={`w-full text-left px-3 py-2.5 text-xs font-semibold hover:bg-slate-50 ${
+                                      className={`w-full text-left px-3 py-2.5 text-xs font-semibold hover:bg-[#F0EFEA] ${
                                         m.role === o.value
-                                          ? 'text-[#6366F1]'
-                                          : 'text-slate-700'
+                                          ? 'text-[#2C3B2E]'
+                                          : 'text-[#2C2621]'
                                       }`}
                                     >
                                       {roleLabel(o.value)}
@@ -1215,7 +1215,7 @@ export default function AdminSettingsPanel() {
                   })}
 
                   {orgMembers.length === 0 && (
-                    <p className="text-sm text-slate-400 font-medium py-8 text-center">
+                    <p className="text-sm text-[#8A857D] font-medium py-8 text-center">
                       {t('settingsNoMembers', locale)}
                     </p>
                   )}

@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
-import { Analytics } from '@vercel/analytics/react';
 import './global.css';
 import { Providers } from './providers';
+import ConsentAwareAnalytics from '@/components/ConsentAwareAnalytics';
 import { SITE_URL } from '@/lib/site';
 
 const defaultTitle = 'clikd: — Creator OS';
@@ -51,6 +51,8 @@ export const metadata: Metadata = {
 const GOOGLE_FONTS_HREF =
   'https://fonts.googleapis.com/css2?' +
   [
+    'family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600',
+    'family=Inter:wght@400;500;600;700',
     'family=Plus+Jakarta+Sans:wght@400;500;600;700;800',
     'family=Space+Grotesk:wght@500;600;700',
     'family=Outfit:wght@500;600;700;800',
@@ -74,10 +76,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           href="/fontawesome/releases/v6.3.0/css/pro.min.css?token=2c15cc0cc7"
         />
       </head>
-      <body className="font-sans antialiased bg-clikd-light text-slate-900">
+      <body className="font-sans antialiased bg-[#F9F8F6] text-[#2C2621]">
         {/* Mobile bottom nav + pb-20 spacer are mounted in Providers for app routes. */}
         <Providers>{children}</Providers>
-        <Analytics />
+        <ConsentAwareAnalytics />
       </body>
     </html>
   );

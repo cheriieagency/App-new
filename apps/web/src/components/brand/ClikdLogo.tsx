@@ -1,6 +1,9 @@
 'use client';
 
-/** Clikd. signature mark — pink `c` + white `:` on midnight periwinkle. */
+/**
+ * Editorial Clikd mark — Playfair serif “C.”
+ * Massive, quiet, gallery-like. No pink/midnight badge.
+ */
 export function ClikdMark({
   size = 32,
   className = '',
@@ -8,29 +11,23 @@ export function ClikdMark({
   size?: number;
   className?: string;
 }) {
-  const radius = Math.max(8, Math.round(size * 0.28));
-  const fontSize = Math.max(12, Math.round(size * 0.52));
+  const fontSize = Math.max(18, Math.round(size * 0.85));
   return (
     <div
-      className={`flex items-center justify-center font-mono font-black tracking-tighter shadow-md shrink-0 ${className}`}
+      className={`flex items-center justify-center shrink-0 font-playfair font-medium tracking-tight text-[#2C2621] leading-none ${className}`}
       style={{
         width: size,
         height: size,
-        borderRadius: radius,
-        backgroundColor: 'var(--clikd-midnight)',
-        boxShadow: '0 8px 24px -6px rgba(244, 114, 182, 0.35)',
         fontSize,
-        lineHeight: 1,
       }}
       aria-hidden
     >
-      <span style={{ color: 'var(--clikd-pink)' }}>c</span>
-      <span className="text-white">:</span>
+      C.
     </div>
   );
 }
 
-/** Clikd. wordmark — Space Grotesk + signature pink colon. */
+/** Editorial wordmark — Playfair “Clikd.” with forest colon optional. */
 export function ClikdWordmark({
   className = '',
   markSize = 32,
@@ -46,9 +43,9 @@ export function ClikdWordmark({
     <span className={`inline-flex items-center gap-2 min-h-11 ${className}`}>
       {showMark && <ClikdMark size={markSize} />}
       <span
-        className={`font-clikd-wordmark font-extrabold text-slate-900 tracking-tight ${textClassName}`}
+        className={`font-playfair font-medium text-[#2C2621] tracking-tight ${textClassName}`}
       >
-        clikd<span style={{ color: 'var(--clikd-pink)' }}>:</span>
+        Clikd<span className="text-[#2C3B2E]">.</span>
       </span>
     </span>
   );

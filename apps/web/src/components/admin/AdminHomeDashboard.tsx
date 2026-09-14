@@ -632,7 +632,7 @@ export default function AdminHomeDashboard() {
   }[] = [
     { id: 'todo', titleKey: 'admin.colTodo', dot: 'bg-amber-400' },
     { id: 'doing', titleKey: 'admin.colDoing', dot: 'bg-indigo-500' },
-    { id: 'done', titleKey: 'admin.colDone', dot: 'bg-emerald-500' },
+    { id: 'done', titleKey: 'admin.colDone', dot: 'bg-[#2C3B2E]' },
   ];
 
   const shortcuts = shortcutKeys.map((key) => {
@@ -651,13 +651,13 @@ export default function AdminHomeDashboard() {
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
-        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+        <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
           {t('admin.homeEyebrow')}
         </p>
-        <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mt-1">
+        <h1 className="font-playfair font-medium text-[28px] sm:text-[34px] leading-tight text-[#2C2621] tracking-[-0.02em] mt-2">
           {greetingTitle}
         </h1>
-        <p className="text-sm text-slate-500 font-medium mt-1">
+        <p className="font-inter text-sm text-[#8A857D] font-normal mt-2 max-w-xl leading-relaxed">
           {t('admin.homeSub')}
         </p>
       </div>
@@ -666,22 +666,22 @@ export default function AdminHomeDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
         <div className="lg:col-span-5">
           <div
-            className="relative border shadow-md rounded-3xl p-6 transform -rotate-1 hover:rotate-0 transition-transform"
+            className="relative border border-[#E6E3DB] shadow-none rounded-xl p-8 transition-colors"
             style={{
               backgroundColor: noteTheme.bg,
               borderColor: noteTheme.border,
             }}
           >
             <span
-              className="w-7 h-7 rounded-full bg-[#F472B6] border-2 border-white absolute -top-3 left-1/2 -translate-x-1/2 shadow-sm"
+              className="w-2.5 h-2.5 rounded-full bg-[#B85C38] absolute -top-1 left-1/2 -translate-x-1/2"
               aria-hidden
             />
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pt-1">
-              <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+              <h2 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight">
                 {t('admin.focusTitle')}
               </h2>
               <span
-                className="inline-flex items-center rounded-full bg-white/80 border px-2.5 py-1 text-[10px] font-bold text-[#2B2568] capitalize"
+                className="inline-flex items-center rounded-full bg-[#FFFFFF]/90 border px-2.5 py-1 text-[10px] font-medium text-[#2C3B2E] capitalize"
                 style={{ borderColor: noteTheme.chipBorder }}
               >
                 {dateLabel}
@@ -689,12 +689,12 @@ export default function AdminHomeDashboard() {
             </div>
 
             {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-8 text-slate-400 text-sm font-medium">
+              <div className="flex items-center justify-center gap-2 py-8 text-[#8A857D] text-sm font-medium">
                 <Loader2 size={16} className="animate-spin" />
                 …
               </div>
             ) : stickyTasks.length === 0 ? (
-              <p className="text-sm text-slate-400 font-medium py-6 text-center">
+              <p className="font-playfair italic text-base text-[#8A857D] py-8 text-center">
                 {t('admin.stickyEmpty')}
               </p>
             ) : (
@@ -724,7 +724,7 @@ export default function AdminHomeDashboard() {
                       <span
                         className={`h-5 w-5 rounded-md border-2 flex items-center justify-center ${
                           task.done
-                            ? 'bg-[#10B981] border-[#10B981] text-white'
+                            ? 'bg-[#2C3B2E] border-[#2C3B2E] text-[#F9F8F6]'
                             : 'bg-white/80'
                         }`}
                         style={
@@ -739,8 +739,8 @@ export default function AdminHomeDashboard() {
                     <p
                       className={`flex-1 min-w-0 pt-2 text-sm font-semibold leading-snug ${
                         task.done
-                          ? 'text-slate-500 line-through decoration-slate-400'
-                          : 'text-slate-800'
+                          ? 'text-[#8A857D] line-through decoration-[#8A857D]'
+                          : 'text-[#2C2621]'
                       }`}
                     >
                       {task.text}
@@ -750,7 +750,7 @@ export default function AdminHomeDashboard() {
                         type="button"
                         onClick={() => setEditingSticky(task)}
                         aria-label={t('admin.editSticky')}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#2B2568]/70 hover:bg-white/80 hover:text-[#2B2568] transition-colors"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#2C3B2E]/70 hover:bg-white/80 hover:text-[#2C3B2E] transition-colors"
                       >
                         <Pencil size={14} strokeWidth={2.25} />
                       </button>
@@ -759,7 +759,7 @@ export default function AdminHomeDashboard() {
                         onClick={() => deleteStickyMutation.mutate(task.id)}
                         disabled={deleteStickyMutation.isPending}
                         aria-label={t('admin.deleteSticky')}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#8A857D] hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50"
                       >
                         <Trash2 size={14} strokeWidth={2.25} />
                       </button>
@@ -773,7 +773,7 @@ export default function AdminHomeDashboard() {
               <button
                 type="button"
                 onClick={() => setDraftKind('sticky')}
-                className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl text-xs font-bold text-[#2B2568]/80 hover:bg-white/60 transition-colors"
+                className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl text-xs font-medium text-[#2C3B2E]/80 hover:bg-white/60 transition-colors"
               >
                 <Plus size={14} strokeWidth={2.5} />
                 {t('admin.addSticky')}
@@ -787,13 +787,13 @@ export default function AdminHomeDashboard() {
                   onClick={() => setColorPickerOpen((o) => !o)}
                   aria-label={t('admin.stickyColor')}
                   aria-expanded={colorPickerOpen}
-                  className="inline-flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-full text-[#2B2568]/35 hover:text-[#2B2568]/70 hover:bg-white/50 transition-colors"
+                  className="inline-flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-full text-[#2C3B2E]/35 hover:text-[#2C3B2E]/70 hover:bg-white/50 transition-colors"
                 >
                   <Palette size={13} strokeWidth={2} />
                 </button>
                 {colorPickerOpen ? (
                   <div
-                    className="absolute right-0 bottom-full mb-2 z-20 flex flex-wrap gap-1.5 w-[148px] p-2 rounded-2xl bg-white border border-slate-200 shadow-lg"
+                    className="absolute right-0 bottom-full mb-2 z-20 flex flex-wrap gap-1.5 w-[148px] p-2 rounded-xl bg-white border border-[#E6E3DB] shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]"
                     role="listbox"
                     aria-label={t('admin.stickyColor')}
                   >
@@ -810,7 +810,7 @@ export default function AdminHomeDashboard() {
                           onClick={() => saveStickyColorMutation.mutate(id)}
                           className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-105 disabled:opacity-50 ${
                             selected
-                              ? 'border-[#2B2568] ring-2 ring-[#2B2568]/20'
+                              ? 'border-[#2C3B2E] ring-2 ring-[#2C3B2E]/20'
                               : 'border-white shadow-sm'
                           }`}
                           style={{ backgroundColor: swatch.bg }}
@@ -830,7 +830,7 @@ export default function AdminHomeDashboard() {
             <button
               type="button"
               onClick={() => setEditShortcutsOpen(true)}
-              className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl text-xs font-bold text-slate-500 hover:text-[#2B2568] hover:bg-white border border-transparent hover:border-slate-200 transition-colors"
+              className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-xl text-xs font-medium text-[#8A857D] hover:text-[#2C3B2E] hover:bg-white border border-transparent hover:border-[#E6E3DB] transition-colors"
             >
               <Pencil size={13} strokeWidth={2.5} />
               {t('admin.editShortcuts')}
@@ -844,17 +844,17 @@ export default function AdminHomeDashboard() {
                   key={card.key}
                   type="button"
                   onClick={card.onClick}
-                  className={`${adminCardClass} p-4 sm:p-5 text-left hover:border-[#F472B6]/50 hover:shadow-md transition-all min-h-[44px]`}
+                  className={`${adminCardClass} p-4 sm:p-5 text-left hover:border-[#2C3B2E]/50 hover:shadow-none transition-all min-h-[44px]`}
                 >
                   <span
                     className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${card.accent}`}
                   >
                     <Icon size={18} strokeWidth={2.25} />
                   </span>
-                  <p className="mt-3 font-clikd-wordmark font-extrabold text-base text-slate-900 tracking-tight leading-tight">
+                  <p className="mt-3 font-playfair font-medium text-base text-[#2C2621] tracking-tight leading-tight">
                     {card.title}
                   </p>
-                  <p className="mt-1 text-xs font-medium text-slate-500 leading-snug">
+                  <p className="mt-1 text-xs font-medium text-[#8A857D] leading-snug">
                     {card.detail}
                   </p>
                 </button>
@@ -868,13 +868,13 @@ export default function AdminHomeDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
         <div className={`lg:col-span-7 ${adminCardClass} p-4 sm:p-5`}>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+            <h2 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight">
               {t('admin.kanbanTitle')}
             </h2>
             <button
               type="button"
               onClick={() => setDraftKind('kanban')}
-              className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-[#2B2568] text-white text-xs font-bold hover:bg-[#1e1b4b] transition-colors"
+              className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] transition-colors"
             >
               <Plus size={14} strokeWidth={2.5} />
               {t('admin.newTask')}
@@ -892,23 +892,23 @@ export default function AdminHomeDashboard() {
                 return (
                   <div
                     key={col.id}
-                    className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3 min-h-[220px]"
+                    className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/50 p-3 min-h-[220px]"
                   >
                     <div className="flex items-center gap-2 mb-3 px-0.5">
                       <span className={`h-2 w-2 rounded-full ${col.dot}`} />
-                      <p className="text-[11px] font-extrabold text-slate-700">
+                      <p className="text-[11px] font-medium text-[#2C2621]">
                         {t(col.titleKey)}
                       </p>
-                      <span className="ml-auto text-[10px] font-mono font-bold text-slate-400">
+                      <span className="ml-auto text-[10px] font-mono font-medium text-[#8A857D]">
                         {tasks.length}
                       </span>
                     </div>
                     {isLoading ? (
-                      <div className="flex justify-center py-8 text-slate-300">
+                      <div className="flex justify-center py-8 text-[#8A857D]">
                         <Loader2 size={16} className="animate-spin" />
                       </div>
                     ) : tasks.length === 0 ? (
-                      <p className="text-[11px] text-slate-400 font-medium px-0.5 py-4">
+                      <p className="text-[11px] text-[#8A857D] font-medium px-0.5 py-4">
                         {t('admin.kanbanEmpty')}
                       </p>
                     ) : (
@@ -916,13 +916,13 @@ export default function AdminHomeDashboard() {
                         {tasks.map((task) => (
                           <li
                             key={task.id}
-                            className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+                            className="rounded-xl border border-[#E6E3DB] bg-white p-3 shadow-none"
                           >
                             <p
-                              className={`text-[12px] font-bold leading-snug ${
+                              className={`text-[12px] font-medium leading-snug ${
                                 col.id === 'done'
-                                  ? 'text-slate-400 line-through'
-                                  : 'text-slate-900'
+                                  ? 'text-[#8A857D] line-through'
+                                  : 'text-[#2C2621]'
                               }`}
                             >
                               {task.title}
@@ -931,8 +931,8 @@ export default function AdminHomeDashboard() {
                               <p
                                 className={`mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold ${
                                   col.id === 'done'
-                                    ? 'text-slate-400'
-                                    : 'text-slate-500'
+                                    ? 'text-[#8A857D]'
+                                    : 'text-[#8A857D]'
                                 }`}
                               >
                                 <CalendarDays size={11} strokeWidth={2.25} aria-hidden />
@@ -943,10 +943,10 @@ export default function AdminHomeDashboard() {
                               </p>
                             ) : null}
                             <div className="mt-2 flex items-center justify-between gap-2">
-                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                              <span className="inline-flex items-center rounded-full bg-[#F0EFEA] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-[#8A857D]">
                                 {t(task.categoryKey)}
                               </span>
-                              <span className="h-6 w-6 rounded-full bg-[#2B2568] text-white text-[10px] font-extrabold flex items-center justify-center">
+                              <span className="h-6 w-6 rounded-full bg-[#2C3B2E] text-[#F9F8F6] text-[10px] font-medium flex items-center justify-center">
                                 {task.assignee}
                               </span>
                             </div>
@@ -963,7 +963,7 @@ export default function AdminHomeDashboard() {
                                     column: e.target.value as KanbanColumnId,
                                   })
                                 }
-                                className="flex-1 h-9 min-h-[36px] rounded-lg border border-slate-200 bg-slate-50 px-2 text-[10px] font-bold text-slate-600"
+                                className="flex-1 h-9 min-h-[36px] rounded-lg border border-[#E6E3DB] bg-[#F0EFEA] px-2 text-[10px] font-medium text-[#8A857D]"
                               >
                                 {columns.map((c) => (
                                   <option key={c.id} value={c.id}>
@@ -974,7 +974,7 @@ export default function AdminHomeDashboard() {
                               <button
                                 type="button"
                                 onClick={() => deleteKanbanMutation.mutate(task.id)}
-                                className="h-9 w-9 min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                className="h-9 w-9 min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg text-[#8A857D] hover:text-rose-600 hover:bg-rose-50 transition-colors"
                                 aria-label="Delete task"
                               >
                                 <Trash2 size={14} />
@@ -993,10 +993,10 @@ export default function AdminHomeDashboard() {
 
         <div className={`lg:col-span-5 ${adminCardClass} p-4 sm:p-5`}>
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+            <h2 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight">
               {t('admin.activityTitle')}
             </h2>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 text-[10px] font-extrabold text-[#10B981]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.18)] px-2.5 py-1 text-[10px] font-medium text-[#2C3B2E]">
               <Radio size={11} strokeWidth={2.5} className="animate-pulse" />
               {t('admin.realtime')}
             </span>
@@ -1010,10 +1010,10 @@ export default function AdminHomeDashboard() {
                   key={f.id}
                   type="button"
                   onClick={() => setActivityFilter(f.id)}
-                  className={`inline-flex items-center min-h-[40px] px-3 rounded-full text-[11px] font-extrabold transition-colors ${
+                  className={`inline-flex items-center min-h-[40px] px-3 rounded-full text-[11px] font-medium transition-colors ${
                     active
-                      ? 'bg-[#2B2568] text-white'
-                      : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-300'
+                      ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                      : 'bg-white border border-[#E6E3DB] text-[#8A857D] hover:border-[#E6E3DB]'
                   }`}
                 >
                   {t(f.labelKey)}
@@ -1024,24 +1024,24 @@ export default function AdminHomeDashboard() {
 
           <ul className="space-y-2.5">
             {filteredActivities.length === 0 ? (
-              <li className="text-sm text-slate-400 font-medium py-6 text-center">
+              <li className="font-playfair italic text-base text-[#8A857D] py-8 text-center">
                 {t('admin.activityEmpty')}
               </li>
             ) : (
               filteredActivities.map((item) => (
                 <li
                   key={item.id}
-                  className="rounded-2xl border border-slate-100 bg-slate-50/60 px-3.5 py-3"
+                  className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/50 px-3.5 py-3"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[12px] font-extrabold text-slate-900 leading-snug">
+                    <p className="text-[12px] font-medium text-[#2C2621] leading-snug">
                       {item.title}
                     </p>
-                    <span className="text-[10px] font-mono font-bold text-slate-400 flex-shrink-0">
+                    <span className="text-[10px] font-mono font-medium text-[#8A857D] flex-shrink-0">
                       {item.time}
                     </span>
                   </div>
-                  <p className="mt-1 text-[12px] font-medium text-slate-500 leading-snug">
+                  <p className="mt-1 text-[12px] font-medium text-[#8A857D] leading-snug">
                     {item.body}
                   </p>
                 </li>
@@ -1065,16 +1065,16 @@ export default function AdminHomeDashboard() {
           }
         }}
       >
-        <DialogContent className="max-w-[min(420px,94vw)] rounded-2xl border-slate-200/90 p-0 gap-0">
+        <DialogContent className="max-w-[min(420px,94vw)] rounded-xl border-[#E6E3DB] p-0 gap-0">
           <DialogHeader className="px-5 pt-5 pb-2">
-            <DialogTitle className="font-clikd-wordmark text-lg font-extrabold text-slate-900">
+            <DialogTitle className="font-playfair text-lg font-medium text-[#2C2621]">
               {editingSticky
                 ? t('admin.editSticky')
                 : draftKind === 'sticky'
                   ? t('admin.stickyPrompt')
                   : t('admin.taskPrompt')}
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 font-medium">
+            <DialogDescription className="text-xs text-[#8A857D] font-medium">
               {editingSticky || draftKind === 'sticky'
                 ? t('admin.focusTitle')
                 : t('admin.kanbanTitle')}
@@ -1096,7 +1096,7 @@ export default function AdminHomeDashboard() {
                   ? t('admin.stickyPrompt')
                   : t('admin.taskPrompt')
               }
-              className="h-11 min-h-[44px] rounded-xl border-slate-200 text-sm font-semibold"
+              className="h-11 min-h-[44px] rounded-xl border-[#E6E3DB] text-sm font-semibold"
               disabled={
                 createMutation.isPending || patchStickyMutation.isPending
               }
@@ -1105,7 +1105,7 @@ export default function AdminHomeDashboard() {
               <div className="space-y-1.5">
                 <label
                   htmlFor="admin-task-deadline"
-                  className="block text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                  className="block text-[11px] font-medium uppercase tracking-wide text-[#8A857D]"
                 >
                   {t('admin.taskDeadline')}
                 </label>
@@ -1114,7 +1114,7 @@ export default function AdminHomeDashboard() {
                   type="date"
                   value={draftDueDate}
                   onChange={(e) => setDraftDueDate(e.target.value)}
-                  className="h-11 min-h-[44px] rounded-xl border-slate-200 text-sm font-semibold"
+                  className="h-11 min-h-[44px] rounded-xl border-[#E6E3DB] text-sm font-semibold"
                   disabled={createMutation.isPending}
                 />
               </div>
@@ -1129,7 +1129,7 @@ export default function AdminHomeDashboard() {
                 disabled={
                   createMutation.isPending || patchStickyMutation.isPending
                 }
-                className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-white text-xs font-medium text-[#8A857D] hover:bg-[#F0EFEA] transition-colors"
               >
                 Cancel
               </button>
@@ -1140,7 +1140,7 @@ export default function AdminHomeDashboard() {
                   createMutation.isPending ||
                   patchStickyMutation.isPending
                 }
-                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-bold hover:bg-[#1e1b4b] disabled:opacity-50 transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] disabled:opacity-50 transition-colors"
               >
                 {createMutation.isPending || patchStickyMutation.isPending ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -1164,12 +1164,12 @@ export default function AdminHomeDashboard() {
           if (!saveShortcutsMutation.isPending) setEditShortcutsOpen(open);
         }}
       >
-        <DialogContent className="sm:max-w-md rounded-2xl border-slate-200 p-0 gap-0 overflow-hidden">
+        <DialogContent className="sm:max-w-md rounded-xl border-[#E6E3DB] p-0 gap-0 overflow-hidden">
           <DialogHeader className="px-5 pt-5 pb-2">
-            <DialogTitle className="font-clikd-wordmark font-extrabold text-lg text-slate-900">
+            <DialogTitle className="font-playfair font-medium text-lg text-[#2C2621]">
               {t('admin.editShortcutsTitle')}
             </DialogTitle>
-            <DialogDescription className="text-sm text-slate-500 font-medium">
+            <DialogDescription className="text-sm text-[#8A857D] font-medium">
               {t('admin.editShortcutsSub')}
             </DialogDescription>
           </DialogHeader>
@@ -1188,8 +1188,8 @@ export default function AdminHomeDashboard() {
                   onClick={() => toggleDraftShortcut(key)}
                   className={`flex items-center gap-3 min-h-[44px] rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-40 ${
                     selected
-                      ? 'border-[#F472B6] bg-[#FCE7F3]/50'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.06)]'
+                      : 'border-[#E6E3DB] bg-white hover:border-[#E6E3DB]'
                   }`}
                 >
                   <span
@@ -1197,14 +1197,14 @@ export default function AdminHomeDashboard() {
                   >
                     <Icon size={16} strokeWidth={2.25} />
                   </span>
-                  <span className="flex-1 text-sm font-bold text-slate-800">
+                  <span className="flex-1 text-sm font-medium text-[#2C2621]">
                     {t(meta.labelKey)}
                   </span>
                   <span
                     className={`h-5 w-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
                       selected
-                        ? 'bg-[#F472B6] border-[#F472B6] text-white'
-                        : 'bg-white border-slate-300'
+                        ? 'bg-[#2C3B2E] border-[#2C3B2E] text-white'
+                        : 'bg-white border-[#E6E3DB]'
                     }`}
                   >
                     {selected ? <Check size={12} strokeWidth={3} /> : null}
@@ -1218,7 +1218,7 @@ export default function AdminHomeDashboard() {
               type="button"
               onClick={() => setEditShortcutsOpen(false)}
               disabled={saveShortcutsMutation.isPending}
-              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-white text-xs font-medium text-[#8A857D] hover:bg-[#F0EFEA] transition-colors"
             >
               Cancel
             </button>
@@ -1228,7 +1228,7 @@ export default function AdminHomeDashboard() {
                 draftShortcuts.length === 0 || saveShortcutsMutation.isPending
               }
               onClick={() => saveShortcutsMutation.mutate(draftShortcuts)}
-              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-bold hover:bg-[#1e1b4b] disabled:opacity-50 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] disabled:opacity-50 transition-colors"
             >
               {saveShortcutsMutation.isPending ? (
                 <Loader2 size={14} className="animate-spin" />

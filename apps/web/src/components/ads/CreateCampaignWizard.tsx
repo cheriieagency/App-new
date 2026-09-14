@@ -110,7 +110,7 @@ export type CreateCampaignPayload = {
 };
 
 const sourceBtn =
-  'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50 sm:flex-none';
+  'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-xs font-medium text-[#2C2621] transition hover:bg-[#F0EFEA] disabled:pointer-events-none disabled:opacity-50 sm:flex-none';
 
 export default function CreateCampaignWizard({
   open,
@@ -355,12 +355,12 @@ export default function CreateCampaignWizard({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto rounded-2xl border-slate-200 bg-[#FAFAFA] sm:max-w-xl">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto rounded-xl border-[#E6E3DB] bg-[#F9F8F6] sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-[family-name:var(--font-space-grotesk)] text-[#0F172A]">
+          <DialogTitle className="font-playfair font-medium text-[#2C2621]">
             {t('adsCreateTitle')}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-[#8A857D]">
             Step {step} of 3 —{' '}
             {step === 1
               ? t('adsStepObjective')
@@ -375,7 +375,7 @@ export default function CreateCampaignWizard({
             <div
               key={n}
               className={`h-1.5 flex-1 rounded-full ${
-                n <= step ? 'bg-[#F472B6]' : 'bg-slate-200'
+                n <= step ? 'bg-[#2C3B2E]' : 'bg-[#E6E3DB]'
               }`}
             />
           ))}
@@ -384,7 +384,7 @@ export default function CreateCampaignWizard({
         {step === 1 && (
           <div className="space-y-4">
             <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">
+              <span className="text-sm font-medium text-[#2C2621]">
                 {t('adsCampaignName')}
               </span>
               <Input
@@ -395,7 +395,7 @@ export default function CreateCampaignWizard({
               />
             </label>
             <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">
+              <span className="text-sm font-medium text-[#2C2621]">
                 {t('adsDailyBudgetLabel', {
                   currency: adsCurrencyCode('SEK', locale),
                 })}
@@ -416,12 +416,12 @@ export default function CreateCampaignWizard({
                   onClick={() => setObjective(o.id)}
                   className={`min-h-[88px] rounded-2xl border p-3 text-left transition ${
                     objective === o.id
-                      ? 'border-[#F472B6] bg-pink-50/80 ring-1 ring-[#F472B6]'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
+                      ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.06)]'
+                      : 'border-[#E6E3DB] bg-[#FFFFFF] hover:border-[#8A857D]/40'
                   }`}
                 >
-                  <p className="font-semibold text-[#0F172A]">{t(o.titleKey)}</p>
-                  <p className="mt-1 text-xs text-slate-500">{t(o.blurbKey)}</p>
+                  <p className="font-semibold text-[#2C2621]">{t(o.titleKey)}</p>
+                  <p className="mt-1 text-xs text-[#8A857D]">{t(o.blurbKey)}</p>
                 </button>
               ))}
             </div>
@@ -431,7 +431,7 @@ export default function CreateCampaignWizard({
         {step === 2 && (
           <div className="space-y-4">
             <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">
+              <span className="text-sm font-medium text-[#2C2621]">
                 Locations (ISO country codes)
               </span>
               <Input
@@ -443,7 +443,7 @@ export default function CreateCampaignWizard({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-[#2C2621]">
                   Age min
                 </span>
                 <Input
@@ -456,7 +456,7 @@ export default function CreateCampaignWizard({
                 />
               </label>
               <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-[#2C2621]">
                   Age max
                 </span>
                 <Input
@@ -470,7 +470,7 @@ export default function CreateCampaignWizard({
               </label>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">
+              <p className="text-sm font-medium text-[#2C2621]">
                 Meta custom audiences
               </p>
               <div className="space-y-2">
@@ -481,8 +481,8 @@ export default function CreateCampaignWizard({
                     onClick={() => setRetargeting(r.id)}
                     className={`flex min-h-11 w-full items-center rounded-xl border px-3 text-left text-sm transition ${
                       retargeting === r.id
-                        ? 'border-[#2B2568] bg-[#2B2568]/10 text-[#2B2568]'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
+                        : 'border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] hover:bg-[#F0EFEA]'
                     }`}
                   >
                     {r.label}
@@ -490,7 +490,7 @@ export default function CreateCampaignWizard({
                 ))}
               </div>
               {audiences.length === 0 ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[#8A857D]">
                   No custom audiences loaded yet. Sync Meta Ads after connecting
                   Facebook with ads permissions.
                 </p>
@@ -503,19 +503,19 @@ export default function CreateCampaignWizard({
           <div className="space-y-4">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-[#2C2621]">
                   {t('adsHeadline')}
                 </span>
                 <button
                   type="button"
                   onClick={() => void runAiCopy()}
                   disabled={aiLoading}
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#2B2568] px-3 text-sm font-medium text-white disabled:opacity-60"
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-[#2C3B2E] px-3 text-sm font-medium text-[#F9F8F6] disabled:opacity-60"
                 >
                   {aiLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Sparkles className="h-4 w-4 text-[#F472B6]" />
+                    <Sparkles className="h-4 w-4 text-[#B85C38]" />
                   )}
                   {t('adsAiCopywriter')}
                 </button>
@@ -529,8 +529,8 @@ export default function CreateCampaignWizard({
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">{t('adsCreative')}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm font-medium text-[#2C2621]">{t('adsCreative')}</p>
+              <p className="text-xs text-[#8A857D]">
                 {t('adsCreativeSources')}
               </p>
 
@@ -558,15 +558,15 @@ export default function CreateCampaignWizard({
                 }}
                 className={`relative flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-3 py-4 transition ${
                   dragOver
-                    ? 'border-[#F472B6] bg-pink-50/60'
-                    : 'border-slate-200 bg-white hover:border-slate-300'
+                    ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.06)]'
+                    : 'border-[#E6E3DB] bg-[#FFFFFF] hover:border-[#8A857D]/40'
                 }`}
               >
                 {uploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                  <Loader2 className="h-5 w-5 animate-spin text-[#8A857D]" />
                 ) : creative ? (
                   <div className="flex w-full items-center gap-3 px-1">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#F0EFEA]">
                       {creative.kind === 'video' ? (
                         <video
                           src={creative.url}
@@ -583,16 +583,16 @@ export default function CreateCampaignWizard({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-[#0F172A]">
+                      <p className="truncate text-sm font-semibold text-[#2C2621]">
                         {creative.label}
                       </p>
-                      <p className="text-xs capitalize text-slate-400">
+                      <p className="text-xs capitalize text-[#8A857D]">
                         {creative.kind} selected
                       </p>
                       <button
                         type="button"
                         onClick={() => setCreative(null)}
-                        className="mt-1 text-xs font-semibold text-[#F472B6]"
+                        className="mt-1 text-xs font-medium text-[#2C3B2E]"
                       >
                         {t('adsRemove')}
                       </button>
@@ -600,11 +600,11 @@ export default function CreateCampaignWizard({
                   </div>
                 ) : (
                   <>
-                    <Upload className="h-5 w-5 text-slate-300" />
-                    <p className="text-center text-sm font-medium text-slate-600">
+                    <Upload className="h-5 w-5 text-[#E6E3DB]" />
+                    <p className="text-center text-sm font-medium text-[#8A857D]">
                       {t('adsDropCreative')}
                     </p>
-                    <p className="text-center text-xs text-slate-400">
+                    <p className="text-center text-xs text-[#8A857D]">
                       {t('adsOrChooseSource')}
                     </p>
                   </>
@@ -666,7 +666,7 @@ export default function CreateCampaignWizard({
         <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between">
           <button
             type="button"
-            className="min-h-11 rounded-xl px-4 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className="min-h-11 rounded-xl px-4 text-sm font-medium text-[#8A857D] hover:bg-[#F0EFEA]"
             onClick={() => {
               if (step === 1) onOpenChange(false);
               else setStep((s) => s - 1);
@@ -677,7 +677,7 @@ export default function CreateCampaignWizard({
           {step < 3 ? (
             <button
               type="button"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#F472B6] px-5 text-sm font-semibold text-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2C3B2E] px-5 text-sm font-medium text-[#F9F8F6]"
               onClick={() => {
                 if (step === 1 && !name.trim()) {
                   toast.error('Add a campaign name first');
@@ -692,13 +692,13 @@ export default function CreateCampaignWizard({
             <button
               type="button"
               disabled={submitting}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2B2568] px-5 text-sm font-semibold text-white disabled:opacity-60"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2C3B2E] px-5 text-sm font-medium text-[#F9F8F6] disabled:opacity-60"
               onClick={() => void handleCreate()}
             >
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Wand2 className="h-4 w-4 text-[#F472B6]" />
+                <Wand2 className="h-4 w-4 text-[#B85C38]" />
               )}
               {t('adsCreateSubmit')}
             </button>
@@ -721,20 +721,20 @@ export default function CreateCampaignWizard({
             aria-label="Media Library"
             className="relative z-10 flex max-h-[85vh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:max-w-xl sm:rounded-2xl"
           >
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+            <div className="flex items-start justify-between gap-3 border-b border-[#E6E3DB] px-5 py-4">
               <div className="min-w-0">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
                   Media Library
                 </p>
-                <h3 className="mt-0.5 flex items-center gap-2 font-[family-name:var(--font-space-grotesk)] text-lg font-extrabold text-slate-900">
-                  <FolderOpen size={18} className="text-[#F472B6]" />
+                <h3 className="mt-0.5 flex items-center gap-2 font-playfair font-medium text-lg text-[#2C2621]">
+                  <FolderOpen size={18} className="text-[#B85C38]" />
                   Brand assets
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setLibraryOpen(false)}
-                className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl bg-slate-50"
+                className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl bg-[#F0EFEA]"
                 aria-label="Close"
               >
                 <X size={18} />
@@ -743,15 +743,15 @@ export default function CreateCampaignWizard({
 
             <div className="flex-1 overflow-y-auto px-4 py-4">
               {mediaQuery.isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-400">
+                <div className="flex items-center justify-center gap-2 py-12 text-sm text-[#8A857D]">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading…
                 </div>
               ) : libraryAssets.length === 0 ? (
                 <div className="space-y-2 py-10 text-center">
-                  <p className="text-sm font-semibold text-slate-600">
+                  <p className="text-sm font-medium text-[#8A857D]">
                     No files in Media Library yet
                   </p>
-                  <p className="px-6 text-xs text-slate-400">
+                  <p className="px-6 text-xs text-[#8A857D]">
                     Upload from your device or import from Google Drive, then
                     pick it here.
                   </p>
@@ -769,8 +769,8 @@ export default function CreateCampaignWizard({
                         }
                         className={`relative aspect-square overflow-hidden rounded-xl border-2 transition ${
                           selected
-                            ? 'border-[#F472B6] ring-2 ring-[#F472B6]/25'
-                            : 'border-slate-100 hover:border-slate-300'
+                            ? 'border-[#2C3B2E] ring-1 ring-[#2C3B2E]/30'
+                            : 'border-[#E6E3DB] hover:border-[#8A857D]/40'
                         }`}
                         title={asset.label}
                       >
@@ -789,7 +789,7 @@ export default function CreateCampaignWizard({
                           />
                         )}
                         {selected ? (
-                          <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#F472B6] text-white">
+                          <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#2C3B2E] text-[#F9F8F6]">
                             <Check size={12} strokeWidth={3} />
                           </span>
                         ) : null}
@@ -803,15 +803,15 @@ export default function CreateCampaignWizard({
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
-              <p className="text-xs font-semibold text-slate-500">
+            <div className="flex items-center justify-between gap-3 border-t border-[#E6E3DB] px-4 py-3">
+              <p className="text-xs font-medium text-[#8A857D]">
                 {libraryPickId ? '1 selected' : 'None selected'}
               </p>
               <button
                 type="button"
                 disabled={!libraryPickId}
                 onClick={applyLibraryPick}
-                className="inline-flex min-h-11 items-center rounded-xl bg-[#2B2568] px-4 text-sm font-semibold text-white disabled:opacity-50"
+                className="inline-flex min-h-11 items-center rounded-xl bg-[#2C3B2E] px-4 text-sm font-medium text-[#F9F8F6] disabled:opacity-50"
               >
                 Use creative
               </button>

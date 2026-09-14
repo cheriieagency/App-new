@@ -70,28 +70,28 @@ export default function AdsKpiTrends({
         {
           key: 'spend' as const,
           label: t('adsSpend'),
-          color: '#F472B6',
+          color: '#2C3B2E',
           kpi: 'totalSpend' as const,
           format: 'money' as const,
         },
         {
           key: 'conversions' as const,
           label: t('adsConversions'),
-          color: '#2B2568',
+          color: '#B85C38',
           kpi: 'conversions' as const,
           format: 'number' as const,
         },
         {
           key: 'purchase_roas' as const,
           label: t('adsRoas'),
-          color: '#10B981',
+          color: '#243228',
           kpi: 'avgRoas' as const,
           format: 'roas' as const,
         },
         {
           key: 'cpc' as const,
           label: t('adsCpc'),
-          color: '#7C3AED',
+          color: '#8A857D',
           kpi: 'avgCpc' as const,
           format: 'cpc' as const,
         },
@@ -127,10 +127,12 @@ export default function AdsKpiTrends({
     <section className="space-y-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h2 className="font-[family-name:var(--font-space-grotesk)] text-lg font-semibold text-[#0F172A]">
+          <h2 className="font-playfair font-medium text-lg text-[#2C2621]">
             {t('adsPerformance')}
           </h2>
-          <p className="text-sm text-slate-500">{t('adsPerformanceSub')}</p>
+          <p className="text-sm text-[#8A857D] font-medium">
+            {t('adsPerformanceSub')}
+          </p>
         </div>
         <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
           {(
@@ -145,27 +147,27 @@ export default function AdsKpiTrends({
               onClick={() => onPresetChange(id)}
               className={`min-h-11 rounded-xl px-3.5 text-sm font-medium transition ${
                 presetActive === id
-                  ? 'bg-[#2B2568] text-white'
-                  : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                  ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                  : 'bg-[#FFFFFF] text-[#8A857D] border border-[#E6E3DB] hover:bg-[#F0EFEA]'
               }`}
             >
               {label}
             </button>
           ))}
-          <label className="flex min-h-11 items-center gap-2 rounded-xl bg-white px-3 text-sm text-slate-600 ring-1 ring-slate-200">
+          <label className="flex min-h-11 items-center gap-2 rounded-xl bg-[#FFFFFF] px-3 text-sm text-[#8A857D] border border-[#E6E3DB]">
             <span className="sr-only">{t('adsFromDate')}</span>
             <input
               type="date"
               value={since}
               onChange={(e) => onCustomRange(e.target.value, until)}
-              className="bg-transparent outline-none"
+              className="bg-transparent outline-none text-[#2C2621]"
             />
-            <span className="text-slate-300">→</span>
+            <span className="text-[#E6E3DB]">→</span>
             <input
               type="date"
               value={until}
               onChange={(e) => onCustomRange(since, e.target.value)}
-              className="bg-transparent outline-none"
+              className="bg-transparent outline-none text-[#2C2621]"
             />
           </label>
         </div>
@@ -181,14 +183,14 @@ export default function AdsKpiTrends({
               onClick={() => setActive(m.key)}
               className={`${adminCardClass} min-h-[88px] p-4 text-left transition ${
                 selected
-                  ? 'ring-2 ring-[#F472B6]'
-                  : 'hover:ring-1 hover:ring-slate-200'
+                  ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.06)]'
+                  : 'hover:bg-[#F0EFEA]/50'
               } ${loading ? 'opacity-70' : ''}`}
             >
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                 {m.label}
               </p>
-              <p className="mt-1 font-[family-name:var(--font-fira-code)] text-xl font-semibold text-[#0F172A]">
+              <p className="mt-1 font-[family-name:var(--font-fira-code)] text-xl font-medium text-[#2C2621]">
                 {formatKpi(kpis[m.kpi] || 0, m.format)}
               </p>
               <span
@@ -202,16 +204,16 @@ export default function AdsKpiTrends({
 
       <div className={`${adminCardClass} p-4 sm:p-5`}>
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-medium text-[#0F172A]">
+          <p className="text-sm font-medium text-[#2C2621]">
             {t('adsTrend', { metric: metric.label })}
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[#8A857D] font-medium">
             {since} → {until}
           </p>
         </div>
         <div className="h-56 w-full">
           {chartData.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
+            <div className="flex h-full items-center justify-center text-sm text-[#8A857D]">
               {t('adsNoInsightData')}
             </div>
           ) : (
@@ -231,7 +233,7 @@ export default function AdsKpiTrends({
                     <stop
                       offset="0%"
                       stopColor={metric.color}
-                      stopOpacity={0.35}
+                      stopOpacity={0.28}
                     />
                     <stop
                       offset="100%"
@@ -242,17 +244,17 @@ export default function AdsKpiTrends({
                 </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#E2E8F0"
+                  stroke="#E6E3DB"
                   vertical={false}
                 />
                 <XAxis
                   dataKey="label"
-                  tick={{ fill: '#94A3B8', fontSize: 11 }}
+                  tick={{ fill: '#8A857D', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: '#94A3B8', fontSize: 11 }}
+                  tick={{ fill: '#8A857D', fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   width={44}
@@ -260,8 +262,9 @@ export default function AdsKpiTrends({
                 <Tooltip
                   contentStyle={{
                     borderRadius: 12,
-                    border: '1px solid #E2E8F0',
-                    boxShadow: '0 8px 24px rgba(15,23,42,0.06)',
+                    border: '1px solid #E6E3DB',
+                    background: '#FFFFFF',
+                    boxShadow: 'none',
                   }}
                   formatter={(value) => [
                     formatKpi(Number(value) || 0, metric.format),
@@ -273,7 +276,7 @@ export default function AdsKpiTrends({
                   type="monotone"
                   dataKey={metric.key}
                   stroke={metric.color}
-                  strokeWidth={2.5}
+                  strokeWidth={2}
                   fill={`url(#ads-${metric.key})`}
                   isAnimationActive
                 />

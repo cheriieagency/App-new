@@ -117,7 +117,7 @@ import {
 } from '@/components/icons/SocialBrandIcons';
 
 const PanelFallback = () => (
-  <div className="py-16 text-center text-sm font-semibold text-slate-400">Loading…</div>
+  <div className="py-16 text-center font-playfair italic text-base text-[#8A857D]">Loading…</div>
 );
 
 const LaterAnalyticsPanel = dynamic(
@@ -239,14 +239,14 @@ function LinkBlockCategoryIcon({ type }: { type: BioBlock['type'] }) {
     'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border';
   if (type === 'lead_magnet') {
     return (
-      <div className={`${base} bg-indigo-50 border-indigo-100 text-indigo-600`}>
+      <div className={`${base} bg-[rgba(44,59,46,0.08)] border-[rgba(44,59,46,0.15)] text-[#2C3B2E]`}>
         <BookOpen size={18} strokeWidth={2.25} />
       </div>
     );
   }
   if (type === 'course') {
     return (
-      <div className={`${base} bg-purple-50 border-purple-100 text-purple-600`}>
+      <div className={`${base} bg-[rgba(184,92,56,0.08)] border-[rgba(184,92,56,0.15)] text-[#B85C38]`}>
         <GraduationCap size={18} strokeWidth={2.25} />
       </div>
     );
@@ -273,7 +273,7 @@ function LinkBlockCategoryIcon({ type }: { type: BioBlock['type'] }) {
     );
   }
   return (
-    <div className={`${base} bg-slate-50 border-slate-100 text-slate-600`}>
+    <div className={`${base} bg-[#F0EFEA] border-[#E6E3DB] text-[#8A857D]`}>
       <LinkIcon size={18} strokeWidth={2.25} />
     </div>
   );
@@ -312,7 +312,7 @@ function getBlockPricePill(block: BioBlock): { label: string; className: string 
     return {
       label: formatSek(amount),
       className:
-        'bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono text-[10px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap',
+        'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E] border border-[rgba(44,59,46,0.18)] font-mono text-[10px] font-extrabold px-2.5 py-0.5 rounded-full whitespace-nowrap',
     };
   }
 
@@ -993,14 +993,14 @@ function CoachingGoogleCalendarControls({
     : '/api/auth/google/login';
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-2.5 space-y-2">
+    <div className="rounded-xl border border-[#E6E3DB] bg-white p-2.5 space-y-2">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-600 inline-flex items-center gap-1.5">
-            <CalendarDays size={12} className="text-[#F472B6]" />
+          <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#8A857D] inline-flex items-center gap-1.5">
+            <CalendarDays size={12} className="text-[#B85C38]" />
             Google Calendar & Meet
           </p>
-          <p className="text-[10px] text-slate-400 font-medium leading-snug mt-0.5">
+          <p className="text-[10px] text-[#8A857D] font-medium leading-snug mt-0.5">
             Auto-create a Meet link when someone buys this 1:1 session.
           </p>
         </div>
@@ -1010,8 +1010,8 @@ function CoachingGoogleCalendarControls({
             onClick={() => onChange(false)}
             className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[10px] font-bold border transition-colors ${
               !enabled
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                ? 'bg-[#2C3B2E] text-white border-[#2C3B2E]'
+                : 'bg-white text-[#8A857D] border-[#E6E3DB] hover:bg-[#F0EFEA]'
             }`}
           >
             Off
@@ -1021,8 +1021,8 @@ function CoachingGoogleCalendarControls({
             onClick={() => onChange(true)}
             className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[10px] font-bold border transition-colors ${
               enabled
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                ? 'bg-[#2C3B2E] text-white border-[#2C3B2E]'
+                : 'bg-white text-[#8A857D] border-[#E6E3DB] hover:bg-[#F0EFEA]'
             }`}
           >
             On
@@ -1031,7 +1031,7 @@ function CoachingGoogleCalendarControls({
       </div>
       {enabled && !connected && (
         <div className="rounded-lg border border-[#E9D5FF] bg-[#FDF4FF] px-2.5 py-2 space-y-2">
-          <p className="text-[10px] font-semibold text-slate-700 leading-snug">
+          <p className="text-[10px] font-semibold text-[#2C2621] leading-snug">
             {health?.oauthReady === false
               ? health.hint
               : 'Connect Google to enable Calendar + Meet for this coaching block.'}
@@ -1039,7 +1039,7 @@ function CoachingGoogleCalendarControls({
           {health?.oauthReady !== false && (
             <a
               href={connectUrl}
-              className="inline-flex items-center justify-center h-10 min-h-[40px] w-full rounded-lg bg-[#2B2568] text-white text-[11px] font-extrabold"
+              className="inline-flex items-center justify-center h-10 min-h-[40px] w-full rounded-lg bg-[#2C3B2E] text-white text-[11px] font-extrabold"
             >
               Connect Google Calendar
             </a>
@@ -1127,11 +1127,11 @@ function BioDragBlock({
           onDragOver(index);
         }}
         onDrop={onDrop}
-        className={`flex items-center gap-3 px-3 py-2 rounded-xl border border-dashed border-zinc-200 group cursor-grab ${dragging === index ? 'opacity-40' : ''}`}
+        className={`flex items-center gap-3 px-3 py-2 rounded-xl border border-dashed border-[#E6E3DB] group cursor-grab ${dragging === index ? 'opacity-40' : ''}`}
       >
         <GripVertical size={14} className="text-zinc-300" />
         <div className="flex-1 h-px bg-zinc-200" />
-        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-[#8A857D] uppercase tracking-widest">
           Avdelare
         </span>
         <button
@@ -1154,18 +1154,18 @@ function BioDragBlock({
         onDragOver(index);
       }}
       onDrop={onDrop}
-      className={`group bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs transition-all ${editing ? 'cursor-default space-y-3' : 'cursor-grab'} ${dragging === index ? 'opacity-40 scale-95' : 'hover:border-indigo-300'} ${block.visible ? '' : 'border-dashed opacity-60'}`}
+      className={`group bg-white border border-[#E6E3DB] rounded-2xl p-4 shadow-none transition-all ${editing ? 'cursor-default space-y-3' : 'cursor-grab'} ${dragging === index ? 'opacity-40 scale-95' : 'hover:border-[#2C3B2E]/40'} ${block.visible ? '' : 'border-dashed opacity-60'}`}
     >
       <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <GripVertical size={15} className="text-slate-300 hover:text-slate-500 flex-shrink-0" />
+          <GripVertical size={15} className="text-[#E6E3DB] hover:text-[#8A857D] flex-shrink-0" />
           <button
             type="button"
             onClick={() => {
               setEditing(true);
               setIconTab(block.icon_url ? 'upload' : 'emoji');
             }}
-            className="relative flex-shrink-0 rounded-xl ring-offset-1 hover:ring-2 hover:ring-indigo-300/50 transition-shadow"
+            className="relative flex-shrink-0 rounded-xl ring-offset-1 hover:ring-2 hover:ring-[#2C3B2E]/30 transition-shadow"
             title="Byt ikon"
           >
             <LinkBlockCategoryIcon type={block.type} />
@@ -1182,19 +1182,19 @@ function BioDragBlock({
                       : {}),
                   })
                 }
-                className="w-full text-xs font-extrabold text-slate-900 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
+                className="w-full text-xs font-medium text-[#2C2621] bg-[#F0EFEA] border border-[#E6E3DB] rounded-lg px-2 py-1 focus:outline-none focus:border-[#2C3B2E]"
               />
               {!isStore && (
                 <input
                   value={block.subtitle}
                   onChange={(e) => onUpdate(index, { subtitle: e.target.value })}
-                  className="w-full text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
+                  className="w-full text-[10px] font-mono text-[#8A857D] bg-[#F0EFEA] border border-[#E6E3DB] rounded-lg px-2 py-1 focus:outline-none focus:border-[#2C3B2E]"
                 />
               )}
               {!isStore && (
                 <div className="grid grid-cols-2 gap-1.5">
                   <label className="min-w-0">
-                    <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-400 block mb-0.5">
+                    <span className="text-[9px] font-medium uppercase tracking-wide text-[#8A857D] block mb-0.5">
                       Pris (SEK)
                     </span>
                     <input
@@ -1207,11 +1207,11 @@ function BioDragBlock({
                         onUpdate(index, { price: parsePriceInput(e.target.value) })
                       }
                       placeholder="t.ex. 499"
-                      className="w-full text-[10px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-300"
+                      className="w-full text-[10px] text-[#8A857D] bg-[#F0EFEA] border border-[#E6E3DB] rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#2C3B2E]"
                     />
                   </label>
                   <label className="min-w-0">
-                    <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-400 block mb-0.5">
+                    <span className="text-[9px] font-medium uppercase tracking-wide text-[#8A857D] block mb-0.5">
                       Reapris (SEK)
                     </span>
                     <input
@@ -1224,7 +1224,7 @@ function BioDragBlock({
                         onUpdate(index, { sale_price: parsePriceInput(e.target.value) })
                       }
                       placeholder="t.ex. 299"
-                      className="w-full text-[10px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-300"
+                      className="w-full text-[10px] text-[#8A857D] bg-[#F0EFEA] border border-[#E6E3DB] rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#2C3B2E]"
                     />
                   </label>
                 </div>
@@ -1234,7 +1234,7 @@ function BioDragBlock({
                   value={block.url ?? ''}
                   onChange={(e) => onUpdate(index, { url: e.target.value })}
                   placeholder="https://..."
-                  className="w-full text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
+                  className="w-full text-[10px] text-[#8A857D] bg-[#F0EFEA] border border-[#E6E3DB] rounded-lg px-2 py-1 focus:outline-none focus:border-[#2C3B2E]"
                 />
               )}
               {isStore && (
@@ -1248,21 +1248,21 @@ function BioDragBlock({
                       })
                     }
                     placeholder="Produkt-URL (Shopify, Gumroad…)"
-                    className="w-full text-[10px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-300"
+                    className="w-full text-[10px] text-[#8A857D] bg-[#F0EFEA] border border-[#E6E3DB] rounded-lg px-2 py-1 focus:outline-none focus:border-[#2C3B2E]"
                   />
-                  <p className="text-[9px] text-zinc-400 font-medium break-all">
+                  <p className="text-[9px] text-[#8A857D] font-medium break-all">
                     UTM: {utmDestination || 'Add a product URL'}
                   </p>
                 </>
               )}
               {/* Community access unlock after purchase */}
-              <div className="rounded-xl border border-slate-200 bg-white p-2.5 space-y-2">
+              <div className="rounded-xl border border-[#E6E3DB] bg-white p-2.5 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-600">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D]">
                       {t('communityAccessLabel', locale)}
                     </p>
-                    <p className="text-[10px] text-slate-400 font-medium leading-snug">
+                    <p className="text-[10px] text-[#8A857D] font-medium leading-snug">
                       {t('communityAccessHint', locale)}
                     </p>
                   </div>
@@ -1277,8 +1277,8 @@ function BioDragBlock({
                       }
                       className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[10px] font-bold border transition-colors ${
                         !block.grants_community_access
-                          ? 'bg-slate-900 text-white border-slate-900'
-                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          ? 'bg-[#2C3B2E] text-white border-[#2C3B2E]'
+                          : 'bg-white text-[#8A857D] border-[#E6E3DB] hover:bg-[#F0EFEA]'
                       }`}
                     >
                       {t('noLabel', locale)}
@@ -1294,8 +1294,8 @@ function BioDragBlock({
                       }
                       className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[10px] font-bold border transition-colors ${
                         block.grants_community_access
-                          ? 'bg-slate-900 text-white border-slate-900'
-                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                          ? 'bg-[#2C3B2E] text-white border-[#2C3B2E]'
+                          : 'bg-white text-[#8A857D] border-[#E6E3DB] hover:bg-[#F0EFEA]'
                       }`}
                     >
                       {t('yesLabel', locale)}
@@ -1305,7 +1305,7 @@ function BioDragBlock({
                 {block.grants_community_access && (
                   <div className="space-y-2">
                     <label className="block">
-                      <span className="text-[9px] font-extrabold uppercase tracking-wide text-zinc-400 block mb-0.5">
+                      <span className="text-[9px] font-medium uppercase tracking-wide text-[#8A857D] block mb-0.5">
                         {t('whichCommunity', locale)}
                       </span>
                       <select
@@ -1317,7 +1317,7 @@ function BioDragBlock({
                               : null,
                           })
                         }
-                        className="w-full h-11 min-h-[44px] text-[11px] font-semibold text-slate-800 bg-zinc-50 border border-zinc-200 rounded-lg px-2 focus:outline-none focus:border-indigo-300"
+                        className="w-full h-11 min-h-[44px] text-[11px] font-semibold text-[#2C2621] bg-[#F0EFEA] border border-[#E6E3DB] rounded-lg px-2 focus:outline-none focus:border-[#2C3B2E]"
                       >
                         {communities.length === 0 && (
                           <option value="">No communities yet</option>
@@ -1359,18 +1359,18 @@ function BioDragBlock({
             </div>
           ) : (
             <div className="min-w-0 flex-1">
-              <p className="font-extrabold text-xs text-slate-900 leading-snug truncate">
+              <p className="font-medium text-xs text-[#2C2621] leading-snug truncate">
                 {block.title || '(Inget namn)'}
               </p>
-              <p className="font-mono text-[10px] text-slate-400 truncate">{block.subtitle}</p>
+              <p className="font-mono text-[10px] text-[#8A857D] truncate">{block.subtitle}</p>
               {block.grants_community_access && accessCommunity && (
                 <p className="text-[9px] text-emerald-600 font-semibold truncate mt-0.5">
                   {t('unlocksLabel', locale)} · {accessCommunity.name}
                 </p>
               )}
               {block.type === 'coaching' && block.google_calendar_enabled !== false && (
-                <p className="text-[9px] text-[#2B2568] font-semibold truncate mt-0.5 inline-flex items-center gap-1">
-                  <CalendarDays size={10} className="text-[#F472B6]" />
+                <p className="text-[9px] text-[#2C3B2E] font-semibold truncate mt-0.5 inline-flex items-center gap-1">
+                  <CalendarDays size={10} className="text-[#B85C38]" />
                   Google Calendar + Meet
                 </p>
               )}
@@ -1389,7 +1389,7 @@ function BioDragBlock({
             <button
               type="button"
               onClick={() => void copyUtm()}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${utmCopied ? 'bg-green-50 text-green-600 border-green-200' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${utmCopied ? 'bg-green-50 text-green-600 border-green-200' : 'bg-[#F0EFEA] text-[#8A857D] border-[#E6E3DB] hover:bg-[#F0EFEA]'}`}
               title="Copy UTM link"
             >
               {utmCopied ? <Check size={12} /> : <Copy size={12} />}
@@ -1398,7 +1398,7 @@ function BioDragBlock({
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
-            className={`w-8 h-8 min-h-[32px] min-w-[32px] rounded-xl flex items-center justify-center transition-all border ${editing ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'}`}
+            className={`w-8 h-8 min-h-[32px] min-w-[32px] rounded-xl flex items-center justify-center transition-all border ${editing ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E] border-[rgba(44,59,46,0.18)]' : 'bg-[#F0EFEA] hover:bg-[#F0EFEA] text-[#8A857D] border-[#E6E3DB]'}`}
             aria-label="Edit"
           >
             {editing ? <Check size={12} /> : <Edit3 size={12} />}
@@ -1412,9 +1412,9 @@ function BioDragBlock({
             aria-label="Toggle active"
           >
             {block.visible ? (
-              <ToggleRight className="text-indigo-600 text-base" size={22} />
+              <ToggleRight className="text-[#2C3B2E] text-base" size={22} />
             ) : (
-              <ToggleLeft className="text-slate-300 text-base" size={22} />
+              <ToggleLeft className="text-[#E6E3DB] text-base" size={22} />
             )}
           </button>
           <button
@@ -1429,9 +1429,9 @@ function BioDragBlock({
 
       {editing && (
         <div className="px-3 pb-3 pt-0">
-          <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 p-3 space-y-2.5">
+          <div className="rounded-xl border border-zinc-100 bg-[#F0EFEA]/80 p-3 space-y-2.5">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400">
+              <p className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
                 Ikon
               </p>
               <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white border border-zinc-100">
@@ -1441,7 +1441,7 @@ function BioDragBlock({
                   className={`h-8 min-h-[32px] px-2.5 rounded-md text-[10px] font-bold transition-colors ${
                     iconTab === 'emoji'
                       ? 'bg-[var(--nc-coral)] text-white'
-                      : 'text-zinc-500 hover:text-zinc-700'
+                      : 'text-[#8A857D] hover:text-zinc-700'
                   }`}
                 >
                   Emoji
@@ -1452,7 +1452,7 @@ function BioDragBlock({
                   className={`h-8 min-h-[32px] px-2.5 rounded-md text-[10px] font-bold transition-colors ${
                     iconTab === 'upload'
                       ? 'bg-[var(--nc-coral)] text-white'
-                      : 'text-zinc-500 hover:text-zinc-700'
+                      : 'text-[#8A857D] hover:text-zinc-700'
                   }`}
                 >
                   Bild
@@ -1472,7 +1472,7 @@ function BioDragBlock({
                       className={`h-9 min-h-[36px] rounded-lg text-base flex items-center justify-center transition-colors ${
                         active
                           ? 'bg-white border border-[var(--nc-coral)] shadow-sm'
-                          : 'bg-white/70 border border-transparent hover:border-zinc-200'
+                          : 'bg-white/70 border border-transparent hover:border-[#E6E3DB]'
                       }`}
                     >
                       {em}
@@ -1497,12 +1497,12 @@ function BioDragBlock({
                   type="button"
                   onClick={() => iconFileRef.current?.click()}
                   disabled={uploadingIcon}
-                  className="w-full h-20 min-h-[80px] rounded-xl border-2 border-dashed border-zinc-200 bg-white flex flex-col items-center justify-center gap-1.5 hover:border-[var(--nc-coral)] transition-colors"
+                  className="w-full h-20 min-h-[80px] rounded-xl border-2 border-dashed border-[#E6E3DB] bg-white flex flex-col items-center justify-center gap-1.5 hover:border-[var(--nc-coral)] transition-colors"
                 >
                   {uploadingIcon ? (
                     <Loader2
                       size={18}
-                      className="text-zinc-400"
+                      className="text-[#8A857D]"
                       style={{ animation: 'spin 1s linear infinite' }}
                     />
                   ) : block.icon_url ? (
@@ -1512,12 +1512,12 @@ function BioDragBlock({
                         alt=""
                         className="w-12 h-12 rounded-xl object-cover"
                       />
-                      <span className="text-xs font-bold text-zinc-600">Byt bild</span>
+                      <span className="text-xs font-bold text-[#8A857D]">Byt bild</span>
                     </div>
                   ) : (
                     <>
                       <ImageIcon size={18} className="text-zinc-300" />
-                      <span className="text-xs font-bold text-zinc-500">Ladda upp ikonbild</span>
+                      <span className="text-xs font-bold text-[#8A857D]">Ladda upp ikonbild</span>
                     </>
                   )}
                 </button>
@@ -1525,7 +1525,7 @@ function BioDragBlock({
                   <button
                     type="button"
                     onClick={() => onUpdate(index, { icon_url: null })}
-                    className="text-[11px] font-bold text-zinc-400 hover:text-red-500 transition-colors"
+                    className="text-[11px] font-bold text-[#8A857D] hover:text-red-500 transition-colors"
                   >
                     Remove image (use emoji)
                   </button>
@@ -1599,7 +1599,7 @@ function AvatarUploader({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-extrabold transition-all disabled:opacity-60 active:scale-95"
+          className="flex items-center gap-2 h-9 px-4 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-medium transition-all disabled:opacity-60 active:scale-95"
         >
           <Camera size={13} /> {previewUrl ? 'Byt foto' : 'Ladda upp foto'}
         </button>
@@ -1610,12 +1610,12 @@ function AvatarUploader({
               setPreviewUrl('');
               onUpdate('');
             }}
-            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 text-xs font-extrabold transition-all border border-red-100"
+            className="flex items-center gap-2 h-9 px-4 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 text-xs font-medium transition-all border border-red-100"
           >
             <X size={12} /> Ta bort
           </button>
         )}
-        <p className="text-[10px] text-zinc-400 font-medium">JPG, PNG eller WebP · Max 5 MB</p>
+        <p className="text-[10px] text-[#8A857D] font-medium">JPG, PNG eller WebP · Max 5 MB</p>
       </div>
     </div>
   );
@@ -1632,18 +1632,18 @@ function SocialLinksEditor({
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+        <h4 className="text-[10px] font-inter font-medium text-[#8A857D] uppercase tracking-[0.14em] flex items-center gap-2">
           <GlobeIcon size={12} /> Social media links
         </h4>
-        <span className="text-[10px] font-semibold text-slate-400">
+        <span className="text-[10px] font-medium text-[#8A857D]">
           Use Add Link / Product
         </span>
       </div>
       <div className="space-y-2">
         {links.length === 0 && (
-          <div className="text-center py-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 text-slate-400">
+          <div className="text-center py-5 rounded-xl border border-dashed border-[#E6E3DB] bg-[#F0EFEA]/60 text-[#8A857D]">
             <GlobeIcon size={20} className="mx-auto mb-1.5 opacity-50" />
-            <p className="text-xs font-bold text-slate-500">No social links yet</p>
+            <p className="text-xs font-medium text-[#8A857D]">No social links yet</p>
             <p className="text-[10px] mt-0.5">
               Open Add Link / Product → Social media
             </p>
@@ -1655,7 +1655,7 @@ function SocialLinksEditor({
           return (
             <div
               key={`${link.platform}-${i}`}
-              className="flex items-center gap-2 p-2.5 min-h-[44px] rounded-xl bg-slate-50 border border-slate-100 group"
+              className="flex items-center gap-2 p-2.5 min-h-[44px] rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] group"
             >
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -1664,7 +1664,7 @@ function SocialLinksEditor({
                 <SocialPlatformIcon id={plat.id} size={14} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-0.5">
+                <p className="text-[10px] font-inter font-medium text-[#8A857D] uppercase tracking-[0.12em] mb-0.5">
                   {plat.label}
                 </p>
                 <input
@@ -1674,7 +1674,7 @@ function SocialLinksEditor({
                       links.map((l, idx) => (idx === i ? { ...l, url: e.target.value } : l))
                     )
                   }
-                  className="w-full text-xs text-slate-700 bg-transparent focus:outline-none truncate"
+                  className="w-full text-xs text-[#2C2621] bg-transparent focus:outline-none truncate"
                   placeholder="https://..."
                 />
               </div>
@@ -2450,9 +2450,9 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      {/* Top navbar — minimal Clikd shell */}
-      <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#F9F8F6]">
+      {/* Top navbar — editorial Clikd shell */}
+      <header className="sticky top-0 z-30 h-16 bg-[#F9F8F6]/95 backdrop-blur-md border-b border-[#E6E3DB] px-4 sm:px-8 flex items-center justify-between gap-4">
         <div className="md:hidden flex-shrink-0 min-w-0 max-w-[42%]">
           <WorkspaceSelector
             workspaces={brandWorkspaces}
@@ -2463,7 +2463,7 @@ export default function AdminPage() {
         </div>
         <AdminSearchBar locale={locale} />
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
-          <LanguageSwitcher className="hidden lg:block [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:h-9 [&_button]:min-h-[36px] [&_button]:text-slate-500 [&_button]:px-2 [&_button]:text-xs [&_button]:font-semibold" />
+          <LanguageSwitcher className="hidden lg:block [&_button]:bg-transparent [&_button]:border-0 [&_button]:shadow-none [&_button]:h-9 [&_button]:min-h-[36px] [&_button]:text-[#8A857D] [&_button]:px-2 [&_button]:text-xs [&_button]:font-medium" />
           <button
             type="button"
             onClick={() => {
@@ -2473,7 +2473,7 @@ export default function AdminPage() {
               }
               setShowCreatorAI(true);
             }}
-            className="hidden xl:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-lg text-slate-500 text-xs font-semibold hover:bg-slate-50 hover:text-slate-800 transition-colors"
+            className="hidden xl:inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-xl text-[#8A857D] text-xs font-medium hover:bg-[#F0EFEA] hover:text-[#2C2621] transition-colors"
             title={t('aiCopilotTitle', locale)}
           >
             <Sparkles size={14} />
@@ -2485,23 +2485,23 @@ export default function AdminPage() {
                 setAccountMenuOpen(false);
                 setNotifOpen((v) => !v);
               }}
-              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-500 relative transition-colors"
+              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full hover:bg-[#F0EFEA] flex items-center justify-center text-[#8A857D] relative transition-colors"
               aria-label={t('notificationsTitle', locale)}
             >
               <Bell size={17} strokeWidth={1.75} />
               {headerNotifs.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#F472B6]" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#B85C38]" />
               )}
             </button>
             {notifOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-40 overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-100">
-                  <p className="text-xs font-bold text-slate-900">
+              <div className="absolute right-0 top-full mt-2 w-72 bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)] z-40 overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#E6E3DB]">
+                  <p className="text-xs font-medium text-[#2C2621]">
                     {t('notificationsTitle', locale)}
                   </p>
                 </div>
                 {headerNotifs.length === 0 ? (
-                  <p className="px-4 py-4 text-xs font-medium text-slate-500">
+                  <p className="px-4 py-4 text-xs font-medium text-[#8A857D]">
                     {t('notifEmpty', locale)}
                   </p>
                 ) : (
@@ -2510,7 +2510,7 @@ export default function AdminPage() {
                       key={n.id}
                       type="button"
                       onClick={() => setNotifOpen(false)}
-                      className="w-full text-left px-4 py-3 text-xs font-medium text-slate-600 hover:bg-slate-50 border-b border-slate-50 last:border-0"
+                      className="w-full text-left px-4 py-3 text-xs font-medium text-[#8A857D] hover:bg-[#F0EFEA] border-b border-slate-50 last:border-0"
                     >
                       {t(n.messageKey as TranslationKey, locale)}
                     </button>
@@ -2526,7 +2526,7 @@ export default function AdminPage() {
                 setNotifOpen(false);
                 setAccountMenuOpen((v) => !v);
               }}
-              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full overflow-hidden border border-slate-200 shadow-sm bg-slate-900 flex items-center justify-center text-white text-xs font-bold"
+              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full overflow-hidden border border-[#E6E3DB] shadow-none bg-[#2C3B2E] flex items-center justify-center text-white text-xs font-medium"
               title={session.user.name || t('accountMenuTitle', locale)}
               aria-expanded={accountMenuOpen}
               aria-haspopup="menu"
@@ -2547,10 +2547,10 @@ export default function AdminPage() {
                 />
                 <div
                   role="menu"
-                  className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-50 overflow-hidden"
+                  className="absolute right-0 top-full mt-2 w-80 bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)] z-50 overflow-hidden"
                 >
-                  <div className="px-4 py-4 border-b border-slate-100 flex items-center gap-3">
-                    <div className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  <div className="px-4 py-4 border-b border-[#E6E3DB] flex items-center gap-3">
+                    <div className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border border-[#E6E3DB] bg-[#2C3B2E] flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
                       {session.user.image ? (
                         <img
                           src={session.user.image}
@@ -2562,42 +2562,42 @@ export default function AdminPage() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-extrabold text-slate-900 truncate">
+                      <p className="text-sm font-medium text-[#2C2621] truncate">
                         {session.user.name || t('accountMenuCreator', locale)}
                       </p>
-                      <p className="text-xs font-medium text-slate-500 truncate flex items-center gap-1 mt-0.5">
-                        <Mail size={11} className="flex-shrink-0 text-slate-400" />
+                      <p className="text-xs font-medium text-[#8A857D] truncate flex items-center gap-1 mt-0.5">
+                        <Mail size={11} className="flex-shrink-0 text-[#8A857D]" />
                         {session.user.email || '—'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="px-4 py-3 border-b border-slate-100 space-y-2">
-                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                  <div className="px-4 py-3 border-b border-[#E6E3DB] space-y-2">
+                    <p className="text-[10px] font-inter font-medium uppercase tracking-[0.12em] text-[#8A857D]">
                       {t('accountMenuTitle', locale)}
                     </p>
-                    <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 space-y-1.5">
+                    <div className="rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] px-3 py-2.5 space-y-1.5">
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D]">
                           {t('email', locale)}
                         </span>
-                        <span className="text-xs font-semibold text-slate-700 text-right break-all">
+                        <span className="text-xs font-medium text-[#2C2621] text-right break-all">
                           {session.user.email || '—'}
                         </span>
                       </div>
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D]">
                           {t('accountMenuWorkspace', locale)}
                         </span>
-                        <span className="text-xs font-semibold text-slate-700 text-right truncate">
+                        <span className="text-xs font-medium text-[#2C2621] text-right truncate">
                           {activeWorkspace.name} ({activeWorkspace.handle})
                         </span>
                       </div>
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D]">
                           {t('accountMenuRole', locale)}
                         </span>
-                        <span className="text-xs font-semibold text-slate-700">
+                        <span className="text-xs font-medium text-[#2C2621]">
                           {t('accountMenuCreator', locale)}
                         </span>
                       </div>
@@ -2612,9 +2612,9 @@ export default function AdminPage() {
                         setAccountMenuOpen(false);
                         setSection('settings');
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-3 min-h-[44px] text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      className="w-full flex items-center gap-2.5 px-4 py-3 min-h-[44px] text-left text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA] transition-colors"
                     >
-                      <Settings size={14} className="text-slate-400" />
+                      <Settings size={14} className="text-[#8A857D]" />
                       {t('accountMenuSettingsBilling', locale)}
                     </button>
                     <button
@@ -2624,14 +2624,14 @@ export default function AdminPage() {
                         setAccountMenuOpen(false);
                         setSection('biobuilder');
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-3 min-h-[44px] text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                      className="w-full flex items-center gap-2.5 px-4 py-3 min-h-[44px] text-left text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA] transition-colors"
                     >
-                      <UserCheck size={14} className="text-slate-400" />
+                      <UserCheck size={14} className="text-[#8A857D]" />
                       {t('accountMenuProfileBio', locale)}
                     </button>
                   </div>
 
-                  <div className="border-t border-slate-100 p-2">
+                  <div className="border-t border-[#E6E3DB] p-2">
                     <button
                       type="button"
                       role="menuitem"
@@ -2639,7 +2639,7 @@ export default function AdminPage() {
                         setAccountMenuOpen(false);
                         void signOutAndRedirect('/');
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                      className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-left text-xs font-medium text-[#B85C38] hover:bg-[rgba(184,92,56,0.08)] transition-colors"
                     >
                       <LogOut size={14} />
                       {t('signOut', locale)}
@@ -2652,13 +2652,13 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 py-8 pb-24 md:pb-16">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 py-10 sm:py-12 pb-28 md:pb-20">
         {section === 'settings' ? (
           <AdminSettingsPanel />
         ) : section === 'home' ? (
           <AdminHomeDashboard />
         ) : socialsLoading ? (
-          <div className="py-16 text-center text-sm font-semibold text-slate-400">
+          <div className="py-16 text-center font-playfair italic text-base text-[#8A857D]">
             Loading…
           </div>
         ) : !hasConnectedSocials ? (
@@ -2711,8 +2711,8 @@ export default function AdminPage() {
             isLive={isLive}
             eventPanel={
           <div className="space-y-5">
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6 max-w-2xl">
-              <h3 className="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+            <div className="bg-white border border-[#E6E3DB] rounded-xl shadow-none p-6 max-w-2xl">
+              <h3 className="text-sm font-medium text-[#2C2621] mb-4 flex items-center gap-2">
                 <Calendar size={14} /> {t('scheduleEvent', locale)}
               </h3>
               <div className="space-y-4">
@@ -2732,7 +2732,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={() => eventCoverRef.current?.click()}
                   disabled={eventUploading}
-                  className="relative w-full h-36 min-h-[144px] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 overflow-hidden flex flex-col items-center justify-center gap-1.5 hover:border-[#9089F0] transition-colors"
+                  className="relative w-full h-36 min-h-[144px] rounded-xl border-2 border-dashed border-[#E6E3DB] bg-[#F0EFEA] overflow-hidden flex flex-col items-center justify-center gap-1.5 hover:border-[#2C3B2E] transition-colors"
                 >
                   {eventForm.image_url ? (
                     <>
@@ -2741,21 +2741,21 @@ export default function AdminPage() {
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover"
                       />
-                      <span className="relative z-10 text-[11px] font-extrabold text-white bg-black/45 px-3 py-1.5 rounded-full">
+                      <span className="relative z-10 text-[11px] font-medium text-white bg-black/45 px-3 py-1.5 rounded-full">
                         Byt headerbild
                       </span>
                     </>
                   ) : eventUploading ? (
                     <Loader2
                       size={22}
-                      className="text-slate-400"
+                      className="text-[#8A857D]"
                       style={{ animation: 'spin 1s linear infinite' }}
                     />
                   ) : (
                     <>
-                      <ImageIcon size={22} className="text-slate-300" />
-                      <span className="text-xs font-bold text-slate-500">Add header image</span>
-                      <span className="text-[10px] text-slate-400 font-medium">
+                      <ImageIcon size={22} className="text-[#E6E3DB]" />
+                      <span className="text-xs font-bold text-[#8A857D]">Add header image</span>
+                      <span className="text-[10px] text-[#8A857D] font-medium">
                         Shown at the top of the event
                       </span>
                     </>
@@ -2765,7 +2765,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setEventForm((p) => ({ ...p, image_url: '' }))}
-                    className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors -mt-2"
+                    className="text-xs font-bold text-[#8A857D] hover:text-red-500 transition-colors -mt-2"
                   >
                     Ta bort bild
                   </button>
@@ -2775,24 +2775,24 @@ export default function AdminPage() {
                   placeholder={t('eventTitle', locale)}
                   value={eventForm.title}
                   onChange={(e) => setEventForm((p) => ({ ...p, title: e.target.value }))}
-                  className="rounded-xl bg-slate-50 border-slate-100 h-11"
+                  className="rounded-xl bg-[#F0EFEA] border-[#E6E3DB] h-11"
                 />
                 <Textarea
                   placeholder={t('description', locale)}
                   value={eventForm.description}
                   onChange={(e) => setEventForm((p) => ({ ...p, description: e.target.value }))}
-                  className="rounded-xl bg-slate-50 border-slate-100 min-h-[70px] resize-none"
+                  className="rounded-xl bg-[#F0EFEA] border-[#E6E3DB] min-h-[70px] resize-none"
                 />
                 <Input
                   type="datetime-local"
                   value={eventForm.start_time}
                   onChange={(e) => setEventForm((p) => ({ ...p, start_time: e.target.value }))}
-                  className="rounded-xl bg-slate-50 border-slate-100 h-11"
+                  className="rounded-xl bg-[#F0EFEA] border-[#E6E3DB] h-11"
                 />
 
                 {/* In person / Online */}
                 <div>
-                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-slate-400 mb-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-[#8A857D] mb-2">
                     Plats
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -2810,8 +2810,8 @@ export default function AdminPage() {
                           onClick={() => setEventForm((p) => ({ ...p, location_type: key }))}
                           className={`h-11 min-h-[44px] rounded-xl border text-sm font-bold flex items-center justify-center gap-2 transition-colors ${
                             active
-                              ? 'border-[#9089F0] bg-[#E9D5FF]/50 text-slate-900'
-                              : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'
+                              ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)] text-[#2C2621]'
+                              : 'border-[#E6E3DB] bg-[#F0EFEA] text-[#8A857D] hover:border-[#E6E3DB]'
                           }`}
                         >
                           <Icon size={15} /> {label}
@@ -2826,7 +2826,7 @@ export default function AdminPage() {
                     placeholder={t('streamUrl', locale)}
                     value={eventForm.stream_url}
                     onChange={(e) => setEventForm((p) => ({ ...p, stream_url: e.target.value }))}
-                    className="rounded-xl bg-slate-50 border-slate-100 h-11"
+                    className="rounded-xl bg-[#F0EFEA] border-[#E6E3DB] h-11"
                   />
                 ) : (
                   <Input
@@ -2835,13 +2835,13 @@ export default function AdminPage() {
                     onChange={(e) =>
                       setEventForm((p) => ({ ...p, location_address: e.target.value }))
                     }
-                    className="rounded-xl bg-slate-50 border-slate-100 h-11"
+                    className="rounded-xl bg-[#F0EFEA] border-[#E6E3DB] h-11"
                   />
                 )}
 
                 {/* Audience */}
                 <div>
-                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-slate-400 mb-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-[#8A857D] mb-2">
                     Vem kan delta
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -2872,8 +2872,8 @@ export default function AdminPage() {
                           onClick={() => setEventForm((p) => ({ ...p, audience: key }))}
                           className={`h-11 min-h-[44px] rounded-xl border text-xs sm:text-[13px] font-bold flex items-center justify-center gap-1.5 px-2 transition-colors ${
                             active
-                              ? 'border-[#9089F0] bg-[#E9D5FF]/50 text-slate-900'
-                              : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'
+                              ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)] text-[#2C2621]'
+                              : 'border-[#E6E3DB] bg-[#F0EFEA] text-[#8A857D] hover:border-[#E6E3DB]'
                           }`}
                         >
                           <Icon size={14} className="flex-shrink-0" /> {label}
@@ -2884,8 +2884,8 @@ export default function AdminPage() {
                 </div>
 
                 {eventForm.audience === 'selected' && (
-                  <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 max-h-44 overflow-y-auto space-y-1">
-                    <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wide mb-2">
+                  <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA] p-3 max-h-44 overflow-y-auto space-y-1">
+                    <p className="text-[11px] font-medium text-[#8A857D] uppercase tracking-wide mb-2">
                       Select members
                     </p>
                     {getMockCommunityAdminPayload(adminCommunityId).members.map((m) => {
@@ -2896,20 +2896,20 @@ export default function AdminPage() {
                           type="button"
                           onClick={() => toggleInvitedMember(m.id)}
                           className={`w-full flex items-center gap-2.5 px-2.5 h-11 min-h-[44px] rounded-lg text-left transition-colors ${
-                            checked ? 'bg-white border border-[#9089F0]/50' : 'hover:bg-white'
+                            checked ? 'bg-white border border-[#2C3B2E]/50' : 'hover:bg-white'
                           }`}
                         >
                           <span
                             className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                               checked
-                                ? 'bg-[#1a1848] border-[#1a1848]'
+                                ? 'bg-[#2C3B2E] border-[#2C3B2E]'
                                 : 'border-zinc-300 bg-white'
                             }`}
                           >
                             {checked && <Check size={10} className="text-white" />}
                           </span>
-                          <span className="text-sm font-bold text-slate-900 truncate">{m.name}</span>
-                          <span className="text-[10px] text-slate-400 font-medium ml-auto flex-shrink-0">
+                          <span className="text-sm font-bold text-[#2C2621] truncate">{m.name}</span>
+                          <span className="text-[10px] text-[#8A857D] font-medium ml-auto flex-shrink-0">
                             {m.role}
                           </span>
                         </button>
@@ -2919,7 +2919,7 @@ export default function AdminPage() {
                 )}
 
                 {eventForm.audience === 'invite_only' && (
-                  <p className="text-xs text-slate-400 font-medium -mt-1">
+                  <p className="text-xs text-[#8A857D] font-medium -mt-1">
                     Only people you personally invite can see and RSVP.
                   </p>
                 )}
@@ -2928,7 +2928,7 @@ export default function AdminPage() {
                   placeholder={t('speakerName', locale)}
                   value={eventForm.speaker_name}
                   onChange={(e) => setEventForm((p) => ({ ...p, speaker_name: e.target.value }))}
-                  className="rounded-xl bg-slate-50 border-slate-100 h-11"
+                  className="rounded-xl bg-[#F0EFEA] border-[#E6E3DB] h-11"
                 />
                 <Button
                   onClick={() => addEventMutation.mutate()}
@@ -2940,7 +2940,7 @@ export default function AdminPage() {
                       eventForm.invited_member_ids.length === 0) ||
                     (eventForm.location_type === 'in_person' && !eventForm.location_address.trim())
                   }
-                  className="w-full rounded-full bg-[#1a1848] hover:bg-[#2B2568] text-white font-extrabold h-11 min-h-[44px] flex items-center justify-center gap-2"
+                  className="w-full rounded-full bg-[#2C3B2E] hover:bg-[#243228] text-white font-medium h-11 min-h-[44px] flex items-center justify-center gap-2"
                 >
                   {saved === 'event' ? (
                     <>
@@ -2957,15 +2957,15 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {/* Planned / upcoming */}
-              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6">
-                <h3 className="text-sm font-extrabold text-slate-900 mb-1 flex items-center gap-2">
-                  <Calendar size={14} className="text-[#9089F0]" /> Planerade events
+              <div className="bg-white border border-[#E6E3DB] rounded-xl shadow-none p-6">
+                <h3 className="text-sm font-medium text-[#2C2621] mb-1 flex items-center gap-2">
+                  <Calendar size={14} className="text-[#2C3B2E]" /> Planerade events
                 </h3>
-                <p className="text-xs text-slate-400 font-medium mb-4">
+                <p className="text-xs text-[#8A857D] font-medium mb-4">
                   Upcoming events visible to members.
                 </p>
                 {plannedEvents.length === 0 ? (
-                  <p className="text-sm text-slate-400 font-medium py-6 text-center">
+                  <p className="text-sm text-[#8A857D] font-medium py-6 text-center">
                     {t('noUpcomingEvents', locale)}
                   </p>
                 ) : (
@@ -2984,7 +2984,7 @@ export default function AdminPage() {
                       }) => (
                         <li
                           key={ev.id}
-                          className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100"
+                          className="flex items-start gap-3 p-3 rounded-xl bg-[#F0EFEA] border border-[#E6E3DB]"
                         >
                           {ev.image_url ? (
                             <img
@@ -2999,20 +2999,20 @@ export default function AdminPage() {
                                 background: '#E9D5FF',
                               }}
                             >
-                              <Calendar size={16} className="text-[#9089F0]" />
+                              <Calendar size={16} className="text-[#2C3B2E]" />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-slate-900 truncate">{ev.title}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">
+                            <p className="text-sm font-bold text-[#2C2621] truncate">{ev.title}</p>
+                            <p className="text-xs text-[#8A857D] mt-0.5">
                               {formatEventWhen(ev.start_time)}
                               {ev.speaker_name ? ` · ${ev.speaker_name}` : ''}
                             </p>
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
+                              <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D] bg-white border border-[#E6E3DB] px-2 py-0.5 rounded-md">
                                 {ev.location_type === 'in_person' ? 'In person' : 'Online'}
                               </span>
-                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
+                              <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D] bg-white border border-[#E6E3DB] px-2 py-0.5 rounded-md">
                                 {ev.audience === 'invite_only'
                                   ? 'Inbjudan'
                                   : ev.audience === 'selected'
@@ -3020,11 +3020,11 @@ export default function AdminPage() {
                                     : 'Community'}
                               </span>
                               {ev.category && (
-                                <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
+                                <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D] bg-white border border-[#E6E3DB] px-2 py-0.5 rounded-md">
                                   {ev.category}
                                 </span>
                               )}
-                              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                              <span className="text-[10px] font-bold text-[#8A857D] flex items-center gap-1">
                                 <Users size={10} /> {ev.attendee_count ?? 0} RSVP
                               </span>
                             </div>
@@ -3037,15 +3037,15 @@ export default function AdminPage() {
               </div>
 
               {/* Previous / past */}
-              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6">
-                <h3 className="text-sm font-extrabold text-slate-900 mb-1 flex items-center gap-2">
-                  <CheckCircle2 size={14} className="text-slate-400" /> Tidigare events
+              <div className="bg-white border border-[#E6E3DB] rounded-xl shadow-none p-6">
+                <h3 className="text-sm font-medium text-[#2C2621] mb-1 flex items-center gap-2">
+                  <CheckCircle2 size={14} className="text-[#8A857D]" /> Tidigare events
                 </h3>
-                <p className="text-xs text-slate-400 font-medium mb-4">
+                <p className="text-xs text-[#8A857D] font-medium mb-4">
                   Avslutade events och replays.
                 </p>
                 {previousEvents.length === 0 ? (
-                  <p className="text-sm text-slate-400 font-medium py-6 text-center">
+                  <p className="text-sm text-[#8A857D] font-medium py-6 text-center">
                     No past events yet.
                   </p>
                 ) : (
@@ -3064,7 +3064,7 @@ export default function AdminPage() {
                       }) => (
                         <li
                           key={ev.id}
-                          className="flex items-start gap-3 p-3 rounded-xl bg-slate-50/80 border border-slate-100"
+                          className="flex items-start gap-3 p-3 rounded-xl bg-[#F0EFEA]/80 border border-[#E6E3DB]"
                         >
                           {ev.image_url ? (
                             <img
@@ -3074,20 +3074,20 @@ export default function AdminPage() {
                             />
                           ) : (
                             <div className="w-12 h-12 rounded-xl bg-zinc-100 flex items-center justify-center flex-shrink-0">
-                              <CheckCircle2 size={16} className="text-slate-400" />
+                              <CheckCircle2 size={16} className="text-[#8A857D]" />
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-slate-600 truncate">{ev.title}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">
+                            <p className="text-sm font-bold text-[#8A857D] truncate">{ev.title}</p>
+                            <p className="text-xs text-[#8A857D] mt-0.5">
                               {formatEventWhen(ev.start_time)}
                               {ev.speaker_name ? ` · ${ev.speaker_name}` : ''}
                             </p>
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
+                              <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D] bg-white border border-[#E6E3DB] px-2 py-0.5 rounded-md">
                                 {ev.location_type === 'in_person' ? 'In person' : 'Online'}
                               </span>
-                              <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
+                              <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D] bg-white border border-[#E6E3DB] px-2 py-0.5 rounded-md">
                                 {ev.audience === 'invite_only'
                                   ? 'Inbjudan'
                                   : ev.audience === 'selected'
@@ -3095,11 +3095,11 @@ export default function AdminPage() {
                                     : 'Community'}
                               </span>
                               {ev.category && (
-                                <span className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
+                                <span className="text-[10px] font-medium uppercase tracking-wide text-[#8A857D] bg-white border border-[#E6E3DB] px-2 py-0.5 rounded-md">
                                   {ev.category}
                                 </span>
                               )}
-                              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                              <span className="text-[10px] font-bold text-[#8A857D] flex items-center gap-1">
                                 <Users size={10} /> {ev.attendee_count ?? 0} deltog
                               </span>
                             </div>
@@ -3116,20 +3116,20 @@ export default function AdminPage() {
             broadcastPanel={
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              <div className="bg-[#1a1848] rounded-2xl overflow-hidden">
-                <div className="aspect-video bg-zinc-950 flex items-center justify-center relative">
+              <div className="bg-[#2C3B2E] rounded-xl overflow-hidden">
+                <div className="aspect-video bg-[#1C1A18] flex items-center justify-center relative">
                   {isLive ? (
                     <div className="text-center text-white">
-                      <div className="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-3">
+                      <div className="w-16 h-16 rounded-xl bg-red-500/20 flex items-center justify-center mx-auto mb-3">
                         <Radio
                           size={32}
                           className="text-red-400"
                           style={{ animation: 'livePulse 1s ease-in-out infinite' }}
                         />
                       </div>
-                      <p className="text-lg font-extrabold">{liveTitle || 'Live Broadcast'}</p>
+                      <p className="text-lg font-medium">{liveTitle || 'Live Broadcast'}</p>
                       <div className="flex items-center justify-center gap-2 mt-2">
-                        <span className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-extrabold px-3 py-1 rounded-full">
+                        <span className="flex items-center gap-1.5 bg-red-500 text-white text-xs font-medium px-3 py-1 rounded-full">
                           <div
                             className="w-1.5 h-1.5 bg-white rounded-full"
                             style={{ animation: 'livePulse 1s ease-in-out infinite' }}
@@ -3143,8 +3143,8 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="text-center">
-                      <Video size={48} className="text-slate-500 mx-auto mb-3" strokeWidth={1} />
-                      <p className="text-slate-500 text-sm font-bold">
+                      <Video size={48} className="text-[#8A857D] mx-auto mb-3" strokeWidth={1} />
+                      <p className="text-[#8A857D] text-sm font-bold">
                         {t('readyToBroadcast', locale)}
                       </p>
                     </div>
@@ -3163,31 +3163,31 @@ export default function AdminPage() {
                       if (isLive) endBroadcast();
                       else startBroadcast();
                     }}
-                    className={`flex items-center gap-2 h-10 px-5 rounded-xl font-extrabold text-sm transition-all ${isLive ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
+                    className={`flex items-center gap-2 h-10 px-5 rounded-xl font-medium text-sm transition-all ${isLive ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[#2C3B2E] hover:bg-[#243228] text-white'}`}
                   >
                     <Radio size={13} />{' '}
                     {isLive ? t('endBroadcast', locale) : t('startBroadcast', locale)}
                   </button>
                 </div>
               </div>
-              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6">
-                <h3 className="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+              <div className="bg-white border border-[#E6E3DB] rounded-xl shadow-none p-6">
+                <h3 className="text-sm font-medium text-[#2C2621] mb-4 flex items-center gap-2">
                   <Activity size={14} className="text-red-500" /> {t('broadcastSettings', locale)}
                 </h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
+                    <label className="text-[10px] font-medium text-[#8A857D] uppercase tracking-widest block mb-1">
                       {t('broadcastTitle', locale)}
                     </label>
                     <Input
                       value={liveTitle}
                       onChange={(e) => setLiveTitle(e.target.value)}
                       placeholder={t('broadcastTitlePlaceholder', locale)}
-                      className="rounded-xl border-slate-200"
+                      className="rounded-xl border-[#E6E3DB]"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-1">
+                    <label className="text-[10px] font-medium text-[#8A857D] uppercase tracking-widest block mb-1">
                       {t('streamKeyLabel', locale)} (dela publikt)
                     </label>
                     <div className="flex gap-2">
@@ -3199,7 +3199,7 @@ export default function AdminPage() {
                         }
                         readOnly
                         onFocus={(e) => e.currentTarget.select()}
-                        className="rounded-xl border-slate-200 font-mono text-xs bg-slate-50 flex-1 cursor-text"
+                        className="rounded-xl border-[#E6E3DB] font-mono text-xs bg-[#F0EFEA] flex-1 cursor-text"
                       />
                       <button
                         type="button"
@@ -3209,7 +3209,7 @@ export default function AdminPage() {
                           setKeyCopied(true);
                           setTimeout(() => setKeyCopied(false), 2000);
                         }}
-                        className={`h-11 min-h-[44px] px-3 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${keyCopied ? 'bg-green-100 text-green-600' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
+                        className={`h-11 min-h-[44px] px-3 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${keyCopied ? 'bg-green-100 text-green-600' : 'bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#8A857D]'}`}
                         title="Copy link"
                       >
                         {keyCopied ? <Check size={13} /> : <Share2 size={13} />}
@@ -3218,27 +3218,27 @@ export default function AdminPage() {
                         href={`/live/${streamKey}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="h-11 min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center flex-shrink-0"
+                        className="h-11 min-h-[44px] px-3 rounded-xl bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#8A857D] flex items-center justify-center flex-shrink-0"
                         title="Open live page"
                       >
                         <ExternalLink size={13} />
                       </a>
                     </div>
-                    <p className="text-[11px] text-slate-400 font-medium mt-1.5">
+                    <p className="text-[11px] text-[#8A857D] font-medium mt-1.5">
                       Share the link with anyone — works outside the community. No
                       login required to watch.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-50 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-extrabold text-slate-900">{attendeeCount}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <div className="bg-[#F0EFEA] rounded-xl p-4 text-center">
+                      <p className="text-2xl font-medium text-[#2C2621]">{attendeeCount}</p>
+                      <p className="text-[10px] font-bold text-[#8A857D] uppercase tracking-wider">
                         {t('viewers', locale)}
                       </p>
                     </div>
-                    <div className="bg-slate-50 rounded-xl p-4 text-center">
-                      <p className="text-2xl font-extrabold text-slate-900">{liveChat.length}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <div className="bg-[#F0EFEA] rounded-xl p-4 text-center">
+                      <p className="text-2xl font-medium text-[#2C2621]">{liveChat.length}</p>
+                      <p className="text-[10px] font-bold text-[#8A857D] uppercase tracking-wider">
                         {t('chatMessages', locale)}
                       </p>
                     </div>
@@ -3247,14 +3247,14 @@ export default function AdminPage() {
               </div>
             </div>
             <div
-              className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col overflow-hidden"
+              className="bg-white border border-[#E6E3DB] rounded-xl shadow-none flex flex-col overflow-hidden"
               style={{ height: 560 }}
             >
-              <div className="p-4 border-b border-slate-100 flex items-center gap-2 flex-shrink-0">
-                <Radio size={13} className={isLive ? 'text-red-500' : 'text-slate-300'} />
-                <h3 className="text-sm font-extrabold text-slate-900">{t('liveChat', locale)}</h3>
+              <div className="p-4 border-b border-[#E6E3DB] flex items-center gap-2 flex-shrink-0">
+                <Radio size={13} className={isLive ? 'text-red-500' : 'text-[#E6E3DB]'} />
+                <h3 className="text-sm font-medium text-[#2C2621]">{t('liveChat', locale)}</h3>
                 {isLive && (
-                  <span className="ml-auto text-[10px] font-extrabold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                  <span className="ml-auto text-[10px] font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
                     LIVE
                   </span>
                 )}
@@ -3263,8 +3263,8 @@ export default function AdminPage() {
                 {liveChat.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-center">
                     <div>
-                      <Radio size={28} className="text-slate-200 mx-auto mb-2" />
-                      <p className="text-sm text-slate-400 font-medium">
+                      <Radio size={28} className="text-[#E6E3DB] mx-auto mb-2" />
+                      <p className="text-sm text-[#8A857D] font-medium">
                         {isLive ? t('waitingMessages', locale) : t('startForChat', locale)}
                       </p>
                     </div>
@@ -3272,18 +3272,18 @@ export default function AdminPage() {
                 ) : (
                   liveChat.map((msg, i) => (
                     <div key={i} className="flex gap-2">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-extrabold text-[#9089F0] flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-[rgba(44,59,46,0.10)] flex items-center justify-center text-xs font-medium text-[#2C3B2E] flex-shrink-0">
                         {msg.name[0]}
                       </div>
                       <div>
-                        <span className="text-xs font-extrabold text-[#9089F0]">{msg.name}: </span>
-                        <span className="text-xs text-slate-600">{msg.msg}</span>
+                        <span className="text-xs font-medium text-[#2C3B2E]">{msg.name}: </span>
+                        <span className="text-xs text-[#8A857D]">{msg.msg}</span>
                       </div>
                     </div>
                   ))
                 )}
               </div>
-              <div className="p-3 border-t border-slate-100 flex gap-2 flex-shrink-0">
+              <div className="p-3 border-t border-[#E6E3DB] flex gap-2 flex-shrink-0">
                 <input
                   value={chatMsg}
                   onChange={(e) => setChatMsg(e.target.value)}
@@ -3294,7 +3294,7 @@ export default function AdminPage() {
                       setChatMsg('');
                     }
                   }}
-                  className="flex-1 h-9 rounded-xl bg-slate-50 border border-slate-200 px-3 text-xs focus:outline-none focus:border-indigo-300"
+                  className="flex-1 h-9 rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] px-3 text-xs focus:outline-none focus:border-[#2C3B2E]"
                 />
                 <button
                   onClick={() => {
@@ -3304,7 +3304,7 @@ export default function AdminPage() {
                     }
                   }}
                   disabled={!chatMsg.trim()}
-                  className="w-9 h-9 rounded-xl bg-[#1a1848] flex items-center justify-center disabled:opacity-40 hover:bg-[#2B2568] transition-colors flex-shrink-0"
+                  className="w-9 h-9 rounded-xl bg-[#2C3B2E] flex items-center justify-center disabled:opacity-40 hover:bg-[#243228] transition-colors flex-shrink-0"
                 >
                   <Send size={12} className="text-white" />
                 </button>
@@ -3334,14 +3334,14 @@ export default function AdminPage() {
           >
           <div className="-mx-4 sm:-mx-6 -mt-6 mb-5">
             {/* Sub-header & CTAs */}
-            <div className="bg-white border-b border-slate-200/80 px-4 sm:px-8 py-6">
+            <div className="bg-[#FFFFFF] border-b border-[#E6E3DB] px-4 sm:px-8 py-6">
               <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
                     {t('adminBioBuilder', locale)} ·{' '}
-                    <span className="text-slate-600">{activeWorkspace.handle}</span>
+                    <span className="text-[#8A857D]">{activeWorkspace.handle}</span>
                   </p>
-                  <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mt-1">
+                  <h1 className="font-playfair font-medium text-[28px] sm:text-[32px] leading-tight text-[#2C2621] tracking-[-0.02em] mt-1">
                     {t('linkInBio', locale)}
                   </h1>
                 </div>
@@ -3376,7 +3376,7 @@ export default function AdminPage() {
                         );
                       })();
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[40px] rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium px-4 py-2.5 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] hover:bg-[#F0EFEA] transition-colors"
                     title={t('openPublicBioTitle', locale)}
                   >
                     <Eye size={13} /> {t('preview', locale)}
@@ -3387,8 +3387,8 @@ export default function AdminPage() {
                     disabled={saveBioMutation.isPending || !bioHandleAvailable}
                     className={`inline-flex items-center gap-1.5 text-xs font-semibold px-5 py-2.5 min-h-[40px] rounded-xl transition-all hover:opacity-95 disabled:opacity-50 disabled:pointer-events-none ${
                       bioSaved
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                        ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                        : 'bg-[#2C3B2E] text-[#F9F8F6] hover:bg-[#243228]'
                     }`}
                   >
                     {bioSaved ? (
@@ -3406,7 +3406,7 @@ export default function AdminPage() {
             </div>
 
             {/* Sub nav tabs */}
-            <div className="bg-white border-b border-slate-200/80 px-4 sm:px-8">
+            <div className="bg-[#FFFFFF] border-b border-[#E6E3DB] px-4 sm:px-8">
               <div className="max-w-7xl mx-auto flex items-center gap-1 overflow-x-auto scrollbar-none">
                 {BIO_SUB_TABS.map(({ key, label }) => {
                   const active = bioSubTab === key;
@@ -3417,8 +3417,8 @@ export default function AdminPage() {
                       onClick={() => setBioSubTab(key)}
                       className={`relative h-11 min-h-[44px] px-4 text-xs whitespace-nowrap transition-colors border-b-2 ${
                         active
-                          ? 'border-[#F472B6] text-[#2B2568] font-bold'
-                          : 'border-transparent text-slate-400 font-semibold hover:text-slate-700'
+                          ? 'border-[#2C3B2E] text-[#2C2621] font-medium'
+                          : 'border-transparent text-[#8A857D] font-medium hover:text-[#2C2621]'
                       }`}
                     >
                       {label}
@@ -3435,13 +3435,13 @@ export default function AdminPage() {
               <div className={`${bioSubTab === 'design' ? 'lg:col-span-8' : 'lg:col-span-7'} space-y-4`}>
                 {bioSubTab === 'blocks' && (
                   <>
-                    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 space-y-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                    <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-5 space-y-5 shadow-none">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
-                          <h3 className="text-sm font-black text-slate-900">
+                          <h3 className="text-sm font-medium text-[#2C2621]">
                             {t('activeBlocksTitle', locale)}
                           </h3>
-                          <p className="text-xs text-slate-500 mt-0.5">
+                          <p className="text-xs text-[#8A857D] mt-0.5">
                             {t('activeBlocksSub', locale)}
                           </p>
                         </div>
@@ -3451,7 +3451,7 @@ export default function AdminPage() {
                             setDrawerSocialUrl('');
                             setAddDrawerOpen(true);
                           }}
-                          className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5 hover:bg-[#1a1848] transition-colors self-start sm:self-auto"
+                          className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium inline-flex items-center justify-center gap-1.5 hover:bg-[#243228] transition-colors self-start sm:self-auto"
                         >
                           <Plus size={14} /> {t('addLinkOrProduct', locale)}
                         </button>
@@ -3460,7 +3460,7 @@ export default function AdminPage() {
                       <SocialLinksEditor links={socialLinks} onChange={setSocialLinks} />
 
                       <div>
-                        <p className="font-bold text-[10px] text-slate-400 uppercase tracking-[0.14em] mb-2">
+                        <p className="font-inter font-medium text-[10px] text-[#8A857D] uppercase tracking-[0.14em] mb-2">
                           {t('linksAndLeadMagnets', locale)}
                         </p>
                         <div className="space-y-2" onDragEnd={handleDrop}>
@@ -3484,14 +3484,14 @@ export default function AdminPage() {
                           )}
                         </div>
                         {blocks.filter((b) => b.category !== 'store').length === 0 && (
-                          <p className="text-sm font-bold text-zinc-400 text-center py-6">
+                          <p className="text-sm font-medium text-[#8A857D] text-center py-6">
                             {t('noLinksYet', locale)}
                           </p>
                         )}
                       </div>
 
                       <div>
-                        <p className="font-bold text-[10px] text-slate-400 uppercase tracking-[0.14em] mb-2">
+                        <p className="font-inter font-medium text-[10px] text-[#8A857D] uppercase tracking-[0.14em] mb-2">
                           {t('storeProductsTitle', locale)}
                         </p>
                         <div className="space-y-2" onDragEnd={handleDrop}>
@@ -3515,7 +3515,7 @@ export default function AdminPage() {
                           )}
                         </div>
                         {blocks.filter((b) => b.category === 'store').length === 0 && (
-                          <p className="text-sm font-bold text-zinc-400 text-center py-6">
+                          <p className="text-sm font-medium text-[#8A857D] text-center py-6">
                             {t('noStoreProductsYet', locale)}
                           </p>
                         )}
@@ -3528,27 +3528,27 @@ export default function AdminPage() {
                           className="fixed inset-0 bg-black/40 z-40"
                           onClick={() => setAddDrawerOpen(false)}
                         />
-                        <div className="fixed right-0 top-0 h-full w-full max-w-sm bg-white z-50 shadow-2xl p-5 overflow-y-auto">
+                        <div className="fixed right-0 top-0 h-full w-full max-w-sm bg-[#F9F8F6] z-50 border-l border-[#E6E3DB] p-5 overflow-y-auto">
                           <div className="flex items-center justify-between mb-5">
                             <div>
-                              <h3 className="text-sm font-black text-slate-900">
+                              <h3 className="text-sm font-medium text-[#2C2621]">
                                 {t('addLinkOrProduct', locale)}
                               </h3>
-                              <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                              <p className="text-[11px] text-[#8A857D] font-medium mt-0.5">
                                 Links, products, social & coaching
                               </p>
                             </div>
                             <button
                               type="button"
                               onClick={() => setAddDrawerOpen(false)}
-                              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-slate-100 inline-flex items-center justify-center"
+                              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-[#F0EFEA] inline-flex items-center justify-center text-[#2C2621]"
                               aria-label="Close"
                             >
                               <X size={16} />
                             </button>
                           </div>
 
-                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+                          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
                             Links
                           </p>
                           <div className="space-y-1 mb-5">
@@ -3557,12 +3557,12 @@ export default function AdminPage() {
                                 key={bt.type}
                                 type="button"
                                 onClick={() => addLinkBlock(bt.type)}
-                                className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 min-h-[44px] text-left border border-transparent hover:border-slate-100"
+                                className="w-full flex items-center gap-2.5 px-3 py-3 rounded-xl text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA] min-h-[44px] text-left border border-transparent hover:border-[#E6E3DB]"
                               >
                                 <span className="text-base w-6 text-center">{bt.emoji}</span>
                                 <span className="flex-1">{bt.label}</span>
                                 {bt.type === 'coaching' ? (
-                                  <span className="text-[9px] font-bold uppercase tracking-wide text-[#F472B6] bg-[#FDF2F8] px-1.5 py-0.5 rounded">
+                                  <span className="text-[9px] font-medium uppercase tracking-wide text-[#B85C38] bg-[rgba(184,92,56,0.08)] px-1.5 py-0.5 rounded">
                                     Calendar
                                   </span>
                                 ) : null}
@@ -3570,10 +3570,10 @@ export default function AdminPage() {
                             ))}
                           </div>
 
-                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+                          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
                             Social media
                           </p>
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-3 mb-5">
+                          <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 p-3.5 space-y-3 mb-5">
                             <div className="grid grid-cols-4 gap-1.5">
                               {SOCIAL_PLATFORMS.map((p) => {
                                 const active = drawerSocialPlatform === p.id;
@@ -3584,8 +3584,8 @@ export default function AdminPage() {
                                     onClick={() => setDrawerSocialPlatform(p.id)}
                                     className={`flex flex-col items-center gap-1 p-2 min-h-[44px] rounded-xl border text-center transition-all ${
                                       active
-                                        ? 'border-[#F472B6] bg-white shadow-sm'
-                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                        ? 'border-[#2C3B2E] bg-[#FFFFFF]'
+                                        : 'border-[#E6E3DB] bg-[#FFFFFF] hover:border-[#8A857D]/40'
                                     }`}
                                   >
                                     <span
@@ -3594,7 +3594,7 @@ export default function AdminPage() {
                                     >
                                       <SocialPlatformIcon id={p.id} size={14} />
                                     </span>
-                                    <span className="text-[9px] font-bold text-slate-600 leading-tight">
+                                    <span className="text-[9px] font-bold text-[#8A857D] leading-tight">
                                       {p.label.split(' ')[0]}
                                     </span>
                                   </button>
@@ -3608,7 +3608,7 @@ export default function AdminPage() {
                                 SOCIAL_PLATFORMS.find((p) => p.id === drawerSocialPlatform)
                                   ?.prefix ?? 'https://...'
                               }
-                              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium focus:outline-none focus:border-[#F472B6]"
+                              className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-xs font-medium focus:outline-none focus:border-[#2C3B2E]"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') addSocialLinkFromDrawer();
                               }}
@@ -3617,13 +3617,13 @@ export default function AdminPage() {
                               type="button"
                               onClick={addSocialLinkFromDrawer}
                               disabled={!drawerSocialUrl.trim()}
-                              className="w-full h-11 min-h-[44px] rounded-xl bg-[#F472B6] text-white text-xs font-extrabold disabled:opacity-40 inline-flex items-center justify-center gap-1.5"
+                              className="w-full h-11 min-h-[44px] rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium disabled:opacity-40 inline-flex items-center justify-center gap-1.5"
                             >
                               <Plus size={13} /> Add social link
                             </button>
                           </div>
 
-                          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-400 mb-2">
+                          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
                             Products
                           </p>
                           <button
@@ -3632,7 +3632,7 @@ export default function AdminPage() {
                               addStoreProduct();
                               setAddDrawerOpen(false);
                             }}
-                            className="w-full h-11 min-h-[44px] rounded-xl bg-[#2B2568] text-white text-xs font-extrabold inline-flex items-center justify-center gap-1.5"
+                            className="w-full h-11 min-h-[44px] rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium inline-flex items-center justify-center gap-1.5"
                           >
                             <ShoppingBag size={13} /> Add Product
                           </button>
@@ -3657,33 +3657,33 @@ export default function AdminPage() {
                 )}
 
                 {bioSubTab === 'analytics' && (
-                  <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden">
-                    <div className="px-5 py-4 border-b border-zinc-100">
-                      <h3 className="text-sm font-black text-[#1f2430]">Bio Store UTM clicks</h3>
-                      <p className="text-xs text-zinc-500 mt-0.5">
+                  <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] overflow-hidden">
+                    <div className="px-5 py-4 border-b border-[#E6E3DB]">
+                      <h3 className="text-sm font-medium text-[#2C2621]">Bio Store UTM clicks</h3>
+                      <p className="text-xs text-[#8A857D] mt-0.5">
                         Link performance & top converting products · {activeWorkspace.analytics.utm_total_clicks} clicks
                       </p>
                     </div>
-                    <div className="divide-y divide-zinc-100">
+                    <div className="divide-y divide-[#E6E3DB]">
                       {activeWorkspace.analytics.utm_links.length === 0 ? (
-                        <p className="py-10 text-center text-sm text-zinc-400">
+                        <p className="py-10 text-center text-sm text-[#8A857D]">
                           Add store products in Blocks to see UTM breakdown.
                         </p>
                       ) : (
                         activeWorkspace.analytics.utm_links.map((row) => (
                           <div key={row.slug} className="px-5 py-4 flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-sm font-black text-[#1f2430] truncate">{row.title}</p>
-                              <p className="text-[11px] font-mono text-zinc-400 truncate">/r/{row.slug}</p>
+                              <p className="text-sm font-medium text-[#2C2621] truncate">{row.title}</p>
+                              <p className="text-[11px] font-mono text-[#8A857D] truncate">/r/{row.slug}</p>
                             </div>
                             <div className="flex items-center gap-4 flex-shrink-0">
                               <div className="text-right">
-                                <p className="text-lg font-black tabular-nums">{row.clicks}</p>
-                                <p className="text-[10px] font-bold uppercase text-zinc-400">Clicks</p>
+                                <p className="text-lg font-medium tabular-nums text-[#2C2621]">{row.clicks}</p>
+                                <p className="text-[10px] font-inter font-medium uppercase tracking-[0.12em] text-[#8A857D]">Clicks</p>
                               </div>
                               <div className="text-right">
-                                <p className="text-lg font-black tabular-nums">{row.unique}</p>
-                                <p className="text-[10px] font-bold uppercase text-zinc-400">Unique</p>
+                                <p className="text-lg font-medium tabular-nums text-[#2C2621]">{row.unique}</p>
+                                <p className="text-[10px] font-inter font-medium uppercase tracking-[0.12em] text-[#8A857D]">Unique</p>
                               </div>
                             </div>
                           </div>
@@ -3695,20 +3695,20 @@ export default function AdminPage() {
 
                 {bioSubTab === 'settings' && (
                   <div className="space-y-4">
-                    <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-4">
-                      <h3 className="text-sm font-black text-[#1f2430]">Profile</h3>
+                    <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-5 space-y-4">
+                      <h3 className="text-sm font-medium text-[#2C2621]">Profile</h3>
                       <div className="mb-2">
-                        <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-2">
+                        <label className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] block mb-2">
                           Profile photo
                         </label>
                         <AvatarUploader avatarUrl={bioAvatarUrl} onUpdate={setBioAvatarUrl} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+                          <label className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] block mb-1">
                             Display name
                           </label>
-                          <Input value={bioDisplayName} onChange={(e) => setBioDisplayName(e.target.value)} className="rounded-xl border-zinc-200 text-sm" />
+                          <Input value={bioDisplayName} onChange={(e) => setBioDisplayName(e.target.value)} className="rounded-xl border-[#E6E3DB] text-sm" />
                         </div>
                         <BioHandleInput
                           value={bioHandle}
@@ -3723,23 +3723,23 @@ export default function AdminPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 block mb-1">
+                        <label className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] block mb-1">
                           Bio
                         </label>
                         <Textarea
                           value={bioBioText}
                           onChange={(e) => setBioBioText(e.target.value)}
                           placeholder="Short bio…"
-                          className="rounded-xl border-zinc-200 resize-none min-h-[60px] text-sm"
+                          className="rounded-xl border-[#E6E3DB] resize-none min-h-[60px] text-sm"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <h3 className="text-sm font-black text-slate-900 px-0.5">
+                      <h3 className="text-sm font-medium text-[#2C2621] px-0.5">
                         Booking integrations
                       </h3>
-                      <p className="text-xs text-slate-500 px-0.5 mb-1">
+                      <p className="text-xs text-[#8A857D] px-0.5 mb-1">
                         Connect Google so 1:1 Coaching blocks can create Calendar events + Meet links on purchase.
                       </p>
                       <GoogleIntegrationCard />
@@ -3764,10 +3764,10 @@ export default function AdminPage() {
                     />
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-10 text-center">
-                    <Eye size={24} className="text-zinc-300 mx-auto mb-2" />
-                    <p className="text-sm text-zinc-400 font-bold">Preview hidden</p>
-                    <button type="button" onClick={() => setShowPreview(true)} className="mt-2 text-xs font-bold text-[#7c6cf0] hover:underline">
+                  <div className="rounded-xl border border-dashed border-[#E6E3DB] bg-[#FFFFFF] p-10 text-center">
+                    <Eye size={24} className="text-[#E6E3DB] mx-auto mb-2" />
+                    <p className="text-sm text-[#8A857D] font-medium">Preview hidden</p>
+                    <button type="button" onClick={() => setShowPreview(true)} className="mt-2 text-xs font-medium text-[#2C3B2E] hover:underline">
                       Show preview
                     </button>
                   </div>

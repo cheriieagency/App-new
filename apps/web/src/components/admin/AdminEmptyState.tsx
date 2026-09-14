@@ -14,7 +14,7 @@ type AdminEmptyStateProps = {
 };
 
 /**
- * Shared Clikd empty state for admin tabs with no user-created data.
+ * Editorial empty state — italic serif headline, calm sand border, forest CTA.
  */
 export default function AdminEmptyState({
   icon: Icon,
@@ -26,22 +26,22 @@ export default function AdminEmptyState({
   secondary,
 }: AdminEmptyStateProps) {
   const ctaClass =
-    'inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold hover:bg-[#1a1848] transition-colors';
+    'inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] transition-colors shadow-none';
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-8 text-center">
-      <div className="mx-auto w-14 h-14 rounded-2xl bg-[#E9D5FF]/50 text-[#2B2568] flex items-center justify-center mb-4">
-        <Icon size={22} strokeWidth={2.25} />
+    <div className="bg-[#FFFFFF] rounded-xl border border-[#E6E3DB] shadow-none p-10 sm:p-12 text-center">
+      <div className="mx-auto w-12 h-12 rounded-xl border border-[#E6E3DB] text-[#2C3B2E] flex items-center justify-center mb-6">
+        <Icon size={20} strokeWidth={1.5} />
       </div>
-      <h3 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+      <h3 className="font-playfair italic font-normal text-xl text-[#2C2621] tracking-tight">
         {headline}
       </h3>
       {description ? (
-        <p className="text-sm text-slate-500 font-medium mt-2 max-w-md mx-auto leading-relaxed">
+        <p className="font-inter text-sm text-[#8A857D] font-normal mt-3 max-w-md mx-auto leading-relaxed">
           {description}
         </p>
       ) : null}
-      <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2">
+      <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
         {href ? (
           <a href={href} className={ctaClass}>
             {ctaLabel}

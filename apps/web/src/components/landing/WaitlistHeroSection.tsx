@@ -1,20 +1,10 @@
 'use client';
 
 /**
- * VIP waitlist signup block — hero CTA for early access.
- * Used at the top of the live landing page (and standalone waitlist page).
+ * Editorial waitlist hero — VIP early access CTA for `/`.
  */
 
 import { useMemo, useState, type FormEvent } from 'react';
-import { ArrowRight, Sparkles } from 'lucide-react';
-import {
-  ltAccent,
-  ltBadge,
-  ltCta,
-  ltHero,
-  ltHeroSub,
-  ltMuted,
-} from '@/components/landing/landingType';
 
 function normalizeEmail(raw: string) {
   return raw.trim().toLowerCase();
@@ -25,7 +15,7 @@ function isValidEmail(email: string) {
 }
 
 function formatQueueCount(n: number) {
-  return n.toLocaleString('sv-SE');
+  return n.toLocaleString('en-US');
 }
 
 export function WaitlistHeroSection() {
@@ -89,92 +79,86 @@ export function WaitlistHeroSection() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-0 pt-6 sm:pt-12 text-center">
-      <span className={`${ltBadge} gap-1 min-h-[44px] normal-case tracking-normal`}>
-        <Sparkles size={12} />
-        VIP Early Access
+    <section className="mx-auto max-w-3xl px-6 sm:px-10 pt-24 sm:pt-32 pb-8 text-center">
+      <span className="inline-flex items-center rounded-full border border-[#E6E3DB] bg-[rgba(184,92,56,0.06)] px-3.5 py-1.5 text-[10px] font-medium tracking-[0.18em] text-[#B85C38]">
+        VIP EARLY ACCESS
       </span>
 
-      <h1 className={`mt-6 sm:mt-8 ${ltHero} px-1`}>
+      <h1 className="mt-10 sm:mt-12 font-playfair text-[2.65rem] sm:text-5xl md:text-6xl lg:text-[4.25rem] font-medium leading-[1.08] tracking-[-0.02em] text-[#2C2621]">
         Be first in the future{' '}
-        <span className={`block ${ltAccent}`}>creators studio.</span>
+        <em className="italic font-normal">creators studio.</em>
       </h1>
 
-      <p className={`${ltHeroSub} px-1`}>
-        An all-in-one social media dashboard that replaces 5 separate tools. Direct dispatch to
-        TikTok, Meta, Linkedin, Youtube &amp; Pinterest, fast checkout, community, email marketing,
-        and Meta Ads.
+      <p className="mt-7 sm:mt-8 mx-auto max-w-xl font-inter text-[15px] sm:text-base leading-relaxed text-[#8A857D]">
+        An all-in-one social media dashboard that replaces 5 separate tools. Direct publishing,
+        checkout, community, email, and ads — in one calm studio built for modern creators.
       </p>
 
       {queueNumber == null ? (
         <>
-          <form onSubmit={submit} className="mt-8 sm:mt-10 max-w-xl mx-auto">
-            <div className="flex flex-col sm:flex-row items-stretch justify-center gap-3">
+          <form onSubmit={submit} className="mt-12 sm:mt-14 mx-auto max-w-lg">
+            <div className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-0 sm:border sm:border-[#E6E3DB] sm:bg-[#FFFFFF] sm:rounded-xl sm:p-1.5">
+              <label className="sr-only" htmlFor="waitlist-email">
+                Email address
+              </label>
               <input
+                id="waitlist-email"
                 value={email}
                 onChange={(ev) => setEmail(ev.target.value)}
                 type="email"
                 inputMode="email"
                 autoComplete="email"
-                placeholder="Enter your email address..."
-                className="w-full sm:flex-1 sm:max-w-[420px] h-12 min-h-[44px] rounded-2xl border border-slate-200/90 bg-white px-5 text-base sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FCE7F3] focus:border-[#F472B6]/50"
+                placeholder="Your email address"
+                className="w-full sm:flex-1 h-12 min-h-[44px] rounded-xl sm:rounded-lg border border-[#E6E3DB] sm:border-0 bg-[#FFFFFF] sm:bg-transparent px-4 text-[15px] font-inter text-[#2C2621] placeholder:text-[#8A857D]/70 focus:outline-none focus:ring-1 focus:ring-[#2C3B2E]/25 sm:focus:ring-0"
               />
-
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className={`h-12 min-h-[44px] rounded-2xl bg-[#F472B6] hover:bg-[#F472B6]/90 text-white ${ltCta} px-6 flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed`}
+                className="h-12 min-h-[44px] shrink-0 rounded-xl sm:rounded-lg bg-[#2C3B2E] px-6 text-[13px] font-inter font-medium tracking-wide text-[#F9F8F6] transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {pending ? 'Joining…' : 'Join the waitlist'}
-                <ArrowRight size={16} />
               </button>
             </div>
 
             {error ? (
-              <p className="mt-4 w-full text-sm font-medium text-rose-600 bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 text-left sm:text-center">
-                {error}
-              </p>
+              <p className="mt-5 text-sm font-inter text-[#B85C38]">{error}</p>
             ) : (
-              <p className={`mt-4 ${ltMuted} px-1`}>
-                🔒 VIP queue + launch updates only. No spam-blasts.
+              <p className="mt-5 text-[12px] font-inter tracking-wide text-[#8A857D]">
+                VIP queue + launch updates only.
               </p>
             )}
           </form>
 
-          <p className={`mt-4 ${ltMuted} px-2`}>
-            🔥 {queueEstimateText} creators are already in the queue for early access.
+          <p className="mt-4 text-[12px] font-inter text-[#8A857D]">
+            {queueEstimateText} creators are already in the queue.
           </p>
         </>
       ) : (
-        <div className="mt-8 sm:mt-10 max-w-xl mx-auto px-1">
-          <div className="rounded-3xl bg-white/70 backdrop-blur border border-[#E9D5FF] p-5 sm:p-7 shadow-sm text-left sm:text-center">
-            <p className="font-mono font-bold uppercase tracking-[0.14em] text-[#2B2568] text-[10px]">
-              You&apos;re in
-            </p>
-            <p className="mt-3 font-outfit font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight">
-              VIP queue spot secured.
-            </p>
-            <p className="mt-3 text-sm text-slate-600 font-display leading-relaxed">
-              Check your inbox for your early access invite. If it doesn&apos;t arrive within a
-              minute, check spam.
-            </p>
-
-            <div className="mt-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setQueueNumber(null);
-                  setEmail('');
-                  setError(null);
-                }}
-                className={`w-full h-12 min-h-[44px] rounded-2xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-800 ${ltCta} px-5 transition-all`}
-              >
-                Join with a different email
-              </button>
-            </div>
-          </div>
+        <div className="mt-12 sm:mt-14 mx-auto max-w-md editorial-card p-8 text-left sm:text-center">
+          <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#2C3B2E]">
+            You&apos;re in
+          </p>
+          <p className="mt-3 font-playfair text-2xl sm:text-3xl text-[#2C2621] tracking-tight">
+            VIP queue spot secured.
+          </p>
+          <p className="mt-3 text-sm font-inter leading-relaxed text-[#8A857D]">
+            Check your inbox for confirmation. If it doesn&apos;t arrive within a minute, check
+            spam.
+          </p>
+          <p className="mt-5 font-playfair text-xl text-[#2C2621]">#{queueEstimateText}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setQueueNumber(null);
+              setEmail('');
+              setError(null);
+            }}
+            className="mt-6 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] text-[13px] font-inter font-medium text-[#2C2621] hover:bg-[#FFFFFF] transition-colors"
+          >
+            Join with a different email
+          </button>
         </div>
       )}
-    </div>
+    </section>
   );
 }

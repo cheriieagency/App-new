@@ -2,243 +2,134 @@
 
 import Link from 'next/link';
 import {
-  Mail,
-  Users,
-  CheckCircle2,
-  Send,
-  Inbox,
-  Home,
   BarChart3,
-  Megaphone,
-  Music2,
-  Camera,
+  CalendarDays,
+  Home,
+  Layers,
+  Mail,
+  MessageSquare,
+  Send,
+  Users,
+  type LucideIcon,
 } from 'lucide-react';
-import { ClikdWordmark } from '@/components/brand/ClikdLogo';
 import { WaitlistHeroSection } from '@/components/landing/WaitlistHeroSection';
-import { useLanguage } from '@/lib/locale-context';
-import { t, type TranslationKey } from '@/lib/i18n';
+import { useLanguage } from '@/lib/i18n';
+import type { TranslationKey } from '@/lib/i18n';
 
-/** Legal links only — Terms, GDPR, Privacy (no cookies / product / account). */
+/** Legal links only — Terms, GDPR, Privacy. */
 const WAITLIST_LEGAL_LINKS: { labelKey: TranslationKey; href: string }[] = [
   { labelKey: 'legalVillkor', href: '/legal/villkor' },
   { labelKey: 'legalGdpr', href: '/legal/gdpr' },
   { labelKey: 'legalIntegritet', href: '/legal/integritet' },
 ];
 
-/** Standalone waitlist page — currently shown on `/` until launch. */
+/**
+ * Full Clikd suite — every core function from the platform landing,
+ * rendered as editorial feature cards on the waitlist page.
+ */
+const WAITLIST_FEATURES: {
+  icon: LucideIcon;
+  titleKey: TranslationKey;
+  summaryKey: TranslationKey;
+}[] = [
+  { icon: Send, titleKey: 'suitePublishTitle', summaryKey: 'suitePublishSummary' },
+  { icon: CalendarDays, titleKey: 'suitePlannerTitle', summaryKey: 'suitePlannerSummary' },
+  { icon: Home, titleKey: 'suiteBioTitle', summaryKey: 'suiteBioSummary' },
+  { icon: Mail, titleKey: 'suiteEmailTitle', summaryKey: 'suiteEmailSummary' },
+  { icon: MessageSquare, titleKey: 'suiteInboxTitle', summaryKey: 'suiteInboxSummary' },
+  { icon: Users, titleKey: 'suiteCommunityTitle', summaryKey: 'suiteCommunitySummary' },
+  { icon: Layers, titleKey: 'suiteAdsTitle', summaryKey: 'suiteAdsSummary' },
+  { icon: BarChart3, titleKey: 'suiteReportsTitle', summaryKey: 'suiteReportsSummary' },
+];
+
+/**
+ * Editorial waitlist landing — currently shown on `/` until launch.
+ * High-end magazine aesthetic: Playfair + Inter, alabaster paper, forest green CTAs.
+ */
 export function WaitlistPageClient() {
-  const { locale } = useLanguage();
+  const { t } = useLanguage();
   const year = new Date().getFullYear();
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 pt-5 sm:pt-8">
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
-          <ClikdWordmark className="text-lg sm:text-xl shrink-0" />
+    <div className="editorial-landing min-h-screen overflow-x-hidden">
+      {/* A. Header */}
+      <header className="mx-auto max-w-6xl px-6 sm:px-10 pt-8 sm:pt-10">
+        <div className="flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="font-playfair text-3xl sm:text-4xl font-medium tracking-tight text-[#2C2621] leading-none min-h-[44px] inline-flex items-center"
+            aria-label="Clikd home"
+          >
+            C.
+          </Link>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <a
-              href="/admin"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 backdrop-blur px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-mono font-medium text-slate-500 hover:text-slate-900 hover:border-slate-300 transition-colors min-h-[44px] whitespace-nowrap"
-            >
-              <span className="sm:hidden">Dev Login</span>
-              <span className="hidden sm:inline">Developer Login</span>
-            </a>
-          </div>
+          <a
+            href="/admin"
+            className="inline-flex items-center min-h-[44px] rounded-xl border border-[#E6E3DB] bg-transparent px-4 py-2 text-[12px] font-inter font-medium tracking-wide text-[#8A857D] hover:text-[#2C2621] hover:border-[#D5D0C6] transition-colors"
+          >
+            Developer Login
+          </a>
         </div>
-      </div>
+      </header>
 
+      {/* B. Hero + waitlist */}
       <WaitlistHeroSection />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24 text-center">
-        <section className="mt-10 sm:mt-14">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 text-left">
-            <div className="lg:col-span-2 bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shrink-0">
-                  <Send size={22} />
-                </div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-[#FCE7F3] text-[#2B2568] px-3 sm:px-4 py-2 text-[10px] sm:text-[11px] font-extrabold border border-[#F472B6]/20 w-fit">
-                  Direct Publishing API
-                </span>
-              </div>
-              <p className="mt-4 font-outfit font-black text-slate-900 text-[1.35rem] sm:text-[1.6rem] leading-tight tracking-tight">
-                Automated Multi-Platform Auto-Posting
-              </p>
-              <p className="mt-2 text-sm sm:text-[15px] text-slate-600 font-display leading-relaxed">
-                Schedule and publish videos directly to TikTok, Instagram Reels, and Facebook in
-                seconds. Integrated OAuth scopes ensure zero manual draft approvals or push
-                notification hassles.
-              </p>
-              <div className="mt-6 h-px bg-slate-200/70" />
-              <div className="mt-5 flex flex-col gap-3 sm:gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-extrabold text-white min-h-[44px]">
-                      <Music2 size={14} />
-                      TikTok Direct Post Active
-                    </span>
-                    <span className="inline-flex items-center justify-center gap-2 rounded-full bg-[#FCE7F3] text-[#2B2568] px-3 sm:px-4 py-2 text-[11px] sm:text-xs font-extrabold border border-[#F472B6]/20 min-h-[44px]">
-                      <Camera size={14} />
-                      Instagram Auto-Reel
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[#F472B6] font-extrabold text-xs sm:text-sm">
-                    100% Direct API Status
-                  </div>
-                </div>
-              </div>
-            </div>
+      {/* C. Full suite feature grid — all Clikd functions */}
+      <section
+        className="mx-auto max-w-5xl px-6 sm:px-10 pt-24 sm:pt-32 pb-28 sm:pb-36"
+        aria-labelledby="waitlist-suite-heading"
+      >
+        <header className="max-w-2xl mx-auto text-center mb-14 sm:mb-16">
+          <p className="font-inter text-[10px] font-medium tracking-[0.18em] uppercase text-[#8A857D]">
+            The studio
+          </p>
+          <h2
+            id="waitlist-suite-heading"
+            className="mt-4 font-playfair text-3xl sm:text-4xl font-medium tracking-tight text-[#2C2621] leading-snug"
+          >
+            Everything in one calm workspace.
+          </h2>
+          <p className="mt-4 font-inter text-[15px] leading-relaxed text-[#8A857D]">
+            Publishing, storefront, community, CRM, inbox, ads, and analytics — designed for
+            fashion brands, lifestyle creators, and PR teams who prefer precision over clutter.
+          </p>
+        </header>
 
-            <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-[#FCE7F3] flex items-center justify-center text-[#F472B6]">
-                <Mail size={22} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+          {WAITLIST_FEATURES.map(({ icon: Icon, titleKey, summaryKey }) => (
+            <article key={titleKey} className="editorial-card p-8 sm:p-10">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#E6E3DB] text-[#2C3B2E]">
+                <Icon size={18} strokeWidth={1.5} aria-hidden />
               </div>
-              <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">
-                Email CRM & Broadcasts
+              <h3 className="mt-8 font-playfair text-2xl sm:text-[1.65rem] font-medium tracking-tight text-[#2C2621] leading-snug">
+                {t(titleKey)}
+              </h3>
+              <p className="mt-4 font-inter text-[15px] leading-relaxed text-[#8A857D]">
+                {t(summaryKey)}
               </p>
-              <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
-                Subscriber directly, automated email broadcasts, tags, and engagement tracking built
-                on custom Resend infrastructure.
-              </p>
-              <div className="mt-6 h-px bg-slate-200/70" />
-              <div className="mt-5 flex items-center justify-between gap-3 flex-wrap">
-                <div className="inline-flex items-center gap-2 text-[#2B2568] font-extrabold text-sm">
-                  <CheckCircle2 size={16} /> Resend Verified
-                </div>
-                <p className="text-xs font-display text-slate-500">99.8% Inbox Guarantee</p>
-              </div>
-            </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
-            <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-[#E9D5FF]/60 flex items-center justify-center text-[#2B2568]">
-                <Inbox size={22} />
-              </div>
-              <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">
-                Automated DMs
-              </p>
-              <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
-                Manage DMs and comments across Instagram and TikTok profiles seamlessly from a
-                single workspace.
-              </p>
-              <div className="mt-6 h-px bg-slate-200/70" />
-              <div className="mt-5 flex items-center justify-between">
-                <div className="text-sm font-extrabold text-slate-700 flex items-center gap-2">
-                  Auto Comment-to-DM Trigger
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-[#FCE7F3] flex items-center justify-center text-[#2B2568]">
-                <Home size={22} />
-              </div>
-              <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">
-                Bio Link Storefront
-              </p>
-              <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
-                Custom themes, UTM tracking, digital products, and a tap mobile checkout flow.
-              </p>
-              <div className="mt-6 h-px bg-slate-200/70" />
-              <div className="mt-5 flex items-center justify-between">
-                <div className="text-sm font-extrabold text-[#F472B6] flex items-center gap-2">
-                  1-Tap Swish &amp; Card Checkout
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-[#E9D5FF]/60 flex items-center justify-center text-[#2B2568]">
-                <Users size={22} />
-              </div>
-              <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">
-                Community &amp; Courses
-              </p>
-              <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
-                Member feeds, moderation tools, classroom courses, storefront, live events, and XP
-                leaderboards.
-              </p>
-              <div className="mt-6 h-px bg-slate-200/70" />
-              <div className="mt-5 flex items-center justify-between">
-                <div className="text-sm font-extrabold text-[#2B2568] flex items-center gap-2">
-                  Gamified Member Hub &amp; XP
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#2B2568] flex items-center justify-center text-white">
-                  <Megaphone size={22} />
-                </div>
-                <span className="inline-flex items-center rounded-full bg-[#E9D5FF]/70 text-[#2B2568] px-3 py-1 text-[11px] font-extrabold border border-[#E9D5FF]">
-                  NEW
-                </span>
-              </div>
-              <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">
-                Meta Ads Manager &amp; ROAS
-              </p>
-              <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
-                Launch Facebook &amp; Instagram ad campaigns directly from your studio with
-                real-time ROAS tracking and conversion attribution.
-              </p>
-              <div className="mt-6 h-px bg-slate-200/70" />
-              <div className="mt-5 flex items-center justify-between">
-                <div className="text-sm font-extrabold text-slate-700 flex items-center gap-2">
-                  Real-time Campaign ROAS
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-2 bg-white/80 backdrop-blur border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <div className="w-12 h-12 rounded-2xl bg-[#FCE7F3] flex items-center justify-center text-[#F472B6]">
-                <BarChart3 size={22} />
-              </div>
-              <p className="mt-4 font-outfit font-extrabold text-slate-900 tracking-tight">
-                In-depth Analytics &amp; Revenue Reports
-              </p>
-              <p className="mt-2 text-sm text-slate-600 font-display leading-relaxed">
-                Reach, video views, impressions, audience growth, Linkin.bio performance, and total
-                Swish &amp; card sales reports unified in one view.
-              </p>
-              <div className="mt-5 flex items-center gap-3 flex-wrap">
-                <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-4 py-2 text-xs font-extrabold">
-                  Reach: 94.2K
-                </span>
-                <span className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-4 py-2 text-xs font-extrabold">
-                  Views: 186.4K
-                </span>
-                <span className="inline-flex items-center rounded-full bg-[#E9D5FF]/70 text-[#2B2568] px-4 py-2 text-xs font-extrabold">
-                  +842 Followers
-                </span>
-              </div>
-              <div className="mt-6 h-px bg-slate-200/70" />
-              <div className="mt-5 flex items-center justify-between">
-                <div className="text-sm font-extrabold text-slate-700 flex items-center gap-2">
-                  Full Cross-Platform Reports
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <footer className="border-t border-slate-200/80 bg-white text-slate-500">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs font-medium text-slate-400">
-            © {year} clikd<span className="text-[#F472B6]">:</span>
+      {/* Footer — quiet, legal only */}
+      <footer className="border-t border-[#E6E3DB]">
+        <div className="mx-auto max-w-6xl px-6 sm:px-10 py-10 sm:py-12 flex flex-col sm:flex-row items-center justify-between gap-5">
+          <p className="font-playfair text-sm text-[#8A857D]">
+            © {year} Clikd<span className="text-[#2C3B2E]">.</span>
           </p>
           <nav
             aria-label="Legal"
-            className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1"
+            className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2"
           >
             {WAITLIST_LEGAL_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm font-bold text-slate-700 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
+                className="font-inter text-[12px] font-medium tracking-wide text-[#8A857D] hover:text-[#2C2621] transition-colors min-h-11 inline-flex items-center"
               >
-                {t(link.labelKey, locale)}
+                {t(link.labelKey)}
               </Link>
             ))}
           </nav>

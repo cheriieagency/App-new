@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronDown, Plus, Search } from 'lucide-react';
 import {
   Popover,
@@ -25,7 +25,7 @@ function BrandAvatar({
   size?: number;
   round?: boolean;
 }) {
-  const radius = round ? 'rounded-full' : 'rounded-xl';
+  const radius = round ? 'rounded-full' : 'rounded-lg';
   if (workspace.avatar_url) {
     return (
       <OptimizedImage
@@ -41,8 +41,13 @@ function BrandAvatar({
   }
   return (
     <div
-      className={`${radius} flex items-center justify-center text-white font-black flex-shrink-0`}
-      style={{ width: size, height: size, background: workspace.color, fontSize: size * 0.38 }}
+      className={`${radius} flex items-center justify-center text-[#F9F8F6] font-medium flex-shrink-0`}
+      style={{
+        width: size,
+        height: size,
+        background: workspace.color || '#2C3B2E',
+        fontSize: size * 0.38,
+      }}
     >
       {workspace.name?.[0] ?? 'B'}
     </div>
@@ -54,17 +59,17 @@ function TriggerSkeleton({ compact }: { compact: boolean }) {
     <div
       className={
         compact
-          ? 'flex items-center gap-2.5 w-full h-11 min-h-[44px] rounded-2xl border border-slate-200/90 bg-white pl-1.5 pr-3'
-          : 'flex items-center gap-2 h-10 min-h-[40px] max-w-[220px] sm:max-w-[300px] rounded-xl border border-slate-200/90 bg-white pl-1.5 pr-2.5'
+          ? 'flex items-center gap-2.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] pl-1.5 pr-3'
+          : 'flex items-center gap-2 h-10 min-h-[40px] max-w-[220px] sm:max-w-[300px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] pl-1.5 pr-2.5'
       }
       aria-hidden
     >
       <div
-        className={`bg-slate-100 flex-shrink-0 ${compact ? 'h-7 w-7 rounded-full' : 'h-[30px] w-[30px] rounded-xl'}`}
+        className={`bg-[#F0EFEA] flex-shrink-0 ${compact ? 'h-7 w-7 rounded-full' : 'h-[30px] w-[30px] rounded-lg'}`}
       />
       <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="h-3 w-24 max-w-full rounded bg-slate-100" />
-        {!compact ? <div className="h-2.5 w-16 rounded bg-slate-50" /> : null}
+        <div className="h-3 w-24 max-w-full rounded bg-[#F0EFEA]" />
+        {!compact ? <div className="h-2.5 w-16 rounded bg-[#F0EFEA]" /> : null}
       </div>
     </div>
   );
@@ -109,14 +114,15 @@ export default function WorkspaceSelector({
     );
   }, [workspaces, query]);
 
+  const labelClass =
+    'font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D] px-0.5';
+
   if (!mounted) {
     const skeleton = <TriggerSkeleton compact={compact} />;
     if (!compact) return skeleton;
     return (
       <div className="space-y-1.5">
-        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-0.5">
-          {t('socialSpaces', locale)}
-        </p>
+        <p className={labelClass}>{t('socialSpaces', locale)}</p>
         {skeleton}
       </div>
     );
@@ -129,20 +135,18 @@ export default function WorkspaceSelector({
         onClick={onCreateNew}
         className={
           compact
-            ? 'flex items-center justify-center gap-2 w-full h-11 min-h-[44px] rounded-2xl border border-dashed border-slate-300 bg-white px-3 text-[13px] font-semibold text-[#2B2568] hover:border-[#F472B6] hover:bg-[#FCE7F3]/40 transition-colors'
-            : 'flex items-center justify-center gap-2 h-10 min-h-[40px] rounded-xl border border-dashed border-slate-300 bg-white px-3 text-xs font-bold text-[#2B2568] hover:border-[#F472B6] hover:bg-[#FCE7F3]/40 transition-colors'
+            ? 'flex items-center justify-center gap-2 w-full h-11 min-h-[44px] rounded-xl border border-dashed border-[#E6E3DB] bg-[#FFFFFF] px-3 text-[13px] font-medium text-[#2C3B2E] hover:border-[#2C3B2E]/40 hover:bg-[#F0EFEA] transition-colors'
+            : 'flex items-center justify-center gap-2 h-10 min-h-[40px] rounded-xl border border-dashed border-[#E6E3DB] bg-[#FFFFFF] px-3 text-xs font-medium text-[#2C3B2E] hover:border-[#2C3B2E]/40 hover:bg-[#F0EFEA] transition-colors'
         }
       >
-        <Plus size={15} className="text-[#F472B6]" strokeWidth={2} />
+        <Plus size={15} className="text-[#2C3B2E]" strokeWidth={1.75} />
         {t('createTeamWorkspace', locale)}
       </button>
     );
     if (!compact) return emptyCreate;
     return (
       <div className="space-y-1.5">
-        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-0.5">
-          {t('socialSpaces', locale)}
-        </p>
+        <p className={labelClass}>{t('socialSpaces', locale)}</p>
         {emptyCreate}
       </div>
     );
@@ -161,8 +165,8 @@ export default function WorkspaceSelector({
           type="button"
           className={
             compact
-              ? 'flex items-center gap-2.5 w-full h-11 min-h-[44px] rounded-2xl border border-slate-200/90 bg-white pl-1.5 pr-3 hover:border-slate-300 hover:bg-slate-50/80 transition-colors text-left'
-              : 'flex items-center gap-2 h-10 min-h-[40px] max-w-[220px] sm:max-w-[300px] rounded-xl border border-slate-200/90 bg-white pl-1.5 pr-2.5 hover:border-slate-300 hover:bg-slate-50/80 transition-colors text-left'
+              ? 'flex items-center gap-2.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] pl-1.5 pr-3 hover:border-[#D5D0C6] hover:bg-[#F0EFEA]/60 transition-colors text-left'
+              : 'flex items-center gap-2 h-10 min-h-[40px] max-w-[220px] sm:max-w-[300px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] pl-1.5 pr-2.5 hover:border-[#D5D0C6] hover:bg-[#F0EFEA]/60 transition-colors text-left'
           }
         >
           <span>
@@ -172,41 +176,41 @@ export default function WorkspaceSelector({
             <p
               className={
                 compact
-                  ? 'text-[13px] font-semibold text-slate-800 truncate leading-tight'
-                  : 'text-xs font-bold text-slate-900 truncate leading-tight'
+                  ? 'text-[13px] font-medium text-[#2C2621] truncate leading-tight'
+                  : 'text-xs font-medium text-[#2C2621] truncate leading-tight'
               }
             >
               {active.name}
             </p>
             {!compact && (
-              <p className="text-[10px] text-slate-500 font-semibold truncate">
+              <p className="text-[10px] text-[#8A857D] font-normal truncate">
                 {workspaceChannelLabel(active, accountWord(active.channels.length))}
               </p>
             )}
           </div>
-          <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />
+          <ChevronDown size={14} strokeWidth={1.75} className="text-[#8A857D] flex-shrink-0" />
         </button>
       </PopoverTrigger>
       <PopoverContent
         align="start"
         sideOffset={8}
-        className="w-[min(360px,92vw)] p-0 rounded-2xl overflow-hidden border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.08)]"
+        className="w-[min(360px,92vw)] p-0 rounded-xl overflow-hidden border border-[#E6E3DB] bg-[#FFFFFF] shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]"
       >
-        <div className="p-3.5 border-b border-slate-200/80 bg-[#FAFAFA]/80">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2.5 px-0.5">
+        <div className="p-4 border-b border-[#E6E3DB] bg-[#F9F8F6]">
+          <p className={`${labelClass} mb-2.5`}>
             {t(compact ? 'socialSpaces' : 'teamWorkspacesBrands', locale)}
           </p>
           <div className="relative">
             <Search
               size={14}
               strokeWidth={1.75}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A857D] pointer-events-none"
             />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('searchBrand', locale)}
-              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200/90 bg-white pl-9 pr-3 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300"
+              className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] pl-9 pr-3 text-sm font-normal text-[#2C2621] placeholder:text-[#8A857D] focus:outline-none focus:ring-0 focus:border-[#8A857D]"
             />
           </div>
         </div>
@@ -223,32 +227,28 @@ export default function WorkspaceSelector({
                   setOpen(false);
                   setQuery('');
                 }}
-                className={`w-full text-left rounded-2xl p-2.5 min-h-[44px] transition-colors ${
+                className={`w-full text-left rounded-xl p-2.5 min-h-[44px] transition-colors ${
                   selected
-                    ? 'bg-[#1a1848] text-white shadow-sm'
-                    : 'hover:bg-slate-50 text-slate-900'
+                    ? 'bg-[rgba(44,59,46,0.08)] text-[#2C2621]'
+                    : 'hover:bg-[#F0EFEA] text-[#2C2621]'
                 }`}
               >
                 <div className="flex items-start gap-2.5">
                   <BrandAvatar workspace={ws} size={36} round />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p
-                        className={`text-[13px] font-semibold truncate tracking-tight ${
-                          selected ? 'text-white' : 'text-slate-800'
-                        }`}
-                      >
+                      <p className="text-[13px] font-medium truncate tracking-tight text-[#2C2621]">
                         {ws.name}
                       </p>
                       {selected && (
-                        <Check size={14} className="text-[#F472B6] flex-shrink-0" strokeWidth={2.5} />
+                        <Check
+                          size={14}
+                          className="text-[#2C3B2E] flex-shrink-0"
+                          strokeWidth={2}
+                        />
                       )}
                     </div>
-                    <p
-                      className={`text-[11px] font-medium truncate mt-0.5 ${
-                        selected ? 'text-white/65' : 'text-slate-500'
-                      }`}
-                    >
+                    <p className="text-[11px] font-normal truncate mt-0.5 text-[#8A857D]">
                       {workspaceChannelLabel(ws, accountWord(ws.channels.length))}
                     </p>
                     <div className="flex flex-wrap gap-1 mt-1.5">
@@ -262,22 +262,22 @@ export default function WorkspaceSelector({
             );
           })}
           {filtered.length === 0 && (
-            <p className="text-xs text-slate-400 font-medium text-center py-6">
+            <p className="font-playfair italic text-sm text-[#8A857D] text-center py-8">
               {t('noBrandsMatch', locale)}
             </p>
           )}
         </div>
 
-        <div className="p-2 border-t border-slate-200/80 bg-[#FAFAFA]/60">
+        <div className="p-2 border-t border-[#E6E3DB] bg-[#F9F8F6]">
           <button
             type="button"
             onClick={() => {
               setOpen(false);
               onCreateNew();
             }}
-            className="w-full h-11 min-h-[44px] rounded-2xl text-[13px] font-semibold text-[#2B2568] hover:bg-[#E9D5FF]/50 hover:text-[#1a1848] inline-flex items-center justify-center gap-1.5 transition-colors"
+            className="w-full h-11 min-h-[44px] rounded-xl text-[13px] font-medium text-[#2C3B2E] hover:bg-[rgba(44,59,46,0.08)] inline-flex items-center justify-center gap-1.5 transition-colors"
           >
-            <Plus size={15} strokeWidth={2} className="text-[#F472B6]" />{' '}
+            <Plus size={15} strokeWidth={1.75} className="text-[#2C3B2E]" />{' '}
             {t('createTeamWorkspace', locale)}
           </button>
         </div>
@@ -289,9 +289,7 @@ export default function WorkspaceSelector({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 px-0.5">
-        {t('socialSpaces', locale)}
-      </p>
+      <p className={labelClass}>{t('socialSpaces', locale)}</p>
       {selector}
     </div>
   );

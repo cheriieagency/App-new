@@ -7,6 +7,7 @@ import { Toaster } from 'sonner';
 import { LanguageProvider } from '@/lib/i18n';
 import { GlobalLanguageMenu } from '@/components/GlobalLanguageMenu';
 import { MobileBottomNav, MobileBottomNavSpacer } from '@/components/MobileBottomNav';
+import CookieConsentBanner from '@/components/CookieConsentBanner';
 
 // Create a client that persists across re-renders
 function makeQueryClient() {
@@ -48,6 +49,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <MobileBottomNav />
         </Suspense>
         <GlobalLanguageMenu />
+        <CookieConsentBanner />
         <Toaster position="bottom-right" />
       </LanguageProvider>
     </QueryClientProvider>

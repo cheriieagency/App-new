@@ -9,108 +9,133 @@
     --font-outfit-face: 'Outfit', ui-sans-serif, system-ui, sans-serif;
     --font-fira-code: 'Fira Code', ui-monospace, monospace;
     --font-inter-face: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-playfair: 'Playfair Display', ui-serif, Georgia, serif;
 
-    /* Clikd. official signature tokens */
-    --clikd-pink: #F472B6;
-    --clikd-midnight: #2B2568;
-    --clikd-lilac: #E9D5FF;
+    /* ── Editorial Minimalism (source of truth) ── */
+    --editorial-bg: #F9F8F6;
+    --editorial-surface: #FFFFFF;
+    --editorial-ink: #2C2621;
+    --editorial-muted: #8A857D;
+    --editorial-forest: #2C3B2E;
+    --editorial-terracotta: #B85C38;
+    --editorial-sand: #E6E3DB;
+    --editorial-hover: #F0EFEA;
+    --editorial-float-shadow: 0 12px 30px -12px rgba(44, 38, 33, 0.08);
+    --editorial-radius: 0.75rem;
+
+    /* Clikd brand aliases → editorial (keeps legacy class usage coherent) */
+    --clikd-pink: #B85C38;
+    --clikd-midnight: #2C2621;
+    --clikd-lilac: #F0EFEA;
     --clikd-white: #FFFFFF;
-    --clikd-mint: #10B981;
-    --clikd-dark: #0F172A;
-    --clikd-light: #FAFAFA;
+    --clikd-mint: #2C3B2E;
+    --clikd-dark: #2C2621;
+    --clikd-light: #F9F8F6;
 
-    /* Legacy nc-* aliases → Clikd (light canvas kept) */
-    --nc-ink: #0F172A;
-    --nc-ink-soft: #5b6472;
-    --nc-paper: #FAFAFA;
-    --nc-blush: #E9D5FF;
-    --nc-coral: #F472B6;
-    --nc-coral-soft: #FCE7F3;
-    --nc-sky: #E9D5FF;
-    --nc-mint: #D1FAE5;
-    --nc-glass: rgba(255, 255, 255, 0.55);
-    --nc-glass-border: rgba(255, 255, 255, 0.75);
+    /* Legacy nc-* aliases → editorial */
+    --nc-ink: #2C2621;
+    --nc-ink-soft: #8A857D;
+    --nc-paper: #F9F8F6;
+    --nc-blush: #F0EFEA;
+    --nc-coral: #2C3B2E;
+    --nc-coral-soft: rgba(44, 59, 46, 0.06);
+    --nc-sky: #F0EFEA;
+    --nc-mint: rgba(44, 59, 46, 0.08);
+    --nc-glass: #FFFFFF;
+    --nc-glass-border: #E6E3DB;
 
-    --background: #FAFAFA;
-    --foreground: #0F172A;
-    --card: rgba(255, 255, 255, 0.85);
-    --card-foreground: #0F172A;
-    --popover: #ffffff;
-    --popover-foreground: #0F172A;
-    --primary: #F472B6;
-    --primary-foreground: #ffffff;
-    --secondary: #FCE7F3;
-    --secondary-foreground: #2B2568;
-    --muted: #F4F4F5;
-    --muted-foreground: #5b6472;
-    --accent: #E9D5FF;
-    --accent-foreground: #2B2568;
-    --destructive: hsl(0 84.2% 60.2%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: rgba(200, 210, 225, 0.55);
-    --input: rgba(200, 210, 225, 0.7);
-    --ring: #F472B6;
-    --radius: 1rem;
-    --chart-1: #F472B6;
-    --chart-2: #2B2568;
-    --chart-3: #10B981;
-    --chart-4: #E9D5FF;
-    --chart-5: #F9A8D4;
-    --sidebar: rgba(255, 255, 255, 0.9);
-    --sidebar-foreground: #0F172A;
-    --sidebar-primary: #F472B6;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #FCE7F3;
-    --sidebar-accent-foreground: #2B2568;
-    --sidebar-border: rgba(226, 232, 240, 0.9);
-    --sidebar-ring: #F472B6;
+    /* shadcn semantic tokens → editorial */
+    --background: #F9F8F6;
+    --foreground: #2C2621;
+    --card: #FFFFFF;
+    --card-foreground: #2C2621;
+    --popover: #FFFFFF;
+    --popover-foreground: #2C2621;
+    --primary: #2C3B2E;
+    --primary-foreground: #F9F8F6;
+    --secondary: #F0EFEA;
+    --secondary-foreground: #2C2621;
+    --muted: #F0EFEA;
+    --muted-foreground: #8A857D;
+    --accent: #F0EFEA;
+    --accent-foreground: #2C2621;
+    --destructive: #B85C38;
+    --destructive-foreground: #F9F8F6;
+    --border: #E6E3DB;
+    --input: #E6E3DB;
+    --ring: #8A857D;
+    --radius: 0.75rem;
+    --chart-1: #2C3B2E;
+    --chart-2: #B85C38;
+    --chart-3: #8A857D;
+    --chart-4: #E6E3DB;
+    --chart-5: #2C2621;
+    --sidebar: #F9F8F6;
+    --sidebar-foreground: #2C2621;
+    --sidebar-primary: #2C3B2E;
+    --sidebar-primary-foreground: #F9F8F6;
+    --sidebar-accent: #F0EFEA;
+    --sidebar-accent-foreground: #2C2621;
+    --sidebar-border: #E6E3DB;
+    --sidebar-ring: #8A857D;
 }
 
 .dark {
-    --background: hsl(240 10% 3.9%);
-    --foreground: hsl(0 0% 98%);
-    --card: hsl(240 10% 3.9%);
-    --card-foreground: hsl(0 0% 98%);
-    --popover: hsl(240 10% 3.9%);
-    --popover-foreground: hsl(0 0% 98%);
-    --primary: hsl(0 0% 98%);
-    --primary-foreground: hsl(240 5.9% 10%);
-    --secondary: hsl(240 3.7% 15.9%);
-    --secondary-foreground: hsl(0 0% 98%);
-    --muted: hsl(240 3.7% 15.9%);
-    --muted-foreground: hsl(240 5% 64.9%);
-    --accent: hsl(240 3.7% 15.9%);
-    --accent-foreground: hsl(0 0% 98%);
-    --destructive: hsl(0 62.8% 30.6%);
-    --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(240 3.7% 15.9%);
-    --input: hsl(240 3.7% 15.9%);
-    --ring: hsl(240 4.9% 83.9%);
-    --chart-1: hsl(220 70% 50%);
-    --chart-2: hsl(160 60% 45%);
-    --chart-3: hsl(30 80% 55%);
-    --chart-4: hsl(280 65% 60%);
-    --chart-5: hsl(340 75% 55%);
-    --sidebar: hsl(240 5.9% 10%);
-    --sidebar-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-primary: hsl(224.3 76.3% 48%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(240 3.7% 15.9%);
-    --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-    --sidebar-border: hsl(240 3.7% 15.9%);
-    --sidebar-ring: hsl(217.2 91.2% 59.8%);
+    --background: #1C1917;
+    --foreground: #F9F8F6;
+    --card: #292524;
+    --card-foreground: #F9F8F6;
+    --popover: #292524;
+    --popover-foreground: #F9F8F6;
+    --primary: #F9F8F6;
+    --primary-foreground: #2C3B2E;
+    --secondary: #44403C;
+    --secondary-foreground: #F9F8F6;
+    --muted: #44403C;
+    --muted-foreground: #A8A29E;
+    --accent: #44403C;
+    --accent-foreground: #F9F8F6;
+    --destructive: #B85C38;
+    --destructive-foreground: #F9F8F6;
+    --border: #44403C;
+    --input: #44403C;
+    --ring: #A8A29E;
+    --chart-1: #A8B5A9;
+    --chart-2: #B85C38;
+    --chart-3: #A8A29E;
+    --chart-4: #57534E;
+    --chart-5: #F9F8F6;
+    --sidebar: #1C1917;
+    --sidebar-foreground: #F9F8F6;
+    --sidebar-primary: #A8B5A9;
+    --sidebar-primary-foreground: #1C1917;
+    --sidebar-accent: #292524;
+    --sidebar-accent-foreground: #F9F8F6;
+    --sidebar-border: #44403C;
+    --sidebar-ring: #A8A29E;
 }
 
 @theme inline {
-    /* Clikd. type + color system */
-    --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    /* Editorial type + color system */
+    --font-sans: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-jakarta: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     --font-inter: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-display: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-    --font-clikd-wordmark: var(--font-space-grotesk), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-playfair), 'Playfair Display', ui-serif, Georgia, serif;
+    --font-clikd-wordmark: var(--font-playfair), 'Playfair Display', ui-serif, Georgia, serif;
     --font-outfit: var(--font-outfit-face), 'Outfit', ui-sans-serif, system-ui, sans-serif;
     --font-grotesk: var(--font-space-grotesk), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
     --font-mono: var(--font-fira-code), 'Fira Code', ui-monospace, monospace;
+    --font-serif: var(--font-playfair), 'Playfair Display', ui-serif, Georgia, serif;
+
+    --color-editorial-bg: var(--editorial-bg);
+    --color-editorial-surface: var(--editorial-surface);
+    --color-editorial-ink: var(--editorial-ink);
+    --color-editorial-muted: var(--editorial-muted);
+    --color-editorial-forest: var(--editorial-forest);
+    --color-editorial-terracotta: var(--editorial-terracotta);
+    --color-editorial-sand: var(--editorial-sand);
+    --color-editorial-hover: var(--editorial-hover);
+
     --color-clikd-pink: var(--clikd-pink);
     --color-clikd-midnight: var(--clikd-midnight);
     --color-clikd-lilac: var(--clikd-lilac);
@@ -161,31 +186,37 @@
     }
     body {
         @apply bg-background text-foreground font-sans antialiased;
-        color: var(--nc-ink);
-        background: var(--nc-paper);
+        color: var(--editorial-ink);
+        background: var(--editorial-bg);
     }
     h1,
     h2,
     h3 {
-        @apply font-extrabold tracking-tight;
+        font-family: var(--font-playfair), 'Playfair Display', ui-serif, Georgia, serif;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+        color: var(--editorial-ink);
     }
     h4 {
-        @apply font-bold tracking-tight;
+        font-family: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        color: var(--editorial-ink);
     }
 }
 
-/* Soft glass design system — landing + app (Clikd. light canvas) */
+/* App + landing surfaces share editorial canvas */
 .nc-landing,
 .nc-app {
-    --nc-ink: #0F172A;
-    --nc-ink-soft: #5b6472;
-    --nc-paper: #FAFAFA;
-    --nc-blush: #E9D5FF;
-    --nc-coral: #F472B6;
-    --nc-coral-soft: #FCE7F3;
-    --nc-sky: #E9D5FF;
-    --nc-mint: #D1FAE5;
-    font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --nc-ink: #2C2621;
+    --nc-ink-soft: #8A857D;
+    --nc-paper: #F9F8F6;
+    --nc-blush: #F0EFEA;
+    --nc-coral: #2C3B2E;
+    --nc-coral-soft: rgba(44, 59, 46, 0.06);
+    --nc-sky: #F0EFEA;
+    --nc-mint: rgba(44, 59, 46, 0.08);
+    font-family: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
     color: var(--nc-ink);
     background: var(--nc-paper);
 }
@@ -193,12 +224,88 @@
 .nc-landing .font-display,
 .nc-app .font-display,
 .font-display {
-    font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-playfair), 'Playfair Display', ui-serif, Georgia, serif;
 }
 
-/* Clikd. wordmark only — Space Grotesk per brand guide */
+.font-playfair {
+    font-family: var(--font-playfair), 'Playfair Display', ui-serif, Georgia, serif;
+}
+
+.font-inter {
+    font-family: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Editorial waitlist + reusable paper cards */
+.editorial-landing {
+    background-color: #f9f8f6;
+    color: #2c2621;
+    font-family: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.editorial-landing .editorial-card,
+.editorial-card {
+    background: #ffffff;
+    border: 1px solid #e6e3db;
+    border-radius: 0.75rem;
+    transition: box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+.editorial-landing .editorial-card:hover,
+.editorial-card:hover {
+    box-shadow: 0 18px 40px -28px rgba(44, 38, 33, 0.18);
+    border-color: #ddd8ce;
+}
+
+/* Empty states — italic serif, calm */
+.editorial-empty {
+    text-align: center;
+    padding: 3.5rem 1.5rem;
+    color: var(--editorial-muted);
+}
+.editorial-empty-title {
+    font-family: var(--font-playfair), 'Playfair Display', ui-serif, Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.25rem;
+    color: var(--editorial-ink);
+    letter-spacing: -0.02em;
+}
+.editorial-empty-copy {
+    margin-top: 0.75rem;
+    font-family: var(--font-inter-face), 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--editorial-muted);
+}
+
+/* Status badges — soft wash + ink */
+.editorial-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 9999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+.editorial-badge-forest {
+    background: rgba(44, 59, 46, 0.06);
+    color: #2c3b2e;
+}
+.editorial-badge-terracotta {
+    background: rgba(184, 92, 56, 0.08);
+    color: #b85c38;
+}
+.editorial-badge-muted {
+    background: #f0efea;
+    color: #8a857d;
+}
+
+/* Logo / wordmark — Playfair editorial mark */
 .font-clikd-wordmark {
-    font-family: var(--font-space-grotesk), 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-playfair), 'Playfair Display', ui-serif, Georgia, serif;
 }
 
 .font-outfit {
@@ -214,64 +321,35 @@
     font-family: var(--font-fira-code), 'Fira Code', ui-monospace, monospace;
 }
 
+/* Soft glass → flat paper (no blur / blobs) */
 .nc-glass {
-    background: rgba(255, 255, 255, 0.38);
-    border: 1px solid rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(22px) saturate(1.35);
-    -webkit-backdrop-filter: blur(22px) saturate(1.35);
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.85) inset,
-      0 22px 60px -28px rgba(120, 140, 180, 0.35);
+    background: #ffffff;
+    border: 1px solid #e6e3db;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
 }
 
-/* Landing hero floating callout cards */
 .glass-card {
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    backdrop-filter: blur(18px) saturate(1.3);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    background: #ffffff;
+    border: 1px solid #e6e3db;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .nc-blob {
-    position: absolute;
-    border-radius: 9999px;
-    filter: blur(60px);
-    pointer-events: none;
+    display: none;
 }
 
 .nc-app-shell {
     position: relative;
     isolation: isolate;
     min-height: 100vh;
-    background: var(--nc-paper);
-    /* clip (not hidden) so position:sticky sidebars still follow page scroll */
+    background: var(--editorial-bg);
     overflow-x: clip;
 }
 
 .nc-app-shell::before,
 .nc-app-shell::after {
-    content: '';
-    position: fixed;
-    border-radius: 9999px;
-    filter: blur(70px);
-    pointer-events: none;
-    z-index: 0;
-}
-
-.nc-app-shell::before {
-    width: 28rem;
-    height: 28rem;
-    top: -6rem;
-    left: -4rem;
-    background: var(--nc-blush);
-    opacity: 0.7;
-}
-
-.nc-app-shell::after {
-    width: 32rem;
-    height: 32rem;
-    top: 20%;
-    right: -8rem;
-    background: var(--nc-sky);
-    opacity: 0.65;
+    display: none;
 }

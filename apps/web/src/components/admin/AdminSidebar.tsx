@@ -18,7 +18,6 @@ import AdminPlanModal, { useAdminPlan } from '@/components/admin/AdminPlanModal'
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAdminNav, adminProjectsHref } from '@/components/admin/AdminNavContext';
 import { ADMIN_NAV_ITEMS } from '@/components/admin/adminNavItems';
-import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { useLanguage } from '@/lib/i18n';
 import type { CampaignLabel } from '@/lib/mock-content-planner';
 import {
@@ -264,18 +263,17 @@ export default function AdminSidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 w-64 flex-col justify-between bg-white border-r border-slate-200/80 text-slate-900 h-screen rounded-bl-[28px]">
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 w-64 flex-col justify-between bg-[#F9F8F6] border-r border-[#E6E3DB] text-[#2C2621] h-screen">
         <div className="flex flex-col min-h-0 flex-1">
-          <div className="px-4 pt-5 pb-4 space-y-4">
+          <div className="px-5 pt-7 pb-5 space-y-5">
             <Link
               href="/"
-              className="flex items-center gap-2.5 px-0.5 min-h-[44px] hover:opacity-90 transition-opacity"
-              aria-label="clikd: home"
+              className="flex items-center px-0.5 min-h-[44px] hover:opacity-80 transition-opacity"
+              aria-label="Clikd home"
             >
-              <ClikdMark size={34} className="rounded-[11px] shadow-sm" />
-              <p className="font-clikd-wordmark font-extrabold text-[17px] text-slate-900 tracking-tight leading-none">
-                clikd<span className="text-[#F472B6]">:</span>
-              </p>
+              <span className="font-playfair text-[2rem] font-medium tracking-tight text-[#2C2621] leading-none">
+                C.
+              </span>
             </Link>
 
             <WorkspaceSelector
@@ -299,10 +297,10 @@ export default function AdminSidebar() {
                     ? onAds || section === 'ads'
                     : !onPlanner && !onAds && section === key;
               const className = [
-                'w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 transition-all duration-200',
+                'w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 transition-colors duration-200 border-l-2',
                 active
-                  ? 'rounded-2xl bg-[#1a1848] text-white font-semibold shadow-sm'
-                  : 'rounded-2xl text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium',
+                  ? 'border-[#2C3B2E] text-[#2C2621] font-medium bg-transparent'
+                  : 'border-transparent text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]/60 font-normal',
               ].join(' ');
 
               if (key === 'media') {

@@ -136,15 +136,15 @@ export function LoginModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px] rounded-[1.5rem] border-white/70 bg-white/80 backdrop-blur-xl p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[440px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-0 gap-0 overflow-hidden shadow-none">
         <DialogHeader className="px-6 pt-6 pb-2">
           <div className="flex items-center gap-2.5 mb-3">
             <ClikdMark size={32} />
-            <DialogTitle className="text-base font-black text-zinc-900">
+            <DialogTitle className="font-playfair text-xl font-medium text-[#2C2621] tracking-tight">
               {title}
             </DialogTitle>
           </div>
-          <DialogDescription className="text-sm text-zinc-500 font-medium">
+          <DialogDescription className="text-sm text-[#8A857D] font-medium">
             {subtitle}
           </DialogDescription>
         </DialogHeader>
@@ -152,10 +152,10 @@ export function LoginModal({
         <div className="px-6 pb-6">
           {/* Locked portal badge — matches the header dropdown choice */}
           <div
-            className={`min-h-11 rounded-xl px-3.5 inline-flex items-center gap-2.5 text-sm font-extrabold w-full ${
+            className={`min-h-11 rounded-xl px-3.5 inline-flex items-center gap-2.5 text-xs font-medium w-full border ${
               isAdmin
-                ? 'bg-[#2B2568] text-white'
-                : 'bg-[#F472B6]/15 text-[#9D174D] border border-[#F472B6]/30'
+                ? 'bg-[rgba(44,59,46,0.08)] border-[rgba(44,59,46,0.18)] text-[#2C3B2E]'
+                : 'bg-[#F0EFEA] border-[#E6E3DB] text-[#8A857D]'
             }`}
           >
             {isAdmin ? <Crown size={16} aria-hidden /> : <Users size={16} aria-hidden />}
@@ -168,7 +168,7 @@ export function LoginModal({
             }}
             className="mt-4 flex flex-col gap-3.5"
           >
-            <label className="flex flex-col gap-1.5 text-xs font-black text-zinc-500 uppercase tracking-wider">
+            <label className="flex flex-col gap-1.5 text-[10px] font-inter font-medium text-[#8A857D] uppercase tracking-[0.14em]">
               {t('emailAddress', locale)}
               <input
                 type="email"
@@ -177,16 +177,16 @@ export function LoginModal({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@email.com"
-                className="min-h-11 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all placeholder:text-zinc-300"
+                className="min-h-11 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-3 text-sm text-[#2C2621] font-medium outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[rgba(44,59,46,0.12)] transition-all placeholder:text-[#8A857D]/70"
               />
             </label>
             {isDualAccessEmail(email) ? (
-              <p className="text-[11px] font-medium text-zinc-400 -mt-1.5 leading-snug">
+              <p className="text-[11px] font-medium text-[#8A857D] -mt-1.5 leading-snug">
                 This account can use both Admin and Community logins.
               </p>
             ) : null}
 
-            <label className="flex flex-col gap-1.5 text-xs font-black text-zinc-500 uppercase tracking-wider">
+            <label className="flex flex-col gap-1.5 text-[10px] font-inter font-medium text-[#8A857D] uppercase tracking-[0.14em]">
               {t('password', locale)}
               <input
                 type="password"
@@ -195,32 +195,32 @@ export function LoginModal({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="min-h-11 rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all placeholder:text-zinc-300"
+                className="min-h-11 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-3 text-sm text-[#2C2621] font-medium outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[rgba(44,59,46,0.12)] transition-all placeholder:text-[#8A857D]/70"
               />
             </label>
 
             <div className="flex items-center justify-end -mt-1">
               <Link
                 href="/forgot-password"
-                className="text-xs font-bold text-[var(--nc-coral)] hover:opacity-80 min-h-[44px] inline-flex items-center"
+                className="text-xs font-medium text-[#2C3B2E] hover:underline min-h-[44px] inline-flex items-center"
                 onClick={() => onOpenChange(false)}
               >
                 Forgot password?
               </Link>
             </div>
 
-            <label className="inline-flex items-center gap-2 min-h-11 text-sm font-bold text-zinc-600 cursor-pointer">
+            <label className="inline-flex items-center gap-2.5 min-h-11 text-sm font-medium text-[#8A857D] cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
-                className="rounded border-zinc-300"
+                className="h-4 w-4 rounded border-[#E6E3DB] text-[#2C3B2E] focus:ring-[#2C3B2E]/30"
               />
               {t('rememberMe', locale)}
             </label>
 
             {error && (
-              <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-bold text-red-600">
+              <div className="rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.2)] px-4 py-3 text-sm font-medium text-[#B85C38]">
                 {error}
               </div>
             )}
@@ -228,7 +228,7 @@ export function LoginModal({
             <button
               type="submit"
               disabled={loading}
-              className="min-h-12 rounded-xl text-sm font-black text-white bg-[var(--nc-coral)] hover:opacity-90 transition-all active:scale-95 disabled:opacity-60"
+              className="min-h-12 rounded-xl text-sm font-medium text-[#F9F8F6] bg-[#2C3B2E] hover:bg-[#243228] transition-colors disabled:opacity-60"
             >
               {loading
                 ? t('signingIn', locale)
@@ -239,11 +239,11 @@ export function LoginModal({
 
             <SocialSignInButtons callbackUrl={socialCallback} />
 
-            <p className="text-center text-sm text-zinc-400">
+            <p className="text-center text-sm text-[#8A857D]">
               {t('noAccount', locale)}{' '}
               <Link
                 href={signupHref}
-                className="font-black text-zinc-900 hover:underline transition-colors"
+                className="font-medium text-[#2C3B2E] hover:underline transition-colors"
                 onClick={() => onOpenChange(false)}
               >
                 {t('signUp', locale)}
