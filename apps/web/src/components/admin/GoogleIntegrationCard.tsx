@@ -83,24 +83,24 @@ export default function GoogleIntegrationCard({
 
   return (
     <div
-      className={`rounded-2xl border border-slate-200/80 bg-white px-4 py-4 sm:px-5 space-y-3 w-full ${className}`}
+      className={`rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full ${className}`}
     >
       <div className="min-w-0">
-        <p className="text-sm font-extrabold text-slate-900">
+        <p className="text-sm font-medium text-[#2C2621]">
           Connect Google Account
         </p>
-        <p className="text-xs text-slate-500 font-medium mt-0.5 leading-relaxed">
+        <p className="text-xs text-[#8A857D] font-medium mt-0.5 leading-relaxed">
           Import files to Media Library &amp; Planner. Auto-create Google Meet
           links for 1:1 coaching purchases.
         </p>
-        <p className="text-[10px] font-semibold text-slate-500 leading-snug mt-1.5">
+        <p className="text-[10px] font-medium text-[#8A857D] leading-snug mt-1.5">
           {t('socials.workspaceGuidePerWorkspace')}
         </p>
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-2 items-stretch sm:items-start">
         {isLoading ? (
-          <div className="inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-medium text-slate-400">
+          <div className="inline-flex min-h-[44px] items-center gap-2 px-4 text-sm font-medium text-[#8A857D]">
             <Loader2 size={16} className="animate-spin" /> Checking…
           </div>
         ) : connected ? (
@@ -109,20 +109,20 @@ export default function GoogleIntegrationCard({
               type="button"
               disabled
               aria-pressed="true"
-              className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold cursor-default"
+              className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.2)] text-[#2C3B2E] text-sm font-medium cursor-default"
             >
               <CheckCircle2 size={16} strokeWidth={2.5} />
               Connected · Google
             </button>
             <div className="mt-2 flex items-center gap-2 min-w-0 px-1">
-              <span className="w-7 h-7 rounded-full bg-white border border-emerald-200 flex items-center justify-center flex-shrink-0">
+              <span className="w-7 h-7 rounded-full bg-[#FFFFFF] border border-[rgba(44,59,46,0.2)] flex items-center justify-center flex-shrink-0">
                 <GoogleGlyph size={14} />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-[#2C3B2E]">
                   Google
                 </p>
-                <p className="text-xs font-extrabold text-slate-900 truncate">
+                <p className="text-xs font-medium text-[#2C2621] truncate">
                   {label}
                 </p>
               </div>
@@ -130,7 +130,7 @@ export default function GoogleIntegrationCard({
             <button
               type="button"
               onClick={() => void disconnect()}
-              className="mt-2 w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-rose-200 bg-white text-rose-600 text-xs font-semibold hover:bg-rose-50 transition-colors"
+              className="mt-2 w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-[rgba(184,92,56,0.28)] bg-[#FFFFFF] text-[#B85C38] text-xs font-medium hover:bg-[rgba(184,92,56,0.08)] transition-colors"
             >
               <Unplug size={14} />
               {t('socials.disconnectAccount')}
@@ -140,7 +140,7 @@ export default function GoogleIntegrationCard({
           <div className="min-w-0 sm:min-w-[200px] flex-1 sm:flex-none flex flex-col gap-1.5">
             <a
               href={connectUrl}
-              className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#FFFFFF] border border-[#E6E3DB] text-[#2C2621] text-sm font-medium  hover:bg-[#F0EFEA] transition-colors"
             >
               <GoogleGlyph size={16} />
               Connect Google Account
