@@ -19,7 +19,7 @@ export default function GdprContent() {
       </p>
 
       <LegalH2 section="gdprS1" />
-      <pre className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-slate-50 px-4 py-4 text-[11px] sm:text-xs leading-relaxed text-slate-700 font-mono whitespace-pre">
+      <pre className="overflow-x-auto rounded-xl border border-[#E6E3DB] bg-[#F0EFEA] px-4 py-4 text-[11px] sm:text-xs leading-relaxed text-[#2C2621]/85 font-mono whitespace-pre">
 {`+---------------------------------------------------------------------------------+
 |                        Cheriie AB / clikd: PLATFORM                             |
 +---------------------------------------------------------------------------------+
@@ -32,7 +32,7 @@ export default function GdprContent() {
 +-----------------------------+                         +-----------------------------+`}
       </pre>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         A. clikd: as Data Controller
       </h3>
       <p>
@@ -41,7 +41,7 @@ export default function GdprContent() {
         social API tokens, and AI prompt logs).
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         B. clikd: as Data Processor (for Creators)
       </h3>
       <p>
@@ -76,66 +76,66 @@ export default function GdprContent() {
       </ul>
 
       <LegalH2 section="gdprS3" />
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+      <div className="overflow-x-auto rounded-xl border border-[#E6E3DB]">
         <table className="w-full min-w-[640px] text-left text-sm border-collapse">
           <thead>
-            <tr className="bg-slate-50 text-slate-900">
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+            <tr className="bg-[#F0EFEA] text-[#2C2621]">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Sub-processor
               </th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">Purpose</th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">Purpose</th>
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Processing Location
               </th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Safeguard Mechanism
               </th>
             </tr>
           </thead>
-          <tbody className="text-slate-700">
-            <tr className="border-b border-slate-100 align-top">
+          <tbody className="text-[#2C2621]/85">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Supabase Inc.</td>
               <td className="px-3 py-2.5">Relational Database, Auth &amp; Realtime</td>
               <td className="px-3 py-2.5">EU (Frankfurt / Dublin)</td>
               <td className="px-3 py-2.5">GDPR DPA / EU Hosting</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Vercel Inc.</td>
               <td className="px-3 py-2.5">Web Application Hosting &amp; Custom Domain Routing</td>
               <td className="px-3 py-2.5">EU / Global Edge</td>
               <td className="px-3 py-2.5">EU-U.S. Data Privacy Framework</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">OpenAI LLC</td>
               <td className="px-3 py-2.5">AI Copilot Text Generation</td>
               <td className="px-3 py-2.5">USA</td>
               <td className="px-3 py-2.5">Data Privacy Framework / DPA</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Stripe Inc.</td>
               <td className="px-3 py-2.5">Card &amp; Subscription Payment Processing</td>
               <td className="px-3 py-2.5">EU / USA</td>
               <td className="px-3 py-2.5">PCI-DSS Level 1 / DPA</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Swish (Hippo/Banker)</td>
               <td className="px-3 py-2.5">Mobile BankID &amp; 1-Tap Swish Payments</td>
               <td className="px-3 py-2.5">Sweden</td>
               <td className="px-3 py-2.5">Swedish Banking Standards</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Meta Platforms Inc.</td>
               <td className="px-3 py-2.5">Instagram, Facebook &amp; Messenger API</td>
               <td className="px-3 py-2.5">EU / USA</td>
               <td className="px-3 py-2.5">Meta Platform Terms / SCCs</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">TikTok Inc.</td>
               <td className="px-3 py-2.5">TikTok Content Posting &amp; Analytics API</td>
               <td className="px-3 py-2.5">EU / USA</td>
               <td className="px-3 py-2.5">TikTok Developer DPA</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Pinterest Inc.</td>
               <td className="px-3 py-2.5">Pinterest Pin Publishing &amp; Board API</td>
               <td className="px-3 py-2.5">USA</td>

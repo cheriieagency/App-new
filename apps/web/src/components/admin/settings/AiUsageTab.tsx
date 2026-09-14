@@ -57,39 +57,39 @@ export default function AiUsageTab({ locale }: AiUsageTabProps) {
         title={t('settingsNavAi', locale)}
         subtitle={t('aiUsageGateBody', locale)}
       >
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
+        <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-5 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D]">
                 {t('aiUsageThisMonth', locale)}
               </p>
-              <p className="mt-1 font-mono font-extrabold text-2xl text-slate-900 tabular-nums tracking-tight">
+              <p className="mt-1 font-mono font-medium text-2xl text-[#2C2621] tabular-nums tracking-tight">
                 {usage.used.toLocaleString()}
-                <span className="text-base text-slate-400 font-bold">
+                <span className="text-base text-[#8A857D] font-bold">
                   {' '}
                   / {usage.limit.toLocaleString()}
                 </span>
               </p>
-              <p className="text-xs font-medium text-slate-500 mt-0.5">
+              <p className="text-xs font-medium text-[#8A857D] mt-0.5">
                 {t('aiUsageWordsUsed', locale)}
               </p>
             </div>
             <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-extrabold tabular-nums border ${
+              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium tabular-nums border ${
                 pct >= 90
                   ? 'bg-rose-50 text-rose-600 border-rose-200'
                   : pct >= 70
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-emerald-50 text-[#10B981] border-emerald-200'
+                    ? 'bg-[rgba(184,92,56,0.08)] text-[#B85C38] border-[rgba(184,92,56,0.18)]'
+                    : 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E] border-[rgba(44,59,46,0.18)]'
               }`}
             >
               {pct}%
             </span>
           </div>
 
-          <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-3 rounded-full bg-[#F0EFEA] overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#2B2568] via-[#9089F0] to-[#F472B6] transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-[#2C3B2E] via-[#2C3B2E] to-[#2C3B2E] transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -97,7 +97,7 @@ export default function AiUsageTab({ locale }: AiUsageTabProps) {
           <button
             type="button"
             onClick={() => requestUpgrade('pro')}
-            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-bold hover:bg-[#1e1b4b] transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-bold hover:bg-[#1e1b4b] transition-colors"
           >
             <Zap size={14} strokeWidth={2.5} />
             Upgrade AI Limit
@@ -105,10 +105,10 @@ export default function AiUsageTab({ locale }: AiUsageTabProps) {
         </div>
       </SectionBlock>
 
-      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-5 py-6 mt-2">
+      <div className="rounded-xl border border-emerald-100 bg-[rgba(44,59,46,0.08)]/60 px-5 py-6 mt-2">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={16} className="text-emerald-700" />
-          <p className="text-sm font-extrabold text-emerald-900">
+          <Sparkles size={16} className="text-[#2C3B2E]" />
+          <p className="text-sm font-medium text-emerald-900">
             AI Copilot Suite unlocked
           </p>
         </div>

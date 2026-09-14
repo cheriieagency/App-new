@@ -92,8 +92,8 @@ function roleLabel(role: string, locale: Parameters<typeof t>[1]) {
 
 function roleBadgeClass(role: string) {
   if (role === 'owner') return 'bg-amber-50 text-amber-700 border border-amber-100';
-  if (role === 'moderator') return 'bg-[#E9D5FF]/70 text-[#1a1848] border border-[#E9D5FF]';
-  return 'bg-slate-100 text-slate-500 border border-slate-100';
+  if (role === 'moderator') return 'bg-[rgba(44,59,46,0.10)] text-[#243228] border border-[rgba(44,59,46,0.18)]';
+  return 'bg-[#F0EFEA] text-[#8A857D] border border-[#E6E3DB]';
 }
 
 function formatRelative(iso: string, locale: string) {
@@ -108,7 +108,7 @@ function formatRelative(iso: string, locale: string) {
 function CommentPhoto({ url, type }: { url: string; type: string | null }) {
   if (!type || type.startsWith('image/') || url.startsWith('data:image')) {
     return (
-      <div className="mt-2 rounded-xl overflow-hidden border border-slate-100 max-w-[220px]">
+      <div className="mt-2 rounded-xl overflow-hidden border border-[#E6E3DB] max-w-[220px]">
         <img src={url} alt="" className="w-full max-h-40 object-cover" />
       </div>
     );
@@ -118,7 +118,7 @@ function CommentPhoto({ url, type }: { url: string; type: string | null }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-2 inline-flex items-center gap-2 text-[11px] font-bold text-[#F472B6]"
+      className="mt-2 inline-flex items-center gap-2 text-[11px] font-bold text-[#2C3B2E]"
     >
       <ImageIcon size={12} /> Bilaga
     </a>
@@ -271,7 +271,7 @@ function AdminPostComments({
   const canSend = Boolean(text.trim() || pendingPhoto) && !addComment.isPending && !uploading;
 
   return (
-    <div className="border-t border-slate-100 bg-slate-50/60">
+    <div className="border-t border-[#E6E3DB] bg-[#F0EFEA]/60">
       <input
         ref={photoRef}
         type="file"
@@ -285,7 +285,7 @@ function AdminPostComments({
       />
 
       {comments.length === 0 ? (
-        <p className="px-5 py-4 text-xs text-slate-400 font-medium">
+        <p className="px-5 py-4 text-xs text-[#8A857D] font-medium">
           {t('noCommentsYet', locale)}
         </p>
       ) : (
@@ -293,30 +293,30 @@ function AdminPostComments({
           {topLevel.map((c) => (
             <div key={c.id}>
               <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-[11px] font-extrabold text-slate-500 flex-shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-white border border-[#E6E3DB] flex items-center justify-center text-[11px] font-medium text-[#8A857D] flex-shrink-0">
                   {c.user_name?.[0] ?? '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div
                     className={`rounded-xl rounded-tl-none px-3 py-2 border ${
                       c.is_pinned
-                        ? 'bg-[#E9D5FF]/70 border-[#ffe0d4]'
-                        : 'bg-white border-slate-100'
+                        ? 'bg-[rgba(44,59,46,0.10)] border-[#ffe0d4]'
+                        : 'bg-white border-[#E6E3DB]'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <p className="text-xs font-extrabold text-slate-900">{c.user_name}</p>
+                      <p className="text-xs font-medium text-[#2C2621]">{c.user_name}</p>
                       {c.is_pinned && (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#F472B6] bg-white/80 px-1.5 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium uppercase tracking-wide text-[#2C3B2E] bg-white/80 px-1.5 py-0.5 rounded-full">
                           <Pin size={9} /> {t('pinned', locale)}
                         </span>
                       )}
-                      <span className="text-[10px] text-slate-300 font-bold">
+                      <span className="text-[10px] text-[#E6E3DB] font-bold">
                         {formatRelative(c.created_at, locale)}
                       </span>
                     </div>
                     {c.content?.trim() && (
-                      <p className="text-xs text-slate-600 leading-relaxed">{c.content}</p>
+                      <p className="text-xs text-[#8A857D] leading-relaxed">{c.content}</p>
                     )}
                     {c.media_url && <CommentPhoto url={c.media_url} type={c.media_type} />}
                   </div>
@@ -324,7 +324,7 @@ function AdminPostComments({
                     <button
                       type="button"
                       onClick={() => startReply(c)}
-                      className="inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-extrabold text-slate-400 hover:text-[#F472B6] transition-colors"
+                      className="inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-medium text-[#8A857D] hover:text-[#2C3B2E] transition-colors"
                     >
                       <Reply size={11} /> {t('reply', locale)}
                     </button>
@@ -337,10 +337,10 @@ function AdminPostComments({
                           action: c.is_pinned ? 'unpin' : 'pin',
                         })
                       }
-                      className={`inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-extrabold transition-colors disabled:opacity-50 ${
+                      className={`inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-medium transition-colors disabled:opacity-50 ${
                         c.is_pinned
-                          ? 'text-[#F472B6] hover:text-[#1a1848]'
-                          : 'text-slate-400 hover:text-[#F472B6]'
+                          ? 'text-[#2C3B2E] hover:text-[#243228]'
+                          : 'text-[#8A857D] hover:text-[#2C3B2E]'
                       }`}
                     >
                       <Pin size={11} />
@@ -353,7 +353,7 @@ function AdminPostComments({
                         if (!window.confirm(t('confirmDeleteComment', locale))) return;
                         onDeleteComment(c.id);
                       }}
-                      className="inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-extrabold text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-medium text-[#E6E3DB] hover:text-red-500 transition-colors disabled:opacity-50"
                     >
                       <Trash2 size={11} /> {t('remove', locale)}
                     </button>
@@ -365,19 +365,19 @@ function AdminPostComments({
                 .filter((n) => n.parent_id === c.id)
                 .map((n) => (
                   <div key={n.id} className="flex items-start gap-2 mt-2 ml-8">
-                    <div className="w-6 h-6 rounded-lg bg-[#E9D5FF]/70 flex items-center justify-center text-[10px] font-extrabold text-[#6b5bb8] flex-shrink-0">
+                    <div className="w-6 h-6 rounded-lg bg-[rgba(44,59,46,0.10)] flex items-center justify-center text-[10px] font-medium text-[#8A857D] flex-shrink-0">
                       {n.user_name?.[0] ?? '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="bg-[#E9D5FF]/70 rounded-xl rounded-tl-none px-3 py-2 border border-[#f2eeff]">
+                      <div className="bg-[rgba(44,59,46,0.10)] rounded-xl rounded-tl-none px-3 py-2 border border-[#f2eeff]">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <p className="text-xs font-extrabold text-[#6b5bb8]">{n.user_name}</p>
-                          <span className="text-[10px] text-slate-300 font-bold">
+                          <p className="text-xs font-medium text-[#8A857D]">{n.user_name}</p>
+                          <span className="text-[10px] text-[#E6E3DB] font-bold">
                             {formatRelative(n.created_at, locale)}
                           </span>
                         </div>
                         {n.content?.trim() && (
-                          <p className="text-xs text-slate-600 leading-relaxed">{n.content}</p>
+                          <p className="text-xs text-[#8A857D] leading-relaxed">{n.content}</p>
                         )}
                         {n.media_url && <CommentPhoto url={n.media_url} type={n.media_type} />}
                       </div>
@@ -385,7 +385,7 @@ function AdminPostComments({
                         <button
                           type="button"
                           onClick={() => startReply(c)}
-                          className="inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-extrabold text-slate-400 hover:text-[#F472B6] transition-colors"
+                          className="inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-medium text-[#8A857D] hover:text-[#2C3B2E] transition-colors"
                         >
                           <Reply size={11} /> {t('reply', locale)}
                         </button>
@@ -396,7 +396,7 @@ function AdminPostComments({
                             if (!window.confirm(t('confirmDeleteComment', locale))) return;
                             onDeleteComment(n.id);
                           }}
-                          className="inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-extrabold text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                          className="inline-flex items-center gap-1 h-10 min-h-[44px] px-2 text-[11px] font-medium text-[#E6E3DB] hover:text-red-500 transition-colors disabled:opacity-50"
                         >
                           <Trash2 size={11} /> {t('remove', locale)}
                         </button>
@@ -410,11 +410,11 @@ function AdminPostComments({
       )}
 
       {/* Composer: new comment or reply + optional photo */}
-      <div className="px-4 sm:px-5 pb-4 pt-1 border-t border-slate-100">
+      <div className="px-4 sm:px-5 pb-4 pt-1 border-t border-[#E6E3DB]">
         {replyTo && (
-          <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-[#E9D5FF]/70 rounded-xl w-fit max-w-full">
-            <Reply size={11} className="text-[#6b5bb8] flex-shrink-0" />
-            <span className="text-[11px] font-bold text-[#6b5bb8] truncate">
+          <div className="flex items-center gap-1.5 mb-2 px-2.5 py-1.5 bg-[rgba(44,59,46,0.10)] rounded-xl w-fit max-w-full">
+            <Reply size={11} className="text-[#8A857D] flex-shrink-0" />
+            <span className="text-[11px] font-bold text-[#8A857D] truncate">
               {t('reply', locale)} {replyToName}
             </span>
             <button
@@ -423,7 +423,7 @@ function AdminPostComments({
                 setReplyTo(null);
                 setReplyToName('');
               }}
-              className="h-8 w-8 min-h-[44px] min-w-[44px] -my-1 -mr-1 flex items-center justify-center text-[#6b5bb8]/70 hover:text-[#1a1848]"
+              className="h-8 w-8 min-h-[44px] min-w-[44px] -my-1 -mr-1 flex items-center justify-center text-[#8A857D]/70 hover:text-[#243228]"
             >
               <X size={12} />
             </button>
@@ -431,19 +431,19 @@ function AdminPostComments({
         )}
 
         {pendingPhoto && (
-          <div className="flex items-center gap-2 mb-2 p-2 bg-white rounded-xl border border-slate-100">
+          <div className="flex items-center gap-2 mb-2 p-2 bg-white rounded-xl border border-[#E6E3DB]">
             <img
               src={pendingPhoto.url}
               alt=""
               className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
             />
-            <span className="text-xs font-bold text-slate-600 flex-1 truncate">
+            <span className="text-xs font-bold text-[#8A857D] flex-1 truncate">
               {t('attachmentSelected', locale)}
             </span>
             <button
               type="button"
               onClick={() => setPendingPhoto(null)}
-              className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-red-500"
+              className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-[#8A857D] hover:text-red-500"
             >
               <X size={14} />
             </button>
@@ -451,13 +451,13 @@ function AdminPostComments({
         )}
 
         {uploading && (
-          <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-white rounded-xl border border-slate-100">
+          <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-white rounded-xl border border-[#E6E3DB]">
             <Loader2
               size={12}
-              className="text-slate-400"
+              className="text-[#8A857D]"
               style={{ animation: 'spin 1s linear infinite' }}
             />
-            <span className="text-xs text-slate-500 font-medium">{t('uploading', locale)}</span>
+            <span className="text-xs text-[#8A857D] font-medium">{t('uploading', locale)}</span>
           </div>
         )}
 
@@ -469,7 +469,7 @@ function AdminPostComments({
                 ? `${t('reply', locale)} ${replyToName}...`
                 : t('writeComment', locale)
             }
-            className="flex-1 text-xs bg-white border border-slate-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/5 min-h-[44px] max-h-[96px]"
+            className="flex-1 text-xs bg-white border border-[#E6E3DB] rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[#2C3B2E]/10 min-h-[44px] max-h-[96px]"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -484,7 +484,7 @@ function AdminPostComments({
             type="button"
             onClick={() => addComment.mutate()}
             disabled={!canSend}
-            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-[#1a1848] flex items-center justify-center disabled:opacity-40 transition-opacity flex-shrink-0"
+            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-[#243228] flex items-center justify-center disabled:opacity-40 transition-opacity flex-shrink-0"
             title={t('comment', locale)}
           >
             <Send size={14} className="text-white" />
@@ -494,7 +494,7 @@ function AdminPostComments({
           type="button"
           onClick={() => photoRef.current?.click()}
           disabled={uploading}
-          className="mt-1.5 inline-flex items-center gap-1.5 h-10 min-h-[44px] px-2 rounded-lg text-[11px] font-extrabold text-slate-400 hover:text-[#F472B6] hover:bg-[#E9D5FF]/50 transition-all disabled:opacity-50"
+          className="mt-1.5 inline-flex items-center gap-1.5 h-10 min-h-[44px] px-2 rounded-lg text-[11px] font-medium text-[#8A857D] hover:text-[#2C3B2E] hover:bg-[rgba(44,59,46,0.10)]/50 transition-all disabled:opacity-50"
         >
           <ImageIcon size={13} /> {t('uploadImage', locale)}
         </button>
@@ -766,7 +766,7 @@ export default function CommunityAdminPanel({
   ];
 
   const communitySubNav = (
-    <div className="flex gap-0.5 overflow-x-auto scrollbar-none p-1 rounded-xl bg-slate-100/80 border border-slate-200/80 w-fit max-w-full">
+    <div className="flex gap-0.5 overflow-x-auto scrollbar-none p-1 rounded-xl bg-[#F0EFEA]/80 border border-[#E6E3DB] w-fit max-w-full">
       {SUB_TABS.map(({ key, label, icon: Icon }) => (
         <button
           key={key}
@@ -774,15 +774,15 @@ export default function CommunityAdminPanel({
           onClick={() => setSubTab(key)}
           className={`inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-lg text-xs whitespace-nowrap transition-all flex-shrink-0 ${
             subTab === key
-              ? 'bg-white text-slate-900 shadow-sm font-semibold'
-              : 'text-slate-500 font-medium hover:text-slate-800'
+              ? 'bg-[#FFFFFF] text-[#2C2621] border border-[#E6E3DB] font-medium'
+              : 'text-[#8A857D] font-medium hover:text-[#2C2621]'
           }`}
         >
           <Icon size={13} /> {label}
           {key === 'broadcast' && isLive && (
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                subTab === key ? 'bg-[#F472B6]' : 'bg-red-500'
+                subTab === key ? 'bg-[#2C3B2E]' : 'bg-red-500'
               }`}
               style={{ animation: 'livePulse 1s ease-in-out infinite' }}
             />
@@ -816,7 +816,7 @@ export default function CommunityAdminPanel({
   // Wait for workspace community list before showing empty vs dashboard.
   if (communitiesLoading || (communityId && isLoading)) {
     return (
-      <div className={`${adminCardClass} p-12 text-center text-sm font-medium text-slate-400`}>
+      <div className={`${adminCardClass} p-12 text-center text-sm font-medium text-[#8A857D]`}>
         {t('loading', locale)}
       </div>
     );
@@ -824,7 +824,7 @@ export default function CommunityAdminPanel({
 
   if (communityId && (isError || !data)) {
     return (
-      <div className={`${adminCardClass} p-12 text-center text-sm font-medium text-rose-500`}>
+      <div className={`${adminCardClass} p-12 text-center text-sm font-medium text-[#B85C38]`}>
         {t('communityLoadError', locale)}
       </div>
     );
@@ -907,13 +907,13 @@ export default function CommunityAdminPanel({
       <div className={`${adminCardClass} p-4 sm:p-5`}>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
           <div
-            className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-2xl flex-shrink-0 flex items-center justify-center text-white font-extrabold text-base shadow-sm"
-            style={{ background: community.cover_color || '#1a1848' }}
+            className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-xl flex-shrink-0 flex items-center justify-center text-white font-medium text-base shadow-none"
+            style={{ background: community.cover_color || '#243228' }}
           >
             {community.name?.[0] ?? 'C'}
           </div>
           <div className="flex-1 min-w-0">
-            <label className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-[0.12em] block mb-1">
+            <label className="text-[10px] font-mono font-bold text-[#8A857D] uppercase tracking-[0.12em] block mb-1">
               {t('chooseCommunity', locale)}
             </label>
             <select
@@ -930,7 +930,7 @@ export default function CommunityAdminPanel({
                   setActiveWorkspaceId(String(picked.workspace_id));
                 }
               }}
-              className="w-full sm:max-w-xs h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full sm:max-w-xs h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-sm font-semibold text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/10"
               aria-label={t('chooseCommunity', locale)}
             >
               {communities.map((c) => (
@@ -950,7 +950,7 @@ export default function CommunityAdminPanel({
                   window.setTimeout(() => setLinkCopied(false), 1800);
                 });
               }}
-              className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-[#E6E3DB] bg-white text-xs font-semibold text-[#2C2621] hover:bg-[#F0EFEA] transition-colors"
               title={`/communities/${community.id}`}
             >
               {linkCopied ? (
@@ -960,7 +960,7 @@ export default function CommunityAdminPanel({
               )}
               {linkCopied ? t('communityLinkCopied', locale) : t('copyCommunityLink', locale)}
             </button>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wide bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-lg">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wide bg-[#F0EFEA] text-[#8A857D] px-2.5 py-1.5 rounded-lg">
               {community.category}
             </span>
             {community.is_published && (
@@ -986,22 +986,22 @@ export default function CommunityAdminPanel({
                 label: t('members', locale),
                 value: overview.member_count,
                 icon: Users,
-                tint: 'text-[#1a1848]',
-                bg: 'bg-[#E9D5FF]/50',
+                tint: 'text-[#243228]',
+                bg: 'bg-[rgba(44,59,46,0.10)]/50',
               },
               {
                 label: t('posts', locale),
                 value: overview.post_count,
                 icon: FileText,
-                tint: 'text-[#F472B6]',
-                bg: 'bg-pink-50',
+                tint: 'text-[#2C3B2E]',
+                bg: 'bg-[rgba(184,92,56,0.08)]',
               },
               {
                 label: t('comments', locale),
                 value: overview.comment_count,
                 icon: MessageCircle,
-                tint: 'text-slate-600',
-                bg: 'bg-slate-100',
+                tint: 'text-[#8A857D]',
+                bg: 'bg-[#F0EFEA]',
               },
               {
                 label: t('joinedThisWeek', locale),
@@ -1014,22 +1014,22 @@ export default function CommunityAdminPanel({
                 label: t('activeModerators', locale),
                 value: overview.moderator_count,
                 icon: ShieldCheck,
-                tint: 'text-[#1a1848]',
-                bg: 'bg-[#E9D5FF]/50',
+                tint: 'text-[#243228]',
+                bg: 'bg-[rgba(44,59,46,0.10)]/50',
               },
               {
                 label: t('totalLikes', locale),
                 value: overview.like_count,
                 icon: Heart,
-                tint: 'text-[#F472B6]',
-                bg: 'bg-pink-50',
+                tint: 'text-[#2C3B2E]',
+                bg: 'bg-[rgba(184,92,56,0.08)]',
               },
             ].map((stat) => {
               const Icon = stat.icon;
               return (
                 <div key={stat.label} className={adminKpiClass}>
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                       {stat.label}
                     </p>
                     <span
@@ -1038,7 +1038,7 @@ export default function CommunityAdminPanel({
                       <Icon size={14} />
                     </span>
                   </div>
-                  <p className="font-clikd-wordmark font-extrabold text-[26px] sm:text-[28px] leading-none text-slate-900 tracking-tight tabular-nums">
+                  <p className="font-playfair font-medium text-[26px] sm:text-[28px] leading-none text-[#2C2621] tracking-tight tabular-nums">
                     {stat.value}
                   </p>
                 </div>
@@ -1050,19 +1050,19 @@ export default function CommunityAdminPanel({
             <div className={`${adminCardClass} p-5 sm:p-6 lg:col-span-2 relative overflow-hidden`}>
               <div
                 className="absolute inset-x-0 top-0 h-1.5"
-                style={{ background: community.cover_color || '#1a1848' }}
+                style={{ background: community.cover_color || '#243228' }}
               />
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400 mt-1">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D] mt-1">
                 {t('adminNavCommunity', locale)}
               </p>
-              <h3 className="font-clikd-wordmark font-extrabold text-xl text-slate-900 tracking-tight mt-2">
+              <h3 className="font-playfair font-medium text-xl text-[#2C2621] tracking-tight mt-2">
                 {community.name}
               </h3>
-              <p className="text-sm text-slate-500 font-medium leading-relaxed mt-2">
+              <p className="text-sm text-[#8A857D] font-medium leading-relaxed mt-2">
                 {community.description || t('noDescription', locale)}
               </p>
               <div className="flex flex-wrap gap-2 mt-5">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wide bg-slate-100 text-slate-600 px-2.5 py-1.5 rounded-lg">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wide bg-[#F0EFEA] text-[#8A857D] px-2.5 py-1.5 rounded-lg">
                   {community.category}
                 </span>
                 {community.is_published ? (
@@ -1074,38 +1074,38 @@ export default function CommunityAdminPanel({
             </div>
 
             <div className={`${adminCardClass} overflow-hidden lg:col-span-3`}>
-              <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 flex items-center justify-between gap-2">
+              <div className="px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB] flex items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">
+                  <h3 className="text-sm font-medium text-[#2C2621]">
                     {t('recentMembers', locale)}
                   </h3>
-                  <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                  <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
                     {overview.joined_this_week} {t('joinedThisWeek', locale).toLowerCase()}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setSubTab('members')}
-                  className="h-9 min-h-[36px] px-3 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="h-9 min-h-[36px] px-3 rounded-xl text-xs font-semibold text-[#8A857D] hover:bg-[#F0EFEA] transition-colors"
                 >
                   {t('seeAll', locale)}
                 </button>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[#E6E3DB]">
                 {recentMembers.map((m) => (
                   <div
                     key={m.id}
-                    className="flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-slate-50/70 transition-colors"
+                    className="flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-[#F0EFEA]/70 transition-colors"
                   >
                     <div
-                      className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-xl flex items-center justify-center text-sm font-extrabold text-white flex-shrink-0"
-                      style={{ background: community.cover_color || '#1a1848' }}
+                      className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-xl flex items-center justify-center text-sm font-medium text-white flex-shrink-0"
+                      style={{ background: community.cover_color || '#243228' }}
                     >
                       {m.name?.[0] ?? '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{m.name}</p>
-                      <p className="text-[11px] text-slate-400 truncate">{m.email}</p>
+                      <p className="text-sm font-semibold text-[#2C2621] truncate">{m.name}</p>
+                      <p className="text-[11px] text-[#8A857D] truncate">{m.email}</p>
                     </div>
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0 ${roleBadgeClass(m.role)}`}
@@ -1139,28 +1139,28 @@ export default function CommunityAdminPanel({
                 <button
                   type="button"
                   onClick={() => requestUpgrade('creator')}
-                  className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#F472B6] text-white text-xs font-bold"
+                  className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-bold"
                 >
                   Upgrade to Creator
                 </button>
               </div>
             );
           })()}
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
-            <div className="p-5 border-b border-slate-100">
+          <div className="bg-white border border-[#E6E3DB] rounded-xl shadow-none overflow-hidden">
+            <div className="p-5 border-b border-[#E6E3DB]">
               <div className="flex items-center justify-between gap-3 mb-1">
-                <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <h3 className="text-sm font-medium text-[#2C2621] flex items-center gap-2">
                   <Users size={14} className="text-blue-500" />
                   {t('members', locale)}
-                  <span className="text-slate-400 font-bold">({(data?.members ?? []).length})</span>
+                  <span className="text-[#8A857D] font-bold">({(data?.members ?? []).length})</span>
                   {limits.maxCommunityMembers < 999999 && (
-                    <span className="text-[10px] font-bold text-slate-400">
+                    <span className="text-[10px] font-bold text-[#8A857D]">
                       / {limits.maxCommunityMembers}
                     </span>
                   )}
                 </h3>
               </div>
-              <p className="text-xs text-slate-400 mb-3 flex items-center gap-1.5">
+              <p className="text-xs text-[#8A857D] mb-3 flex items-center gap-1.5">
                 <Shield size={11} className="text-violet-500" />
                 {t('chooseModerators', locale)}
               </p>
@@ -1170,18 +1170,18 @@ export default function CommunityAdminPanel({
                   placeholder={t('searchMembers', locale)}
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
-                  className="w-full h-11 min-h-[44px] pl-10 pr-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/5"
+                  className="w-full h-11 min-h-[44px] pl-10 pr-3 rounded-xl border border-[#E6E3DB] text-sm bg-[#F0EFEA] focus:outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[#2C3B2E]/10"
                 />
                 <Search
                   size={14}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8A857D]"
                 />
               </div>
             </div>
 
-            <div className="divide-y divide-slate-100 max-h-[560px] overflow-y-auto">
+            <div className="divide-y divide-[#E6E3DB] max-h-[560px] overflow-y-auto">
               {members.length === 0 ? (
-                <div className="py-12 text-center text-slate-400 text-sm font-medium">
+                <div className="py-12 text-center text-[#8A857D] text-sm font-medium">
                   {t('noMembersYet', locale)}
                 </div>
               ) : (
@@ -1190,10 +1190,10 @@ export default function CommunityAdminPanel({
                   return (
                     <div
                       key={m.id}
-                      className={`flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors ${isMod ? 'bg-[#E9D5FF]/40' : ''}`}
+                      className={`flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 hover:bg-[#F0EFEA]/80 transition-colors ${isMod ? 'bg-[rgba(44,59,46,0.06)]' : ''}`}
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-sm font-extrabold text-[#F472B6] flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[rgba(44,59,46,0.10)] to-[rgba(44,59,46,0.06)] flex items-center justify-center text-sm font-medium text-[#2C3B2E] flex-shrink-0">
                           {m.role === 'owner' ? (
                             <Crown size={16} className="text-amber-500" />
                           ) : (
@@ -1202,20 +1202,20 @@ export default function CommunityAdminPanel({
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-extrabold text-slate-900 truncate">{m.name}</p>
+                            <p className="text-sm font-medium text-[#2C2621] truncate">{m.name}</p>
                             <span
-                              className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${roleBadgeClass(m.role)}`}
+                              className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${roleBadgeClass(m.role)}`}
                             >
                               {roleLabel(m.role, locale)}
                             </span>
                             {isMod && (
-                              <span className="flex items-center gap-0.5 text-[9px] font-extrabold text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded-full">
+                              <span className="flex items-center gap-0.5 text-[9px] font-medium text-violet-600 bg-[rgba(44,59,46,0.08)] px-1.5 py-0.5 rounded-full">
                                 <ShieldCheck size={8} /> MOD
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-400 truncate">{m.email}</p>
-                          <p className="text-[10px] text-slate-300 mt-0.5">
+                          <p className="text-xs text-[#8A857D] truncate">{m.email}</p>
+                          <p className="text-[10px] text-[#E6E3DB] mt-0.5">
                             {t('joined', locale)} {formatRelative(m.joined_at, locale)}
                           </p>
                         </div>
@@ -1234,7 +1234,7 @@ export default function CommunityAdminPanel({
                                 role: isMod ? 'member' : 'moderator',
                               })
                             }
-                            className={`flex items-center gap-1 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold transition-all disabled:opacity-60 ${isMod ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-violet-100 text-violet-600 hover:bg-violet-200'}`}
+                            className={`flex items-center gap-1 h-11 min-h-[44px] px-3 rounded-xl text-xs font-medium transition-all disabled:opacity-60 ${isMod ? 'bg-red-50 text-red-500 hover:bg-red-100' : 'bg-[rgba(44,59,46,0.08)] text-violet-600 hover:bg-violet-200'}`}
                           >
                             {isMod ? (
                               <>
@@ -1257,7 +1257,7 @@ export default function CommunityAdminPanel({
                                 user_id: m.id,
                               });
                             }}
-                            className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl bg-slate-50 text-slate-500 hover:bg-red-50 hover:text-red-500 flex items-center justify-center gap-1.5 text-xs font-extrabold transition-colors disabled:opacity-50"
+                            className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl bg-[#F0EFEA] text-[#8A857D] hover:bg-red-50 hover:text-red-500 flex items-center justify-center gap-1.5 text-xs font-medium transition-colors disabled:opacity-50"
                             title={t('removeMember', locale)}
                           >
                             <UserMinus size={14} />
@@ -1272,37 +1272,37 @@ export default function CommunityAdminPanel({
           </div>
 
           <div className="space-y-4">
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
-              <div className="p-5 border-b border-slate-100">
-                <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+            <div className="bg-white border border-[#E6E3DB] rounded-xl shadow-none overflow-hidden">
+              <div className="p-5 border-b border-[#E6E3DB]">
+                <h3 className="text-sm font-medium text-[#2C2621] flex items-center gap-2">
                   <ShieldCheck size={14} className="text-violet-500" />
                   {t('activeModerators', locale)}
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-[#8A857D] mt-1">
                   {activeModerators.length} {t('moderatorsAssigned', locale)}
                 </p>
               </div>
               {activeModerators.length === 0 ? (
                 <div className="py-10 text-center">
-                  <Shield size={28} className="text-slate-200 mx-auto mb-2" />
-                  <p className="text-sm text-slate-400">{t('noModeratorsYet', locale)}</p>
-                  <p className="text-xs text-slate-300 mt-1">{t('chooseFromList', locale)}</p>
+                  <Shield size={28} className="text-[#E6E3DB] mx-auto mb-2" />
+                  <p className="text-sm text-[#8A857D]">{t('noModeratorsYet', locale)}</p>
+                  <p className="text-xs text-[#E6E3DB] mt-1">{t('chooseFromList', locale)}</p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-[#E6E3DB]">
                   {activeModerators.map((mod) => (
                     <div key={mod.id} className="flex items-center gap-3 px-5 py-3.5">
-                      <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-sm font-extrabold text-violet-600 flex-shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-[rgba(44,59,46,0.08)] flex items-center justify-center text-sm font-medium text-violet-600 flex-shrink-0">
                         {mod.name?.[0] ?? '?'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-extrabold text-slate-900 truncate">{mod.name}</p>
-                          <span className="text-[9px] font-extrabold text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded-full">
+                          <p className="text-sm font-medium text-[#2C2621] truncate">{mod.name}</p>
+                          <span className="text-[9px] font-medium text-violet-600 bg-[rgba(44,59,46,0.08)] px-1.5 py-0.5 rounded-full">
                             MOD
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400 truncate">{mod.email}</p>
+                        <p className="text-xs text-[#8A857D] truncate">{mod.email}</p>
                       </div>
                       <button
                         type="button"
@@ -1326,8 +1326,8 @@ export default function CommunityAdminPanel({
               )}
             </div>
 
-            <div className="bg-[#E9D5FF]/70 border border-violet-100 rounded-2xl p-5">
-              <h4 className="text-xs font-extrabold text-violet-800 mb-3 flex items-center gap-2">
+            <div className="bg-[rgba(44,59,46,0.10)] border border-violet-100 rounded-xl p-5">
+              <h4 className="text-xs font-medium text-violet-800 mb-3 flex items-center gap-2">
                 <Shield size={11} /> {t('moderatorPerms', locale)}
               </h4>
               {[
@@ -1337,7 +1337,7 @@ export default function CommunityAdminPanel({
                 t('seeReported', locale),
                 t('moderateLiveChat', locale),
               ].map((p) => (
-                <div key={p} className="flex items-center gap-2 text-xs text-[#6b5bb8] mb-1.5">
+                <div key={p} className="flex items-center gap-2 text-xs text-[#8A857D] mb-1.5">
                   <Check size={10} className="text-violet-500 flex-shrink-0" /> {p}
                 </div>
               ))}

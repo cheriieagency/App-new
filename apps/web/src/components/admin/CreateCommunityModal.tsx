@@ -222,12 +222,12 @@ export default function CreateCommunityModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(560px,94vw)] max-h-[90vh] overflow-y-auto rounded-2xl border-slate-200 bg-white p-0 gap-0">
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-100">
-          <DialogTitle className="font-clikd-wordmark text-lg font-extrabold text-slate-900 tracking-tight">
+      <DialogContent className="w-[min(560px,94vw)] max-h-[90vh] overflow-y-auto rounded-xl border-[#E6E3DB] bg-white p-0 gap-0">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-[#E6E3DB]">
+          <DialogTitle className="font-playfair text-lg font-medium text-[#2C2621] tracking-tight">
             Create community
           </DialogTitle>
-          <DialogDescription className="text-sm text-slate-500 font-medium">
+          <DialogDescription className="text-sm text-[#8A857D] font-medium">
             Bound to this workspace — members can find it at a public clikd: URL.
           </DialogDescription>
         </DialogHeader>
@@ -235,7 +235,7 @@ export default function CreateCommunityModal({
         <div className="px-5 py-4 space-y-4">
           {/* Cover — drag inside the frame to choose the crop */}
           <div className="space-y-2">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
               Cover banner
             </p>
             <CoverImageCropper
@@ -266,20 +266,20 @@ export default function CreateCommunityModal({
                 }
               }}
               placeholder="Or paste cover image URL"
-              className="w-full h-10 min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full h-10 min-h-[40px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-xs font-medium text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/10"
             />
           </div>
 
           {/* Avatar + name */}
           <div className="flex gap-3 items-start">
             <div className="space-y-2 flex-shrink-0">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                 Avatar
               </p>
               <button
                 type="button"
                 onClick={() => avatarRef.current?.click()}
-                className="w-16 h-16 min-h-[64px] min-w-[64px] rounded-2xl border border-dashed border-slate-200 bg-slate-50 overflow-hidden inline-flex items-center justify-center hover:bg-slate-100 transition-colors"
+                className="w-16 h-16 min-h-[64px] min-w-[64px] rounded-xl border border-dashed border-[#E6E3DB] bg-[#F0EFEA] overflow-hidden inline-flex items-center justify-center hover:bg-[#F0EFEA] transition-colors"
               >
                 {avatarUrl || avatarManual ? (
                   <img
@@ -288,7 +288,7 @@ export default function CreateCommunityModal({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <Upload size={16} className="text-slate-400" />
+                  <Upload size={16} className="text-[#8A857D]" />
                 )}
               </button>
               <input
@@ -304,7 +304,7 @@ export default function CreateCommunityModal({
             </div>
             <div className="flex-1 space-y-3 min-w-0">
               <label className="block space-y-1.5">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                   Community name
                 </span>
                 <input
@@ -312,12 +312,12 @@ export default function CreateCommunityModal({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ebba Creator Inner Circle"
-                  className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+                  className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3.5 text-sm font-semibold text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/10"
                   autoFocus
                 />
               </label>
               <label className="block space-y-1.5">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                   URL slug
                 </span>
                 <input
@@ -327,9 +327,9 @@ export default function CreateCommunityModal({
                     setSlugTouched(true);
                     setSlug(slugifyName(e.target.value));
                   }}
-                  className="w-full h-10 min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-mono font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+                  className="w-full h-10 min-h-[40px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-sm font-mono font-semibold text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/10"
                 />
-                <p className="text-[11px] font-medium text-slate-400 truncate">
+                <p className="text-[11px] font-medium text-[#8A857D] truncate">
                   {slugPreview}
                 </p>
               </label>
@@ -337,7 +337,7 @@ export default function CreateCommunityModal({
           </div>
 
           <label className="block space-y-1.5">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
               Avatar URL (optional)
             </span>
             <input
@@ -348,18 +348,18 @@ export default function CreateCommunityModal({
                 if (e.target.value.trim()) setAvatarUrl(null);
               }}
               placeholder="https://…"
-              className="w-full h-10 min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full h-10 min-h-[40px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-xs font-medium text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/10"
             />
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
               Category
             </span>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as CommunityCategory)}
-              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-sm font-semibold text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/10"
             >
               {COMMUNITY_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -371,7 +371,7 @@ export default function CreateCommunityModal({
 
           {/* Access / pricing */}
           <div className="space-y-2">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
               Access / pricing
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -380,8 +380,8 @@ export default function CreateCommunityModal({
                 onClick={() => setIsFree(true)}
                 className={`h-11 min-h-[44px] rounded-xl text-sm font-semibold border transition-colors ${
                   isFree
-                    ? 'bg-[#E9D5FF]/70 border-[#E9D5FF] text-[#1a1848]'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-[rgba(44,59,46,0.10)] border-[rgba(44,59,46,0.18)] text-[#243228]'
+                    : 'bg-white border-[#E6E3DB] text-[#8A857D] hover:bg-[#F0EFEA]'
                 }`}
               >
                 Free community
@@ -391,8 +391,8 @@ export default function CreateCommunityModal({
                 onClick={() => setIsFree(false)}
                 className={`h-11 min-h-[44px] rounded-xl text-sm font-semibold border transition-colors ${
                   !isFree
-                    ? 'bg-[#E9D5FF]/70 border-[#E9D5FF] text-[#1a1848]'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-[rgba(44,59,46,0.10)] border-[rgba(44,59,46,0.18)] text-[#243228]'
+                    : 'bg-white border-[#E6E3DB] text-[#8A857D] hover:bg-[#F0EFEA]'
                 }`}
               >
                 Paid subscription
@@ -400,7 +400,7 @@ export default function CreateCommunityModal({
             </div>
             {!isFree ? (
               <label className="block space-y-1.5 pt-1">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                   Monthly price (SEK)
                 </span>
                 <div className="relative">
@@ -410,9 +410,9 @@ export default function CreateCommunityModal({
                     step={1}
                     value={monthlyPrice}
                     onChange={(e) => setMonthlyPrice(e.target.value)}
-                    className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white pl-3.5 pr-16 text-sm font-semibold tabular-nums text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+                    className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white pl-3.5 pr-16 text-sm font-semibold tabular-nums text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/10"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#8A857D]">
                     SEK/mo
                   </span>
                 </div>
@@ -421,7 +421,7 @@ export default function CreateCommunityModal({
           </div>
 
           <label className="block space-y-1.5">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
               Short description
             </span>
             <textarea
@@ -429,21 +429,21 @@ export default function CreateCommunityModal({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="What members get inside this community…"
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/5 resize-y min-h-[88px]"
+              className="w-full rounded-xl border border-[#E6E3DB] bg-white px-3.5 py-2.5 text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/10 resize-y min-h-[88px]"
             />
           </label>
 
           {error ? (
-            <p className="text-xs font-semibold text-rose-500">{error}</p>
+            <p className="text-xs font-semibold text-[#B85C38]">{error}</p>
           ) : null}
         </div>
 
-        <div className="px-5 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+        <div className="px-5 py-4 border-t border-[#E6E3DB] flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
           <button
             type="button"
             disabled={saving}
             onClick={() => onOpenChange(false)}
-            className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+            className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-white text-sm font-semibold text-[#8A857D] hover:bg-[#F0EFEA] transition-colors"
           >
             Cancel
           </button>
@@ -451,7 +451,7 @@ export default function CreateCommunityModal({
             type="button"
             disabled={saving || uploading || !name.trim()}
             onClick={() => void submit()}
-            className="h-11 min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           >
             {saving || uploading ? (
               <Loader2 size={16} className="animate-spin" />

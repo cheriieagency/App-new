@@ -360,7 +360,7 @@ export default function ClassroomAdminSection({
 
   if (isLoading) {
     return (
-      <div className="nc-glass rounded-[1.5rem] p-10 text-center text-sm font-medium text-zinc-400">
+      <div className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl p-10 text-center text-sm font-medium text-[#8A857D]">
         {t('loadingCourses', locale)}
       </div>
     );
@@ -398,7 +398,7 @@ export default function ClassroomAdminSection({
           className={`rounded-xl border px-4 py-3 text-xs font-semibold flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 ${
             storageNearLimit
               ? 'border-amber-200 bg-amber-50 text-amber-900'
-              : 'border-slate-200 bg-white text-slate-600'
+              : 'border-[#E6E3DB] bg-white text-[#8A857D]'
           }`}
         >
           <span>
@@ -409,7 +409,7 @@ export default function ClassroomAdminSection({
             <button
               type="button"
               onClick={() => requestUpgrade('pro')}
-              className="inline-flex items-center justify-center min-h-[36px] px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-bold"
+              className="inline-flex items-center justify-center min-h-[36px] px-3 rounded-lg bg-[#2C2621] text-white text-[11px] font-bold"
             >
               Upgrade for more storage
             </button>
@@ -417,19 +417,19 @@ export default function ClassroomAdminSection({
         </div>
       )}
       {/* Header + filters */}
-      <div className="nc-glass rounded-[1.5rem] p-4 sm:p-5">
+      <div className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between mb-4">
           <div>
-            <h3 className="text-sm font-black text-[#2c3340] flex items-center gap-2">
-              <GraduationCap size={16} className="text-[var(--nc-coral)]" />
+            <h3 className="text-sm font-medium text-[#2C2621] flex items-center gap-2">
+              <GraduationCap size={16} className="text-[#2C3B2E]" />
               {t('classroom', locale)}
             </h3>
-            <p className="text-xs text-zinc-400 mt-1">{t('classroomAdminHint', locale)}</p>
+            <p className="text-xs text-[#8A857D] mt-1">{t('classroomAdminHint', locale)}</p>
           </div>
           <button
             type="button"
             onClick={() => setShowForm((v) => !v)}
-            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[var(--nc-coral)] text-white text-xs font-extrabold"
+            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium"
           >
             {showForm ? (
               <>
@@ -447,10 +447,10 @@ export default function ClassroomAdminSection({
           <button
             type="button"
             onClick={() => setCategoryFilter('all')}
-            className={`h-10 min-h-[44px] px-3 rounded-xl text-[11px] font-extrabold whitespace-nowrap flex-shrink-0 transition-all ${
+            className={`h-10 min-h-[44px] px-3 rounded-xl text-[11px] font-medium whitespace-nowrap flex-shrink-0 transition-all ${
               categoryFilter === 'all'
-                ? 'bg-[#2c3340] text-white'
-                : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100'
+                ? 'bg-[#2C2621] text-white'
+                : 'bg-[#F0EFEA] text-[#8A857D] hover:bg-[#F0EFEA]'
             }`}
           >
             {t('allCategories', locale)}
@@ -460,10 +460,10 @@ export default function ClassroomAdminSection({
               key={cat}
               type="button"
               onClick={() => setCategoryFilter(cat)}
-              className={`h-10 min-h-[44px] px-3 rounded-xl text-[11px] font-extrabold whitespace-nowrap flex-shrink-0 transition-all ${
+              className={`h-10 min-h-[44px] px-3 rounded-xl text-[11px] font-medium whitespace-nowrap flex-shrink-0 transition-all ${
                 categoryFilter === cat
-                  ? 'bg-[#2c3340] text-white'
-                  : 'bg-zinc-50 text-zinc-500 hover:bg-zinc-100'
+                  ? 'bg-[#2C2621] text-white'
+                  : 'bg-[#F0EFEA] text-[#8A857D] hover:bg-[#F0EFEA]'
               }`}
             >
               {cat}
@@ -474,8 +474,8 @@ export default function ClassroomAdminSection({
 
       {/* Create course form */}
       {showForm && (
-        <div className="nc-glass rounded-[1.5rem] p-5 space-y-3">
-          <h4 className="text-sm font-black text-[#2c3340]">{t('addCourse', locale)}</h4>
+        <div className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl p-5 space-y-3">
+          <h4 className="text-sm font-medium text-[#2C2621]">{t('addCourse', locale)}</h4>
           <input
             ref={coverRef}
             type="file"
@@ -492,20 +492,20 @@ export default function ClassroomAdminSection({
               type="button"
               onClick={() => coverRef.current?.click()}
               disabled={uploading}
-              className="w-24 h-24 rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center gap-1 flex-shrink-0 overflow-hidden hover:border-[var(--nc-coral)] transition-colors"
+              className="w-24 h-24 rounded-xl border-2 border-dashed border-[#E6E3DB] bg-[#F0EFEA] flex flex-col items-center justify-center gap-1 flex-shrink-0 overflow-hidden hover:border-[#2C3B2E] transition-colors"
             >
               {form.cover_image ? (
                 <img src={form.cover_image} alt="" className="w-full h-full object-cover" />
               ) : uploading ? (
                 <Loader2
                   size={18}
-                  className="text-zinc-400"
+                  className="text-[#8A857D]"
                   style={{ animation: 'spin 1s linear infinite' }}
                 />
               ) : (
                 <>
-                  <ImageIcon size={18} className="text-zinc-300" />
-                  <span className="text-[9px] font-bold text-zinc-400">
+                  <ImageIcon size={18} className="text-[#E6E3DB]" />
+                  <span className="text-[9px] font-bold text-[#8A857D]">
                     {t('uploadImage', locale)}
                   </span>
                 </>
@@ -516,19 +516,19 @@ export default function ClassroomAdminSection({
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder={t('courseTitle', locale)}
-                className="rounded-xl border-zinc-200 text-sm h-11"
+                className="rounded-xl border-[#E6E3DB] text-sm h-11"
               />
               <Textarea
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 placeholder={t('description', locale)}
-                className="rounded-xl border-zinc-200 text-sm resize-none min-h-[64px]"
+                className="rounded-xl border-[#E6E3DB] text-sm resize-none min-h-[64px]"
               />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
+              <label className="text-[10px] font-medium text-[#8A857D] uppercase tracking-widest block mb-1">
                 {t('category', locale)}
               </label>
               <select
@@ -541,7 +541,7 @@ export default function ClassroomAdminSection({
                   setCustomCategory('');
                   setForm((f) => ({ ...f, category: e.target.value }));
                 }}
-                className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-extrabold text-[#2c3340] focus:outline-none focus:border-[var(--nc-coral)]"
+                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:border-[#2C3B2E]"
               >
                 {categories.map((cat) => (
                   <option key={cat} value={cat}>
@@ -551,20 +551,20 @@ export default function ClassroomAdminSection({
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">
+              <label className="text-[10px] font-medium text-[#8A857D] uppercase tracking-widest block mb-1">
                 {t('orCustomCategory', locale)}
               </label>
               <Input
                 value={customCategory}
                 onChange={(e) => setCustomCategory(e.target.value)}
                 placeholder={t('customCategoryPlaceholder', locale)}
-                className="rounded-xl border-zinc-200 text-sm h-11"
+                className="rounded-xl border-[#E6E3DB] text-sm h-11"
               />
             </div>
           </div>
 
-          <div className="space-y-2 pt-1 border-t border-zinc-50">
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pt-2">
+          <div className="space-y-2 pt-1 border-t border-[#E6E3DB]">
+            <p className="text-[10px] font-medium text-[#8A857D] uppercase tracking-widest pt-2">
               {t('courseMediaOptional', locale)}
             </p>
             <Input
@@ -574,7 +574,7 @@ export default function ClassroomAdminSection({
                 setCourseVideoName('');
               }}
               placeholder={t('courseVideoUrl', locale)}
-              className="rounded-xl border-zinc-200 text-sm h-11"
+              className="rounded-xl border-[#E6E3DB] text-sm h-11"
             />
             <input
               ref={courseVideoRef}
@@ -603,7 +603,7 @@ export default function ClassroomAdminSection({
                 type="button"
                 onClick={() => courseVideoRef.current?.click()}
                 disabled={uploading}
-                className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-white text-xs font-medium text-[#8A857D] hover:border-[#2C3B2E] hover:text-[#2C3B2E] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {uploading ? (
                   <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
@@ -616,7 +616,7 @@ export default function ClassroomAdminSection({
                 type="button"
                 onClick={() => coursePdfRef.current?.click()}
                 disabled={uploading}
-                className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-white text-xs font-medium text-[#8A857D] hover:border-[#2C3B2E] hover:text-[#2C3B2E] inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {uploading ? (
                   <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
@@ -633,9 +633,9 @@ export default function ClassroomAdminSection({
               />
             ) : null}
             {form.video_url ? (
-              <div className="flex items-center gap-2 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                <Video size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
-                <span className="text-xs font-bold text-zinc-600 flex-1 truncate">
+              <div className="flex items-center gap-2 p-2.5 bg-[#F0EFEA] rounded-xl border border-[#E6E3DB]">
+                <Video size={16} className="text-[#2C3B2E] flex-shrink-0" />
+                <span className="text-xs font-bold text-[#8A857D] flex-1 truncate">
                   {courseVideoName || form.video_url}
                 </span>
                 <button
@@ -644,22 +644,22 @@ export default function ClassroomAdminSection({
                     setForm((f) => ({ ...f, video_url: '' }));
                     setCourseVideoName('');
                   }}
-                  className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-zinc-400 hover:text-red-500"
+                  className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-[#8A857D] hover:text-red-500"
                 >
                   <X size={14} />
                 </button>
               </div>
             ) : null}
             {form.pdf_url ? (
-              <div className="flex items-center gap-2 p-2.5 bg-zinc-50 rounded-xl border border-zinc-100">
-                <FileText size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
-                <span className="text-xs font-bold text-zinc-600 flex-1 truncate">
+              <div className="flex items-center gap-2 p-2.5 bg-[#F0EFEA] rounded-xl border border-[#E6E3DB]">
+                <FileText size={16} className="text-[#2C3B2E] flex-shrink-0" />
+                <span className="text-xs font-bold text-[#8A857D] flex-1 truncate">
                   {form.pdf_name || 'PDF'}
                 </span>
                 <button
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, pdf_url: '', pdf_name: '' }))}
-                  className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-zinc-400 hover:text-red-500"
+                  className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-[#8A857D] hover:text-red-500"
                 >
                   <X size={14} />
                 </button>
@@ -667,14 +667,14 @@ export default function ClassroomAdminSection({
             ) : null}
           </div>
 
-          <label className="flex items-center gap-2 h-11 min-h-[44px] text-xs font-extrabold text-zinc-600 cursor-pointer w-fit">
+          <label className="flex items-center gap-2 h-11 min-h-[44px] text-xs font-medium text-[#8A857D] cursor-pointer w-fit">
             <input
               type="checkbox"
               checked={form.is_published}
               onChange={(e) =>
                 setForm((f) => ({ ...f, is_published: e.target.checked }))
               }
-              className="rounded border-zinc-300"
+              className="rounded border-[#E6E3DB]"
             />
             {t('published', locale)}
           </label>
@@ -682,7 +682,7 @@ export default function ClassroomAdminSection({
             type="button"
             disabled={!form.title.trim() || mutation.isPending || uploading}
             onClick={submitCourse}
-            className="w-full sm:w-auto rounded-full bg-[var(--nc-coral)] text-white font-black h-11 px-6"
+            className="w-full sm:w-auto rounded-full bg-[#2C3B2E] text-[#F9F8F6] font-medium h-11 px-6"
           >
             {mutation.isPending ? t('saving', locale) : t('saveCourse', locale)}
           </Button>
@@ -704,9 +704,9 @@ export default function ClassroomAdminSection({
             const open = expandedId === course.id;
             const lessonCount = course.lessons?.length ?? 0;
             return (
-              <div key={course.id} className="nc-glass rounded-[1.5rem] overflow-hidden">
+              <div key={course.id} className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl overflow-hidden">
                 <div className="p-4 sm:p-5 flex items-start gap-3">
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-xl bg-[#F0EFEA] overflow-hidden flex-shrink-0 flex items-center justify-center">
                     {course.cover_image ? (
                       <img
                         src={course.cover_image}
@@ -714,17 +714,17 @@ export default function ClassroomAdminSection({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <BookOpen size={20} className="text-zinc-300" />
+                      <BookOpen size={20} className="text-[#E6E3DB]" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <p className="text-sm font-black text-[#2c3340]">{course.title}</p>
-                      <span className="text-[9px] font-black uppercase tracking-wide bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded-full">
+                      <p className="text-sm font-medium text-[#2C2621]">{course.title}</p>
+                      <span className="text-[9px] font-medium uppercase tracking-wide bg-[#F0EFEA] text-[#8A857D] px-1.5 py-0.5 rounded-full">
                         {course.category || 'General'}
                       </span>
                       <span
-                        className={`text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
+                        className={`text-[9px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
                           course.is_published
                             ? 'bg-emerald-50 text-emerald-700'
                             : 'bg-amber-50 text-amber-700'
@@ -735,15 +735,15 @@ export default function ClassroomAdminSection({
                           : t('draft', locale)}
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-500 line-clamp-2">
+                    <p className="text-xs text-[#8A857D] line-clamp-2">
                       {course.description || t('noDescription', locale)}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                      <p className="text-[11px] font-bold text-zinc-400">
+                      <p className="text-[11px] font-bold text-[#8A857D]">
                         {lessonCount} {t('lessons', locale)}
                       </p>
                       {course.video_url && (
-                        <span className="text-[10px] font-extrabold text-zinc-400">
+                        <span className="text-[10px] font-medium text-[#8A857D]">
                           ▶ Video
                         </span>
                       )}
@@ -752,7 +752,7 @@ export default function ClassroomAdminSection({
                           href={course.pdf_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[var(--nc-coral)] hover:underline"
+                          className="inline-flex items-center gap-1 text-[10px] font-medium text-[#2C3B2E] hover:underline"
                         >
                           <FileText size={11} /> PDF
                         </a>
@@ -770,7 +770,7 @@ export default function ClassroomAdminSection({
                           is_published: !course.is_published,
                         })
                       }
-                      className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-zinc-50 hover:bg-zinc-100 text-zinc-500 flex items-center justify-center"
+                      className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] hover:bg-[#F0EFEA] text-[#8A857D] flex items-center justify-center"
                       title={
                         course.is_published
                           ? t('unpublish', locale)
@@ -797,7 +797,7 @@ export default function ClassroomAdminSection({
                 <button
                   type="button"
                   onClick={() => setExpandedId(open ? null : course.id)}
-                  className="w-full flex items-center justify-between px-5 h-11 min-h-[44px] border-t border-zinc-50 text-xs font-extrabold text-[var(--nc-coral)]"
+                  className="w-full flex items-center justify-between px-5 h-11 min-h-[44px] border-t border-[#E6E3DB] text-xs font-medium text-[#2C3B2E]"
                 >
                   <span>
                     {t('manageLessons', locale)} ({lessonCount})
@@ -806,9 +806,9 @@ export default function ClassroomAdminSection({
                 </button>
 
                 {open && (
-                  <div className="border-t border-zinc-50 bg-zinc-50/50 px-4 sm:px-5 py-4 space-y-3">
+                  <div className="border-t border-[#E6E3DB] bg-[#F0EFEA]/50 px-4 sm:px-5 py-4 space-y-3">
                     {(course.lessons ?? []).length === 0 ? (
-                      <p className="text-xs text-zinc-400 font-medium">
+                      <p className="text-xs text-[#8A857D] font-medium">
                         {t('noLessonsYet', locale)}
                       </p>
                     ) : (
@@ -816,23 +816,23 @@ export default function ClassroomAdminSection({
                         {(course.lessons ?? []).map((lesson, idx) => (
                           <div
                             key={lesson.id}
-                            className="flex items-start gap-3 bg-white rounded-xl border border-zinc-100 px-3 py-2.5"
+                            className="flex items-start gap-3 bg-white rounded-xl border border-[#E6E3DB] px-3 py-2.5"
                           >
-                            <span className="w-7 h-7 rounded-lg bg-[#f2eeff] text-[#6b5bb8] text-[11px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="w-7 h-7 rounded-lg bg-[#f2eeff] text-[#8A857D] text-[11px] font-medium flex items-center justify-center flex-shrink-0 mt-0.5">
                               {idx + 1}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-black text-[#2c3340] truncate">
+                              <p className="text-xs font-medium text-[#2C2621] truncate">
                                 {lesson.title}
                               </p>
                               {lesson.description && (
-                                <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-2">
+                                <p className="text-[11px] text-[#8A857D] mt-0.5 line-clamp-2">
                                   {lesson.description}
                                 </p>
                               )}
                               <div className="flex flex-wrap items-center gap-2 mt-1">
                                 {lesson.video_url && (
-                                  <span className="text-[10px] font-bold text-zinc-400 truncate max-w-[200px]">
+                                  <span className="text-[10px] font-bold text-[#8A857D] truncate max-w-[200px]">
                                     ▶ {lesson.video_url}
                                   </span>
                                 )}
@@ -841,7 +841,7 @@ export default function ClassroomAdminSection({
                                     href={lesson.pdf_url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[var(--nc-coral)] hover:underline"
+                                    className="inline-flex items-center gap-1 text-[10px] font-medium text-[#2C3B2E] hover:underline"
                                   >
                                     <FileText size={11} /> PDF
                                   </a>
@@ -859,7 +859,7 @@ export default function ClassroomAdminSection({
                                   id: lesson.id,
                                 });
                               }}
-                              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-red-50 text-zinc-300 hover:text-red-500 flex items-center justify-center flex-shrink-0"
+                              className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-red-50 text-[#E6E3DB] hover:text-red-500 flex items-center justify-center flex-shrink-0"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -895,13 +895,13 @@ export default function ClassroomAdminSection({
                         value={expandedId === course.id ? lessonTitle : ''}
                         onChange={(e) => setLessonTitle(e.target.value)}
                         placeholder={t('lessonTitle', locale)}
-                        className="rounded-xl border-zinc-200 text-sm h-11"
+                        className="rounded-xl border-[#E6E3DB] text-sm h-11"
                       />
                       <Textarea
                         value={expandedId === course.id ? lessonDescription : ''}
                         onChange={(e) => setLessonDescription(e.target.value)}
                         placeholder={t('lessonDescription', locale)}
-                        className="rounded-xl border-zinc-200 text-sm resize-none min-h-[72px]"
+                        className="rounded-xl border-[#E6E3DB] text-sm resize-none min-h-[72px]"
                       />
                       <Input
                         value={expandedId === course.id ? lessonVideo : ''}
@@ -910,12 +910,12 @@ export default function ClassroomAdminSection({
                           setLessonVideoName('');
                         }}
                         placeholder={t('lessonVideoUrl', locale)}
-                        className="rounded-xl border-zinc-200 text-sm h-11"
+                        className="rounded-xl border-[#E6E3DB] text-sm h-11"
                       />
                       {lessonVideo && expandedId === course.id && lessonVideoName ? (
-                        <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-zinc-100">
-                          <Video size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
-                          <span className="text-xs font-bold text-zinc-600 flex-1 truncate">
+                        <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-[#E6E3DB]">
+                          <Video size={16} className="text-[#2C3B2E] flex-shrink-0" />
+                          <span className="text-xs font-bold text-[#8A857D] flex-1 truncate">
                             {lessonVideoName}
                           </span>
                           <button
@@ -924,22 +924,22 @@ export default function ClassroomAdminSection({
                               setLessonVideo('');
                               setLessonVideoName('');
                             }}
-                            className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-zinc-400 hover:text-red-500"
+                            className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-[#8A857D] hover:text-red-500"
                           >
                             <X size={14} />
                           </button>
                         </div>
                       ) : null}
                       {lessonPdf && expandedId === course.id && (
-                        <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-zinc-100">
-                          <FileText size={16} className="text-[var(--nc-coral)] flex-shrink-0" />
-                          <span className="text-xs font-bold text-zinc-600 flex-1 truncate">
+                        <div className="flex items-center gap-2 p-2.5 bg-white rounded-xl border border-[#E6E3DB]">
+                          <FileText size={16} className="text-[#2C3B2E] flex-shrink-0" />
+                          <span className="text-xs font-bold text-[#8A857D] flex-1 truncate">
                             {lessonPdf.name}
                           </span>
                           <button
                             type="button"
                             onClick={() => setLessonPdf(null)}
-                            className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-zinc-400 hover:text-red-500"
+                            className="h-11 w-11 min-h-[44px] min-w-[44px] flex items-center justify-center text-[#8A857D] hover:text-red-500"
                           >
                             <X size={14} />
                           </button>
@@ -950,7 +950,7 @@ export default function ClassroomAdminSection({
                           type="button"
                           onClick={() => lessonVideoRef.current?.click()}
                           disabled={uploading}
-                          className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                          className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-white text-xs font-medium text-[#8A857D] hover:border-[#2C3B2E] hover:text-[#2C3B2E] flex items-center justify-center gap-1.5 disabled:opacity-50"
                         >
                           {uploading ? (
                             <Loader2
@@ -966,7 +966,7 @@ export default function ClassroomAdminSection({
                           type="button"
                           onClick={() => pdfRef.current?.click()}
                           disabled={uploading}
-                          className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-white text-xs font-extrabold text-zinc-600 hover:border-[var(--nc-coral)] hover:text-[var(--nc-coral)] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                          className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-white text-xs font-medium text-[#8A857D] hover:border-[#2C3B2E] hover:text-[#2C3B2E] flex items-center justify-center gap-1.5 disabled:opacity-50"
                         >
                           {uploading ? (
                             <Loader2
@@ -994,7 +994,7 @@ export default function ClassroomAdminSection({
                               { onSuccess: resetLessonForm }
                             );
                           }}
-                          className="h-11 min-h-[44px] px-4 rounded-xl bg-[var(--nc-coral)] text-white text-xs font-extrabold disabled:opacity-40 flex items-center justify-center gap-1.5 sm:ml-auto"
+                          className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium disabled:opacity-40 flex items-center justify-center gap-1.5 sm:ml-auto"
                         >
                           <Plus size={14} /> {t('addLesson', locale)}
                         </button>

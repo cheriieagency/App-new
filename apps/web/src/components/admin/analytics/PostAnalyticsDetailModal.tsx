@@ -81,7 +81,7 @@ export default function PostAnalyticsDetailModal({
   const accent = PLATFORM_ACCENT[post.platformKey] || '#0F172A';
   const engagement = post.likes + post.comments + post.shares;
   const mix = [
-    { key: 'metricLikes' as const, value: post.likes, color: '#F472B6' },
+    { key: 'metricLikes' as const, value: post.likes, color: '#2C3B2E' },
     { key: 'metricComments' as const, value: post.comments, color: '#6366F1' },
     { key: 'metricShares' as const, value: post.shares, color: '#10B981' },
   ];
@@ -106,14 +106,14 @@ export default function PostAnalyticsDetailModal({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[#2C2621]/35 backdrop-blur-[2px]"
         aria-label={t('postDetailClose', locale)}
         onClick={onClose}
       />
       <div
-        className={`${adminCardClass} relative z-10 w-full sm:max-w-xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-xl`}
+        className={`${adminCardClass} relative z-10 w-full sm:max-w-xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-xl shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]`}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-slate-100 bg-white/95 backdrop-blur-md">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB] bg-[#FFFFFF]/95 backdrop-blur-md">
           <div className="min-w-0 flex items-center gap-2.5">
             <span
               className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-xl inline-flex items-center justify-center text-white flex-shrink-0"
@@ -122,10 +122,10 @@ export default function PostAnalyticsDetailModal({
               <Icon size={16} className="text-white" />
             </span>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+              <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                 {t('postDetailTitle', locale)}
               </p>
-              <p className="text-sm font-extrabold text-slate-900 truncate">
+              <p className="text-sm font-medium text-[#2C2621] truncate">
                 {post.platform}
                 {publishedLabel ? ` · ${publishedLabel}` : ''}
               </p>
@@ -134,7 +134,7 @@ export default function PostAnalyticsDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-slate-50 inline-flex items-center justify-center text-slate-400"
+            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-[#F0EFEA] inline-flex items-center justify-center text-[#8A857D]"
             aria-label={t('postDetailClose', locale)}
           >
             <X size={18} />
@@ -143,7 +143,7 @@ export default function PostAnalyticsDetailModal({
 
         <div className="p-4 sm:p-5 space-y-5">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-full sm:w-36 h-44 sm:h-36 rounded-2xl overflow-hidden bg-slate-100 flex-shrink-0">
+            <div className="w-full sm:w-36 h-44 sm:h-36 rounded-xl overflow-hidden bg-[#F0EFEA] flex-shrink-0">
               {post.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -152,7 +152,7 @@ export default function PostAnalyticsDetailModal({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-slate-400 px-3 text-center">
+                <div className="w-full h-full flex items-center justify-center text-xs font-medium text-[#8A857D] px-3 text-center">
                   {t('postDetailNoImage', locale)}
                 </div>
               )}
@@ -160,12 +160,12 @@ export default function PostAnalyticsDetailModal({
             <div className="min-w-0 flex-1 space-y-2">
               <h2
                 id="post-analytics-detail-title"
-                className="text-base font-extrabold text-slate-900 leading-snug"
+                className="text-base font-medium text-[#2C2621] leading-snug"
               >
                 {post.title}
               </h2>
               {post.caption && post.caption !== post.title ? (
-                <p className="text-sm text-slate-500 font-medium line-clamp-4 whitespace-pre-wrap">
+                <p className="text-sm text-[#8A857D] font-medium line-clamp-4 whitespace-pre-wrap">
                   {post.caption}
                 </p>
               ) : null}
@@ -174,7 +174,7 @@ export default function PostAnalyticsDetailModal({
                   href={post.permalink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA]"
                 >
                   <ExternalLink size={13} />
                   {t('postDetailOpenOriginal', locale)}
@@ -183,17 +183,17 @@ export default function PostAnalyticsDetailModal({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 flex items-center justify-between gap-3">
+          <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/70 px-4 py-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-[10px] font-mono font-medium uppercase tracking-wider text-[#8A857D]">
                 {t('metricEngagementRate', locale)}
               </p>
-              <p className="mt-1 text-3xl font-extrabold tabular-nums text-slate-900 tracking-tight">
+              <p className="mt-1 text-3xl font-medium tabular-nums text-[#2C2621] tracking-tight">
                 {post.er.toFixed(1)}%
               </p>
             </div>
-            <div className="h-14 w-14 rounded-full border-4 border-[#F472B6]/30 flex items-center justify-center">
-              <span className="text-sm font-extrabold text-[#DB2777] tabular-nums">
+            <div className="h-14 w-14 rounded-full border-4 border-[#2C3B2E]/30 flex items-center justify-center">
+              <span className="text-sm font-medium text-[#DB2777] tabular-nums">
                 ER
               </span>
             </div>
@@ -210,12 +210,12 @@ export default function PostAnalyticsDetailModal({
             ).map((m) => (
               <div
                 key={m.label}
-                className="rounded-2xl border border-slate-200 bg-white px-3 py-3 min-h-[72px]"
+                className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 py-3 min-h-[72px]"
               >
-                <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-[9px] font-mono font-medium uppercase tracking-wider text-[#8A857D]">
                   {m.label}
                 </p>
-                <p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900">
+                <p className="mt-1 text-lg font-medium tabular-nums text-[#2C2621]">
                   {formatCompact(m.value, locale)}
                 </p>
               </div>
@@ -223,10 +223,10 @@ export default function PostAnalyticsDetailModal({
           </div>
 
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
               {t('postDetailEngagementMix', locale)}
             </p>
-            <div className="h-3 rounded-full bg-slate-100 overflow-hidden flex">
+            <div className="h-3 rounded-full bg-[#F0EFEA] overflow-hidden flex">
               {mix.map((part) => {
                 const pct =
                   engagement > 0
@@ -247,7 +247,7 @@ export default function PostAnalyticsDetailModal({
               {mix.map((part) => (
                 <span
                   key={part.key}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#8A857D]"
                 >
                   <span
                     className="h-2 w-2 rounded-full"

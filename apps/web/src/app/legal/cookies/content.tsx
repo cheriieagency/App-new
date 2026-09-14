@@ -95,7 +95,7 @@ export default function CookiesContent() {
       </ul>
 
       <LegalH2 section="cookiesS4" />
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         A. Strictly Necessary Cookies (Essential)
       </h3>
       <p>
@@ -113,7 +113,7 @@ export default function CookiesContent() {
         </li>
       </ul>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         B. Functional &amp; Preference Cookies
       </h3>
       <p>
@@ -130,7 +130,7 @@ export default function CookiesContent() {
         </li>
       </ul>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         C. Performance &amp; Analytics Cookies
       </h3>
       <p>
@@ -147,7 +147,7 @@ export default function CookiesContent() {
         </li>
       </ul>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         D. Third-Party API &amp; Payment Processing Cookies
       </h3>
       <p>
@@ -158,44 +158,44 @@ export default function CookiesContent() {
       </p>
 
       <LegalH2 section="cookiesS5" />
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+      <div className="overflow-x-auto rounded-xl border border-[#E6E3DB]">
         <table className="w-full min-w-[640px] text-left text-sm border-collapse">
           <thead>
-            <tr className="bg-slate-50 text-slate-900">
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+            <tr className="bg-[#F0EFEA] text-[#2C2621]">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Cookie / Storage Name
               </th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Provider / Domain
               </th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Purpose &amp; Function
               </th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Type &amp; Duration
               </th>
             </tr>
           </thead>
-          <tbody className="text-slate-700">
-            <tr className="border-b border-slate-100 align-top">
+          <tbody className="text-[#2C2621]/85">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5 font-mono text-xs">sb-access-token</td>
               <td className="px-3 py-2.5">clikd.app (Supabase EU)</td>
               <td className="px-3 py-2.5">Maintains encrypted user authentication session</td>
               <td className="px-3 py-2.5">Essential / Session</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5 font-mono text-xs">sb-refresh-token</td>
               <td className="px-3 py-2.5">clikd.app (Supabase EU)</td>
               <td className="px-3 py-2.5">Refreshes user login session securely</td>
               <td className="px-3 py-2.5">Essential / 30 Days</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5 font-mono text-xs">clikd_workspace_id</td>
               <td className="px-3 py-2.5">clikd.app</td>
               <td className="px-3 py-2.5">Remembers active selected brand workspace</td>
               <td className="px-3 py-2.5">Functional / 1 Year</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5 font-mono text-xs">clikd_lang</td>
               <td className="px-3 py-2.5">clikd.app</td>
               <td className="px-3 py-2.5">
@@ -203,7 +203,7 @@ export default function CookiesContent() {
               </td>
               <td className="px-3 py-2.5">Functional / 1 Year</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5 font-mono text-xs">__stripe_mid / __stripe_sid</td>
               <td className="px-3 py-2.5">stripe.com</td>
               <td className="px-3 py-2.5">
@@ -211,7 +211,7 @@ export default function CookiesContent() {
               </td>
               <td className="px-3 py-2.5">Essential / 1 Year</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5 font-mono text-xs">swish_checkout_token</td>
               <td className="px-3 py-2.5">getswish.se</td>
               <td className="px-3 py-2.5">

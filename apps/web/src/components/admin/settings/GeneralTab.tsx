@@ -138,13 +138,13 @@ export default function GeneralTab({
               value={branding.name}
               onChange={(e) => persist({ ...branding, name: e.target.value })}
               placeholder={workspaceName}
-              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:outline-none focus:border-slate-400"
+              className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:border-[#2C3B2E]"
             />
           </FieldRow>
 
           <FieldRow label={t('orgLogoLabel', locale)} hint={t('orgLogoHint', locale)}>
             <div className="flex items-center gap-3">
-              <div className="h-14 w-14 min-h-[56px] min-w-[56px] rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+              <div className="h-14 w-14 min-h-[56px] min-w-[56px] rounded-xl border border-[#E6E3DB] bg-[#F0EFEA] overflow-hidden flex items-center justify-center">
                 {branding.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -153,14 +153,14 @@ export default function GeneralTab({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <ImagePlus size={18} className="text-slate-300" />
+                  <ImagePlus size={18} className="text-[#E6E3DB]" />
                 )}
               </div>
               <button
                 type="button"
                 disabled={busy === 'logo'}
                 onClick={() => logoRef.current?.click()}
-                className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 inline-flex items-center gap-2"
+                className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-bold text-[#2C2621] hover:bg-[#F0EFEA] disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {busy === 'logo' ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -185,7 +185,7 @@ export default function GeneralTab({
             hint="16×16 or 32×32 ICO/PNG for your custom domain."
           >
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 min-h-[40px] min-w-[40px] rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+              <div className="h-10 w-10 min-h-[40px] min-w-[40px] rounded-lg border border-[#E6E3DB] bg-[#F0EFEA] overflow-hidden flex items-center justify-center">
                 {branding.faviconUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -194,14 +194,14 @@ export default function GeneralTab({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <ImagePlus size={14} className="text-slate-300" />
+                  <ImagePlus size={14} className="text-[#E6E3DB]" />
                 )}
               </div>
               <button
                 type="button"
                 disabled={busy === 'favicon'}
                 onClick={() => favRef.current?.click()}
-                className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 inline-flex items-center gap-2"
+                className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-bold text-[#2C2621] hover:bg-[#F0EFEA] disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {busy === 'favicon' ? (
                   <Loader2 size={14} className="animate-spin" />

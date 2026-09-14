@@ -32,7 +32,7 @@ export default function VillkorContent() {
         comply with the terms of each respective platform:
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         A. OpenAI API &amp; AI Copilot Suite
       </h3>
       <ul>
@@ -47,7 +47,7 @@ export default function VillkorContent() {
         </li>
       </ul>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         B. Pinterest API
       </h3>
       <p>
@@ -56,7 +56,7 @@ export default function VillkorContent() {
         legitimate, non-spam destination URLs.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         C. TikTok API, Meta &amp; YouTube
       </h3>
       <p>
@@ -88,7 +88,7 @@ export default function VillkorContent() {
       </ul>
 
       <LegalH2 section="termsS4" />
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         A. Creator as Seller of Record
       </h3>
       <p>
@@ -98,7 +98,7 @@ export default function VillkorContent() {
         Creator products.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         B. Fees and Payouts
       </h3>
       <ul>
@@ -112,7 +112,7 @@ export default function VillkorContent() {
         </li>
       </ul>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         C. Refunds and Taxes
       </h3>
       <ul>

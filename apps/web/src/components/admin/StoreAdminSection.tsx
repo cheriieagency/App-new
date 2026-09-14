@@ -366,14 +366,14 @@ export default function StoreAdminSection({
 
   return (
     <div className="space-y-4">
-      <div className="nc-glass rounded-[1.5rem] p-4 sm:p-5">
+      <div className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between mb-4">
           <div>
-            <h3 className="text-sm font-black text-[#2c3340] flex items-center gap-2">
-              <ShoppingBag size={14} className="text-[#F472B6]" />
+            <h3 className="text-sm font-medium text-[#2C2621] flex items-center gap-2">
+              <ShoppingBag size={14} className="text-[#2C3B2E]" />
               {t('storeAdminTitle', locale)}
             </h3>
-            <p className="text-xs text-zinc-400 mt-1">
+            <p className="text-xs text-[#8A857D] mt-1">
               Sell exclusive offers to logged-in members — 1-click checkout, no re-entering contact info.
             </p>
           </div>
@@ -387,14 +387,14 @@ export default function StoreAdminSection({
                 openCreate();
               }
             }}
-            className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#F472B6] hover:bg-[#ec4899] text-white text-xs font-black transition-colors"
+            className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-xs font-medium transition-colors"
           >
             {showForm ? <X size={14} /> : <Plus size={14} />}
             {showForm ? t('cancel', locale) : t('addProduct', locale)}
           </button>
         </div>
 
-        <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl w-fit mb-4">
+        <div className="flex items-center gap-1 bg-[#F0EFEA] p-1 rounded-xl w-fit mb-4">
           {(
             [
               { key: 'all' as const, label: t('storeAll', locale) },
@@ -408,8 +408,8 @@ export default function StoreAdminSection({
               onClick={() => setKindFilter(key)}
               className={`h-10 min-h-[44px] px-3 rounded-lg text-xs font-bold transition-all ${
                 kindFilter === key
-                  ? 'bg-white text-[#2c3340] shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-700'
+                  ? 'bg-white text-[#2C2621] shadow-none'
+                  : 'text-[#8A857D] hover:text-[#2C2621]'
               }`}
             >
               {label}
@@ -418,10 +418,10 @@ export default function StoreAdminSection({
         </div>
 
         {showForm && (
-          <div className="rounded-2xl border border-zinc-100 bg-white p-4 sm:p-5 space-y-6 mb-4">
+          <div className="rounded-xl border border-[#E6E3DB] bg-white p-4 sm:p-5 space-y-6 mb-4">
             {/* 1. Offer basics */}
             <section className="space-y-3">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                 1. Offer basics
               </p>
               <div className="flex flex-wrap gap-2">
@@ -430,10 +430,10 @@ export default function StoreAdminSection({
                     key={key}
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, offerPill: key }))}
-                    className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-full text-xs font-extrabold border transition-colors ${
+                    className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 rounded-full text-xs font-medium border transition-colors ${
                       form.offerPill === key
-                        ? 'bg-[#E9D5FF]/80 border-[#E9D5FF] text-[#1a1848]'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        ? 'bg-[rgba(44,59,46,0.12)] border-[rgba(44,59,46,0.18)] text-[#243228]'
+                        : 'bg-[#F0EFEA] border-[#E6E3DB] text-[#8A857D] hover:bg-[#F0EFEA]'
                     }`}
                   >
                     <Icon size={13} /> {label}
@@ -446,7 +446,7 @@ export default function StoreAdminSection({
                 placeholder='e.g. "1:1 Strategy Coaching Call"'
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#F472B6]/25 focus:border-[#F472B6]"
+                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3.5 text-sm font-semibold text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/15 focus:border-[#2C3B2E]"
               />
               <div className="space-y-1">
                 <Textarea
@@ -459,17 +459,17 @@ export default function StoreAdminSection({
                       description: e.target.value.slice(0, DESC_MAX),
                     }))
                   }
-                  className="rounded-xl border-zinc-200 min-h-[88px] resize-none"
+                  className="rounded-xl border-[#E6E3DB] min-h-[88px] resize-none"
                 />
-                <p className="text-[10px] font-bold text-zinc-400 text-right tabular-nums">
+                <p className="text-[10px] font-bold text-[#8A857D] text-right tabular-nums">
                   {form.description.length}/{DESC_MAX}
                 </p>
               </div>
             </section>
 
             {/* 2. Pricing */}
-            <section className="space-y-3 border-t border-zinc-100 pt-5">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <section className="space-y-3 border-t border-[#E6E3DB] pt-5">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                 2. Pricing & billing
               </p>
               <div className="relative max-w-xs">
@@ -485,19 +485,19 @@ export default function StoreAdminSection({
                       price: e.target.value.replace(/[^\d.,]/g, ''),
                     }))
                   }
-                  className={`w-full h-11 min-h-[44px] rounded-xl border bg-white px-3.5 pr-16 text-sm font-semibold tabular-nums text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#F472B6]/25 ${
+                  className={`w-full h-11 min-h-[44px] rounded-xl border bg-white px-3.5 pr-16 text-sm font-semibold tabular-nums text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/15 ${
                     !hasPrice
                       ? 'border-rose-300'
-                      : 'border-zinc-200 focus:border-[#F472B6]'
+                      : 'border-[#E6E3DB] focus:border-[#2C3B2E]'
                   }`}
                   aria-label="Price in SEK"
                 />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#8A857D]">
                   {priceSuffix}
                 </span>
               </div>
               {!hasPrice ? (
-                <p className="text-xs font-semibold text-rose-500">
+                <p className="text-xs font-semibold text-[#B85C38]">
                   Enter a price in SEK (use 0 for free).
                 </p>
               ) : null}
@@ -509,8 +509,8 @@ export default function StoreAdminSection({
                   }
                   className={`h-11 min-h-[44px] rounded-xl text-sm font-semibold border transition-colors ${
                     form.billing_interval === 'one_time'
-                      ? 'bg-[#E9D5FF]/70 border-[#E9D5FF] text-[#1a1848]'
-                      : 'bg-white border-zinc-200 text-zinc-600'
+                      ? 'bg-[rgba(44,59,46,0.10)] border-[rgba(44,59,46,0.18)] text-[#243228]'
+                      : 'bg-white border-[#E6E3DB] text-[#8A857D]'
                   }`}
                 >
                   One-time payment
@@ -526,8 +526,8 @@ export default function StoreAdminSection({
                   }
                   className={`h-11 min-h-[44px] rounded-xl text-sm font-semibold border transition-colors ${
                     form.billing_interval !== 'one_time'
-                      ? 'bg-[#E9D5FF]/70 border-[#E9D5FF] text-[#1a1848]'
-                      : 'bg-white border-zinc-200 text-zinc-600'
+                      ? 'bg-[rgba(44,59,46,0.10)] border-[rgba(44,59,46,0.18)] text-[#243228]'
+                      : 'bg-white border-[#E6E3DB] text-[#8A857D]'
                   }`}
                 >
                   Recurring subscription
@@ -544,8 +544,8 @@ export default function StoreAdminSection({
                       }
                       className={`h-10 min-h-[40px] px-4 rounded-xl text-xs font-bold border ${
                         form.billing_interval === interval
-                          ? 'border-[#F472B6] text-[#F472B6] bg-pink-50'
-                          : 'border-zinc-200 text-zinc-500'
+                          ? 'border-[#2C3B2E] text-[#2C3B2E] bg-[rgba(184,92,56,0.08)]'
+                          : 'border-[#E6E3DB] text-[#8A857D]'
                       }`}
                     >
                       {interval === 'monthly' ? 'Monthly' : 'Yearly'}
@@ -556,8 +556,8 @@ export default function StoreAdminSection({
             </section>
 
             {/* 3. Cover */}
-            <section className="space-y-3 border-t border-zinc-100 pt-5">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <section className="space-y-3 border-t border-[#E6E3DB] pt-5">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                 3. Cover banner / thumbnail
               </p>
               <input
@@ -581,7 +581,7 @@ export default function StoreAdminSection({
                   const f = e.dataTransfer.files?.[0];
                   if (f) void handleImage(f);
                 }}
-                className="relative w-full aspect-video max-h-48 rounded-2xl border border-dashed border-zinc-200 bg-slate-50 overflow-hidden hover:bg-slate-100/80 transition-colors flex items-center justify-center disabled:opacity-50"
+                className="relative w-full aspect-video max-h-48 rounded-xl border border-dashed border-[#E6E3DB] bg-[#F0EFEA] overflow-hidden hover:bg-[#F0EFEA]/80 transition-colors flex items-center justify-center disabled:opacity-50"
               >
                 {form.image_url ? (
                   <>
@@ -595,7 +595,7 @@ export default function StoreAdminSection({
                     </span>
                   </>
                 ) : (
-                  <span className="inline-flex flex-col items-center gap-1.5 text-xs font-semibold text-zinc-400">
+                  <span className="inline-flex flex-col items-center gap-1.5 text-xs font-semibold text-[#8A857D]">
                     {uploading ? (
                       <Loader2 size={18} className="animate-spin" />
                     ) : (
@@ -609,7 +609,7 @@ export default function StoreAdminSection({
                 <button
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, image_url: '' }))}
-                  className="text-xs font-bold text-zinc-400 hover:text-rose-500"
+                  className="text-xs font-bold text-[#8A857D] hover:text-[#B85C38]"
                 >
                   Remove cover
                 </button>
@@ -617,11 +617,11 @@ export default function StoreAdminSection({
             </section>
 
             {/* 4. Fulfillment */}
-            <section className="space-y-3 border-t border-zinc-100 pt-5">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <section className="space-y-3 border-t border-[#E6E3DB] pt-5">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                 4. Automated member fulfillment
               </p>
-              <p className="text-xs text-zinc-400 font-medium -mt-1">
+              <p className="text-xs text-[#8A857D] font-medium -mt-1">
                 What happens when a member buys this offer?
               </p>
               <select
@@ -635,7 +635,7 @@ export default function StoreAdminSection({
                     },
                   }))
                 }
-                className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-slate-800"
+                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-sm font-semibold text-[#2C2621]"
               >
                 {FULFILLMENT_OPTIONS.map((opt) => (
                   <option key={opt.key} value={opt.key}>
@@ -653,7 +653,7 @@ export default function StoreAdminSection({
                       fulfillment: { ...f.fulfillment, target: e.target.value },
                     }))
                   }
-                  className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold"
+                  className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-sm font-semibold"
                 >
                   <option value="">Select classroom course…</option>
                   {courses.map((c) => (
@@ -674,7 +674,7 @@ export default function StoreAdminSection({
                       fulfillment: { ...f.fulfillment, target: e.target.value },
                     }))
                   }
-                  className="rounded-xl border-zinc-200 h-11"
+                  className="rounded-xl border-[#E6E3DB] h-11"
                 />
               ) : null}
 
@@ -694,7 +694,7 @@ export default function StoreAdminSection({
                     type="button"
                     onClick={() => fileRef.current?.click()}
                     disabled={uploading}
-                    className="h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 bg-slate-50 text-xs font-extrabold text-zinc-600 inline-flex items-center gap-1.5"
+                    className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#F0EFEA] text-xs font-medium text-[#8A857D] inline-flex items-center gap-1.5"
                   >
                     {uploading ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -704,7 +704,7 @@ export default function StoreAdminSection({
                     Upload downloadable file
                   </button>
                   {form.fulfillment.target ? (
-                    <p className="text-[11px] font-medium text-zinc-500 truncate">
+                    <p className="text-[11px] font-medium text-[#8A857D] truncate">
                       {form.fulfillment.target}
                     </p>
                   ) : null}
@@ -722,19 +722,19 @@ export default function StoreAdminSection({
                       fulfillment: { ...f.fulfillment, target: e.target.value },
                     }))
                   }
-                  className="rounded-xl border-zinc-200 h-11"
+                  className="rounded-xl border-[#E6E3DB] h-11"
                 />
               ) : null}
             </section>
 
             {/* Custom fields toggle (replaces Collect Info) */}
-            <section className="space-y-3 border-t border-zinc-100 pt-5">
+            <section className="space-y-3 border-t border-[#E6E3DB] pt-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-extrabold text-[#2c3340]">
+                  <p className="text-sm font-medium text-[#2C2621]">
                     Require additional custom fields at checkout
                   </p>
-                  <p className="text-xs text-zinc-400 mt-0.5 font-medium">
+                  <p className="text-xs text-[#8A857D] mt-0.5 font-medium">
                     Off by default — members already have name, email & billing on file.
                   </p>
                 </div>
@@ -750,9 +750,9 @@ export default function StoreAdminSection({
                   aria-label="Toggle custom checkout fields"
                 >
                   {form.require_custom_fields ? (
-                    <ToggleRight size={28} className="text-[#F472B6]" />
+                    <ToggleRight size={28} className="text-[#2C3B2E]" />
                   ) : (
-                    <ToggleLeft size={28} className="text-zinc-300" />
+                    <ToggleLeft size={28} className="text-[#E6E3DB]" />
                   )}
                 </button>
               </div>
@@ -761,7 +761,7 @@ export default function StoreAdminSection({
                   {form.custom_fields.map((field) => (
                     <div
                       key={field.id}
-                      className="flex gap-2 items-center rounded-xl border border-zinc-200 bg-slate-50 p-2"
+                      className="flex gap-2 items-center rounded-xl border border-[#E6E3DB] bg-[#F0EFEA] p-2"
                     >
                       <Input
                         value={field.label}
@@ -788,7 +788,7 @@ export default function StoreAdminSection({
                             ),
                           }))
                         }
-                        className="h-10 w-10 rounded-lg text-zinc-400 hover:text-rose-500 flex items-center justify-center"
+                        className="h-10 w-10 rounded-lg text-[#8A857D] hover:text-[#B85C38] flex items-center justify-center"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -797,7 +797,7 @@ export default function StoreAdminSection({
                   <button
                     type="button"
                     onClick={() => addCustomField('text')}
-                    className="h-10 min-h-[40px] px-3 rounded-xl border border-dashed border-zinc-300 text-xs font-extrabold text-zinc-500 inline-flex items-center gap-1"
+                    className="h-10 min-h-[40px] px-3 rounded-xl border border-dashed border-[#E6E3DB] text-xs font-medium text-[#8A857D] inline-flex items-center gap-1"
                   >
                     <Plus size={12} /> Add custom field
                   </button>
@@ -806,13 +806,13 @@ export default function StoreAdminSection({
             </section>
 
             {/* 5. Order bump */}
-            <section className="space-y-3 border-t border-zinc-100 pt-5">
+            <section className="space-y-3 border-t border-[#E6E3DB] pt-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400 mb-1">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D] mb-1">
                     5. Upsell / order bump
                   </p>
-                  <p className="text-sm font-extrabold text-[#2c3340]">
+                  <p className="text-sm font-medium text-[#2C2621]">
                     Optional 1-click upsell at checkout
                   </p>
                 </div>
@@ -830,9 +830,9 @@ export default function StoreAdminSection({
                   className="h-11 min-h-[44px] px-1"
                 >
                   {form.order_bump.enabled ? (
-                    <ToggleRight size={28} className="text-[#F472B6]" />
+                    <ToggleRight size={28} className="text-[#2C3B2E]" />
                   ) : (
-                    <ToggleLeft size={28} className="text-zinc-300" />
+                    <ToggleLeft size={28} className="text-[#E6E3DB]" />
                   )}
                 </button>
               </div>
@@ -884,18 +884,18 @@ export default function StoreAdminSection({
             </section>
 
             {/* 6. Publish */}
-            <section className="space-y-3 border-t border-zinc-100 pt-5">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <section className="space-y-3 border-t border-[#E6E3DB] pt-5">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                 6. Publishing & visibility
               </p>
-              <label className="flex items-center gap-2 text-sm font-bold text-zinc-600 min-h-[44px] cursor-pointer w-fit">
+              <label className="flex items-center gap-2 text-sm font-bold text-[#8A857D] min-h-[44px] cursor-pointer w-fit">
                 <input
                   type="checkbox"
                   checked={form.is_published}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, is_published: e.target.checked }))
                   }
-                  className="rounded border-zinc-300"
+                  className="rounded border-[#E6E3DB]"
                 />
                 Published (visible in community storefront)
               </label>
@@ -903,7 +903,7 @@ export default function StoreAdminSection({
                 type="button"
                 disabled={!canSubmit}
                 onClick={submit}
-                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-xl bg-[#F472B6] hover:bg-[#ec4899] active:scale-[0.99] text-white font-black h-11 min-h-[44px] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-xl bg-[#2C3B2E] hover:bg-[#243228] active:scale-[0.99] text-[#F9F8F6] font-medium h-11 min-h-[44px] px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {mutation.isPending ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -918,7 +918,7 @@ export default function StoreAdminSection({
       </div>
 
       {isLoading ? (
-        <div className="nc-glass rounded-[1.5rem] py-12 text-center text-sm text-zinc-400">
+        <div className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl py-12 text-center text-sm text-[#8A857D]">
           {t('loading', locale)}
         </div>
       ) : products.length === 0 ? (
@@ -937,9 +937,9 @@ export default function StoreAdminSection({
             return (
               <div
                 key={product.id}
-                className="nc-glass rounded-[1.5rem] p-4 sm:p-5 flex gap-3 sm:gap-4"
+                className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl p-4 sm:p-5 flex gap-3 sm:gap-4"
               >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-zinc-100 flex-shrink-0">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-[#F0EFEA] flex-shrink-0">
                   {product.image_url ? (
                     <img
                       src={product.image_url}
@@ -949,19 +949,19 @@ export default function StoreAdminSection({
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       {isService ? (
-                        <Briefcase size={20} className="text-zinc-300" />
+                        <Briefcase size={20} className="text-[#E6E3DB]" />
                       ) : (
-                        <Package size={20} className="text-zinc-300" />
+                        <Package size={20} className="text-[#E6E3DB]" />
                       )}
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <p className="text-sm font-black text-[#2c3340] truncate">
+                    <p className="text-sm font-medium text-[#2C2621] truncate">
                       {product.name}
                     </p>
-                    <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[#E9D5FF]/60 text-[#2B2568]">
+                    <span className="text-[9px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[rgba(44,59,46,0.10)] text-[#2C3B2E]">
                       {pill === 'course'
                         ? 'Course'
                         : pill === 'coaching'
@@ -969,15 +969,15 @@ export default function StoreAdminSection({
                           : 'Digital'}
                     </span>
                     {!product.is_published && (
-                      <span className="text-[9px] font-black uppercase tracking-wide bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">
+                      <span className="text-[9px] font-medium uppercase tracking-wide bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">
                         Draft
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-zinc-500 line-clamp-2 mb-1">
+                  <p className="text-xs text-[#8A857D] line-clamp-2 mb-1">
                     {product.description}
                   </p>
-                  <p className="text-sm font-black text-[#2c3340] tabular-nums">
+                  <p className="text-sm font-medium text-[#2C2621] tabular-nums">
                     {product.price === 0
                       ? t('freeLabel', locale)
                       : `${Math.round(product.price)} ${product.currency}${
@@ -987,7 +987,7 @@ export default function StoreAdminSection({
                               ? '/yr'
                               : ''
                         }`}
-                    <span className="text-[10px] font-bold text-zinc-400 ml-2">
+                    <span className="text-[10px] font-bold text-[#8A857D] ml-2">
                       1-click member checkout
                       {product.order_bump?.enabled ? ' · bump' : ''}
                       {product.fulfillment?.type &&
@@ -1001,7 +1001,7 @@ export default function StoreAdminSection({
                   <button
                     type="button"
                     onClick={() => openEdit(product)}
-                    className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-zinc-50 text-zinc-500 hover:bg-pink-50 hover:text-[#F472B6] flex items-center justify-center"
+                    className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] text-[#8A857D] hover:bg-[rgba(184,92,56,0.08)] hover:text-[#2C3B2E] flex items-center justify-center"
                     title="Edit"
                   >
                     <Pencil size={14} />
@@ -1012,7 +1012,7 @@ export default function StoreAdminSection({
                     onClick={() =>
                       mutation.mutate({ action: 'toggle_publish', id: product.id })
                     }
-                    className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-zinc-50 text-zinc-500 hover:bg-pink-50 hover:text-[#F472B6] flex items-center justify-center disabled:opacity-50"
+                    className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] text-[#8A857D] hover:bg-[rgba(184,92,56,0.08)] hover:text-[#2C3B2E] flex items-center justify-center disabled:opacity-50"
                     title={product.is_published ? 'Hide' : 'Publish'}
                   >
                     {product.is_published ? <Eye size={14} /> : <EyeOff size={14} />}

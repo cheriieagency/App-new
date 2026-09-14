@@ -163,7 +163,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
       >
         <div className="space-y-5">
           <div>
-            <p className="text-sm font-semibold text-slate-800 mb-2">
+            <p className="text-sm font-semibold text-[#2C2621] mb-2">
               {t('profilePhotoLabel', locale)}
             </p>
             <div
@@ -173,17 +173,17 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
               }}
               onDragLeave={() => setDragOver(false)}
               onDrop={onDrop}
-              className={`flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-dashed p-4 transition-colors ${
+              className={`flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-dashed p-4 transition-colors ${
                 dragOver
-                  ? 'border-[#F472B6] bg-[#FCE7F3]/40'
-                  : 'border-slate-200 bg-slate-50/50'
+                  ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)]/40'
+                  : 'border-[#E6E3DB] bg-[#F0EFEA]/50'
               }`}
             >
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading}
-                className="relative h-20 w-20 min-h-[80px] min-w-[80px] rounded-full overflow-hidden border-2 border-white shadow-sm bg-[#2B2568] text-white font-extrabold text-2xl flex items-center justify-center"
+                className="relative h-20 w-20 min-h-[80px] min-w-[80px] rounded-full overflow-hidden border-2 border-white shadow-none bg-[#2C3B2E] text-[#F9F8F6] font-medium text-2xl flex items-center justify-center"
               >
                 {avatarUrl ? (
                   <OptimizedImage
@@ -196,7 +196,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                 ) : (
                   initial
                 )}
-                <span className="absolute inset-0 bg-slate-900/0 hover:bg-slate-900/35 transition-colors flex items-center justify-center">
+                <span className="absolute inset-0 bg-[#2C3B2E]/0 hover:bg-[#2C3B2E]/35 transition-colors flex items-center justify-center">
                   {uploading ? (
                     <Loader2 size={18} className="animate-spin text-white" />
                   ) : (
@@ -212,13 +212,13 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-bold text-[#2C2621] hover:bg-[#F0EFEA] disabled:opacity-50"
                 >
                   {uploading
                     ? t('uploadingEllipsis', locale)
                     : t('uploadPhoto', locale)}
                 </button>
-                <p className="text-[11px] text-slate-400 font-medium mt-1.5">
+                <p className="text-[11px] text-[#8A857D] font-medium mt-1.5">
                   Drag & drop or click · PNG/JPG · saved to avatars storage
                 </p>
               </div>
@@ -242,7 +242,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
               <button
                 type="button"
                 onClick={() => void saveProfile()}
-                className="h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
+                className="h-11 min-h-[44px] px-4 rounded-xl bg-[#243228] text-white text-xs font-bold hover:bg-[#2C3B2E] transition-colors"
               >
                 {t('save', locale)}
               </button>
@@ -251,7 +251,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:outline-none focus:border-slate-400"
+              className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:border-[#2C3B2E]"
             />
           </FieldRow>
 
@@ -274,7 +274,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                   if (!r.ok) toast.error(t('toastTimezoneSaveFailed', locale));
                 });
               }}
-              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:outline-none"
+              className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none"
             >
               {!TIMEZONE_OPTIONS.some((o) => o.value === timezone) ? (
                 <option value={timezone}>{timezone}</option>
@@ -297,7 +297,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
           <select
             value={weekStart}
             onChange={(e) => setWeekStart(e.target.value)}
-            className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:outline-none"
+            className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none"
           >
             <option value="monday">{t('settingsMonday', locale)}</option>
             <option value="sunday">{t('settingsSunday', locale)}</option>
@@ -317,7 +317,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                   setPassword('');
                   flash(t('flashPasswordUpdated', locale));
                 }}
-                className="h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
+                className="h-11 min-h-[44px] px-4 rounded-xl bg-[#243228] text-white text-xs font-bold hover:bg-[#2C3B2E] transition-colors"
               >
                 {t('settingsReset', locale)}
               </button>
@@ -328,16 +328,16 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium focus:outline-none focus:border-slate-400"
+              className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium focus:outline-none focus:border-[#2C3B2E]"
             />
           </FieldRow>
 
-          <div className="rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+          <div className="rounded-xl border border-[#E6E3DB] p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-extrabold text-slate-900">
+              <p className="text-sm font-medium text-[#2C2621]">
                 {t('settingsEnable2fa', locale)}
               </p>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
+              <p className="text-xs text-[#8A857D] font-medium mt-0.5">
                 {twoFaEnabled
                   ? t('settings2faOn', locale)
                   : t('settingsEnable2faSub', locale)}
@@ -353,7 +353,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                     : t('flash2faEnabled', locale)
                 );
               }}
-              className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors flex-shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-[#243228] text-white text-xs font-bold hover:bg-[#2C3B2E] transition-colors flex-shrink-0"
             >
               {twoFaEnabled
                 ? t('settingsManage2fa', locale)
@@ -371,7 +371,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
             <button
               type="button"
               onClick={() => flash(t('flashEmailConfirm', locale))}
-              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
+              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#243228] text-white text-xs font-bold hover:bg-[#2C3B2E] transition-colors"
             >
               {t('settingsReset', locale)}
             </button>
@@ -381,7 +381,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium focus:outline-none focus:border-slate-400"
+            className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium focus:outline-none focus:border-[#2C3B2E]"
           />
         </FieldRow>
       </SectionBlock>
@@ -390,7 +390,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
         <button
           type="button"
           onClick={() => void signOutAndRedirect('/')}
-          className="w-full h-12 min-h-[48px] rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors inline-flex items-center justify-center gap-2"
+          className="w-full h-12 min-h-[48px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-sm font-bold text-[#2C2621] hover:bg-[#F0EFEA] transition-colors inline-flex items-center justify-center gap-2"
         >
           <LogOut size={15} />
           {t('settingsLogOut', locale)}
@@ -399,7 +399,7 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
           <button
             type="button"
             onClick={() => setDeleteOpen(true)}
-            className="text-xs font-semibold text-slate-400 hover:text-rose-500 underline-offset-2 hover:underline transition-colors min-h-[44px] px-2"
+            className="text-xs font-semibold text-[#8A857D] hover:text-rose-500 underline-offset-2 hover:underline transition-colors min-h-[44px] px-2"
           >
             {t('settingsDeleteAccount', locale)}…
           </button>

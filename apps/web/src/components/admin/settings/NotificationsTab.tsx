@@ -85,20 +85,20 @@ export default function NotificationsTab({
     prefKey: NotifPrefKey;
     hint?: string;
   }) => (
-    <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 min-h-[52px] cursor-pointer hover:bg-slate-50/80 transition-colors">
+    <label className="flex items-center justify-between gap-3 rounded-xl border border-[#E6E3DB] px-4 py-3 min-h-[52px] cursor-pointer hover:bg-[#F0EFEA]/80 transition-colors">
       <div className="min-w-0">
-        <span className="text-sm font-semibold text-slate-800">
+        <span className="text-sm font-semibold text-[#2C2621]">
           {t(labelKey, locale)}
         </span>
         {hint ? (
-          <p className="text-xs text-slate-400 font-medium mt-0.5 truncate">{hint}</p>
+          <p className="text-xs text-[#8A857D] font-medium mt-0.5 truncate">{hint}</p>
         ) : null}
       </div>
       <input
         type="checkbox"
         checked={prefs[prefKey]}
         onChange={() => toggle(prefKey)}
-        className="h-5 w-5 rounded border-slate-300 accent-[#1a1848] flex-shrink-0"
+        className="h-5 w-5 rounded border-[#E6E3DB] accent-[#243228] flex-shrink-0"
       />
     </label>
   );
@@ -109,7 +109,7 @@ export default function NotificationsTab({
         title={t('notifInAppTitle', locale)}
         subtitle={t('notifInAppHint', locale)}
       >
-        <div className="flex items-center gap-2 mb-3 text-slate-500">
+        <div className="flex items-center gap-2 mb-3 text-[#8A857D]">
           <Bell size={14} />
           <p className="text-[11px] font-bold uppercase tracking-wide">
             {t('notifInAppBellHint', locale)}
@@ -126,7 +126,7 @@ export default function NotificationsTab({
         title={t('notifEmailTitle', locale)}
         subtitle={t('notifWeeklyDigestHint', locale)}
       >
-        <div className="flex items-center gap-2 mb-3 text-slate-500">
+        <div className="flex items-center gap-2 mb-3 text-[#8A857D]">
           <Mail size={14} />
           <p className="text-[11px] font-bold uppercase tracking-wide">
             Sent to {userEmail}

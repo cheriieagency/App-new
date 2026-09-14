@@ -19,18 +19,18 @@ export default function CustomDomainCard() {
       <div className="space-y-4">
         <div className="flex items-center gap-2 flex-wrap">
           <PlanLockBadge minPlan="pro" />
-          <span className="text-xs font-medium text-slate-500">
+          <span className="text-xs font-medium text-[#8A857D]">
             Link yourname.se to your bio & community via Vercel DNS
           </span>
         </div>
-        <p className="text-sm text-slate-600 leading-relaxed">
+        <p className="text-sm text-[#8A857D] leading-relaxed">
           Connect an apex domain (A → 76.76.21.21) or subdomain (CNAME →
           cname.vercel-dns.com). Pro/Agency plan required.
         </p>
         {canUse ? (
           <a
             href="/admin/settings/domain"
-            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#0F172A] text-white text-sm font-bold"
+            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#2C2621] text-white text-sm font-bold"
           >
             Manage custom domain
           </a>
@@ -39,7 +39,7 @@ export default function CustomDomainCard() {
             <button
               type="button"
               onClick={() => requestUpgrade('pro')}
-              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#0F172A] text-white text-sm font-bold"
+              className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#2C2621] text-white text-sm font-bold"
             >
               Unlock on Pro
             </button>

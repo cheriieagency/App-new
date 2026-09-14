@@ -47,13 +47,13 @@ function RoleBadge({ role }: { role?: string | null }) {
   const r = (role || 'member').toLowerCase();
   if (r === 'owner' || r === 'admin' || r === 'moderator') {
     return (
-      <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#2B2568] bg-[#E9D5FF]/80 px-1.5 py-0.5 rounded-full">
+      <span className="inline-flex items-center gap-0.5 text-[9px] font-medium uppercase tracking-wide text-[#2C3B2E] bg-[rgba(44,59,46,0.12)] px-1.5 py-0.5 rounded-full">
         <Crown size={9} /> {r === 'moderator' ? 'Admin' : 'Owner'}
       </span>
     );
   }
   return (
-    <span className="text-[9px] font-extrabold uppercase tracking-wide text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+    <span className="text-[9px] font-medium uppercase tracking-wide text-[#8A857D] bg-[#F0EFEA] px-1.5 py-0.5 rounded-full">
       Member
     </span>
   );
@@ -345,15 +345,15 @@ export default function CommunityPostsTab({
   return (
     <div className="space-y-4">
       {/* Composer */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-4">
+      <div className="bg-white border border-[#E6E3DB] rounded-xl shadow-none p-4 sm:p-5 space-y-4">
         <div className="flex gap-3 items-start">
           <img
             src={avatar}
             alt=""
-            className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-2xl object-cover bg-slate-100 flex-shrink-0"
+            className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-xl object-cover bg-[#F0EFEA] flex-shrink-0"
           />
           <div className="flex-1 min-w-0 space-y-3">
-            <p className="text-sm font-semibold text-slate-500">
+            <p className="text-sm font-semibold text-[#8A857D]">
               Write a post to your community…
             </p>
             <input
@@ -362,14 +362,14 @@ export default function CommunityPostsTab({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Post title (optional)"
-              className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#F472B6]/20 focus:border-[#F472B6]"
+              className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 px-3.5 text-sm font-semibold text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/15 focus:border-[#2C3B2E]"
             />
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={4}
               placeholder="Share an announcement, ask a question, or start a discussion…"
-              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F472B6]/20 focus:border-[#F472B6] resize-y min-h-[100px]"
+              className="w-full rounded-xl border border-[#E6E3DB] bg-white px-3.5 py-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/15 focus:border-[#2C3B2E] resize-y min-h-[100px]"
             />
           </div>
         </div>
@@ -380,10 +380,10 @@ export default function CommunityPostsTab({
               key={c.id}
               type="button"
               onClick={() => setCategory(c.id)}
-              className={`h-10 min-h-[40px] px-3 rounded-full text-xs font-extrabold border transition-colors ${
+              className={`h-10 min-h-[40px] px-3 rounded-full text-xs font-medium border transition-colors ${
                 category === c.id
-                  ? 'bg-[#E9D5FF]/80 border-[#E9D5FF] text-[#1a1848]'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'bg-[rgba(44,59,46,0.12)] border-[rgba(44,59,46,0.18)] text-[#243228]'
+                  : 'bg-white border-[#E6E3DB] text-[#8A857D] hover:bg-[#F0EFEA]'
               }`}
             >
               {c.label}
@@ -391,14 +391,14 @@ export default function CommunityPostsTab({
           ))}
         </div>
 
-        <label className="flex items-center gap-2 h-11 min-h-[44px] text-sm font-semibold text-slate-700 cursor-pointer w-fit">
+        <label className="flex items-center gap-2 h-11 min-h-[44px] text-sm font-semibold text-[#2C2621] cursor-pointer w-fit">
           <input
             type="checkbox"
             checked={isPinned}
             onChange={(e) => setIsPinned(e.target.checked)}
-            className="rounded border-slate-300"
+            className="rounded border-[#E6E3DB]"
           />
-          <Pin size={14} className="text-[#F472B6]" />
+          <Pin size={14} className="text-[#2C3B2E]" />
           Pin post to top of community feed
         </label>
 
@@ -419,7 +419,7 @@ export default function CommunityPostsTab({
             {mediaUrls.map((url) => (
               <div
                 key={url}
-                className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200"
+                className="relative w-24 h-24 rounded-xl overflow-hidden border border-[#E6E3DB]"
               >
                 <img src={url} alt="" className="w-full h-full object-cover" />
                 <button
@@ -441,7 +441,7 @@ export default function CommunityPostsTab({
             type="button"
             onClick={() => mediaRef.current?.click()}
             disabled={uploading}
-            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-xs font-extrabold text-slate-600 hover:border-[#F472B6] hover:text-[#F472B6] disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-white text-xs font-medium text-[#8A857D] hover:border-[#2C3B2E] hover:text-[#2C3B2E] disabled:opacity-50"
           >
             {uploading ? (
               <Loader2 size={14} className="animate-spin" />
@@ -454,7 +454,7 @@ export default function CommunityPostsTab({
             type="button"
             disabled={!canPublish}
             onClick={() => createPost.mutate()}
-            className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-5 rounded-xl bg-[#F472B6] hover:bg-[#ec4899] text-white text-sm font-black transition-colors disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-5 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-sm font-medium transition-colors disabled:opacity-50"
           >
             {createPost.isPending ? (
               <Loader2 size={16} className="animate-spin" />
@@ -473,8 +473,8 @@ export default function CommunityPostsTab({
           onClick={() => setFilter('all')}
           className={`h-10 min-h-[40px] px-3 rounded-full text-xs font-bold border ${
             filter === 'all'
-              ? 'bg-slate-900 text-white border-slate-900'
-              : 'bg-white text-slate-600 border-slate-200'
+              ? 'bg-[#2C3B2E] text-[#F9F8F6] border-[#2C3B2E]'
+              : 'bg-white text-[#8A857D] border-[#E6E3DB]'
           }`}
         >
           All
@@ -486,8 +486,8 @@ export default function CommunityPostsTab({
             onClick={() => setFilter(c.id)}
             className={`h-10 min-h-[40px] px-3 rounded-full text-xs font-bold border ${
               filter === c.id
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-600 border-slate-200'
+                ? 'bg-[#2C3B2E] text-[#F9F8F6] border-[#2C3B2E]'
+                : 'bg-white text-[#8A857D] border-[#E6E3DB]'
             }`}
           >
             {c.short}
@@ -497,18 +497,18 @@ export default function CommunityPostsTab({
 
       {/* Feed */}
       {isLoading ? (
-        <div className="bg-white border border-slate-200/80 rounded-2xl py-14 text-center text-sm text-slate-400">
+        <div className="bg-white border border-[#E6E3DB] rounded-xl py-14 text-center text-sm text-[#8A857D]">
           Loading feed…
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-8 text-center">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-[#E9D5FF]/50 text-[#2B2568] flex items-center justify-center mb-4">
+        <div className="bg-white rounded-xl border border-[#E6E3DB] shadow-none p-8 text-center">
+          <div className="mx-auto w-14 h-14 rounded-xl bg-[rgba(44,59,46,0.10)]/50 text-[#2C3B2E] flex items-center justify-center mb-4">
             <MessageCircle size={22} />
           </div>
-          <h3 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+          <h3 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight">
             No posts yet
           </h3>
-          <p className="text-sm text-slate-500 font-medium mt-2 max-w-md mx-auto">
+          <p className="text-sm text-[#8A857D] font-medium mt-2 max-w-md mx-auto">
             Start the discussion or share an announcement with your members.
           </p>
           <button
@@ -520,7 +520,7 @@ export default function CommunityPostsTab({
               });
               titleInputRef.current?.focus();
             }}
-            className="mt-5 inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold"
+            className="mt-5 inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium"
           >
             + Create First Post
           </button>
@@ -533,13 +533,13 @@ export default function CommunityPostsTab({
             return (
               <article
                 key={post.id}
-                className={`bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden ${
-                  post.is_pinned ? 'ring-1 ring-[#F472B6]/30' : ''
+                className={`bg-white border border-[#E6E3DB] rounded-xl shadow-none overflow-hidden ${
+                  post.is_pinned ? 'ring-1 ring-[#2C3B2E]/25' : ''
                 }`}
               >
                 <div className="p-4 sm:p-5">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-2xl overflow-hidden bg-slate-100 flex-shrink-0 flex items-center justify-center text-sm font-extrabold text-slate-600">
+                    <div className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl overflow-hidden bg-[#F0EFEA] flex-shrink-0 flex items-center justify-center text-sm font-medium text-[#8A857D]">
                       {post.user_image ? (
                         <img
                           src={post.user_image}
@@ -552,18 +552,18 @@ export default function CommunityPostsTab({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <p className="text-sm font-extrabold text-slate-900">
+                        <p className="text-sm font-medium text-[#2C2621]">
                           {post.user_name}
                         </p>
                         <RoleBadge role={post.author_role} />
-                        <span className="text-[9px] font-extrabold uppercase tracking-wide bg-[#E9D5FF]/70 text-[#6b5bb8] px-1.5 py-0.5 rounded-full">
+                        <span className="text-[9px] font-medium uppercase tracking-wide bg-[rgba(44,59,46,0.10)] text-[#8A857D] px-1.5 py-0.5 rounded-full">
                           {categoryLabel(String(post.category || post.tag))}
                         </span>
-                        <span className="text-[10px] text-slate-300 font-bold">
+                        <span className="text-[10px] text-[#E6E3DB] font-bold">
                           {formatRelative(post.created_at)}
                         </span>
                         {post.is_pinned ? (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#F472B6] bg-pink-50 px-1.5 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-medium uppercase tracking-wide text-[#2C3B2E] bg-[rgba(184,92,56,0.08)] px-1.5 py-0.5 rounded-full">
                             <Pin size={9} /> Pinned
                           </span>
                         ) : null}
@@ -574,27 +574,27 @@ export default function CommunityPostsTab({
                           <input
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
-                            className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm font-semibold"
+                            className="w-full h-10 rounded-xl border border-[#E6E3DB] px-3 text-sm font-semibold"
                             placeholder="Title"
                           />
                           <textarea
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
                             rows={3}
-                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm resize-y"
+                            className="w-full rounded-xl border border-[#E6E3DB] px-3 py-2 text-sm resize-y"
                           />
                           <div className="flex gap-2">
                             <button
                               type="button"
                               onClick={() => saveEdit.mutate()}
-                              className="h-10 px-3 rounded-xl bg-[#F472B6] text-white text-xs font-bold"
+                              className="h-10 px-3 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-bold"
                             >
                               Save
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditingId(null)}
-                              className="h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+                              className="h-10 px-3 rounded-xl border border-[#E6E3DB] text-xs font-bold text-[#8A857D]"
                             >
                               Cancel
                             </button>
@@ -603,11 +603,11 @@ export default function CommunityPostsTab({
                       ) : (
                         <>
                           {post.title ? (
-                            <h4 className="text-base font-extrabold text-slate-900 mb-1">
+                            <h4 className="text-base font-medium text-[#2C2621] mb-1">
                               {post.title}
                             </h4>
                           ) : null}
-                          <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-sm text-[#2C2621] leading-relaxed whitespace-pre-wrap">
                             {post.content}
                           </p>
                           {(post.media_urls?.length || post.image_url) ? (
@@ -618,7 +618,7 @@ export default function CommunityPostsTab({
                               ).map((url) => (
                                 <div
                                   key={url}
-                                  className="rounded-xl overflow-hidden border border-slate-100 aspect-video bg-slate-50"
+                                  className="rounded-xl overflow-hidden border border-[#E6E3DB] aspect-video bg-[#F0EFEA]"
                                 >
                                   <img
                                     src={url}
@@ -638,8 +638,8 @@ export default function CommunityPostsTab({
                           onClick={() => toggleLike.mutate(post.id)}
                           className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl text-xs font-bold transition-colors ${
                             post.liked_by_me
-                              ? 'bg-rose-50 text-rose-600'
-                              : 'bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600'
+                              ? 'bg-[rgba(184,92,56,0.08)] text-rose-600'
+                              : 'bg-[#F0EFEA] text-[#8A857D] hover:bg-[rgba(184,92,56,0.08)] hover:text-[#B85C38]'
                           }`}
                         >
                           <Heart
@@ -653,7 +653,7 @@ export default function CommunityPostsTab({
                           onClick={() =>
                             setExpandedId(open ? null : post.id)
                           }
-                          className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl bg-slate-50 text-slate-500 hover:bg-[#E9D5FF]/50 hover:text-[#2B2568] text-xs font-bold"
+                          className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl bg-[#F0EFEA] text-[#8A857D] hover:bg-[rgba(44,59,46,0.10)]/50 hover:text-[#2C3B2E] text-xs font-bold"
                         >
                           <MessageCircle size={13} />
                           {post.comment_count ?? comments.length}
@@ -667,13 +667,13 @@ export default function CommunityPostsTab({
                         onClick={() =>
                           setMenuOpenId(menuOpenId === post.id ? null : post.id)
                         }
-                        className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 flex items-center justify-center"
+                        className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] text-[#8A857D] hover:bg-[#F0EFEA] flex items-center justify-center"
                         aria-label="Post actions"
                       >
                         <MoreHorizontal size={16} />
                       </button>
                       {menuOpenId === post.id ? (
-                        <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-slate-100 bg-white shadow-lg overflow-hidden">
+                        <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-[#E6E3DB] bg-white shadow-none overflow-hidden">
                           <button
                             type="button"
                             onClick={() =>
@@ -682,7 +682,7 @@ export default function CommunityPostsTab({
                                 pin: !post.is_pinned,
                               })
                             }
-                            className="w-full text-left px-3 h-11 min-h-[44px] text-xs font-bold text-slate-700 hover:bg-slate-50 inline-flex items-center gap-2"
+                            className="w-full text-left px-3 h-11 min-h-[44px] text-xs font-bold text-[#2C2621] hover:bg-[#F0EFEA] inline-flex items-center gap-2"
                           >
                             <Pin size={13} />{' '}
                             {post.is_pinned ? 'Unpin post' : 'Pin post'}
@@ -695,7 +695,7 @@ export default function CommunityPostsTab({
                               setEditContent(post.content);
                               setMenuOpenId(null);
                             }}
-                            className="w-full text-left px-3 h-11 min-h-[44px] text-xs font-bold text-slate-700 hover:bg-slate-50 inline-flex items-center gap-2"
+                            className="w-full text-left px-3 h-11 min-h-[44px] text-xs font-bold text-[#2C2621] hover:bg-[#F0EFEA] inline-flex items-center gap-2"
                           >
                             <Pencil size={13} /> Edit post
                           </button>
@@ -705,7 +705,7 @@ export default function CommunityPostsTab({
                               if (!window.confirm('Delete this post?')) return;
                               deletePost.mutate(post.id);
                             }}
-                            className="w-full text-left px-3 h-11 min-h-[44px] text-xs font-bold text-rose-600 hover:bg-rose-50 inline-flex items-center gap-2"
+                            className="w-full text-left px-3 h-11 min-h-[44px] text-xs font-bold text-rose-600 hover:bg-[rgba(184,92,56,0.08)] inline-flex items-center gap-2"
                           >
                             <Trash2 size={13} /> Delete post
                           </button>
@@ -716,15 +716,15 @@ export default function CommunityPostsTab({
                 </div>
 
                 {open ? (
-                  <div className="border-t border-slate-100 bg-slate-50/60 px-4 sm:px-5 py-4 space-y-3">
+                  <div className="border-t border-[#E6E3DB] bg-[#F0EFEA]/60 px-4 sm:px-5 py-4 space-y-3">
                     {comments.length === 0 ? (
-                      <p className="text-xs font-medium text-slate-400">
+                      <p className="text-xs font-medium text-[#8A857D]">
                         No comments yet — be the first to reply.
                       </p>
                     ) : (
                       comments.map((c) => (
                         <div key={c.id} className="flex gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-[11px] font-extrabold text-slate-500 flex-shrink-0 overflow-hidden">
+                          <div className="w-8 h-8 rounded-xl bg-white border border-[#E6E3DB] flex items-center justify-center text-[11px] font-medium text-[#8A857D] flex-shrink-0 overflow-hidden">
                             {c.user_image ? (
                               <img
                                 src={c.user_image}
@@ -735,17 +735,17 @@ export default function CommunityPostsTab({
                               c.user_name?.[0] ?? '?'
                             )}
                           </div>
-                          <div className="flex-1 min-w-0 rounded-xl bg-white border border-slate-100 px-3 py-2">
+                          <div className="flex-1 min-w-0 rounded-xl bg-white border border-[#E6E3DB] px-3 py-2">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-extrabold text-slate-800">
+                              <span className="text-xs font-medium text-[#2C2621]">
                                 {c.user_name}
                               </span>
                               <RoleBadge role={c.author_role} />
-                              <span className="text-[10px] text-slate-300 font-bold">
+                              <span className="text-[10px] text-[#E6E3DB] font-bold">
                                 {formatRelative(c.created_at)}
                               </span>
                             </div>
-                            <p className="text-sm text-slate-700 mt-0.5 whitespace-pre-wrap">
+                            <p className="text-sm text-[#2C2621] mt-0.5 whitespace-pre-wrap">
                               {c.content}
                             </p>
                           </div>
@@ -764,7 +764,7 @@ export default function CommunityPostsTab({
                           }))
                         }
                         placeholder="Add a reply…"
-                        className="flex-1 h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#F472B6]/20"
+                        className="flex-1 h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#2C3B2E]/15"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -783,7 +783,7 @@ export default function CommunityPostsTab({
                           const text = (replyDrafts[post.id] ?? '').trim();
                           if (text) addComment.mutate({ postId: post.id, text });
                         }}
-                        className="h-11 min-h-[44px] w-11 min-w-[44px] rounded-xl bg-[#F472B6] text-white flex items-center justify-center disabled:opacity-40"
+                        className="h-11 min-h-[44px] w-11 min-w-[44px] rounded-xl bg-[#2C3B2E] text-[#F9F8F6] flex items-center justify-center disabled:opacity-40"
                       >
                         <Send size={15} />
                       </button>

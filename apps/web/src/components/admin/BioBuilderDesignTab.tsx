@@ -83,21 +83,21 @@ function ThemeImageUpload({
   return (
     <div className="space-y-2">
       <div>
-        <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400">
+        <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
           {label}
         </p>
-        <p className="text-[10px] text-zinc-500 mt-0.5">{hint}</p>
+        <p className="text-[10px] text-[#8A857D] mt-0.5">{hint}</p>
       </div>
 
       <div
-        className={`relative w-full ${previewClass} rounded-xl border border-dashed border-zinc-200 bg-zinc-50 overflow-hidden`}
+        className={`relative w-full ${previewClass} rounded-xl border border-dashed border-[#E6E3DB] bg-[#F0EFEA] overflow-hidden`}
       >
         {preview ? (
           <img src={preview} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-zinc-400">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[#8A857D]">
             <ImageIcon size={22} />
-            <span className="text-[10px] font-bold">{t('noImageYet')}</span>
+            <span className="text-[10px] font-medium">{t('noImageYet')}</span>
           </div>
         )}
         {loading && (
@@ -123,7 +123,7 @@ function ThemeImageUpload({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={loading}
-          className="h-11 min-h-[44px] px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold inline-flex items-center gap-1.5 disabled:opacity-60"
+          className="h-11 min-h-[44px] px-3.5 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-60"
         >
           <Upload size={14} />
           {preview ? t('replaceImage') : t('uploadFromDevice')}
@@ -137,16 +137,16 @@ function ThemeImageUpload({
               setError('');
             }}
             disabled={loading}
-            className="h-11 min-h-[44px] px-3.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 text-xs font-extrabold inline-flex items-center gap-1.5 disabled:opacity-60"
+            className="h-11 min-h-[44px] px-3.5 rounded-xl bg-[rgba(184,92,56,0.08)] hover:bg-[rgba(184,92,56,0.14)] text-[#B85C38] border border-[rgba(184,92,56,0.18)] text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-60"
           >
             <Trash2 size={13} /> {t('remove')}
           </button>
         )}
       </div>
       {error ? (
-        <p className="text-[10px] font-bold text-red-500">{error}</p>
+        <p className="text-[10px] font-medium text-[#B85C38]">{error}</p>
       ) : (
-        <p className="text-[10px] text-zinc-400 font-medium">{t('imageFormatHint')}</p>
+        <p className="text-[10px] text-[#8A857D] font-medium">{t('imageFormatHint')}</p>
       )}
     </div>
   );
@@ -164,10 +164,10 @@ function ThemeColorField({
   // <input type="color"> only accepts #rrggbb — map rgba / named values to a safe hex.
   const hexForPicker = /^#[0-9A-Fa-f]{6}$/.test(value.trim())
     ? value.trim()
-    : '#6366F1';
+    : '#2C3B2E';
   return (
     <label className="block space-y-1.5">
-      <span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400">
+      <span className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
         {label}
       </span>
       <div className="flex items-center gap-2">
@@ -175,13 +175,13 @@ function ThemeColorField({
           type="color"
           value={hexForPicker}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl border border-zinc-200 cursor-pointer bg-white p-1"
+          className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl border border-[#E6E3DB] cursor-pointer bg-white p-1"
         />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-xs font-bold font-mono text-[#1f2430]"
+          className="flex-1 h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-xs font-medium font-mono text-[#2C2621]"
         />
       </div>
     </label>
@@ -198,7 +198,7 @@ function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5 p-1 rounded-2xl bg-zinc-100/90 border border-zinc-200/80">
+    <div className="flex flex-wrap gap-1.5 p-1 rounded-xl bg-[#F0EFEA] border border-[#E6E3DB]">
       {options.map((opt) => {
         const active = value === opt.key;
         return (
@@ -206,10 +206,10 @@ function Segmented<T extends string>({
             key={opt.key}
             type="button"
             onClick={() => onChange(opt.key)}
-            className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+            className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-medium transition-all flex-shrink-0 ${
               active
-                ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/60'
-                : 'text-zinc-500 border border-transparent hover:text-zinc-800'
+                ? 'bg-white text-[#2C3B2E] border border-[#E6E3DB]'
+                : 'text-[#8A857D] border border-transparent hover:text-[#2C2621]'
             }`}
           >
             {opt.icon}
@@ -248,7 +248,7 @@ export default function BioBuilderDesignTab({
   };
 
   const cardClass =
-    'rounded-2xl border border-zinc-200 bg-white p-5 space-y-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] h-fit';
+    'rounded-xl border border-[#E6E3DB] bg-white p-5 space-y-4 shadow-none h-fit';
 
   return (
     <div className="space-y-4">
@@ -256,10 +256,10 @@ export default function BioBuilderDesignTab({
       {/* Exclusive themes */}
       <section className={cardClass}>
         <div>
-          <h3 className="text-sm font-black text-[#1f2430] flex items-center gap-2">
-            <Sparkles size={14} className="text-indigo-500" /> {t('exclusiveThemes')}
+          <h3 className="text-sm font-medium text-[#2C2621] flex items-center gap-2">
+            <Sparkles size={14} className="text-[#2C3B2E]" /> {t('exclusiveThemes')}
           </h3>
-          <p className="text-xs text-zinc-500">{t('exclusiveThemesSub')}</p>
+          <p className="text-xs text-[#8A857D]">{t('exclusiveThemesSub')}</p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           {LATER_THEME_PRESETS.map((preset) => {
@@ -298,8 +298,8 @@ export default function BioBuilderDesignTab({
                 }}
                 className={`relative overflow-hidden p-3 rounded-2xl border-2 text-left min-h-[44px] transition-all ${
                   active
-                    ? 'border-indigo-500 shadow-md shadow-indigo-500/10'
-                    : 'border-zinc-100 hover:border-zinc-200'
+                    ? 'border-[#2C3B2E]'
+                    : 'border-[#E6E3DB] hover:border-[#8A857D]/40'
                 }`}
               >
                 <div
@@ -325,7 +325,7 @@ export default function BioBuilderDesignTab({
                       style={{ background: preset.accent }}
                     />
                   </div>
-                  <p className="text-xs font-extrabold text-white drop-shadow-sm">
+                  <p className="text-xs font-medium text-white drop-shadow-sm">
                     {labelKey ? t(labelKey) : preset.label}
                   </p>
                   <p className="text-[10px] text-white/80">
@@ -333,7 +333,7 @@ export default function BioBuilderDesignTab({
                   </p>
                 </div>
                 {active && (
-                  <span className="absolute top-2 right-2 z-20 w-5 h-5 rounded-full bg-white text-indigo-600 flex items-center justify-center shadow">
+                  <span className="absolute top-2 right-2 z-20 w-5 h-5 rounded-full bg-white text-[#2C3B2E] flex items-center justify-center">
                     <Check size={11} strokeWidth={3} />
                   </span>
                 )}
@@ -345,12 +345,12 @@ export default function BioBuilderDesignTab({
 
       {/* Header & cover */}
       <section className={cardClass}>
-        <h3 className="text-sm font-black text-[#1f2430]">{t('headerCoverBanner')}</h3>
+        <h3 className="text-sm font-medium text-[#2C2621]">{t('headerCoverBanner')}</h3>
 
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 px-3 py-2.5">
           <div>
-            <p className="text-xs font-bold text-[#1f2430]">{t('hdCoverPhoto')}</p>
-            <p className="text-[10px] text-zinc-500">{t('optionalBannerAbove')}</p>
+            <p className="text-xs font-medium text-[#2C2621]">{t('hdCoverPhoto')}</p>
+            <p className="text-[10px] text-[#8A857D]">{t('optionalBannerAbove')}</p>
           </div>
           <button
             type="button"
@@ -358,7 +358,7 @@ export default function BioBuilderDesignTab({
             aria-checked={theme.coverEnabled}
             onClick={() => onPatch('coverEnabled', !theme.coverEnabled)}
             className={`relative h-7 w-12 rounded-full transition-colors ${
-              theme.coverEnabled ? 'bg-indigo-600' : 'bg-zinc-300'
+              theme.coverEnabled ? 'bg-[#2C3B2E]' : 'bg-[#E6E3DB]'
             }`}
           >
             <span
@@ -380,7 +380,7 @@ export default function BioBuilderDesignTab({
         )}
 
         <div>
-          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
             {t('avatarShape')}
           </p>
           <Segmented<BioAvatarShape>
@@ -393,10 +393,10 @@ export default function BioBuilderDesignTab({
           />
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 px-3 py-2.5">
           <div>
-            <p className="text-xs font-bold text-[#1f2430]">{t('verifiedBadge')}</p>
-            <p className="text-[10px] text-zinc-500">{t('verifiedBadgeHint')}</p>
+            <p className="text-xs font-medium text-[#2C2621]">{t('verifiedBadge')}</p>
+            <p className="text-[10px] text-[#8A857D]">{t('verifiedBadgeHint')}</p>
           </div>
           <button
             type="button"
@@ -404,7 +404,7 @@ export default function BioBuilderDesignTab({
             aria-checked={theme.verifiedBadge}
             onClick={() => onPatch('verifiedBadge', !theme.verifiedBadge)}
             className={`relative h-7 w-12 rounded-full transition-colors ${
-              theme.verifiedBadge ? 'bg-indigo-600' : 'bg-zinc-300'
+              theme.verifiedBadge ? 'bg-[#2C3B2E]' : 'bg-[#E6E3DB]'
             }`}
           >
             <span
@@ -416,7 +416,7 @@ export default function BioBuilderDesignTab({
         </div>
 
         <div>
-          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
             {t('socialIconsLayout')}
           </p>
           <Segmented<BioSocialLayout>
@@ -432,9 +432,9 @@ export default function BioBuilderDesignTab({
 
       {/* Canvas & background */}
       <section className={cardClass}>
-        <h3 className="text-sm font-black text-[#1f2430]">{t('canvasBackground')}</h3>
+        <h3 className="text-sm font-medium text-[#2C2621]">{t('canvasBackground')}</h3>
         <div>
-          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
             {t('backgroundType')}
           </p>
           <Segmented<'solid' | 'image' | 'liquid'>
@@ -460,12 +460,12 @@ export default function BioBuilderDesignTab({
         </div>
 
         {(theme.bgType === 'solid' || theme.bgType === 'mesh') && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 px-3 py-2.5">
             <div className="flex items-center gap-2">
-              <Waves size={14} className="text-indigo-500" />
+              <Waves size={14} className="text-[#2C3B2E]" />
               <div>
-                <p className="text-xs font-bold text-[#1f2430]">{t('meshGradient')}</p>
-                <p className="text-[10px] text-zinc-500">{t('meshGradientHint')}</p>
+                <p className="text-xs font-medium text-[#2C2621]">{t('meshGradient')}</p>
+                <p className="text-[10px] text-[#8A857D]">{t('meshGradientHint')}</p>
               </div>
             </div>
             <button
@@ -474,7 +474,7 @@ export default function BioBuilderDesignTab({
               aria-checked={theme.bgType === 'mesh'}
               onClick={() => onPatch('bgType', theme.bgType === 'mesh' ? 'solid' : 'mesh')}
               className={`relative h-7 w-12 rounded-full transition-colors ${
-                theme.bgType === 'mesh' ? 'bg-indigo-600' : 'bg-zinc-300'
+                theme.bgType === 'mesh' ? 'bg-[#2C3B2E]' : 'bg-[#E6E3DB]'
               }`}
             >
               <span
@@ -519,7 +519,7 @@ export default function BioBuilderDesignTab({
         </div>
 
         <div>
-          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
             {t('typographyLabel')}
           </p>
           <select
@@ -528,7 +528,7 @@ export default function BioBuilderDesignTab({
               ensureFont(e.target.value);
               onPatch('fontId', e.target.value);
             }}
-            className="w-full h-11 min-h-[44px] rounded-xl border border-zinc-200 bg-white px-3 text-sm font-bold text-[#1f2430]"
+            className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-white px-3 text-sm font-medium text-[#2C2621]"
           >
             {LATER_BIO_FONTS.map((f) => (
               <option key={f.id} value={f.id} style={{ fontFamily: f.family }}>
@@ -548,9 +548,9 @@ export default function BioBuilderDesignTab({
 
       {/* Block designs */}
       <section className={cardClass}>
-        <h3 className="text-sm font-black text-[#1f2430]">{t('exclusiveBlockDesigns')}</h3>
+        <h3 className="text-sm font-medium text-[#2C2621]">{t('exclusiveBlockDesigns')}</h3>
         <div>
-          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
             {t('blockVariant')}
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -574,12 +574,12 @@ export default function BioBuilderDesignTab({
                 }}
                 className={`p-3 rounded-xl border text-left min-h-[44px] ${
                   theme.blockVariant === v.key
-                    ? 'border-indigo-500 bg-indigo-50/50'
-                    : 'border-zinc-100 bg-zinc-50 hover:border-zinc-200'
+                    ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.06)]'
+                    : 'border-[#E6E3DB] bg-[#F0EFEA] hover:border-[#8A857D]/40'
                 }`}
               >
-                <p className="text-xs font-extrabold text-[#1f2430]">{v.label}</p>
-                <p className="text-[10px] text-zinc-500">{v.hint}</p>
+                <p className="text-xs font-medium text-[#2C2621]">{v.label}</p>
+                <p className="text-[10px] text-[#8A857D]">{v.hint}</p>
               </button>
             ))}
           </div>
@@ -599,7 +599,7 @@ export default function BioBuilderDesignTab({
         </div>
 
         <div>
-          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
             {t('cornerCurvature')}
           </p>
           <Segmented<BioButtonRadius>
@@ -614,7 +614,7 @@ export default function BioBuilderDesignTab({
         </div>
 
         <div>
-          <p className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-zinc-400 mb-2">
+          <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
             {t('hoverEffect')}
           </p>
           <Segmented<BioHoverEffect>
@@ -631,10 +631,10 @@ export default function BioBuilderDesignTab({
       </section>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="rounded-xl border border-[#E6E3DB] bg-white p-4 shadow-none">
         <Button
           type="button"
-          className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black h-11 min-h-[44px] shadow-md shadow-indigo-600/20"
+          className="w-full rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] font-medium h-11 min-h-[44px] shadow-none"
           onClick={onApply}
         >
           {saved ? t('themeSaved') : t('applyTheme')}

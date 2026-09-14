@@ -37,29 +37,29 @@ export default function DeleteAccountModal({
       <button
         type="button"
         aria-label={t('closeAria', locale)}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[#2C3B2E]/40 backdrop-blur-[2px]"
         onClick={onClose}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-account-title"
-        className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-xl p-5 sm:p-6"
+        className="relative w-full max-w-md rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] shadow-xl p-5 sm:p-6"
       >
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 h-10 w-10 min-h-[40px] min-w-[40px] rounded-xl inline-flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+          className="absolute right-3 top-3 h-10 w-10 min-h-[40px] min-w-[40px] rounded-xl inline-flex items-center justify-center text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#8A857D]"
         >
           <X size={16} />
         </button>
         <h2
           id="delete-account-title"
-          className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight pr-10"
+          className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight pr-10"
         >
           {t('deleteAccountTitle', locale)}
         </h2>
-        <p className="text-sm text-slate-500 font-medium mt-2 leading-relaxed">
+        <p className="text-sm text-[#8A857D] font-medium mt-2 leading-relaxed">
           {t('deleteAccountBody', locale)}
         </p>
         <input
@@ -67,14 +67,14 @@ export default function DeleteAccountModal({
           onChange={(e) => setConfirmText(e.target.value)}
           placeholder={t('deleteAccountConfirmPlaceholder', locale)}
           autoComplete="off"
-          className="mt-4 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 focus:outline-none focus:border-rose-300"
+          className="mt-4 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#2C2621] focus:outline-none focus:border-rose-300"
         />
         <div className="mt-4 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-sm font-bold text-[#8A857D] hover:bg-[#F0EFEA] disabled:opacity-50"
           >
             {t('cancel', locale)}
           </button>

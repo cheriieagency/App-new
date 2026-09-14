@@ -1,21 +1,21 @@
 /**
- * Admin Home sticky-note background color presets.
+ * Admin Home sticky-note color presets — editorial pastels.
  */
 
 export const STICKY_COLOR_IDS = [
-  'lilac',
-  'pink',
-  'mint',
-  'sky',
-  'butter',
-  'peach',
-  'rose',
-  'slate',
+  'sand',
+  'sage',
+  'cream',
+  'clay',
+  'mist',
+  'blush',
+  'olive',
+  'stone',
 ] as const;
 
 export type StickyColorId = (typeof STICKY_COLOR_IDS)[number];
 
-export const DEFAULT_STICKY_COLOR: StickyColorId = 'lilac';
+export const DEFAULT_STICKY_COLOR: StickyColorId = 'cream';
 
 export type StickyColorTheme = {
   id: StickyColorId;
@@ -32,70 +32,82 @@ export type StickyColorTheme = {
 };
 
 export const STICKY_COLOR_THEMES: Record<StickyColorId, StickyColorTheme> = {
-  lilac: {
-    id: 'lilac',
-    bg: '#F8F4FF',
-    border: '#EDE4FF',
-    rowHover: 'rgba(239, 232, 255, 0.7)',
-    checkBorder: '#D4C4F7',
-    chipBorder: '#EDE4FF',
+  sand: {
+    id: 'sand',
+    bg: '#F5F2EB',
+    border: '#E6E3DB',
+    rowHover: 'rgba(230, 227, 219, 0.55)',
+    checkBorder: '#D5D0C6',
+    chipBorder: '#E6E3DB',
   },
-  pink: {
-    id: 'pink',
-    bg: '#FDF2F8',
-    border: '#FBCFE8',
-    rowHover: 'rgba(252, 231, 243, 0.8)',
-    checkBorder: '#F9A8D4',
-    chipBorder: '#FBCFE8',
+  sage: {
+    id: 'sage',
+    bg: '#EEF1EC',
+    border: '#D5DDD4',
+    rowHover: 'rgba(213, 221, 212, 0.55)',
+    checkBorder: '#B7C4B5',
+    chipBorder: '#D5DDD4',
   },
-  mint: {
-    id: 'mint',
-    bg: '#ECFDF5',
-    border: '#A7F3D0',
-    rowHover: 'rgba(209, 250, 229, 0.7)',
-    checkBorder: '#6EE7B7',
-    chipBorder: '#A7F3D0',
+  cream: {
+    id: 'cream',
+    bg: '#FAF7F0',
+    border: '#E6E3DB',
+    rowHover: 'rgba(230, 227, 219, 0.6)',
+    checkBorder: '#D5D0C6',
+    chipBorder: '#E6E3DB',
   },
-  sky: {
-    id: 'sky',
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
-    rowHover: 'rgba(219, 234, 254, 0.8)',
-    checkBorder: '#93C5FD',
-    chipBorder: '#BFDBFE',
+  clay: {
+    id: 'clay',
+    bg: '#F7EEE8',
+    border: '#E8D5C8',
+    rowHover: 'rgba(232, 213, 200, 0.55)',
+    checkBorder: '#D4B5A0',
+    chipBorder: '#E8D5C8',
   },
-  butter: {
-    id: 'butter',
-    bg: '#FFFBEB',
-    border: '#FDE68A',
-    rowHover: 'rgba(254, 243, 199, 0.8)',
-    checkBorder: '#FCD34D',
-    chipBorder: '#FDE68A',
+  mist: {
+    id: 'mist',
+    bg: '#F3F2EF',
+    border: '#E6E3DB',
+    rowHover: 'rgba(240, 239, 234, 0.8)',
+    checkBorder: '#D5D0C6',
+    chipBorder: '#E6E3DB',
   },
-  peach: {
-    id: 'peach',
-    bg: '#FFF7ED',
-    border: '#FED7AA',
-    rowHover: 'rgba(255, 237, 213, 0.85)',
-    checkBorder: '#FDBA74',
-    chipBorder: '#FED7AA',
+  blush: {
+    id: 'blush',
+    bg: '#F8F1EE',
+    border: '#E8D6CF',
+    rowHover: 'rgba(232, 214, 207, 0.55)',
+    checkBorder: '#D4B8AE',
+    chipBorder: '#E8D6CF',
   },
-  rose: {
-    id: 'rose',
-    bg: '#FFF1F2',
-    border: '#FECDD3',
-    rowHover: 'rgba(255, 228, 230, 0.85)',
-    checkBorder: '#FDA4AF',
-    chipBorder: '#FECDD3',
+  olive: {
+    id: 'olive',
+    bg: '#F1F3EE',
+    border: '#D8DED3',
+    rowHover: 'rgba(216, 222, 211, 0.55)',
+    checkBorder: '#B8C4B0',
+    chipBorder: '#D8DED3',
   },
-  slate: {
-    id: 'slate',
-    bg: '#F8FAFC',
-    border: '#E2E8F0',
-    rowHover: 'rgba(241, 245, 249, 0.9)',
-    checkBorder: '#CBD5E1',
-    chipBorder: '#E2E8F0',
+  stone: {
+    id: 'stone',
+    bg: '#F4F3F0',
+    border: '#E6E3DB',
+    rowHover: 'rgba(240, 239, 234, 0.9)',
+    checkBorder: '#D5D0C6',
+    chipBorder: '#E6E3DB',
   },
+};
+
+/** Legacy ids mapped into the editorial palette. */
+const LEGACY_STICKY_MAP: Record<string, StickyColorId> = {
+  lilac: 'mist',
+  pink: 'blush',
+  mint: 'sage',
+  sky: 'mist',
+  butter: 'cream',
+  peach: 'clay',
+  rose: 'blush',
+  slate: 'stone',
 };
 
 export function isStickyColorId(value: string): value is StickyColorId {
@@ -107,7 +119,9 @@ export function normalizeStickyColor(
   fallback: StickyColorId = DEFAULT_STICKY_COLOR
 ): StickyColorId {
   const key = typeof raw === 'string' ? raw.trim() : '';
-  return isStickyColorId(key) ? key : fallback;
+  if (isStickyColorId(key)) return key;
+  if (key in LEGACY_STICKY_MAP) return LEGACY_STICKY_MAP[key];
+  return fallback;
 }
 
 export function stickyTheme(

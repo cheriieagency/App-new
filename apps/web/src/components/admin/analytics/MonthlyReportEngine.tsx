@@ -421,14 +421,14 @@ export default function MonthlyReportEngine() {
       <div className={`${adminCardClass} p-4 sm:p-5`}>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               Monthly reports
             </p>
-            <h2 className="font-clikd-wordmark font-extrabold text-xl text-slate-900 tracking-tight mt-1">
+            <h2 className="font-playfair font-medium text-xl text-[#2C2621] tracking-tight mt-1">
               Performance snapshots for clients
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Freeze metrics for <span className="font-semibold text-slate-700">{activeWorkspace.name}</span> only —
+            <p className="text-sm text-[#8A857D] mt-1">
+              Freeze metrics for <span className="font-medium text-[#2C2621]">{activeWorkspace.name}</span> only —
               reports never cross users or workspaces. Share a guest link or PDF, and email clients on a day you choose each month.
             </p>
           </div>
@@ -441,10 +441,10 @@ export default function MonthlyReportEngine() {
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`h-11 min-h-[44px] px-3 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap transition-colors ${
+                className={`h-11 min-h-[44px] px-3 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                   active
-                    ? 'bg-[#2B2568] text-white'
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    ? 'bg-[#2C3B2E] text-white'
+                    : 'bg-[#F0EFEA] text-[#8A857D] hover:bg-[#F0EFEA] border border-[#E6E3DB]'
                 }`}
               >
                 <Icon size={13} /> {label}
@@ -456,18 +456,18 @@ export default function MonthlyReportEngine() {
 
       {tab === 'directory' && (
         <div className={`${adminCardClass} overflow-hidden`}>
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-sm font-extrabold text-slate-900">Saved reports</h3>
+          <div className="px-5 py-4 border-b border-[#E6E3DB] flex items-center justify-between">
+            <h3 className="text-sm font-medium text-[#2C2621]">Saved reports</h3>
             <button
               type="button"
               onClick={() => setTab('builder')}
-              className="h-10 min-h-[40px] px-3 rounded-xl bg-clikd-pink text-white text-xs font-extrabold"
+              className="h-10 min-h-[40px] px-3 rounded-xl bg-clikd-pink text-white text-xs font-medium"
             >
               New report
             </button>
           </div>
           {reportsQuery.isLoading ? (
-            <div className="py-12 flex justify-center text-slate-400 gap-2 text-sm">
+            <div className="py-12 flex justify-center text-[#8A857D] gap-2 text-sm">
               <Loader2 className="animate-spin" size={16} /> Loading…
             </div>
           ) : reportsQuery.isError ? (
@@ -477,7 +477,7 @@ export default function MonthlyReportEngine() {
                 : 'Failed to load reports'}
             </p>
           ) : reports.length === 0 ? (
-            <p className="py-12 text-center text-sm text-slate-400">
+            <p className="py-12 text-center text-sm text-[#8A857D]">
               No frozen reports yet — build one or enable automation.
             </p>
           ) : (
@@ -491,8 +491,8 @@ export default function MonthlyReportEngine() {
                   className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">{r.title}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-sm font-medium text-[#2C2621] truncate">{r.title}</p>
+                    <p className="text-xs text-[#8A857D] mt-0.5">
                       {r.date_range_label || `${r.period_start} → ${r.period_end}`}
                       {r.is_automated ? ' · Automated' : ' · Manual'}
                       {' · '}
@@ -508,14 +508,14 @@ export default function MonthlyReportEngine() {
                         );
                         toast.success(t('toastShareLinkCopied', locale));
                       }}
-                      className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
+                      className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <Copy size={13} /> Copy link
                     </button>
                     <button
                       type="button"
                       onClick={() => openPdf(r.public_share_token)}
-                      className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
+                      className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <FileDown size={13} /> PDF
                     </button>
@@ -523,7 +523,7 @@ export default function MonthlyReportEngine() {
                       href={shareUrl(r.public_share_token)}
                       target="_blank"
                       rel="noreferrer"
-                      className="h-10 min-h-[40px] px-3 rounded-xl bg-[#2B2568] text-white text-xs font-bold inline-flex items-center gap-1.5"
+                      className="h-10 min-h-[40px] px-3 rounded-xl bg-[#2C3B2E] text-white text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <ExternalLink size={13} /> Open
                     </a>
@@ -534,7 +534,7 @@ export default function MonthlyReportEngine() {
                         setPreviewToken(r.public_share_token);
                         setTab('preview');
                       }}
-                      className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold"
+                      className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium"
                     >
                       Preview
                     </button>
@@ -550,7 +550,7 @@ export default function MonthlyReportEngine() {
                           deleteReport.mutate(r.id);
                         }
                       }}
-                      className="h-10 min-h-[40px] px-3 rounded-xl border border-rose-100 text-rose-600 text-xs font-bold inline-flex items-center gap-1.5"
+                      className="h-10 min-h-[40px] px-3 rounded-xl border border-rose-100 text-rose-600 text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <Trash2 size={13} /> Delete
                     </button>
@@ -574,10 +574,10 @@ export default function MonthlyReportEngine() {
           ) : null}
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-extrabold text-slate-900">
+              <h3 className="text-sm font-medium text-[#2C2621]">
                 Monthly email automation
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[#8A857D] mt-0.5">
                 Scoped to this workspace only. On your chosen day each month (08:00 UTC),
                 we freeze the previous calendar month, create a guest link, and email it
                 to the addresses below. Requires CRON_SECRET + RESEND_API_KEY in production.
@@ -589,11 +589,11 @@ export default function MonthlyReportEngine() {
               aria-checked={autoEnabled}
               onClick={() => setAutoEnabled((v) => !v)}
               className={`relative h-7 w-12 rounded-full transition-colors flex-shrink-0 ${
-                autoEnabled ? 'bg-emerald-500' : 'bg-slate-200'
+                autoEnabled ? 'bg-[rgba(44,59,46,0.08)]' : 'bg-[#E6E3DB]'
               }`}
             >
               <span
-                className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                className={`absolute top-0.5 h-6 w-6 rounded-full bg-[#FFFFFF] shadow transition-transform ${
                   autoEnabled ? 'translate-x-[22px]' : 'translate-x-0.5'
                 }`}
               />
@@ -601,14 +601,14 @@ export default function MonthlyReportEngine() {
           </div>
 
           <label className="block">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
               Send day of month
             </span>
             <div className="mt-1.5 flex items-center gap-3">
               <select
                 value={autoSendDay}
                 onChange={(e) => setAutoSendDay(Number(e.target.value))}
-                className="h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-semibold bg-white"
+                className="h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-medium bg-[#FFFFFF]"
               >
                 {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                   <option key={d} value={d}>
@@ -617,29 +617,29 @@ export default function MonthlyReportEngine() {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#8A857D]">
                 Emails go out on day {autoSendDay} · previous month snapshot
               </p>
             </div>
           </label>
 
           <label className="block">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
               Recipient emails
             </span>
             <input
               value={autoEmails}
               onChange={(e) => setAutoEmails(e.target.value)}
               placeholder="client@brand.com, you@clikd.app"
-              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
             />
-            <p className="text-[10px] text-slate-400 mt-1">
+            <p className="text-[10px] text-[#8A857D] mt-1">
               Comma-separated. Each email gets the guest link (open / print as PDF).
             </p>
           </label>
 
           <div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
               Platforms
             </span>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -650,10 +650,10 @@ export default function MonthlyReportEngine() {
                   onClick={() =>
                     togglePlatform(autoPlatforms, setAutoPlatforms, p)
                   }
-                  className={`h-10 min-h-[40px] px-3 rounded-xl text-xs font-bold capitalize ${
+                  className={`h-10 min-h-[40px] px-3 rounded-xl text-xs font-medium capitalize ${
                     autoPlatforms.includes(p)
-                      ? 'bg-[#2B2568] text-white'
-                      : 'bg-slate-50 border border-slate-200 text-slate-600'
+                      ? 'bg-[#2C3B2E] text-white'
+                      : 'bg-[#F0EFEA] border border-[#E6E3DB] text-[#8A857D]'
                   }`}
                 >
                   {p}
@@ -663,28 +663,28 @@ export default function MonthlyReportEngine() {
           </div>
 
           <label className="block">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
               Subject template
             </span>
             <input
               value={autoSubject}
               onChange={(e) => setAutoSubject(e.target.value)}
-              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
             />
-            <p className="text-[10px] text-slate-400 mt-1">
+            <p className="text-[10px] text-[#8A857D] mt-1">
               Tokens: {'{{month}}'} {'{{workspace}}'}
             </p>
           </label>
 
           <label className="block">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
               Custom email note
             </span>
             <textarea
               value={autoNote}
               onChange={(e) => setAutoNote(e.target.value)}
               rows={3}
-              className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm resize-none"
+              className="mt-1.5 w-full rounded-xl border border-[#E6E3DB] px-3 py-2 text-sm resize-none"
               placeholder="Optional note for your client…"
             />
           </label>
@@ -694,9 +694,9 @@ export default function MonthlyReportEngine() {
               type="checkbox"
               checked={autoHideAi}
               onChange={(e) => setAutoHideAi(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300"
+              className="h-4 w-4 rounded border-[#E6E3DB]"
             />
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-[#2C2621]">
               Hide AI insights on public guest links
             </span>
           </label>
@@ -706,7 +706,7 @@ export default function MonthlyReportEngine() {
               type="button"
               disabled={saveAutomation.isPending}
               onClick={() => saveAutomation.mutate()}
-              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold inline-flex items-center gap-2 disabled:opacity-60"
+              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-white text-xs font-medium inline-flex items-center gap-2 disabled:opacity-60"
             >
               {saveAutomation.isPending ? (
                 <Loader2 className="animate-spin" size={14} />
@@ -717,7 +717,7 @@ export default function MonthlyReportEngine() {
               type="button"
               disabled={runAutomation.isPending}
               onClick={() => runAutomation.mutate()}
-              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs font-extrabold inline-flex items-center gap-2 disabled:opacity-60"
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] text-xs font-medium inline-flex items-center gap-2 disabled:opacity-60"
             >
               {runAutomation.isPending ? (
                 <Loader2 className="animate-spin" size={14} />
@@ -733,51 +733,51 @@ export default function MonthlyReportEngine() {
       {tab === 'builder' && (
         <div className={`${adminCardClass} p-5 sm:p-6 space-y-4`}>
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-[#F472B6]" />
-            <h3 className="text-sm font-extrabold text-slate-900">
+            <Sparkles size={16} className="text-[#2C3B2E]" />
+            <h3 className="text-sm font-medium text-[#2C2621]">
               Report builder & AI generator
             </h3>
           </div>
 
           <label className="block">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
               Title
             </span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={`${activeWorkspace.name} monthly report`}
-              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
             />
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
                 Start date
               </span>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
               />
             </label>
             <label className="block">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+              <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
                 End date
               </span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
               />
             </label>
           </div>
 
           <div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
               Platforms
             </span>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -786,10 +786,10 @@ export default function MonthlyReportEngine() {
                   key={p}
                   type="button"
                   onClick={() => togglePlatform(platforms, setPlatforms, p)}
-                  className={`h-10 min-h-[40px] px-3 rounded-xl text-xs font-bold capitalize ${
+                  className={`h-10 min-h-[40px] px-3 rounded-xl text-xs font-medium capitalize ${
                     platforms.includes(p)
-                      ? 'bg-[#2B2568] text-white'
-                      : 'bg-slate-50 border border-slate-200 text-slate-600'
+                      ? 'bg-[#2C3B2E] text-white'
+                      : 'bg-[#F0EFEA] border border-[#E6E3DB] text-[#8A857D]'
                   }`}
                 >
                   {p}
@@ -805,7 +805,7 @@ export default function MonthlyReportEngine() {
               onChange={(e) => setIncludeAi(e.target.checked)}
               className="h-4 w-4 rounded"
             />
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-[#2C2621]">
               Include AI analysis (gpt-4o-mini)
             </span>
           </label>
@@ -816,7 +816,7 @@ export default function MonthlyReportEngine() {
               onChange={(e) => setHideAiPublic(e.target.checked)}
               className="h-4 w-4 rounded"
             />
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-[#2C2621]">
               Hide AI insights on public guest link
             </span>
           </label>
@@ -825,7 +825,7 @@ export default function MonthlyReportEngine() {
             type="button"
             disabled={buildMutation.isPending || platforms.length === 0}
             onClick={() => buildMutation.mutate()}
-            className="h-11 min-h-[44px] px-4 rounded-xl bg-clikd-pink text-white text-xs font-extrabold inline-flex items-center gap-2 disabled:opacity-50"
+            className="h-11 min-h-[44px] px-4 rounded-xl bg-clikd-pink text-white text-xs font-medium inline-flex items-center gap-2 disabled:opacity-50"
           >
             {buildMutation.isPending ? (
               <Loader2 className="animate-spin" size={14} />
@@ -840,13 +840,13 @@ export default function MonthlyReportEngine() {
       {tab === 'preview' && (
         <div className="space-y-4">
           {!previewReport ? (
-            <div className={`${adminCardClass} py-12 text-center text-sm text-slate-400`}>
+            <div className={`${adminCardClass} py-12 text-center text-sm text-[#8A857D]`}>
               Build or select a report to preview the guest view.
             </div>
           ) : (
             <>
               <div className={`${adminCardClass} p-4 flex flex-wrap items-center gap-2 justify-between`}>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs text-[#8A857D] font-medium">
                   Guest link preview (same data as public page)
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -858,14 +858,14 @@ export default function MonthlyReportEngine() {
                       );
                       toast.success(t('toastShareLinkCopied', locale));
                     }}
-                    className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
+                    className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
                   >
                     <Copy size={13} /> Copy link
                   </button>
                   <button
                     type="button"
                     onClick={() => openPdf(previewReport.public_share_token)}
-                    className="h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 text-xs font-bold inline-flex items-center gap-1.5"
+                    className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
                   >
                     <FileDown size={13} /> Save as PDF
                   </button>
@@ -873,7 +873,7 @@ export default function MonthlyReportEngine() {
                     href={shareUrl(previewReport.public_share_token)}
                     target="_blank"
                     rel="noreferrer"
-                    className="h-10 min-h-[40px] px-3 rounded-xl bg-slate-900 text-white text-xs font-bold inline-flex items-center gap-1.5"
+                    className="h-10 min-h-[40px] px-3 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium inline-flex items-center gap-1.5"
                   >
                     <ExternalLink size={13} /> Open full guest page
                   </a>
@@ -905,16 +905,16 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
   const showAi = !report.hide_ai_on_public_link && report.ai_insights;
 
   return (
-    <div className="rounded-2xl bg-slate-950 text-slate-100 p-5 sm:p-7 space-y-6 border border-slate-800">
+    <div className="rounded-xl bg-[#2C2621] text-[#F9F8F6] p-5 sm:p-7 space-y-6 border border-[#3A342E]">
       <div>
-        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.16em] text-slate-500">
+        <p className="text-[10px] font-mono font-medium uppercase tracking-[0.16em] text-[#8A857D]">
           Verified Static Snapshot · Powered by clikd.app
         </p>
-        <h3 className="font-clikd-wordmark font-extrabold text-2xl mt-2 tracking-tight">
+        <h3 className="font-playfair font-medium text-2xl mt-2 tracking-tight">
           {report.workspace_name || 'Workspace'}
         </h3>
-        <p className="text-sm text-slate-400 mt-1">{report.title}</p>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-sm text-[#8A857D] mt-1">{report.title}</p>
+        <p className="text-xs text-[#8A857D] mt-0.5">
           {report.date_range_label ||
             `${report.period_start} → ${report.period_end}`}
         </p>
@@ -929,12 +929,12 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
         ].map((k) => (
           <div
             key={k.label}
-            className="rounded-xl bg-slate-900 border border-slate-800 p-4"
+            className="rounded-xl bg-[#2C2621] border border-[#3A342E] p-4"
           >
-            <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-[#8A857D]">
               {k.label}
             </p>
-            <p className="text-xl font-extrabold mt-2 tabular-nums">{k.value}</p>
+            <p className="text-xl font-medium mt-2 tabular-nums">{k.value}</p>
           </div>
         ))}
       </div>
@@ -948,12 +948,12 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
           ].map((k) => (
             <div
               key={k.label}
-              className="rounded-xl bg-slate-900/80 border border-slate-800 px-3 py-2.5 text-center"
+              className="rounded-xl bg-[#2C2621]/90 border border-[#3A342E] px-3 py-2.5 text-center"
             >
-              <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-[#8A857D]">
                 {k.label}
               </p>
-              <p className="text-lg font-extrabold mt-1 tabular-nums">{k.value}</p>
+              <p className="text-lg font-medium mt-1 tabular-nums">{k.value}</p>
             </div>
           ))}
         </div>
@@ -961,24 +961,24 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
 
       {(m.followersByPlatform || []).length > 0 && (
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D] mb-2">
             Audience snapshot
           </p>
           <ul className="space-y-2">
             {(m.followersByPlatform || []).map((f) => (
               <li
                 key={f.platform}
-                className="flex justify-between text-sm rounded-xl bg-slate-900/80 border border-slate-800 px-3 py-2.5"
+                className="flex justify-between text-sm rounded-xl bg-[#2C2621]/90 border border-[#3A342E] px-3 py-2.5"
               >
-                <span className="capitalize font-semibold">
+                <span className="capitalize font-medium">
                   {f.platform}
                   {f.handle ? (
-                    <span className="text-slate-500 font-normal ml-1">
+                    <span className="text-[#8A857D] font-normal ml-1">
                       @{f.handle.replace(/^@/, '')}
                     </span>
                   ) : null}
                 </span>
-                <span className="text-slate-400 tabular-nums">
+                <span className="text-[#8A857D] tabular-nums">
                   {f.count.toLocaleString()} followers
                 </span>
               </li>
@@ -989,17 +989,17 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
 
       {(m.platformBreakdown || []).length > 0 && (
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D] mb-2">
             Platform breakdown
           </p>
           <ul className="space-y-2">
             {(m.platformBreakdown || []).map((p) => (
               <li
                 key={p.platform}
-                className="flex justify-between text-sm rounded-xl bg-slate-900/80 border border-slate-800 px-3 py-2.5"
+                className="flex justify-between text-sm rounded-xl bg-[#2C2621]/90 border border-[#3A342E] px-3 py-2.5"
               >
-                <span className="capitalize font-semibold">{p.platform}</span>
-                <span className="text-slate-400 tabular-nums">
+                <span className="capitalize font-medium">{p.platform}</span>
+                <span className="text-[#8A857D] tabular-nums">
                   {p.posts} posts · {p.views.toLocaleString()} views · {p.engagementRate}% ER
                 </span>
               </li>
@@ -1010,28 +1010,28 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
 
       {(m.topPosts || []).length > 0 && (
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+          <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D] mb-2">
             Top posts
           </p>
           <ul className="space-y-2">
             {(m.topPosts || []).slice(0, 8).map((p) => (
               <li
                 key={p.id}
-                className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex gap-3"
+                className="rounded-xl bg-[#2C2621] border border-[#3A342E] overflow-hidden flex gap-3"
               >
                 {p.mediaUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={p.mediaUrl}
                     alt=""
-                    className="w-16 h-16 object-cover flex-shrink-0 bg-slate-800"
+                    className="w-16 h-16 object-cover flex-shrink-0 bg-[#3A342E]"
                   />
                 ) : (
-                  <div className="w-16 h-16 bg-slate-800 flex-shrink-0" />
+                  <div className="w-16 h-16 bg-[#3A342E] flex-shrink-0" />
                 )}
                 <div className="py-2.5 pr-3 min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate">{p.title}</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5 capitalize">
+                  <p className="text-sm font-medium truncate">{p.title}</p>
+                  <p className="text-[11px] text-[#8A857D] mt-0.5 capitalize">
                     {p.platform} · {p.impressions.toLocaleString()} views · {p.engagementRate}% ER
                     {p.likes != null ? ` · ${p.likes.toLocaleString()} likes` : ''}
                   </p>
@@ -1044,18 +1044,18 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
 
       {showAi && report.ai_insights ? (
         <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-4 space-y-3">
-          <p className="text-xs font-bold text-[#F472B6] uppercase tracking-widest">
+          <p className="text-xs font-medium text-[#2C3B2E] uppercase tracking-widest">
             Strategy notes
           </p>
-          <p className="text-sm text-slate-200 leading-relaxed">
+          <p className="text-sm text-[#E6E3DB] leading-relaxed">
             {report.ai_insights.executiveSummary}
           </p>
           {report.ai_insights.wins?.length ? (
             <div>
-              <p className="text-[11px] font-bold text-emerald-400 uppercase mb-1">
+              <p className="text-[11px] font-medium text-emerald-400 uppercase mb-1">
                 Wins
               </p>
-              <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
+              <ul className="list-disc list-inside text-sm text-[#8A857D] space-y-1">
                 {report.ai_insights.wins.map((w) => (
                   <li key={w}>{w}</li>
                 ))}
@@ -1064,10 +1064,10 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
           ) : null}
           {report.ai_insights.improvements?.length ? (
             <div>
-              <p className="text-[11px] font-bold text-amber-400 uppercase mb-1">
+              <p className="text-[11px] font-medium text-amber-400 uppercase mb-1">
                 Areas to improve
               </p>
-              <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
+              <ul className="list-disc list-inside text-sm text-[#8A857D] space-y-1">
                 {report.ai_insights.improvements.map((w) => (
                   <li key={w}>{w}</li>
                 ))}
@@ -1076,10 +1076,10 @@ function GuestReportPreview({ report }: { report: ReportRow }) {
           ) : null}
           {report.ai_insights.recommendations?.length ? (
             <div>
-              <p className="text-[11px] font-bold text-sky-400 uppercase mb-1">
+              <p className="text-[11px] font-medium text-sky-400 uppercase mb-1">
                 Recommendations
               </p>
-              <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
+              <ul className="list-disc list-inside text-sm text-[#8A857D] space-y-1">
                 {report.ai_insights.recommendations.map((w) => (
                   <li key={w}>{w}</li>
                 ))}

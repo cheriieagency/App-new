@@ -58,7 +58,7 @@ export default function IntegritetContent() {
         to your account.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         A. Account, Profile &amp; Custom Domain Information
       </h3>
       <p>
@@ -74,7 +74,7 @@ export default function IntegritetContent() {
         identity verification), VAT registration number, and billing address.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         B. AI Copilot &amp; Prompt Inputs (OpenAI API)
       </h3>
       <p>
@@ -87,7 +87,7 @@ export default function IntegritetContent() {
         content and are not used by us or OpenAI to train public AI models.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         C. Payment &amp; Transaction Data
       </h3>
       <p>
@@ -101,7 +101,7 @@ export default function IntegritetContent() {
         banking details on our servers.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         D. Social Media &amp; Direct Messaging Data (APIs)
       </h3>
       <p>
@@ -132,7 +132,7 @@ export default function IntegritetContent() {
         in accordance with each platform&apos;s respective terms:
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         A. OpenAI API (AI Copilot Suite)
       </h3>
       <p>
@@ -140,7 +140,7 @@ export default function IntegritetContent() {
         assistants. Data sent to OpenAI is governed by OpenAI&apos;s Business Privacy Policy.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         B. Pinterest API
       </h3>
       <p>
@@ -149,7 +149,7 @@ export default function IntegritetContent() {
         Privacy Policy.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         C. TikTok API (Display &amp; Content Posting API)
       </h3>
       <p>
@@ -157,7 +157,7 @@ export default function IntegritetContent() {
         accordance with the TikTok Privacy Policy.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         D. Meta (Instagram Graph API, Facebook &amp; Messenger API)
       </h3>
       <p>
@@ -169,7 +169,7 @@ export default function IntegritetContent() {
         or contact <a href="mailto:hello@clikd.app">hello@clikd.app</a>.
       </p>
 
-      <h3 className="font-outfit font-extrabold text-base text-slate-900 tracking-tight mt-4 mb-2">
+      <h3 className="font-playfair font-medium text-base text-[#2C2621] tracking-tight mt-4 mb-2">
         E. YouTube API Services (Google)
       </h3>
       <p>
@@ -198,23 +198,23 @@ export default function IntegritetContent() {
       </p>
 
       <LegalH2 section="privacyS4" />
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+      <div className="overflow-x-auto rounded-xl border border-[#E6E3DB]">
         <table className="w-full min-w-[560px] text-left text-sm border-collapse">
           <thead>
-            <tr className="bg-slate-50 text-slate-900">
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+            <tr className="bg-[#F0EFEA] text-[#2C2621]">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Purpose of Processing
               </th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Categories of Personal Data
               </th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Legal Basis (GDPR)
               </th>
             </tr>
           </thead>
-          <tbody className="text-slate-700">
-            <tr className="border-b border-slate-100 align-top">
+          <tbody className="text-[#2C2621]/85">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">
                 Provide &amp; Operate the Service (Planner, Bio Store, Community, Custom Domains)
               </td>
@@ -223,24 +223,24 @@ export default function IntegritetContent() {
               </td>
               <td className="px-3 py-2.5">Performance of a Contract (Art. 6.1 b)</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">AI Content Generation &amp; Assistance</td>
               <td className="px-3 py-2.5">Text Prompts, Topic Inputs, Tone Preferences</td>
               <td className="px-3 py-2.5">Performance of a Contract (Initiated by User)</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Process Payments, Payouts &amp; Taxes</td>
               <td className="px-3 py-2.5">Payment &amp; Transaction Data, Billing Address</td>
               <td className="px-3 py-2.5">
                 Performance of a Contract &amp; Legal Obligation (Accounting Laws)
               </td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Social Media &amp; Pinterest Publishing</td>
               <td className="px-3 py-2.5">API Tokens, Scheduled Pins/Posts, Captions</td>
               <td className="px-3 py-2.5">Performance of a Contract (Initiated by User)</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Social Inbox &amp; Automated Direct Messaging</td>
               <td className="px-3 py-2.5">Message Sender Handles, Message Content</td>
               <td className="px-3 py-2.5">Legitimate Interest / Contract</td>
@@ -259,56 +259,56 @@ export default function IntegritetContent() {
         We never sell your personal data. We share data only with trusted third-party sub-processors
         under strict Data Processing Agreements (DPA):
       </p>
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+      <div className="overflow-x-auto rounded-xl border border-[#E6E3DB]">
         <table className="w-full min-w-[560px] text-left text-sm border-collapse">
           <thead>
-            <tr className="bg-slate-50 text-slate-900">
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">Sub-processor</th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">Purpose</th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">Location</th>
-              <th className="px-3 py-2.5 font-extrabold border-b border-slate-200">
+            <tr className="bg-[#F0EFEA] text-[#2C2621]">
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">Sub-processor</th>
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">Purpose</th>
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">Location</th>
+              <th className="px-3 py-2.5 font-medium border-b border-[#E6E3DB]">
                 Transfer Safeguard
               </th>
             </tr>
           </thead>
-          <tbody className="text-slate-700">
-            <tr className="border-b border-slate-100 align-top">
+          <tbody className="text-[#2C2621]/85">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Supabase Inc.</td>
               <td className="px-3 py-2.5">Relational Database, Auth &amp; Realtime</td>
               <td className="px-3 py-2.5">EU (Frankfurt)</td>
               <td className="px-3 py-2.5">GDPR DPA / EU Hosting</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Vercel Inc.</td>
               <td className="px-3 py-2.5">Web Application Hosting &amp; Custom Domain SSL</td>
               <td className="px-3 py-2.5">EU / Global Edge</td>
               <td className="px-3 py-2.5">EU-U.S. Data Privacy Framework</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">OpenAI LLC</td>
               <td className="px-3 py-2.5">AI Copilot Text Generation</td>
               <td className="px-3 py-2.5">USA</td>
               <td className="px-3 py-2.5">Data Privacy Framework / DPA</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Stripe Inc.</td>
               <td className="px-3 py-2.5">Payment Processing &amp; Subscription Billing</td>
               <td className="px-3 py-2.5">EU / USA</td>
               <td className="px-3 py-2.5">PCI-DSS Level 1 / DPA</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Meta Platforms Inc.</td>
               <td className="px-3 py-2.5">Instagram, Facebook &amp; Messenger API</td>
               <td className="px-3 py-2.5">EU / USA</td>
               <td className="px-3 py-2.5">Meta Platform Terms / SCCs</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">TikTok Inc.</td>
               <td className="px-3 py-2.5">TikTok Content Posting &amp; Analytics API</td>
               <td className="px-3 py-2.5">EU / USA</td>
               <td className="px-3 py-2.5">TikTok Developer DPA</td>
             </tr>
-            <tr className="border-b border-slate-100 align-top">
+            <tr className="border-b border-[#E6E3DB] align-top">
               <td className="px-3 py-2.5">Pinterest Inc.</td>
               <td className="px-3 py-2.5">Pinterest Pin Publishing &amp; Board API</td>
               <td className="px-3 py-2.5">USA</td>

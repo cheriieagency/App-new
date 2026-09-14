@@ -907,7 +907,7 @@ export default function DMAutomationPanel() {
   return (
     <div className="space-y-4">
       {isError ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <p>
             {t('dmLoadFailed', locale)}{' '}
             {error instanceof Error ? error.message : t('dmUnknownError', locale)}
@@ -915,7 +915,7 @@ export default function DMAutomationPanel() {
           <button
             type="button"
             onClick={() => void refetch()}
-            className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-xs font-extrabold"
+            className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium"
           >
             {t('dmRetry', locale)}
           </button>
@@ -926,12 +926,12 @@ export default function DMAutomationPanel() {
         {kpiCards.map((k) => (
           <div key={k.label} className={adminKpiClass}>
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+              <p className="text-[10px] font-mono font-medium uppercase tracking-[0.12em] text-[#8A857D]">
                 {k.label}
               </p>
-              <k.icon size={14} className="text-slate-300" />
+              <k.icon size={14} className="text-[#8A857D]" />
             </div>
-            <p className="mt-3 font-clikd-wordmark font-extrabold text-[24px] sm:text-[26px] leading-none text-slate-900 tracking-tight tabular-nums">
+            <p className="mt-3 font-playfair font-medium text-[24px] sm:text-[26px] leading-none text-[#2C2621] tracking-tight tabular-nums">
               {isLoading ? '—' : k.value}
             </p>
           </div>
@@ -939,16 +939,16 @@ export default function DMAutomationPanel() {
       </div>
 
       <div className={`${adminCardClass} overflow-hidden`}>
-        <div className="px-5 sm:px-7 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="px-5 sm:px-7 py-5 border-b border-[#E6E3DB] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+            <h2 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight">
               {t('dmTitle', locale)}
             </h2>
-            <p className="text-sm text-slate-500 mt-0.5">
+            <p className="text-sm text-[#8A857D] mt-0.5">
               {t('dmSub', locale)}
             </p>
             <p
-              className={`text-xs font-semibold mt-1.5 flex items-center gap-1.5 ${
+              className={`text-xs font-medium mt-1.5 flex items-center gap-1.5 ${
                 metaCommentsBlocked ? 'text-amber-800' : 'text-emerald-700'
               }`}
             >
@@ -956,7 +956,7 @@ export default function DMAutomationPanel() {
                 className={`inline-block h-1.5 w-1.5 rounded-full ${
                   metaCommentsBlocked
                     ? 'bg-amber-500'
-                    : 'bg-emerald-500 animate-pulse'
+                    : 'bg-[rgba(44,59,46,0.08)]0 animate-pulse'
                 }`}
                 aria-hidden
               />
@@ -971,7 +971,7 @@ export default function DMAutomationPanel() {
                 fetchCommentsMutation.mutate();
               }}
               disabled={fetchCommentsMutation.isPending}
-              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 hover:bg-[#F0EFEA] disabled:opacity-50"
             >
               {fetchCommentsMutation.isPending ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -984,7 +984,7 @@ export default function DMAutomationPanel() {
               type="button"
               onClick={() => resyncWebhooksMutation.mutate()}
               disabled={resyncWebhooksMutation.isPending}
-              className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+              className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 hover:bg-[#F0EFEA] disabled:opacity-50"
             >
               {resyncWebhooksMutation.isPending ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -996,7 +996,7 @@ export default function DMAutomationPanel() {
             <button
               type="button"
               onClick={openCreate}
-              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#F472B6] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:opacity-90 shadow-sm shadow-[#F472B6]/25"
+              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-sm font-medium inline-flex items-center justify-center gap-2 hover:opacity-90"
             >
               <Plus size={16} />
               {t('dmCreateRule', locale)}
@@ -1005,14 +1005,14 @@ export default function DMAutomationPanel() {
         </div>
 
         {metaCommentsBlocked ? (
-          <div className="mx-5 sm:mx-7 mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-4 sm:px-5 text-sm text-amber-950">
-            <p className="font-extrabold text-amber-950">
+          <div className="mx-5 sm:mx-7 mt-4 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-4 sm:px-5 text-sm text-amber-950">
+            <p className="font-medium text-amber-950">
               Clikd can see your Reel has a comment, but Meta is hiding the comment text from the API.
             </p>
             <p className="mt-2 text-amber-900/90 leading-relaxed">
               Your Instagram permissions are correct. This happens when the Meta app is in{' '}
-              <span className="font-bold">Development</span> mode, or{' '}
-              <span className="font-bold">instagram_manage_comments</span> only has Standard Access.
+              <span className="font-medium">Development</span> mode, or{' '}
+              <span className="font-medium">instagram_manage_comments</span> only has Standard Access.
             </p>
             <ol className="mt-3 list-decimal pl-5 space-y-1.5 text-amber-900/90">
               <li>
@@ -1021,7 +1021,7 @@ export default function DMAutomationPanel() {
                   href={metaAppRolesUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-bold underline underline-offset-2"
+                  className="font-medium underline underline-offset-2"
                 >
                   App Roles → Add Testers
                 </a>{' '}
@@ -1033,7 +1033,7 @@ export default function DMAutomationPanel() {
                   href={metaAppDashboardUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-bold underline underline-offset-2"
+                  className="font-medium underline underline-offset-2"
                 >
                   App Settings → switch App Mode to Live
                 </a>
@@ -1049,24 +1049,24 @@ export default function DMAutomationPanel() {
           <button
             type="button"
             onClick={() => setDevToolsOpen((v) => !v)}
-            className="w-full sm:w-auto h-11 min-h-[44px] px-3 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 inline-flex items-center gap-2 transition-colors"
+            className="w-full sm:w-auto h-11 min-h-[44px] px-3 rounded-xl text-xs font-medium text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA] inline-flex items-center gap-2 transition-colors"
             aria-expanded={devToolsOpen}
           >
             <span aria-hidden>🛠️</span>
             {t('dmDevTools', locale)}
-            <span className="text-slate-400 font-mono">
+            <span className="text-[#8A857D] font-mono">
               {devToolsOpen ? '▾' : '▸'}
             </span>
           </button>
 
           {devToolsOpen ? (
-            <div className="mt-3 space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-5">
+            <div className="mt-3 space-y-4 rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4 sm:p-5">
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => liveDiagnosticMutation.mutate({})}
                   disabled={liveDiagnosticMutation.isPending}
-                  className="h-11 min-h-[44px] px-4 rounded-xl border border-[#2B2568]/20 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-white disabled:opacity-50"
+                  className="h-11 min-h-[44px] px-4 rounded-xl border border-[#2C3B2E]/20 bg-[#FFFFFF] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 hover:bg-[#FFFFFF] disabled:opacity-50"
                 >
                   {liveDiagnosticMutation.isPending && !liveCommentId.trim() ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -1079,7 +1079,7 @@ export default function DMAutomationPanel() {
                   type="button"
                   onClick={() => testMutation.mutate()}
                   disabled={testMutation.isPending || rules.length === 0}
-                  className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+                  className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 hover:bg-[#F0EFEA] disabled:opacity-50"
                 >
                   {testMutation.isPending ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -1092,7 +1092,7 @@ export default function DMAutomationPanel() {
                   type="button"
                   onClick={() => fetchCommentsMutation.mutate()}
                   disabled={fetchCommentsMutation.isPending}
-                  className="h-11 min-h-[44px] px-4 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-50"
+                  className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 hover:bg-[#F0EFEA] disabled:opacity-50"
                 >
                   {fetchCommentsMutation.isPending ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -1104,13 +1104,13 @@ export default function DMAutomationPanel() {
               </div>
 
               {testResult ? (
-                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-medium text-slate-700">
+                <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-3 text-xs font-medium text-[#2C2621]">
                   {testResult}
                 </div>
               ) : null}
 
               <label className="block min-w-0">
-                <span className="block text-xs font-bold text-slate-700 mb-1.5">
+                <span className="block text-xs font-medium text-[#2C2621] mb-1.5">
                   {t('dmSelectRecentComment', locale)}
                 </span>
                 <select
@@ -1122,7 +1122,7 @@ export default function DMAutomationPanel() {
                     setSelectedCommentText(match?.text || '');
                   }}
                   disabled={recentComments.length === 0}
-                  className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25 disabled:opacity-60"
+                  className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-0 disabled:opacity-60"
                 >
                   <option value="">
                     {recentComments.length === 0
@@ -1139,7 +1139,7 @@ export default function DMAutomationPanel() {
 
               <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                 <label className="flex-1 min-w-0">
-                  <span className="block text-xs font-bold text-slate-700 mb-1.5">
+                  <span className="block text-xs font-medium text-[#2C2621] mb-1.5">
                     {t('dmCommentIdLabel', locale)}
                   </span>
                   <input
@@ -1152,7 +1152,7 @@ export default function DMAutomationPanel() {
                       setSelectedCommentText('');
                     }}
                     placeholder={t('dmCommentIdPlaceholder', locale)}
-                    className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white text-sm font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2B2568]/25"
+                    className="w-full h-11 min-h-[44px] px-3.5 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-sm font-mono text-[#2C2621] placeholder:text-[#8A857D] focus:outline-none focus:ring-0"
                   />
                 </label>
                 <button
@@ -1172,7 +1172,7 @@ export default function DMAutomationPanel() {
                     liveDiagnosticMutation.isPending ||
                     !isValidInstagramCommentIdClient(liveCommentId)
                   }
-                  className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 hover:bg-[#1a1848] disabled:opacity-50 shrink-0"
+                  className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-sm font-medium inline-flex items-center justify-center gap-2 hover:bg-[#243228] disabled:opacity-50 shrink-0"
                 >
                   {liveDiagnosticMutation.isPending && liveCommentId.trim() ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -1184,19 +1184,19 @@ export default function DMAutomationPanel() {
               </div>
 
               {liveDiagnostic ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+                <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-4 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div>
-                      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                      <p className="text-[10px] font-mono font-medium uppercase tracking-[0.12em] text-[#8A857D]">
                         {t('dmDiagnosticTitle', locale)}
                       </p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">
+                      <p className="text-sm font-medium text-[#2C2621] mt-1">
                         {liveDiagnostic.ok
                           ? t('dmAllChecksPassed', locale)
                           : t('dmIssuesFound', locale)}
                       </p>
                       {liveDiagnostic.note ? (
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-[#8A857D] mt-1">
                           {liveDiagnostic.note}
                         </p>
                       ) : null}
@@ -1204,7 +1204,7 @@ export default function DMAutomationPanel() {
                     <button
                       type="button"
                       onClick={() => setLiveDiagnostic(null)}
-                      className="h-9 min-h-[36px] px-3 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 border border-transparent hover:border-slate-200 inline-flex items-center gap-1 self-start"
+                      className="h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium text-[#8A857D] hover:bg-[#F0EFEA] border border-transparent hover:border-[#E6E3DB] inline-flex items-center gap-1 self-start"
                     >
                       <X size={14} />
                       {t('dmDismiss', locale)}
@@ -1225,14 +1225,14 @@ export default function DMAutomationPanel() {
                           key={row.key}
                           className={`rounded-xl border px-3.5 py-3 flex gap-3 items-start ${
                             ok
-                              ? 'border-emerald-200/80 bg-emerald-50/70'
+                              ? 'border-emerald-200/80 bg-[rgba(44,59,46,0.08)]/70'
                               : 'border-rose-200/80 bg-rose-50/70'
                           }`}
                         >
                           {ok ? (
                             <CheckCircle2
                               size={18}
-                              className="text-emerald-600 flex-shrink-0 mt-0.5"
+                              className="text-[#2C3B2E] flex-shrink-0 mt-0.5"
                               aria-hidden
                             />
                           ) : (
@@ -1243,11 +1243,11 @@ export default function DMAutomationPanel() {
                             />
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-extrabold text-slate-900">
+                            <p className="text-sm font-medium text-[#2C2621]">
                               {ok ? '✓' : '✗'} {t(row.labelKey, locale)}
                             </p>
                             {failed?.message ? (
-                              <p className="text-xs text-slate-600 mt-1 font-medium">
+                              <p className="text-xs text-[#8A857D] mt-1 font-medium">
                                 {failed.message}
                               </p>
                             ) : null}
@@ -1257,7 +1257,7 @@ export default function DMAutomationPanel() {
                               </p>
                             ) : null}
                             {!ok && failed?.fix ? (
-                              <p className="text-xs text-[#2B2568] mt-1.5 font-semibold">
+                              <p className="text-xs text-[#2C3B2E] mt-1.5 font-medium">
                                 {t('dmFixPrefix', locale)} {failed.fix}
                               </p>
                             ) : null}
@@ -1271,20 +1271,20 @@ export default function DMAutomationPanel() {
                     <div
                       className={`rounded-xl border px-3.5 py-3 ${
                         liveDiagnostic.livePrivateReply.ok
-                          ? 'border-emerald-200 bg-emerald-50/80'
+                          ? 'border-emerald-200 bg-[rgba(44,59,46,0.08)]/80'
                           : 'border-rose-200 bg-rose-50/80'
                       }`}
                     >
-                      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+                      <p className="text-[10px] font-mono font-medium uppercase tracking-[0.12em] text-[#8A857D]">
                         {t('dmLiveReplyResult', locale)}
                       </p>
-                      <p className="text-sm font-extrabold text-slate-900 mt-1">
+                      <p className="text-sm font-medium text-[#2C2621] mt-1">
                         {liveDiagnostic.livePrivateReply.ok ? '✓' : '✗'} HTTP{' '}
                         {liveDiagnostic.livePrivateReply.statusLabel ||
                           liveDiagnostic.livePrivateReply.httpStatus}
                       </p>
                       {liveDiagnostic.livePrivateReply.endpoint ? (
-                        <p className="text-[11px] font-mono text-slate-600 mt-1 break-all">
+                        <p className="text-[11px] font-mono text-[#8A857D] mt-1 break-all">
                           Endpoint: {liveDiagnostic.livePrivateReply.endpoint}
                           {liveDiagnostic.livePrivateReply.pageId
                             ? ` · page_id=${liveDiagnostic.livePrivateReply.pageId}`
@@ -1321,7 +1321,7 @@ export default function DMAutomationPanel() {
         </div>
 
         {isLoading ? (
-          <div className="py-16 flex justify-center text-slate-400">
+          <div className="py-16 flex justify-center text-[#8A857D]">
             <Loader2 className="animate-spin" size={22} />
           </div>
         ) : rules.length === 0 ? (
@@ -1335,7 +1335,7 @@ export default function DMAutomationPanel() {
             />
           </div>
         ) : (
-          <ul className="divide-y divide-slate-50">
+          <ul className="divide-y divide-[#E6E3DB]">
             {rules.map((rule) => (
               <li
                 key={rule.id}
@@ -1343,14 +1343,14 @@ export default function DMAutomationPanel() {
               >
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-bold text-slate-900 truncate">
+                    <p className="text-sm font-medium text-[#2C2621] truncate">
                       {rule.title}
                     </p>
                     <span
-                      className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                      className={`text-[10px] font-mono font-medium uppercase tracking-wider px-2 py-0.5 rounded-md ${
                         rule.isActive
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-slate-100 text-slate-500'
+                          ? 'bg-[rgba(44,59,46,0.08)] text-emerald-700'
+                          : 'bg-[#F0EFEA] text-[#8A857D]'
                       }`}
                     >
                       {rule.isActive ? t('dmActive', locale) : t('dmPaused', locale)}
@@ -1360,16 +1360,16 @@ export default function DMAutomationPanel() {
                     {rule.triggerKeywords.map((kw) => (
                       <span
                         key={kw}
-                        className="inline-flex items-center h-8 px-2.5 rounded-lg bg-[#2B2568]/[0.06] text-[#2B2568] text-xs font-extrabold tracking-wide"
+                        className="inline-flex items-center h-8 px-2.5 rounded-lg bg-[#2C3B2E]/[0.06] text-[#2C3B2E] text-xs font-medium tracking-wide"
                       >
                         #{kw.toUpperCase()}
                       </span>
                     ))}
                   </div>
-                  <p className="text-xs text-slate-500 line-clamp-2">
+                  <p className="text-xs text-[#8A857D] line-clamp-2">
                     {rule.dmMessageText}
                   </p>
-                  <p className="text-[11px] text-slate-400 font-mono">
+                  <p className="text-[11px] text-[#8A857D] font-mono">
                     {tf('dmDmsSentClicks', locale, {
                       dms: rule.totalDmsSent,
                       clicks: rule.storefrontClicks,
@@ -1393,11 +1393,11 @@ export default function DMAutomationPanel() {
                     }
                     onClick={() => toggleMutation.mutate(rule)}
                     className={`relative h-11 min-h-[44px] w-[52px] rounded-full transition-colors disabled:opacity-60 ${
-                      rule.isActive ? 'bg-emerald-500' : 'bg-slate-200'
+                      rule.isActive ? 'bg-[rgba(44,59,46,0.08)]0' : 'bg-slate-200'
                     }`}
                   >
                     <span
-                      className={`absolute top-1.5 h-8 w-8 rounded-full bg-white shadow transition-transform ${
+                      className={`absolute top-1.5 h-8 w-8 rounded-full bg-[#FFFFFF] shadow transition-transform ${
                         rule.isActive ? 'left-5' : 'left-1.5'
                       }`}
                     />
@@ -1405,7 +1405,7 @@ export default function DMAutomationPanel() {
                   <button
                     type="button"
                     onClick={() => openEdit(rule)}
-                    className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-slate-200 bg-white text-slate-700 inline-flex items-center justify-center gap-1.5 text-xs font-bold"
+                    className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] inline-flex items-center justify-center gap-1.5 text-xs font-medium"
                   >
                     <Pencil size={14} /> {t('dmEdit', locale)}
                   </button>
@@ -1416,7 +1416,7 @@ export default function DMAutomationPanel() {
                         deleteMutation.mutate(String(rule.id));
                       }
                     }}
-                    className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-rose-100 bg-rose-50 text-rose-700 inline-flex items-center justify-center gap-1.5 text-xs font-bold"
+                    className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-rose-100 bg-rose-50 text-rose-700 inline-flex items-center justify-center gap-1.5 text-xs font-medium"
                   >
                     <Trash2 size={14} /> {t('dmDelete', locale)}
                   </button>
@@ -1438,38 +1438,38 @@ export default function DMAutomationPanel() {
           <div
             role="dialog"
             aria-modal="true"
-            className="relative z-10 w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4"
+            className="relative z-10 w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-[#FFFFFF] rounded-t-3xl sm:rounded-xl shadow-2xl p-5 sm:p-6 space-y-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+                <p className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
                   {t('dmModalEyebrow', locale)}
                 </p>
-                <h3 className="font-clikd-wordmark font-extrabold text-xl text-slate-900 mt-1">
+                <h3 className="font-playfair font-medium text-xl text-[#2C2621] mt-1">
                   {form.id ? t('dmEditRule', locale) : t('dmCreateRuleTitle', locale)}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-slate-50 inline-flex items-center justify-center"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] inline-flex items-center justify-center"
               >
                 <X size={18} />
               </button>
             </div>
 
             <label className="block space-y-1.5">
-              <span className="text-xs font-bold text-slate-600">{t('dmFieldTitle', locale)}</span>
+              <span className="text-xs font-medium text-[#8A857D]">{t('dmFieldTitle', locale)}</span>
               <input
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder={t('dmTitlePlaceholder', locale)}
-                className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
               />
             </label>
 
             <label className="block space-y-1.5">
-              <span className="text-xs font-bold text-slate-600">
+              <span className="text-xs font-medium text-[#8A857D]">
                 {t('dmFieldKeywords', locale)}
               </span>
               <input
@@ -1478,35 +1478,35 @@ export default function DMAutomationPanel() {
                   setForm((f) => ({ ...f, triggerKeywords: e.target.value }))
                 }
                 placeholder="KURS, MASTERCLASS, START"
-                className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-mono"
+                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-mono"
               />
             </label>
 
             <label className="block space-y-1.5">
-              <span className="text-xs font-bold text-slate-600">{t('dmFieldDm', locale)}</span>
+              <span className="text-xs font-medium text-[#8A857D]">{t('dmFieldDm', locale)}</span>
               <textarea
                 value={form.dmMessageText}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, dmMessageText: e.target.value }))
                 }
                 rows={4}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm resize-y min-h-[110px]"
+                className="w-full rounded-xl border border-[#E6E3DB] px-3 py-2.5 text-sm resize-y min-h-[110px]"
               />
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block space-y-1.5">
-                <span className="text-xs font-bold text-slate-600">{t('dmFieldButton', locale)}</span>
+                <span className="text-xs font-medium text-[#8A857D]">{t('dmFieldButton', locale)}</span>
                 <input
                   value={form.ctaButtonLabel}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, ctaButtonLabel: e.target.value }))
                   }
-                  className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                  className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
                 />
               </label>
               <label className="block space-y-1.5 sm:col-span-1">
-                <span className="text-xs font-bold text-slate-600">
+                <span className="text-xs font-medium text-[#8A857D]">
                   {t('dmFieldStorefront', locale)}
                 </span>
                 <input
@@ -1515,12 +1515,12 @@ export default function DMAutomationPanel() {
                     setForm((f) => ({ ...f, ctaButtonUrl: e.target.value }))
                   }
                   placeholder={storefrontDefault}
-                  className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm font-mono"
+                  className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-mono"
                 />
               </label>
             </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3 space-y-3">
+            <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 px-4 py-3 space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1531,9 +1531,9 @@ export default function DMAutomationPanel() {
                       replyToCommentPublicly: e.target.checked,
                     }))
                   }
-                  className="mt-1 h-4 w-4 rounded border-slate-300"
+                  className="mt-1 h-4 w-4 rounded border-[#E6E3DB]"
                 />
-                <span className="text-sm font-semibold text-slate-800">
+                <span className="text-sm font-medium text-[#2C2621]">
                   {t('dmPublicReplyToggle', locale)}
                 </span>
               </label>
@@ -1547,7 +1547,7 @@ export default function DMAutomationPanel() {
                     }))
                   }
                   placeholder={t('dmDefaultPublicReply', locale)}
-                  className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                  className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm"
                 />
               ) : null}
             </div>
@@ -1556,7 +1556,7 @@ export default function DMAutomationPanel() {
               type="button"
               disabled={saveMutation.isPending}
               onClick={() => saveMutation.mutate(form)}
-              className="h-11 min-h-[44px] w-full rounded-xl bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 disabled:opacity-60"
+              className="h-11 min-h-[44px] w-full rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {saveMutation.isPending ? (
                 <Loader2 className="animate-spin" size={16} />

@@ -125,14 +125,14 @@ export default function IntegrationsTab({
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <p className="text-sm font-bold text-slate-800">{workspaceName}</p>
-          <p className="text-xs font-mono font-bold text-slate-400">
+          <p className="text-sm font-bold text-[#2C2621]">{workspaceName}</p>
+          <p className="text-xs font-mono font-bold text-[#8A857D]">
             @{workspaceHandle.replace(/^@/, '')}
           </p>
         </div>
         <Link
           href="/admin/settings/socials"
-          className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl bg-[#1a1848] text-white text-xs font-bold hover:bg-[#2B2568] transition-colors"
+          className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-xl bg-[#243228] text-white text-xs font-bold hover:bg-[#2C3B2E] transition-colors"
         >
           {t('settingsManageSocials', locale)}
         </Link>
@@ -142,12 +142,12 @@ export default function IntegrationsTab({
         <GoogleIntegrationCard />
       </div>
 
-      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
+      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D] mb-2">
         {t('settingsIntegrationsOverview', locale)}
       </p>
 
       {loading ? (
-        <p className="text-sm text-slate-400 font-medium py-6">
+        <p className="text-sm text-[#8A857D] font-medium py-6">
           {t('loading', locale)}
         </p>
       ) : (
@@ -170,10 +170,10 @@ export default function IntegrationsTab({
                     <Icon size={18} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-extrabold text-slate-900">
+                    <p className="text-sm font-medium text-[#2C2621]">
                       {meta.label}
                     </p>
-                    <p className="text-xs font-medium text-slate-500 truncate mt-0.5">
+                    <p className="text-xs font-medium text-[#8A857D] truncate mt-0.5">
                       {connected
                         ? account?.handle ||
                           account?.display_name ||
@@ -181,7 +181,7 @@ export default function IntegrationsTab({
                         : t('settingsApiNotConnected', locale)}
                     </p>
                     {connected && account?.connected_at ? (
-                      <p className="text-[10px] text-slate-400 font-medium mt-1">
+                      <p className="text-[10px] text-[#8A857D] font-medium mt-1">
                         {tf('settingsConnectedAt', locale, {
                           date: new Date(account.connected_at).toLocaleDateString(
                             tag
@@ -192,14 +192,14 @@ export default function IntegrationsTab({
                   </div>
                 </div>
                 {connected ? (
-                  <span className="inline-flex items-center justify-center h-10 min-h-[40px] rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                  <span className="inline-flex items-center justify-center h-10 min-h-[40px] rounded-xl bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.18)] text-[#2C3B2E] text-xs font-bold">
                     {t('settingsApiAuthorized', locale)}
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => void connect(platform)}
-                    className="inline-flex items-center justify-center h-11 min-h-[44px] rounded-xl bg-[#2B2568] text-white text-xs font-bold hover:bg-[#1e1b4b] transition-colors"
+                    className="inline-flex items-center justify-center h-11 min-h-[44px] rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-bold hover:bg-[#1e1b4b] transition-colors"
                   >
                     Connect {meta.label}
                   </button>

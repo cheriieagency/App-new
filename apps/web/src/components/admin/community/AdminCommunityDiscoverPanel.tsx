@@ -133,19 +133,19 @@ export default function AdminCommunityDiscoverPanel({
       <div className={`${adminCardClass} p-5 sm:p-6`}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
           <div className="min-w-0">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6] mb-1.5">
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#2C3B2E] mb-1.5">
               {t('adminCommunityDiscoverEyebrow', locale)}
             </p>
-            <h3 className="font-outfit font-bold text-xl text-slate-900 tracking-tight">
+            <h3 className="font-playfair font-bold text-xl text-[#2C2621] tracking-tight">
               {t('adminCommunityDiscoverTitle', locale)}
             </h3>
-            <p className="mt-1.5 text-sm text-slate-500 font-display leading-relaxed max-w-xl">
+            <p className="mt-1.5 text-sm text-[#8A857D] font-inter leading-relaxed max-w-xl">
               {t('adminCommunityDiscoverSub', locale)}
             </p>
           </div>
           <Link
             href="/dashboard"
-            className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] hover:bg-[#1a1848] text-white text-sm font-extrabold transition-colors flex-shrink-0"
+            className="inline-flex items-center justify-center gap-2 h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-sm font-medium transition-colors flex-shrink-0"
           >
             {t('adminViewAsMember', locale)}
             <ExternalLink size={14} aria-hidden />
@@ -170,10 +170,10 @@ export default function AdminCommunityDiscoverPanel({
       {joined.length > 0 ? (
         <div className={`${adminCardClass} p-5`}>
           <div className="flex items-center justify-between gap-3 mb-4">
-            <h4 className="text-sm font-extrabold text-slate-900 tracking-tight">
+            <h4 className="text-sm font-medium text-[#2C2621] tracking-tight">
               {t('adminMyMemberships', locale)}
             </h4>
-            <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-bold text-[#8A857D] bg-[#F0EFEA] px-2.5 py-1 rounded-full">
               {joined.length}
             </span>
           </div>
@@ -182,9 +182,9 @@ export default function AdminCommunityDiscoverPanel({
               <Link
                 key={c.id}
                 href={`/communities/${c.id}?from=admin`}
-                className="inline-flex items-center gap-2 h-10 min-h-[40px] px-3 rounded-xl border border-[#E9D5FF] bg-[#FCE7F3]/40 text-sm font-semibold text-[#2B2568] hover:bg-[#FCE7F3] transition-colors"
+                className="inline-flex items-center gap-2 h-10 min-h-[40px] px-3 rounded-xl border border-[rgba(44,59,46,0.18)] bg-[rgba(44,59,46,0.06)] text-sm font-semibold text-[#2C3B2E] hover:bg-[rgba(44,59,46,0.08)] transition-colors"
               >
-                <Check size={14} className="text-[#F472B6]" aria-hidden />
+                <Check size={14} className="text-[#2C3B2E]" aria-hidden />
                 {c.name}
               </Link>
             ))}
@@ -194,12 +194,12 @@ export default function AdminCommunityDiscoverPanel({
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+          <span className="text-[10px] font-medium uppercase tracking-widest text-[#8A857D]">
             {search.trim()
               ? t('searchCommunitiesHeading', locale)
               : t('recommendedCommunities', locale)}
           </span>
-          <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-bold text-[#8A857D] bg-[#F0EFEA] px-2.5 py-1 rounded-full">
             {catalog.length}
           </span>
         </div>
@@ -207,7 +207,7 @@ export default function AdminCommunityDiscoverPanel({
           <button
             type="button"
             onClick={() => setSearch('')}
-            className="text-xs font-bold text-[#F472B6] hover:text-[#2B2568] min-h-11 px-2 transition-colors"
+            className="text-xs font-bold text-[#2C3B2E] hover:text-[#2C3B2E] min-h-11 px-2 transition-colors"
           >
             {t('clearFilterShort', locale)}
           </button>
@@ -215,13 +215,13 @@ export default function AdminCommunityDiscoverPanel({
       </div>
 
       {isLoading ? (
-        <div className={`${adminCardClass} p-10 text-center text-sm font-medium text-slate-400`}>
+        <div className={`${adminCardClass} p-10 text-center text-sm font-medium text-[#8A857D]`}>
           {t('loading', locale)}
         </div>
       ) : catalog.length === 0 ? (
         <div className={`${adminCardClass} p-10 text-center`}>
-          <Search size={22} className="mx-auto mb-2 text-slate-300" aria-hidden />
-          <p className="text-slate-500 font-bold font-display">
+          <Search size={22} className="mx-auto mb-2 text-[#E6E3DB]" aria-hidden />
+          <p className="text-[#8A857D] font-bold font-inter">
             {search.trim()
               ? `${t('noResults', locale)} “${search}”`
               : t('noRecommendationsYet', locale)}
@@ -242,31 +242,31 @@ export default function AdminCommunityDiscoverPanel({
                 <div
                   className="h-20 relative"
                   style={{
-                    background: `linear-gradient(135deg, ${c.cover_color ?? '#2B2568'}, #0F172A)`,
+                    background: `linear-gradient(135deg, ${c.cover_color ?? '#2C3B2E'}, #2C2621)`,
                   }}
                 >
-                  <span className="absolute top-3 left-3 text-[10px] font-extrabold text-white/80 bg-white/10 backdrop-blur px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  <span className="absolute top-3 left-3 text-[10px] font-medium text-white/80 bg-white/10 backdrop-blur px-2.5 py-1 rounded-full uppercase tracking-wider">
                     {c.category || 'Community'}
                   </span>
                   {c.is_joined ? (
-                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-extrabold text-[#2B2568] bg-[#FCE7F3] border border-[#F472B6]/25 px-2 py-1 rounded-full">
+                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-medium text-[#2C3B2E] bg-[rgba(44,59,46,0.08)] border border-[#2C3B2E]/25 px-2 py-1 rounded-full">
                       <Check size={10} aria-hidden />
                       {t('adminJoinedBadge', locale)}
                     </span>
                   ) : null}
                 </div>
                 <div className="p-4 flex flex-col flex-1">
-                  <p className="text-[10px] font-bold text-slate-400 mb-0.5">
+                  <p className="text-[10px] font-bold text-[#8A857D] mb-0.5">
                     {c.creator_name}
                   </p>
-                  <h3 className="text-sm font-extrabold text-slate-900 mb-1 tracking-tight">
+                  <h3 className="text-sm font-medium text-[#2C2621] mb-1 tracking-tight">
                     {c.name}
                   </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 mb-4 flex-1 font-display">
+                  <p className="text-xs text-[#8A857D] leading-relaxed line-clamp-2 mb-4 flex-1 font-inter">
                     {c.description}
                   </p>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1 text-slate-400 text-xs font-bold">
+                    <span className="inline-flex items-center gap-1 text-[#8A857D] text-xs font-bold">
                       <Users size={12} aria-hidden />
                       {c.member_count.toLocaleString(
                         locale === 'en' ? 'en-US' : 'sv-SE'
@@ -276,10 +276,10 @@ export default function AdminCommunityDiscoverPanel({
                       type="button"
                       disabled={joining}
                       onClick={() => openOrJoin(c)}
-                      className={`inline-flex items-center gap-1 h-9 min-h-[36px] px-3 rounded-full text-xs font-extrabold transition-colors disabled:opacity-60 ${
+                      className={`inline-flex items-center gap-1 h-9 min-h-[36px] px-3 rounded-full text-xs font-medium transition-colors disabled:opacity-60 ${
                         c.is_joined
-                          ? 'bg-[#2B2568] text-white hover:bg-[#1a1848]'
-                          : 'bg-[#F472B6] text-white hover:bg-[#e0529c]'
+                          ? 'bg-[#2C3B2E] text-[#F9F8F6] hover:bg-[#243228]'
+                          : 'bg-[#2C3B2E] text-[#F9F8F6] hover:bg-[#243228]'
                       }`}
                     >
                       {c.is_joined

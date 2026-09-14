@@ -390,7 +390,7 @@ export default function MetaAdsDashboard() {
             <button
               type="button"
               onClick={() => setWizardOpen(true)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#F472B6] px-4 text-sm font-semibold text-white"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#2C3B2E] px-4 text-sm font-medium text-[#F9F8F6]"
             >
               <Plus className="h-4 w-4" />
               {t('adsCreateCampaign')}
@@ -399,7 +399,7 @@ export default function MetaAdsDashboard() {
               type="button"
               disabled={syncMutation.isPending || isFetching}
               onClick={() => syncMutation.mutate()}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#2B2568] px-4 text-sm font-medium text-white disabled:opacity-60"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 text-sm font-medium text-[#2C2621] hover:bg-[#F0EFEA] disabled:opacity-60"
             >
               {syncMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -422,14 +422,14 @@ export default function MetaAdsDashboard() {
         <div
           className={`${adminCardClass} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}
         >
-          <p className="text-sm font-medium text-slate-700">
+          <p className="text-sm font-medium text-[#2C2621]">
             {data?.message ||
               'Connect Facebook with ads permissions to sync live Meta Ads.'}
           </p>
           {data?.cta?.href ? (
             <a
               href={data.cta.href}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2B2568] px-4 text-sm font-semibold text-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2C3B2E] px-4 text-sm font-medium text-[#F9F8F6]"
             >
               {data.cta.label || 'Connect Facebook'}
             </a>
@@ -438,7 +438,7 @@ export default function MetaAdsDashboard() {
       ) : null}
 
       {isLoading ? (
-        <div className="flex h-40 items-center justify-center text-slate-400">
+        <div className="flex h-40 items-center justify-center text-[#8A857D]">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" /> {t('adsLoading')}
         </div>
       ) : isError ? null : (
@@ -465,7 +465,7 @@ export default function MetaAdsDashboard() {
 
           <section className="space-y-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="inline-flex rounded-2xl bg-white p-1 ring-1 ring-slate-200">
+              <div className="inline-flex rounded-xl bg-[#FFFFFF] p-1 border border-[#E6E3DB]">
                 {(
                   [
                     ['campaigns', t('adsCampaigns')],
@@ -479,8 +479,8 @@ export default function MetaAdsDashboard() {
                     onClick={() => setLevel(id)}
                     className={`min-h-11 rounded-xl px-4 text-sm font-medium transition ${
                       level === id
-                        ? 'bg-[#2B2568] text-white'
-                        : 'text-slate-600 hover:bg-slate-50'
+                        ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                        : 'text-[#8A857D] hover:bg-[#F0EFEA]'
                     }`}
                   >
                     {label}
@@ -489,23 +489,23 @@ export default function MetaAdsDashboard() {
               </div>
 
               {(campaignFilter || adsetFilter) && (
-                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-[#8A857D]">
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="inline-flex min-h-11 items-center gap-1 rounded-xl bg-white px-3 ring-1 ring-slate-200"
+                    className="inline-flex min-h-11 items-center gap-1 rounded-xl bg-[#FFFFFF] px-3 border border-[#E6E3DB]"
                   >
                     <X className="h-3.5 w-3.5" /> {t('adsClearFilter')}
                   </button>
                   {campaignFilter && (
                     <span className="inline-flex items-center gap-1">
-                      <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+                      <ChevronRight className="h-3.5 w-3.5 text-[#E6E3DB]" />
                       {campaignNameById.get(campaignFilter) || t('adsCampaign')}
                     </span>
                   )}
                   {adsetFilter && (
                     <span className="inline-flex items-center gap-1">
-                      <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+                      <ChevronRight className="h-3.5 w-3.5 text-[#E6E3DB]" />
                       {adsetNameById.get(adsetFilter) || t('adsAdSet')}
                     </span>
                   )}
@@ -516,7 +516,7 @@ export default function MetaAdsDashboard() {
             <div className={`${adminCardClass} overflow-x-auto`}>
               {level === 'campaigns' && (
                 <table className="w-full min-w-[720px] text-left text-sm">
-                  <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                  <thead className="border-b border-[#E6E3DB] text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                     <tr>
                       <th className="px-4 py-3 font-medium">{t('adsStatus')}</th>
                       <th className="px-4 py-3 font-medium">{t('adsCampaign')}</th>
@@ -532,7 +532,7 @@ export default function MetaAdsDashboard() {
                       return (
                         <tr
                           key={c.id}
-                          className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50/80"
+                          className="cursor-pointer border-b border-[#E6E3DB]/70 last:border-0 hover:bg-[#F0EFEA]/80"
                           onClick={() => showCampaignDetail(c)}
                         >
                           <td
@@ -551,7 +551,7 @@ export default function MetaAdsDashboard() {
                                   })
                                 }
                               />
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-[#8A857D]">
                                 {active ? t('adsActive') : t('adsPaused')}
                               </span>
                             </div>
@@ -563,11 +563,11 @@ export default function MetaAdsDashboard() {
                                 e.stopPropagation();
                                 showCampaignDetail(c);
                               }}
-                              className="text-left font-medium text-[#2B2568] hover:underline"
+                              className="text-left font-medium text-[#2C2621] hover:underline"
                             >
                               {c.name}
                             </button>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-[#8A857D]">
                               {objectiveLabel(c.objective)}
                             </p>
                           </td>
@@ -586,7 +586,7 @@ export default function MetaAdsDashboard() {
                                 />
                                 <button
                                   type="button"
-                                  className="text-xs font-semibold text-[#F472B6]"
+                                  className="text-xs font-medium text-[#2C3B2E]"
                                   onClick={() => saveBudget('campaign', c.id)}
                                 >
                                   {t('adsSave')}
@@ -595,7 +595,7 @@ export default function MetaAdsDashboard() {
                             ) : (
                               <button
                                 type="button"
-                                className="font-[family-name:var(--font-fira-code)] text-slate-700 hover:text-[#2B2568]"
+                                className="font-[family-name:var(--font-fira-code)] text-[#2C2621] hover:text-[#2C3B2E]"
                                 onClick={() => {
                                   setEditingId(c.id);
                                   setBudgetDraft(String(c.daily_budget));
@@ -619,7 +619,7 @@ export default function MetaAdsDashboard() {
                     })}
                     {campaigns.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                        <td colSpan={6} className="px-4 py-10 text-center text-[#8A857D]">
                           {t('adsNoCampaigns')}
                         </td>
                       </tr>
@@ -630,7 +630,7 @@ export default function MetaAdsDashboard() {
 
               {level === 'adsets' && (
                 <table className="w-full min-w-[720px] text-left text-sm">
-                  <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                  <thead className="border-b border-[#E6E3DB] text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                     <tr>
                       <th className="px-4 py-3 font-medium">{t('adsStatus')}</th>
                       <th className="px-4 py-3 font-medium">{t('adsAdSet')}</th>
@@ -646,7 +646,7 @@ export default function MetaAdsDashboard() {
                       return (
                         <tr
                           key={a.id}
-                          className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50/80"
+                          className="cursor-pointer border-b border-[#E6E3DB]/70 last:border-0 hover:bg-[#F0EFEA]/80"
                           onClick={() => showAdSetDetail(a)}
                         >
                           <td
@@ -665,7 +665,7 @@ export default function MetaAdsDashboard() {
                                   })
                                 }
                               />
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-[#8A857D]">
                                 {active ? t('adsActive') : t('adsPaused')}
                               </span>
                             </div>
@@ -677,11 +677,11 @@ export default function MetaAdsDashboard() {
                                 e.stopPropagation();
                                 showAdSetDetail(a);
                               }}
-                              className="text-left font-medium text-[#2B2568] hover:underline"
+                              className="text-left font-medium text-[#2C2621] hover:underline"
                             >
                               {a.name}
                             </button>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-[#8A857D]">
                               {a.targeting_summary ||
                                 campaignNameById.get(a.campaign_id) ||
                                 '—'}
@@ -702,7 +702,7 @@ export default function MetaAdsDashboard() {
                                 />
                                 <button
                                   type="button"
-                                  className="text-xs font-semibold text-[#F472B6]"
+                                  className="text-xs font-medium text-[#2C3B2E]"
                                   onClick={() => saveBudget('adset', a.id)}
                                 >
                                   {t('adsSave')}
@@ -711,7 +711,7 @@ export default function MetaAdsDashboard() {
                             ) : (
                               <button
                                 type="button"
-                                className="font-[family-name:var(--font-fira-code)] text-slate-700"
+                                className="font-[family-name:var(--font-fira-code)] text-[#2C2621]"
                                 onClick={() => {
                                   setEditingId(a.id);
                                   setBudgetDraft(String(a.daily_budget));
@@ -735,7 +735,7 @@ export default function MetaAdsDashboard() {
                     })}
                     {filteredAdSets.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
+                        <td colSpan={6} className="px-4 py-10 text-center text-[#8A857D]">
                           {t('adsNoAdSets')}
                         </td>
                       </tr>
@@ -746,7 +746,7 @@ export default function MetaAdsDashboard() {
 
               {level === 'ads' && (
                 <table className="w-full min-w-[720px] text-left text-sm">
-                  <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                  <thead className="border-b border-[#E6E3DB] text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
                     <tr>
                       <th className="px-4 py-3 font-medium">{t('adsStatus')}</th>
                       <th className="px-4 py-3 font-medium">{t('adsAd')}</th>
@@ -761,7 +761,7 @@ export default function MetaAdsDashboard() {
                       return (
                         <tr
                           key={ad.id}
-                          className="cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50/80"
+                          className="cursor-pointer border-b border-[#E6E3DB]/70 last:border-0 hover:bg-[#F0EFEA]/80"
                           onClick={() => showAdDetail(ad)}
                         >
                           <td
@@ -780,7 +780,7 @@ export default function MetaAdsDashboard() {
                                   })
                                 }
                               />
-                              <span className="text-xs text-slate-500">
+                              <span className="text-xs text-[#8A857D]">
                                 {active ? t('adsActive') : t('adsPaused')}
                               </span>
                             </div>
@@ -795,7 +795,7 @@ export default function MetaAdsDashboard() {
                                   className="h-10 w-10 rounded-lg object-cover"
                                 />
                               ) : (
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#2B2568]/10 text-[#F472B6]">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]">
                                   <Megaphone className="h-4 w-4" />
                                 </div>
                               )}
@@ -806,11 +806,11 @@ export default function MetaAdsDashboard() {
                                     e.stopPropagation();
                                     showAdDetail(ad);
                                   }}
-                                  className="text-left font-medium text-[#2B2568] hover:underline"
+                                  className="text-left font-medium text-[#2C2621] hover:underline"
                                 >
                                   {ad.name}
                                 </button>
-                                <p className="text-xs text-slate-400">
+                                <p className="text-xs text-[#8A857D]">
                                   {ad.headline ||
                                     adsetNameById.get(ad.adset_id) ||
                                     '—'}
@@ -832,7 +832,7 @@ export default function MetaAdsDashboard() {
                     })}
                     {filteredAds.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
+                        <td colSpan={5} className="px-4 py-10 text-center text-[#8A857D]">
                           {t('adsNoAds')}
                         </td>
                       </tr>

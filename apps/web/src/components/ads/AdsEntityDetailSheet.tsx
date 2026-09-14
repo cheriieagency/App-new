@@ -143,16 +143,16 @@ export default function AdsEntityDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full gap-0 overflow-y-auto border-slate-200 bg-[#FAFAFA] p-0 sm:max-w-md"
+        className="w-full gap-0 overflow-y-auto border-[#E6E3DB] bg-[#F9F8F6] p-0 sm:max-w-md"
       >
-        <SheetHeader className="space-y-1 border-b border-slate-100 bg-white px-5 py-5 text-left">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-slate-400">
+        <SheetHeader className="space-y-1 border-b border-[#E6E3DB] bg-[#FFFFFF] px-5 py-5 text-left">
+          <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
             {detailsEyebrow}
           </p>
-          <SheetTitle className="font-[family-name:var(--font-space-grotesk)] text-xl text-[#0F172A]">
+          <SheetTitle className="font-playfair font-medium text-xl text-[#2C2621]">
             {entity.name}
           </SheetTitle>
-          <SheetDescription className="text-sm text-slate-500">
+          <SheetDescription className="text-sm text-[#8A857D]">
             {entity.kind === 'campaign' &&
               `${t('adsObjective')} · ${objectiveLabel(entity.objective)}`}
             {entity.kind === 'adset' &&
@@ -165,20 +165,20 @@ export default function AdsEntityDetailSheet({
         </SheetHeader>
 
         <div className="space-y-5 px-5 py-5">
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-4">
+          <section className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-[#0F172A]">
+                <p className="text-sm font-medium text-[#2C2621]">
                   {t('adsDelivery')}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[#8A857D]">
                   {active
                     ? t('adsDeliveryActiveHint')
                     : t('adsDeliveryPausedHint')}
                 </p>
               </div>
               <div className="flex min-h-11 items-center gap-2">
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-medium text-[#8A857D]">
                   {active ? t('adsActive') : t('adsPaused')}
                 </span>
                 <Switch
@@ -193,19 +193,19 @@ export default function AdsEntityDetailSheet({
           </section>
 
           <section>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <p className="mb-2 text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               {t('adsPerformanceSection')}
             </p>
             <div className="grid grid-cols-2 gap-2">
               {metrics.map((m) => (
                 <div
                   key={m.label}
-                  className="rounded-2xl border border-slate-200/80 bg-white p-3"
+                  className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-3"
                 >
-                  <p className="text-[11px] font-medium text-slate-400">
+                  <p className="text-[11px] font-medium text-[#8A857D]">
                     {m.label}
                   </p>
-                  <p className="mt-1 font-[family-name:var(--font-fira-code)] text-sm font-semibold text-[#0F172A]">
+                  <p className="mt-1 font-[family-name:var(--font-fira-code)] text-sm font-medium text-[#2C2621]">
                     {m.value}
                   </p>
                 </div>
@@ -214,12 +214,12 @@ export default function AdsEntityDetailSheet({
           </section>
 
           {canBudget && (
-            <section className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4">
+            <section className="space-y-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-4">
               <div>
-                <p className="text-sm font-semibold text-[#0F172A]">
+                <p className="text-sm font-medium text-[#2C2621]">
                   {t('adsDailyBudget')}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[#8A857D]">
                   {t('adsBudgetHint', { kind: kindWord.toLowerCase() })}
                 </p>
               </div>
@@ -232,7 +232,7 @@ export default function AdsEntityDetailSheet({
                   onChange={(e) => setBudgetDraft(e.target.value)}
                   className="min-h-11 rounded-xl font-[family-name:var(--font-fira-code)]"
                 />
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-[#8A857D]">
                   {adsCurrencyCode(entity.currency, locale)}
                 </span>
               </div>
@@ -244,7 +244,7 @@ export default function AdsEntityDetailSheet({
                   if (!Number.isFinite(value) || value < 0) return;
                   onSaveBudget?.(value);
                 }}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#2B2568] px-4 text-sm font-semibold text-white disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#2C3B2E] px-4 text-sm font-medium text-[#F9F8F6] disabled:opacity-60"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -255,29 +255,29 @@ export default function AdsEntityDetailSheet({
             </section>
           )}
 
-          <section className="space-y-3 rounded-2xl border border-slate-200/80 bg-white p-4">
-            <p className="text-sm font-semibold text-[#0F172A]">
+          <section className="space-y-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-4">
+            <p className="text-sm font-medium text-[#2C2621]">
               {t('adsSettings')}
             </p>
             <dl className="space-y-3 text-sm">
               <div>
-                <dt className="text-xs text-slate-400">ID</dt>
-                <dd className="mt-0.5 break-all font-[family-name:var(--font-fira-code)] text-xs text-slate-700">
+                <dt className="text-xs text-[#8A857D]">ID</dt>
+                <dd className="mt-0.5 break-all font-[family-name:var(--font-fira-code)] text-xs text-[#2C2621]">
                   {entity.id}
                 </dd>
               </div>
               {entity.ad_account_id && (
                 <div>
-                  <dt className="text-xs text-slate-400">{t('adsAdAccount')}</dt>
-                  <dd className="mt-0.5 break-all font-[family-name:var(--font-fira-code)] text-xs text-slate-700">
+                  <dt className="text-xs text-[#8A857D]">{t('adsAdAccount')}</dt>
+                  <dd className="mt-0.5 break-all font-[family-name:var(--font-fira-code)] text-xs text-[#2C2621]">
                     {entity.ad_account_id}
                   </dd>
                 </div>
               )}
               {entity.kind === 'campaign' && (
                 <div>
-                  <dt className="text-xs text-slate-400">{t('adsObjective')}</dt>
-                  <dd className="mt-0.5 font-medium text-slate-800">
+                  <dt className="text-xs text-[#8A857D]">{t('adsObjective')}</dt>
+                  <dd className="mt-0.5 font-medium text-[#2C2621]">
                     {objectiveLabel(entity.objective)}
                   </dd>
                 </div>
@@ -285,16 +285,16 @@ export default function AdsEntityDetailSheet({
               {entity.kind === 'adset' && (
                 <>
                   <div>
-                    <dt className="text-xs text-slate-400">
+                    <dt className="text-xs text-[#8A857D]">
                       {t('adsParentCampaign')}
                     </dt>
-                    <dd className="mt-0.5 font-medium text-slate-800">
+                    <dd className="mt-0.5 font-medium text-[#2C2621]">
                       {entity.parentCampaignName || '—'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-slate-400">{t('adsTargeting')}</dt>
-                    <dd className="mt-0.5 font-medium text-slate-800">
+                    <dt className="text-xs text-[#8A857D]">{t('adsTargeting')}</dt>
+                    <dd className="mt-0.5 font-medium text-[#2C2621]">
                       {entity.targeting_summary || '—'}
                     </dd>
                   </div>
@@ -303,29 +303,29 @@ export default function AdsEntityDetailSheet({
               {entity.kind === 'ad' && (
                 <>
                   <div>
-                    <dt className="text-xs text-slate-400">
+                    <dt className="text-xs text-[#8A857D]">
                       {t('adsParentCampaign')}
                     </dt>
-                    <dd className="mt-0.5 font-medium text-slate-800">
+                    <dd className="mt-0.5 font-medium text-[#2C2621]">
                       {entity.parentCampaignName || '—'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-slate-400">
+                    <dt className="text-xs text-[#8A857D]">
                       {t('adsParentAdSet')}
                     </dt>
-                    <dd className="mt-0.5 font-medium text-slate-800">
+                    <dd className="mt-0.5 font-medium text-[#2C2621]">
                       {entity.parentAdSetName || '—'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-slate-400">{t('adsHeadline')}</dt>
-                    <dd className="mt-0.5 font-medium text-slate-800">
+                    <dt className="text-xs text-[#8A857D]">{t('adsHeadline')}</dt>
+                    <dd className="mt-0.5 font-medium text-[#2C2621]">
                       {entity.headline || '—'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="mb-2 text-xs text-slate-400">
+                    <dt className="mb-2 text-xs text-[#8A857D]">
                       {t('adsCreative')}
                     </dt>
                     <dd>
@@ -337,8 +337,8 @@ export default function AdsEntityDetailSheet({
                           className="h-36 w-full rounded-xl object-cover"
                         />
                       ) : (
-                        <div className="flex h-28 items-center justify-center gap-2 rounded-xl bg-[#2B2568]/5 text-sm text-[#2B2568]">
-                          <Megaphone className="h-4 w-4 text-[#F472B6]" />
+                        <div className="flex h-28 items-center justify-center gap-2 rounded-xl bg-[rgba(44,59,46,0.06)] text-sm text-[#2C3B2E]">
+                          <Megaphone className="h-4 w-4 text-[#2C3B2E]" />
                           {t('adsNoCreative')}
                         </div>
                       )}
@@ -353,14 +353,14 @@ export default function AdsEntityDetailSheet({
             <button
               type="button"
               onClick={onDrillDown}
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F472B6] px-4 text-sm font-semibold text-white"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#2C3B2E] px-4 text-sm font-medium text-[#F9F8F6]"
             >
               {drillLabel}
               <ChevronRight className="h-4 w-4" />
             </button>
           )}
 
-          <p className="flex items-start gap-2 text-xs text-slate-400">
+          <p className="flex items-start gap-2 text-xs text-[#8A857D]">
             <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             {t('adsMetaSyncNote')}
           </p>

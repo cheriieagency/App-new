@@ -254,19 +254,19 @@ export default function RevenueAnalyticsPanel({
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map((k) => (
           <div key={k.label} className={adminKpiClass}>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
               {k.label}
             </p>
-            <p className="mt-3 font-clikd-wordmark font-extrabold text-[26px] sm:text-[28px] leading-none text-slate-900 tracking-tight tabular-nums">
+            <p className="mt-3 font-playfair font-medium text-[26px] sm:text-[28px] leading-none text-[#2C2621] tracking-tight tabular-nums">
               {isLoading ? '—' : k.value}
             </p>
             <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-xs text-slate-400 font-medium">{k.meta}</span>
+              <span className="text-xs text-[#8A857D] font-medium">{k.meta}</span>
               {k.cta ? (
                 <button
                   type="button"
                   onClick={() => setPayoutOpen(true)}
-                  className="h-11 min-h-[44px] px-3.5 rounded-xl bg-clikd-pink text-white text-xs font-extrabold inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity"
+                  className="h-11 min-h-[44px] px-3.5 rounded-xl bg-clikd-pink text-white text-xs font-medium inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity"
                 >
                   <Wallet size={14} /> Request Payout
                 </button>
@@ -279,10 +279,10 @@ export default function RevenueAnalyticsPanel({
       <div className={`${adminCardClass} p-5 sm:p-7`}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
           <div>
-            <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+            <h2 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight">
               Sales & revenue
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-[#8A857D] mt-1">
               {chartCaption}
               {isFetching ? ' · refreshing…' : ''}
             </p>
@@ -291,7 +291,7 @@ export default function RevenueAnalyticsPanel({
             <button
               type="button"
               onClick={() => void refetch()}
-              className="h-10 min-h-[40px] px-3.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="h-10 min-h-[40px] px-3.5 rounded-xl border border-[#E6E3DB] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA]"
             >
               Retry
             </button>
@@ -299,17 +299,17 @@ export default function RevenueAnalyticsPanel({
         </div>
         <div className="h-[240px] w-full min-h-[200px] relative">
           {isLoading && chartData.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-sm text-slate-400">
+            <div className="h-full flex items-center justify-center text-sm text-[#8A857D]">
               Loading sales…
             </div>
           ) : chartData.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-sm text-slate-400">
+            <div className="h-full flex items-center justify-center text-sm text-[#8A857D]">
               No sales data
             </div>
           ) : (
             <>
               {!hasSales ? (
-                <p className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none text-sm text-slate-400 font-medium">
+                <p className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none text-sm text-[#8A857D] font-medium">
                   No sales yet
                 </p>
               ) : null}
@@ -317,8 +317,8 @@ export default function RevenueAnalyticsPanel({
                 <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#F472B6" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#F472B6" stopOpacity={0.02} />
+                      <stop offset="0%" stopColor="#2C3B2E" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#2C3B2E" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
@@ -349,7 +349,7 @@ export default function RevenueAnalyticsPanel({
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#F472B6"
+                    stroke="#2C3B2E"
                     strokeWidth={2}
                     fill="url(#revFill)"
                     animationDuration={700}
@@ -363,18 +363,18 @@ export default function RevenueAnalyticsPanel({
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4">
         <div className={`${adminCardClass} overflow-hidden`}>
-          <div className="px-5 sm:px-7 py-5 border-b border-slate-100 flex items-center gap-2">
-            <Package size={16} className="text-slate-400" />
+          <div className="px-5 sm:px-7 py-5 border-b border-[#E6E3DB] flex items-center gap-2">
+            <Package size={16} className="text-[#8A857D]" />
             <div>
-              <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+              <h2 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight">
                 Top selling products
               </h2>
-              <p className="text-sm text-slate-500 mt-0.5">By gross revenue</p>
+              <p className="text-sm text-[#8A857D] mt-0.5">By gross revenue</p>
             </div>
           </div>
           <ul className="divide-y divide-slate-50">
             {(data?.salesByProduct || []).length === 0 ? (
-              <li className="px-5 sm:px-7 py-10 text-sm text-slate-400 text-center">
+              <li className="px-5 sm:px-7 py-10 text-sm text-[#8A857D] text-center">
                 No product sales yet
               </li>
             ) : (
@@ -384,14 +384,14 @@ export default function RevenueAnalyticsPanel({
                   className="px-5 sm:px-7 py-4 flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">
+                    <p className="text-sm font-medium text-[#2C2621] truncate">
                       {row.productTitle}
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-[#8A857D] mt-0.5">
                       {row.orderCount} order{row.orderCount === 1 ? '' : 's'}
                     </p>
                   </div>
-                  <p className="text-sm font-bold tabular-nums text-emerald-600 shrink-0">
+                  <p className="text-sm font-medium tabular-nums text-[#2C3B2E] shrink-0">
                     {formatSek(row.revenue, tag)}
                   </p>
                 </li>
@@ -401,23 +401,23 @@ export default function RevenueAnalyticsPanel({
         </div>
 
         <div className={`${adminCardClass} overflow-hidden`}>
-          <div className="px-5 sm:px-7 py-5 border-b border-slate-100 flex items-center gap-2">
-            <Receipt size={16} className="text-slate-400" />
+          <div className="px-5 sm:px-7 py-5 border-b border-[#E6E3DB] flex items-center gap-2">
+            <Receipt size={16} className="text-[#8A857D]" />
             <div>
-              <h2 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
+              <h2 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight">
                 Recent transactions
               </h2>
-              <p className="text-sm text-slate-500 mt-0.5">Last 10 completed orders</p>
+              <p className="text-sm text-[#8A857D] mt-0.5">Last 10 completed orders</p>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-left">
               <thead>
-                <tr className="border-b border-slate-100">
+                <tr className="border-b border-[#E6E3DB]">
                   {['Buyer', 'Product', 'Gross', 'Fee', 'Net', 'Date'].map((h) => (
                     <th
                       key={h}
-                      className="px-5 sm:px-7 py-3 text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400"
+                      className="px-5 sm:px-7 py-3 text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]"
                     >
                       {h}
                     </th>
@@ -429,7 +429,7 @@ export default function RevenueAnalyticsPanel({
                   <tr>
                     <td
                       colSpan={6}
-                      className="px-5 sm:px-7 py-10 text-sm text-slate-400 text-center"
+                      className="px-5 sm:px-7 py-10 text-sm text-[#8A857D] text-center"
                     >
                       —
                     </td>
@@ -438,24 +438,24 @@ export default function RevenueAnalyticsPanel({
                   (data?.recentTransactions || []).map((tx) => (
                     <tr
                       key={String(tx.id)}
-                      className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50"
+                      className="border-b border-[#E6E3DB] last:border-0 hover:bg-[#F0EFEA]/50"
                     >
-                      <td className="px-5 sm:px-7 py-3.5 text-sm text-slate-600 truncate max-w-[140px]">
+                      <td className="px-5 sm:px-7 py-3.5 text-sm text-[#8A857D] truncate max-w-[140px]">
                         {tx.buyerEmail || '—'}
                       </td>
-                      <td className="px-5 sm:px-7 py-3.5 text-sm font-semibold text-slate-900 truncate max-w-[140px]">
+                      <td className="px-5 sm:px-7 py-3.5 text-sm font-medium text-[#2C2621] truncate max-w-[140px]">
                         {tx.productTitle}
                       </td>
-                      <td className="px-5 sm:px-7 py-3.5 text-sm tabular-nums text-slate-800">
+                      <td className="px-5 sm:px-7 py-3.5 text-sm tabular-nums text-[#2C2621]">
                         {Math.round(tx.amountGrossSek)}
                       </td>
-                      <td className="px-5 sm:px-7 py-3.5 text-sm tabular-nums text-slate-500">
+                      <td className="px-5 sm:px-7 py-3.5 text-sm tabular-nums text-[#8A857D]">
                         {Math.round(tx.platformFeeSek)}
                       </td>
-                      <td className="px-5 sm:px-7 py-3.5 text-sm font-bold tabular-nums text-emerald-600">
+                      <td className="px-5 sm:px-7 py-3.5 text-sm font-medium tabular-nums text-[#2C3B2E]">
                         {Math.round(tx.amountNetSek)}
                       </td>
-                      <td className="px-5 sm:px-7 py-3.5 text-xs text-slate-400 whitespace-nowrap">
+                      <td className="px-5 sm:px-7 py-3.5 text-xs text-[#8A857D] whitespace-nowrap">
                         {new Date(tx.createdAt).toLocaleDateString(tag)}
                       </td>
                     </tr>
@@ -479,24 +479,24 @@ export default function RevenueAnalyticsPanel({
             role="dialog"
             aria-modal="true"
             aria-label="Request payout"
-            className="relative z-10 w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4"
+            className="relative z-10 w-full sm:max-w-md bg-[#FFFFFF] rounded-t-3xl sm:rounded-xl shadow-2xl p-5 sm:p-6 space-y-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+                <p className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
                   Creator wallet
                 </p>
-                <h3 className="font-clikd-wordmark font-extrabold text-xl text-slate-900 mt-1">
+                <h3 className="font-playfair font-medium text-xl text-[#2C2621] mt-1">
                   {formatSek(wallet, tag)}
                 </h3>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-[#8A857D] mt-1">
                   Minimum payout 100 SEK
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setPayoutOpen(false)}
-                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-slate-50 flex items-center justify-center"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] flex items-center justify-center"
                 aria-label="Close"
               >
                 <X size={18} />
@@ -504,15 +504,15 @@ export default function RevenueAnalyticsPanel({
             </div>
 
             {!connectReady ? (
-              <div className="rounded-2xl border border-clikd-lilac/60 bg-[#FDF4FF] px-4 py-4 space-y-3">
-                <p className="text-sm font-semibold text-slate-800">
+              <div className="rounded-xl border border-clikd-lilac/60 bg-[#FDF4FF] px-4 py-4 space-y-3">
+                <p className="text-sm font-medium text-[#2C2621]">
                   Connect Bank Account with Stripe Express to enable 1-Click payouts
                 </p>
                 <button
                   type="button"
                   disabled={connectMutation.isPending}
                   onClick={() => connectMutation.mutate()}
-                  className="h-11 min-h-[44px] w-full rounded-xl bg-[#2B2568] text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="h-11 min-h-[44px] w-full rounded-xl bg-[#2C3B2E] text-white text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   {connectMutation.isPending ? (
                     <Loader2 className="animate-spin" size={16} />
@@ -527,7 +527,7 @@ export default function RevenueAnalyticsPanel({
                 type="button"
                 disabled={payoutMutation.isPending || wallet < 100}
                 onClick={() => payoutMutation.mutate()}
-                className="h-11 min-h-[44px] w-full rounded-xl bg-clikd-pink text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                className="h-11 min-h-[44px] w-full rounded-xl bg-clikd-pink text-white text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {payoutMutation.isPending ? (
                   <Loader2 className="animate-spin" size={16} />
@@ -539,7 +539,7 @@ export default function RevenueAnalyticsPanel({
             )}
 
             {connectReady && wallet < 100 ? (
-              <p className="text-xs text-slate-400 text-center">
+              <p className="text-xs text-[#8A857D] text-center">
                 Earn at least 100 SEK before requesting a payout.
               </p>
             ) : null}

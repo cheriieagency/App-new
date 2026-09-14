@@ -20,23 +20,23 @@ export default function MembersPendingInvites({
   const { t } = useLanguage();
 
   return (
-    <div className="mt-8 pt-6 border-t border-slate-100">
+    <div className="mt-8 pt-6 border-t border-[#E6E3DB]">
       <div className="flex items-center justify-between gap-3 mb-3">
         <div>
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D]">
             Pending invites
           </p>
-          <h4 className="text-sm font-extrabold text-slate-900 mt-0.5">
+          <h4 className="text-sm font-medium text-[#2C2621] mt-0.5">
             Awaiting acceptance
           </h4>
         </div>
-        <span className="text-[11px] font-mono font-bold text-slate-400">
+        <span className="text-[11px] font-mono font-bold text-[#8A857D]">
           {invites.length}
         </span>
       </div>
 
       {invites.length === 0 ? (
-        <p className="text-sm text-slate-400 font-medium py-4">
+        <p className="text-sm text-[#8A857D] font-medium py-4">
           No pending invites.
         </p>
       ) : (
@@ -47,18 +47,18 @@ export default function MembersPendingInvites({
               className={`${adminCardClass} p-3.5 flex flex-col sm:flex-row sm:items-center gap-3`}
             >
               <div className="flex items-start gap-3 min-w-0 flex-1">
-                <span className="h-10 w-10 min-h-[40px] min-w-[40px] rounded-full bg-amber-50 border border-amber-100 text-amber-700 flex items-center justify-center">
+                <span className="h-10 w-10 min-h-[40px] min-w-[40px] rounded-full bg-[rgba(184,92,56,0.08)] border border-amber-100 text-[#B85C38] flex items-center justify-center">
                   <Mail size={15} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-extrabold text-slate-900 truncate">
+                  <p className="text-sm font-medium text-[#2C2621] truncate">
                     {invite.name || invite.email}
                   </p>
-                  <p className="text-xs text-slate-500 font-medium truncate">
+                  <p className="text-xs text-[#8A857D] font-medium truncate">
                     {invite.email} · {invite.role}
                     {invite.space !== 'all' ? ` · ${invite.space}` : ''}
                   </p>
-                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                  <p className="text-[10px] text-[#8A857D] font-medium mt-0.5">
                     Invited{' '}
                     {new Date(invite.invitedAt).toLocaleDateString(undefined, {
                       month: 'short',
@@ -75,7 +75,7 @@ export default function MembersPendingInvites({
                     onResend(invite.id);
                     toast.success(t('toastInviteResent', { email: invite.email }));
                   }}
-                  className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-bold text-[#2C2621] hover:bg-[#F0EFEA]"
                 >
                   <RefreshCw size={13} />
                   Resend Invite
@@ -83,7 +83,7 @@ export default function MembersPendingInvites({
                 <button
                   type="button"
                   onClick={() => onRevoke(invite.id)}
-                  className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-rose-200 bg-white text-xs font-bold text-rose-600 hover:bg-rose-50"
+                  className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-rose-200 bg-[#FFFFFF] text-xs font-bold text-rose-600 hover:bg-rose-50"
                 >
                   <Trash2 size={13} />
                   Revoke Invite

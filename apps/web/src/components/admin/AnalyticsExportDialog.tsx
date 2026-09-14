@@ -585,8 +585,8 @@ export default function AnalyticsExportDialog({
     * { box-sizing: border-box; }
     body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; color: #0F172A; margin: 0; padding: 32px; background: #FAFAFA; }
     .brand { font-weight: 800; font-size: 18px; margin-bottom: 4px; }
-    .brand span { color: #F472B6; }
-    h1 { font-size: 24px; margin: 8px 0 4px; color: #2B2568; }
+    .brand span { color: #2C3B2E; }
+    h1 { font-size: 24px; margin: 8px 0 4px; color: #2C3B2E; }
     .meta { color: #64748b; font-size: 13px; margin-bottom: 24px; }
     h2 { font-size: 15px; margin: 28px 0 10px; color: #0F172A; letter-spacing: 0.02em; }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
@@ -662,19 +662,19 @@ export default function AnalyticsExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(520px,94vw)] rounded-3xl border-slate-200/80 bg-white p-0 gap-0 overflow-hidden shadow-2xl">
-        <DialogHeader className="px-5 sm:px-6 pt-5 pb-4 border-b border-slate-100 text-left">
-          <DialogTitle className="font-outfit font-extrabold text-xl text-slate-900 tracking-tight">
+      <DialogContent className="max-w-[min(520px,94vw)] rounded-xl border-[#E6E3DB] bg-[#FFFFFF] p-0 gap-0 overflow-hidden shadow-2xl">
+        <DialogHeader className="px-5 sm:px-6 pt-5 pb-4 border-b border-[#E6E3DB] text-left">
+          <DialogTitle className="font-outfit font-medium text-xl text-[#2C2621] tracking-tight">
             {t('admin.export')}
           </DialogTitle>
-          <DialogDescription className="text-sm text-slate-500 font-medium mt-1">
+          <DialogDescription className="text-sm text-[#8A857D] font-medium mt-1">
             Choose the date range and sections to include, then download as PDF or CSV.
           </DialogDescription>
         </DialogHeader>
 
         <div className="px-5 sm:px-6 py-4 max-h-[min(58vh,480px)] overflow-y-auto space-y-4">
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
               Date range
             </p>
             <div className="flex flex-wrap gap-1.5 mb-3">
@@ -685,10 +685,10 @@ export default function AnalyticsExportDialog({
                     key={key}
                     type="button"
                     onClick={() => applyPreset(key)}
-                    className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-bold transition-colors ${
+                    className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-medium transition-colors ${
                       active
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                        : 'bg-[#F0EFEA] text-[#8A857D] border border-[#E6E3DB] hover:bg-[#F0EFEA]'
                     }`}
                   >
                     {label}
@@ -698,7 +698,7 @@ export default function AnalyticsExportDialog({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <label className="block">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+                <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
                   From
                 </span>
                 <input
@@ -709,11 +709,11 @@ export default function AnalyticsExportDialog({
                     setPreset('custom');
                     setFrom(e.target.value);
                   }}
-                  className="mt-1 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                  className="mt-1 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
                 />
               </label>
               <label className="block">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400">
+                <span className="text-[10px] font-mono font-medium uppercase tracking-widest text-[#8A857D]">
                   To
                 </span>
                 <input
@@ -724,13 +724,13 @@ export default function AnalyticsExportDialog({
                     setPreset('custom');
                     setTo(e.target.value);
                   }}
-                  className="mt-1 w-full h-11 min-h-[44px] rounded-xl border border-slate-200 px-3 text-sm"
+                  className="mt-1 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
                 />
               </label>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium mt-2">
+            <p className="text-[11px] text-[#8A857D] font-medium mt-2">
               Exporting data for{' '}
-              <span className="font-semibold text-slate-700">{rangeLabel}</span>
+              <span className="font-medium text-[#2C2621]">{rangeLabel}</span>
               {' · '}
               {rangedPosts.length} posts · {rangedReels.length} reels ·{' '}
               {rangedStories.length} stories
@@ -738,22 +738,22 @@ export default function AnalyticsExportDialog({
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               Sections · {selectedCount}/{SECTIONS.length}
             </p>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => selectAll(true)}
-                className="text-[11px] font-bold text-[#2B2568] hover:underline min-h-[32px] px-1"
+                className="text-[11px] font-medium text-[#2C3B2E] hover:underline min-h-[32px] px-1"
               >
                 Select all
               </button>
-              <span className="text-slate-300">·</span>
+              <span className="text-[#8A857D]">·</span>
               <button
                 type="button"
                 onClick={() => selectAll(false)}
-                className="text-[11px] font-bold text-slate-500 hover:underline min-h-[32px] px-1"
+                className="text-[11px] font-medium text-[#8A857D] hover:underline min-h-[32px] px-1"
               >
                 Clear
               </button>
@@ -766,17 +766,17 @@ export default function AnalyticsExportDialog({
               return (
                 <label
                   key={section.id}
-                  className={`flex items-start gap-3 rounded-2xl border px-3.5 py-3 min-h-[52px] cursor-pointer transition-colors ${
+                  className={`flex items-start gap-3 rounded-xl border px-3.5 py-3 min-h-[52px] cursor-pointer transition-colors ${
                     on
-                      ? 'border-[#E9D5FF] bg-[#E9D5FF]/25'
-                      : 'border-slate-200/80 bg-white hover:bg-slate-50'
+                      ? 'border-[#E6E3DB] bg-[rgba(44,59,46,0.08)]/25'
+                      : 'border-[#E6E3DB] bg-[#FFFFFF] hover:bg-[#F0EFEA]'
                   }`}
                 >
                   <span
                     className={`mt-0.5 h-5 w-5 rounded-md border flex items-center justify-center flex-shrink-0 ${
                       on
-                        ? 'bg-[#2B2568] border-[#2B2568] text-white'
-                        : 'border-slate-300 bg-white'
+                        ? 'bg-[#2C3B2E] border-[#2C3B2E] text-white'
+                        : 'border-[#E6E3DB] bg-[#FFFFFF]'
                     }`}
                     aria-hidden
                   >
@@ -789,10 +789,10 @@ export default function AnalyticsExportDialog({
                     onChange={() => toggle(section.id)}
                   />
                   <span className="min-w-0">
-                    <span className="block text-sm font-extrabold text-slate-900">
+                    <span className="block text-sm font-medium text-[#2C2621]">
                       {section.label}
                     </span>
-                    <span className="block text-[12px] text-slate-500 font-medium mt-0.5">
+                    <span className="block text-[12px] text-[#8A857D] font-medium mt-0.5">
                       {section.description}
                     </span>
                   </span>
@@ -802,47 +802,47 @@ export default function AnalyticsExportDialog({
           </div>
 
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-2">
+            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
               File format
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setFormat('pdf')}
-                className={`min-h-[56px] rounded-2xl border px-3 py-3 text-left transition-colors ${
+                className={`min-h-[56px] rounded-xl border px-3 py-3 text-left transition-colors ${
                   format === 'pdf'
-                    ? 'border-[#F472B6] bg-[#FCE7F3]/50 ring-1 ring-[#F472B6]/30'
-                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                    ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)] ring-1 ring-[#2C3B2E]/25'
+                    : 'border-[#E6E3DB] bg-[#FFFFFF] hover:bg-[#F0EFEA]'
                 }`}
               >
                 <span className="flex items-center gap-2">
                   <FileText
                     size={16}
-                    className={format === 'pdf' ? 'text-[#F472B6]' : 'text-slate-400'}
+                    className={format === 'pdf' ? 'text-[#2C3B2E]' : 'text-[#8A857D]'}
                   />
-                  <span className="text-sm font-extrabold text-slate-900">Visual PDF</span>
+                  <span className="text-sm font-medium text-[#2C2621]">Visual PDF</span>
                 </span>
-                <span className="block text-[11px] text-slate-500 font-medium mt-1">
+                <span className="block text-[11px] text-[#8A857D] font-medium mt-1">
                   Print-ready report layout
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => setFormat('csv')}
-                className={`min-h-[56px] rounded-2xl border px-3 py-3 text-left transition-colors ${
+                className={`min-h-[56px] rounded-xl border px-3 py-3 text-left transition-colors ${
                   format === 'csv'
-                    ? 'border-[#F472B6] bg-[#FCE7F3]/50 ring-1 ring-[#F472B6]/30'
-                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                    ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)] ring-1 ring-[#2C3B2E]/25'
+                    : 'border-[#E6E3DB] bg-[#FFFFFF] hover:bg-[#F0EFEA]'
                 }`}
               >
                 <span className="flex items-center gap-2">
                   <FileSpreadsheet
                     size={16}
-                    className={format === 'csv' ? 'text-[#F472B6]' : 'text-slate-400'}
+                    className={format === 'csv' ? 'text-[#2C3B2E]' : 'text-[#8A857D]'}
                   />
-                  <span className="text-sm font-extrabold text-slate-900">CSV file</span>
+                  <span className="text-sm font-medium text-[#2C2621]">CSV file</span>
                 </span>
-                <span className="block text-[11px] text-slate-500 font-medium mt-1">
+                <span className="block text-[11px] text-[#8A857D] font-medium mt-1">
                   Spreadsheet for Excel / Sheets
                 </span>
               </button>
@@ -850,11 +850,11 @@ export default function AnalyticsExportDialog({
           </div>
         </div>
 
-        <DialogFooter className="px-5 sm:px-6 py-4 border-t border-slate-100 flex-col sm:flex-row gap-2">
+        <DialogFooter className="px-5 sm:px-6 py-4 border-t border-[#E6E3DB] flex-col sm:flex-row gap-2">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="min-h-[44px] px-4 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 w-full sm:w-auto"
+            className="min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] text-sm font-medium text-[#8A857D] hover:bg-[#F0EFEA] w-full sm:w-auto"
           >
             {t('common.cancel')}
           </button>
@@ -862,7 +862,7 @@ export default function AnalyticsExportDialog({
             type="button"
             disabled={busy || selectedCount === 0 || from > to}
             onClick={() => void handleDownload()}
-            className="min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-extrabold inline-flex items-center justify-center gap-2 disabled:opacity-40 w-full sm:w-auto"
+            className="min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-40 w-full sm:w-auto"
           >
             {busy ? (
               <Loader2 size={14} className="animate-spin" />

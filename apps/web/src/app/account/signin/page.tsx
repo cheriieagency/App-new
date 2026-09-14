@@ -120,69 +120,82 @@ function SignInForm() {
   };
 
   return (
-    <main className="nc-app nc-app-shell flex min-h-screen w-full items-center justify-center p-4 relative z-10">
+    <main className="flex min-h-screen w-full items-center justify-center bg-[#F9F8F6] text-[#2C2621] p-4 relative z-10">
       <div className="w-full max-w-[420px]">
-        {/* Logo */}
         <div className="flex items-center justify-center mb-8">
-          <ClikdWordmark showMark={false} textClassName="text-2xl" className="min-h-0 gap-0" />
+          <Link href="/" className="min-h-11 inline-flex items-center">
+            <ClikdWordmark showMark textClassName="text-2xl" className="min-h-0" />
+          </Link>
         </div>
 
-        {/* Role switcher */}
-        <div className="nc-glass rounded-[1.5rem] p-1.5 flex gap-1.5 mb-5">
+        <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-1.5 flex gap-1.5 mb-5">
           <button
             type="button"
             onClick={() => setRole('member')}
-            className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-black transition-all ${role === 'member' ? 'bg-[var(--nc-coral)] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
+            className={`flex-1 flex items-center justify-center gap-2 min-h-11 rounded-xl text-xs font-medium transition-all ${
+              role === 'member'
+                ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                : 'text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]'
+            }`}
           >
-            <Users size={14} />
+            <Users size={14} aria-hidden />
             {t('loginAsMember', locale)}
           </button>
           <button
             type="button"
             onClick={() => setRole('creator')}
-            className={`flex-1 flex items-center justify-center gap-2 h-10 rounded-xl text-xs font-black transition-all ${role === 'creator' ? 'bg-[var(--nc-coral)] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-700'}`}
+            className={`flex-1 flex items-center justify-center gap-2 min-h-11 rounded-xl text-xs font-medium transition-all ${
+              role === 'creator'
+                ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                : 'text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]'
+            }`}
           >
-            <Crown size={14} />
+            <Crown size={14} aria-hidden />
             {t('loginAsCreatorAdmin', locale)}
           </button>
         </div>
 
-        {/* Role badge */}
         <div
-          className={`flex items-center gap-2 mb-5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${role === 'creator' ? 'bg-[#f2eeff] border-[#e8e2ff] text-[#6b5bb8]' : 'bg-[#d7ecff] border-[#b6d9f5] text-[#0369a1]'}`}
+          className={`flex items-center gap-2 mb-5 px-4 py-2.5 min-h-11 rounded-xl border text-xs font-medium transition-all ${
+            role === 'creator'
+              ? 'bg-[rgba(44,59,46,0.08)] border-[rgba(44,59,46,0.18)] text-[#2C3B2E]'
+              : 'bg-[#F0EFEA] border-[#E6E3DB] text-[#8A857D]'
+          }`}
         >
           {role === 'creator' ? (
             <>
-              <Crown size={13} /> {t('loginAsCreatorAdmin', locale)}
+              <Crown size={13} aria-hidden /> {t('loginAsCreatorAdmin', locale)}
             </>
           ) : (
             <>
-              <Users size={13} /> {t('loginAsMember', locale)}
+              <Users size={13} aria-hidden /> {t('loginAsMember', locale)}
             </>
           )}
         </div>
 
         {demoMode && (
-          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-900">
-            Demo mode: Supabase env missing/placeholder — sign-in uses in-memory auth for local testing.
+          <div className="mb-5 rounded-xl border border-[rgba(184,92,56,0.25)] bg-[rgba(184,92,56,0.08)] px-4 py-2.5 text-xs font-medium text-[#B85C38]">
+            Demo mode: Supabase env missing/placeholder — sign-in uses in-memory auth for local
+            testing.
           </div>
         )}
 
-        {/* Card */}
         <form
           onSubmit={(e) => {
             void onSubmit(e);
           }}
-          className="nc-glass rounded-[1.5rem] p-7 flex flex-col gap-4"
+          className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-7 flex flex-col gap-4 shadow-none"
         >
           <div>
-            <h1 className="text-xl font-display font-extrabold text-[#2c3340]">{t('welcomeBack', locale)}</h1>
-            <p className="text-sm text-zinc-400 font-medium mt-0.5">
+            <h1 className="font-playfair text-2xl font-medium text-[#2C2621] tracking-tight">
+              {t('welcomeBack', locale)}
+            </h1>
+            <p className="text-sm text-[#8A857D] font-medium mt-1">
               {role === 'creator' ? t('loginAsCreatorAdmin', locale) : t('loginAsMember', locale)}
             </p>
           </div>
 
-          <label className="flex flex-col gap-1.5 text-xs font-black text-zinc-500 uppercase tracking-wider">
+          <label className="flex flex-col gap-1.5 text-[10px] font-inter font-medium text-[#8A857D] uppercase tracking-[0.14em]">
             {t('emailAddress', locale)}
             <input
               type="email"
@@ -190,11 +203,11 @@ function SignInForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
-              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff] transition-all placeholder:text-zinc-300"
+              className="min-h-11 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-3 text-sm text-[#2C2621] font-medium outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[rgba(44,59,46,0.12)] transition-all placeholder:text-[#8A857D]/70"
             />
           </label>
 
-          <label className="flex flex-col gap-1.5 text-xs font-black text-zinc-500 uppercase tracking-wider">
+          <label className="flex flex-col gap-1.5 text-[10px] font-inter font-medium text-[#8A857D] uppercase tracking-[0.14em]">
             {t('password', locale)}
             <input
               type="password"
@@ -203,31 +216,31 @@ function SignInForm() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
-              className="rounded-xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 font-medium outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff] transition-all placeholder:text-zinc-300"
+              className="min-h-11 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-3 text-sm text-[#2C2621] font-medium outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[rgba(44,59,46,0.12)] transition-all placeholder:text-[#8A857D]/70"
             />
           </label>
 
           <div className="flex items-center justify-end -mt-1">
             <Link
               href="/forgot-password"
-              className="text-xs font-bold text-[var(--nc-coral)] hover:opacity-80 min-h-[44px] inline-flex items-center"
+              className="text-xs font-medium text-[#2C3B2E] hover:underline min-h-[44px] inline-flex items-center"
             >
               Forgot password?
             </Link>
           </div>
 
-          <label className="inline-flex items-center gap-2.5 min-h-[44px] text-sm font-bold text-zinc-600 cursor-pointer select-none">
+          <label className="inline-flex items-center gap-2.5 min-h-[44px] text-sm font-medium text-[#8A857D] cursor-pointer select-none">
             <input
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 text-[var(--nc-coral)] focus:ring-[var(--nc-coral)]"
+              className="h-4 w-4 rounded border-[#E6E3DB] text-[#2C3B2E] focus:ring-[#2C3B2E]/30"
             />
             {t('rememberMe', locale)}
           </label>
 
           {error && (
-            <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-bold text-red-600">
+            <div className="rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.2)] px-4 py-3 text-sm font-medium text-[#B85C38]">
               {error}
             </div>
           )}
@@ -235,7 +248,7 @@ function SignInForm() {
           <button
             type="submit"
             disabled={loading}
-            className={`h-12 rounded-full text-sm font-extrabold text-white transition-all active:scale-95 disabled:opacity-60 ${role === 'creator' ? 'bg-[var(--nc-coral)] hover:opacity-90' : 'bg-[var(--nc-coral)] hover:opacity-90'}`}
+            className="min-h-12 rounded-xl text-sm font-medium text-[#F9F8F6] bg-[#2C3B2E] hover:bg-[#243228] transition-colors disabled:opacity-60"
           >
             {loading ? t('signingIn', locale) : t('signIn', locale)}
           </button>
@@ -243,15 +256,13 @@ function SignInForm() {
           <SocialSignInButtons callbackUrl={callbackUrl} />
 
           {hideCreateAccountLink ? (
-            <p className="text-center text-sm text-zinc-400">
-              {t('noAccount', locale)}
-            </p>
+            <p className="text-center text-sm text-[#8A857D]">{t('noAccount', locale)}</p>
           ) : (
-            <p className="text-center text-sm text-zinc-400">
+            <p className="text-center text-sm text-[#8A857D]">
               {t('noAccount', locale)}{' '}
               <Link
                 href={`/account/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-                className="font-black text-[var(--nc-coral)] hover:opacity-80 transition-colors"
+                className="font-medium text-[#2C3B2E] hover:underline transition-colors"
               >
                 {t('createAccount', locale)}
               </Link>
@@ -259,14 +270,15 @@ function SignInForm() {
           )}
         </form>
 
-        <p className="text-center text-xs text-zinc-400 font-medium mt-6">
-          <Link href="/" className="hover:text-zinc-600 transition-colors">
+        <p className="text-center text-xs text-[#8A857D] font-medium mt-6">
+          <Link href="/" className="hover:text-[#2C2621] transition-colors">
             {t('backToHome', locale)}
           </Link>
         </p>
       </div>
     </main>
   );
+
 }
 
 export default function SignInPage() {
