@@ -18,17 +18,17 @@ export default function ConnectSocialsEmpty({
   description?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-      <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E9D5FF]/60 text-[#2B2568] mb-4">
+    <div className="rounded-xl border border-dashed border-[#E6E3DB] bg-[#FFFFFF] px-6 py-16 text-center ">
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0EFEA] text-[#2C3B2E] mb-4">
         <Link2 size={22} />
       </span>
-      <h3 className="text-base font-extrabold text-slate-900 tracking-tight">{title}</h3>
-      <p className="mt-2 text-sm text-slate-500 font-medium max-w-md mx-auto leading-relaxed">
+      <h3 className="font-playfair text-xl font-medium text-[#2C2621] tracking-tight">{title}</h3>
+      <p className="mt-2 text-sm text-[#8A857D] font-medium max-w-md mx-auto leading-relaxed">
         {description}
       </p>
       <Link
         href="/admin/settings/socials"
-        className="inline-flex items-center justify-center min-h-[44px] mt-6 px-5 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-sm font-bold"
+        className="inline-flex items-center justify-center min-h-[44px] mt-6 px-5 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-sm font-medium"
       >
         Connect now
       </Link>
@@ -50,7 +50,7 @@ export function RequireConnectedSocials({
 
   if (isLoading) {
     return (
-      <div className="py-16 text-center text-sm font-semibold text-slate-400">
+      <div className="py-16 text-center text-sm font-medium text-[#8A857D]">
         Loading…
       </div>
     );
