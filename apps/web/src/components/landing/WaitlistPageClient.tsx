@@ -57,7 +57,7 @@ export function WaitlistPageClient() {
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/"
-            className="font-playfair text-3xl sm:text-4xl font-medium tracking-tight text-[#2C2621] leading-none min-h-[44px] inline-flex items-center"
+            className="font-playfair italic font-medium text-[2.15rem] sm:text-[2.5rem] text-[#2C2621] leading-none tracking-tight min-h-[44px] inline-flex items-center"
             aria-label="Clikd home"
           >
             C.

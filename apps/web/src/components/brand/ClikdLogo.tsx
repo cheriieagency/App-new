@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Editorial Clikd mark — Playfair serif “C.”
- * Massive, quiet, gallery-like. No pink/midnight badge.
+ * Editorial Clikd mark — Playfair Display italic “C.”
+ * Quiet gallery mark. No pink/midnight badge.
  */
 export function ClikdMark({
   size = 32,
@@ -11,10 +11,10 @@ export function ClikdMark({
   size?: number;
   className?: string;
 }) {
-  const fontSize = Math.max(18, Math.round(size * 0.85));
+  const fontSize = Math.max(18, Math.round(size * 0.9));
   return (
     <div
-      className={`flex items-center justify-center shrink-0 font-playfair font-medium tracking-tight text-[#2C2621] leading-none ${className}`}
+      className={`flex items-center justify-center shrink-0 font-playfair italic font-medium tracking-tight text-[#2C2621] leading-none ${className}`}
       style={{
         width: size,
         height: size,

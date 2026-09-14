@@ -114,6 +114,9 @@ function NoInstagramBusinessBanner() {
   return <IgBusinessRequiredBanner />;
 }
 
+const SIGN_IN_HREF =
+  '/account/signin?callbackUrl=' + encodeURIComponent('/admin/settings/socials');
+
 /** Settings → Connected Social Accounts (OAuth + Demo Recording Mode). */
 export default function AdminSocialSettingsPage() {
   const { data: session, isPending } = authClient.useSession();
@@ -127,27 +130,33 @@ export default function AdminSocialSettingsPage() {
       setSessionTimedOut(false);
       return;
     }
-    const t = window.setTimeout(() => setSessionTimedOut(true), 8_000);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setSessionTimedOut(true), 6_000);
+    return () => window.clearTimeout(timer);
   }, [isPending]);
 
   useEffect(() => {
     if ((!isPending || sessionTimedOut) && !session) {
-      router.replace('/account/signin');
+      router.replace(SIGN_IN_HREF);
     }
   }, [isPending, sessionTimedOut, session, router]);
 
   if (isPending && !sessionTimedOut) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F9F8F6] text-[#8A857D] text-sm font-medium">
+      <div className="min-h-[50vh] flex items-center justify-center bg-[#F9F8F6] text-[#8A857D] text-sm font-medium">
         {t('common.loading')}
       </div>
     );
   }
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F9F8F6] text-[#8A857D] text-sm font-medium">
-        {t('common.loading')}
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 bg-[#F9F8F6] text-[#8A857D] text-sm font-medium px-4">
+        <p>Redirecting to sign in…</p>
+        <Link
+          href={SIGN_IN_HREF}
+          className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-sm font-medium"
+        >
+          Sign in
+        </Link>
       </div>
     );
   }
