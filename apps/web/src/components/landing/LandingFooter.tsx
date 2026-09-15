@@ -9,10 +9,12 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 }
 
-const PRODUCT_LINKS: { labelKey: TranslationKey; id: string }[] = [
+const PRODUCT_LINKS: { labelKey: TranslationKey; id?: string; href?: string }[] = [
   { labelKey: 'navFeatures', id: 'creator-admin' },
-  { labelKey: 'navPricing', id: 'pricing' },
+  { labelKey: 'navPlatform', id: 'the-platform' },
+  { labelKey: 'navPricing', href: '/pricing' },
   { labelKey: 'navCommunities', id: 'communities' },
+  { labelKey: 'navFaq', id: 'faq' },
   { labelKey: 'roiEyebrow', id: 'roi' },
 ];
 
@@ -29,33 +31,42 @@ export function LandingFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-slate-200/80 bg-white text-slate-500">
+    <footer className="border-t border-[#E6E3DB] bg-[#F9F8F6] text-[#8A857D]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-14">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
             <ClikdWordmark markSize={28} className="gap-2 min-h-0 mb-4" />
-            <p className="text-sm font-medium leading-relaxed text-slate-600 font-display max-w-xs">
+            <p className="text-sm font-inter font-normal leading-relaxed text-[#8A857D] max-w-xs">
               {t('footerBlurb', locale)}
             </p>
-            <p className="mt-4 text-xs font-mono text-slate-400">{t('footerBuiltFor', locale)}</p>
+            <p className="mt-4 text-xs font-inter text-[#8A857D]/80">{t('footerBuiltFor', locale)}</p>
           </div>
 
-          {/* Product */}
+          {/* Menu */}
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-4">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D] mb-4">
               {t('footerProduct', locale)}
             </p>
             <ul className="space-y-2.5">
               {PRODUCT_LINKS.map((link) => (
-                <li key={link.id}>
-                  <button
-                    type="button"
-                    onClick={() => scrollToId(link.id)}
-                    className="text-sm font-bold text-slate-700 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
-                  >
-                    {t(link.labelKey, locale)}
-                  </button>
+                <li key={link.href ?? link.id}>
+                  {link.href ? (
+                    <Link
+                      href={link.href}
+                      className="text-sm font-inter font-medium text-[#2C2621] hover:text-[#2C3B2E] transition-colors min-h-11 inline-flex items-center"
+                    >
+                      {t(link.labelKey, locale)}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => scrollToId(link.id!)}
+                      className="text-sm font-inter font-medium text-[#2C2621] hover:text-[#2C3B2E] transition-colors min-h-11 inline-flex items-center"
+                    >
+                      {t(link.labelKey, locale)}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -63,14 +74,14 @@ export function LandingFooter() {
 
           {/* Account */}
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-4">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D] mb-4">
               {t('footerAccount', locale)}
             </p>
             <ul className="space-y-2.5">
               <li>
                 <Link
                   href="/account/signin"
-                  className="text-sm font-bold text-slate-700 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
+                  className="text-sm font-inter font-medium text-[#2C2621] hover:text-[#2C3B2E] transition-colors min-h-11 inline-flex items-center"
                 >
                   {t('signIn', locale)}
                 </Link>
@@ -78,7 +89,7 @@ export function LandingFooter() {
               <li>
                 <Link
                   href="/onboarding"
-                  className="text-sm font-bold text-slate-700 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
+                  className="text-sm font-inter font-medium text-[#2C2621] hover:text-[#2C3B2E] transition-colors min-h-11 inline-flex items-center"
                 >
                   {t('signUp', locale)}
                 </Link>
@@ -86,7 +97,7 @@ export function LandingFooter() {
               <li>
                 <a
                   href="mailto:support@clikd.app"
-                  className="text-sm font-bold text-slate-700 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
+                  className="text-sm font-inter font-medium text-[#2C2621] hover:text-[#2C3B2E] transition-colors min-h-11 inline-flex items-center"
                 >
                   {t('footerSupport', locale)}
                 </a>
@@ -96,7 +107,7 @@ export function LandingFooter() {
 
           {/* Legal */}
           <div>
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-4">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D] mb-4">
               {t('footerLegal', locale)}
             </p>
             <ul className="space-y-2.5">
@@ -104,7 +115,7 @@ export function LandingFooter() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm font-bold text-slate-700 hover:text-[#F472B6] transition-colors min-h-11 inline-flex items-center"
+                    className="text-sm font-inter font-medium text-[#2C2621] hover:text-[#2C3B2E] transition-colors min-h-11 inline-flex items-center"
                   >
                     {t(link.labelKey, locale)}
                   </Link>
@@ -114,9 +125,13 @@ export function LandingFooter() {
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs font-medium text-slate-400">
-            © {year} clikd<span className="text-[#F472B6]">:</span> — {t('footerRights', locale)}
+        <div className="mt-12 pt-6 border-t border-[#E6E3DB] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs font-inter text-[#8A857D]">
+            © {year}{' '}
+            <span className="font-playfair italic text-[#2C2621]">
+              C<span className="text-[#2C3B2E]">.</span>
+            </span>{' '}
+            — {t('footerRights', locale)}
           </p>
         </div>
       </div>

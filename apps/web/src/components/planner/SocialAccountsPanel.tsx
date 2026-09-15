@@ -39,6 +39,7 @@ import { localeTag, useLanguage } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
 import { looksLikeOpaquePinterestId } from '@/lib/pinterest/heal-identity';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import WorkspaceOAuthGuideBanner from '@/components/admin/WorkspaceOAuthGuideBanner';
 import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
 import { openOAuthPopup } from '@/lib/oauth/popup';
@@ -311,6 +312,8 @@ export default function SocialAccountsPanel({
   const workspaceCtx = useWorkspaceOptional();
   const activeWorkspace = workspaceCtx?.activeWorkspace;
   const activeWorkspaceId = workspaceCtx?.activeWorkspaceId || null;
+  const { showYouTube, showPinterest, showGoogle, canAccessPlatform } =
+    usePendingApiPlatformAccess();
 
   const connectLabel = (platform: SocialPlatform) => {
     const keys: Partial<Record<SocialPlatform, string>> = {
@@ -554,6 +557,7 @@ export default function SocialAccountsPanel({
       return;
     }
     if (platform === 'youtube') {
+      if (!canAccessPlatform('youtube')) return;
       void handleConnectPlatform(
         'YouTube',
         withWorkspaceQuery('/api/auth/youtube/login', activeWorkspaceId),
@@ -574,6 +578,7 @@ export default function SocialAccountsPanel({
       return;
     }
     if (platform === 'pinterest') {
+      if (!canAccessPlatform('pinterest')) return;
       void handleConnectPlatform(
         'Pinterest',
         withWorkspaceQuery('/api/auth/pinterest/login', activeWorkspaceId),
@@ -1124,6 +1129,7 @@ export default function SocialAccountsPanel({
             </div>
           </div>
 
+          {showYouTube ? (
           <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
             <div className="min-w-0">
               <p className="text-sm font-medium text-[#2C2621]">
@@ -1161,6 +1167,7 @@ export default function SocialAccountsPanel({
               />
             </div>
           </div>
+          ) : null}
 
           <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
             <div className="min-w-0">
@@ -1200,6 +1207,7 @@ export default function SocialAccountsPanel({
             </div>
           </div>
 
+          {showPinterest ? (
           <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
             <div className="min-w-0">
               <p className="text-sm font-medium text-[#2C2621]">
@@ -1237,15 +1245,16 @@ export default function SocialAccountsPanel({
               />
             </div>
           </div>
+          ) : null}
 
-          <GoogleIntegrationCard />
+          {showGoogle ? <GoogleIntegrationCard /> : null}
         </div>
       )}
 
       {/* Platform cards in compact modal — full settings page uses the strips above. */}
       {compact && (
       <div className={`grid grid-cols-1 ${compact ? 'gap-3' : 'md:grid-cols-2 gap-3 sm:gap-4'}`}>
-        {ORDER.map((platform) => {
+        {ORDER.filter((platform) => canAccessPlatform(platform)).map((platform) => {
           const acc = byPlatform.get(platform);
           const meta = PLATFORM_META[platform];
           const Icon = ICONS[platform];

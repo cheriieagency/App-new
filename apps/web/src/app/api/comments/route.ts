@@ -2,19 +2,8 @@ import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { MOCK_COMMENTS } from '@/lib/mock-demo-content';
-import { applyCommentPinOverride, demoCommentPinOverrides } from '@/lib/demo-pin-state';
+import { demoCommentPinOverrides } from '@/lib/demo-pin-state';
 import { ensureCommunitiesSchema } from '@/lib/communities/schema';
-
-function withDemoPins(comments: Array<Record<string, unknown>>) {
-  return comments.map((c) =>
-    applyCommentPinOverride({
-      ...c,
-      id: Number(c.id),
-      is_pinned: Boolean(c.is_pinned),
-      pinned_at: (c.pinned_at as string | null | undefined) ?? null,
-    })
-  );
-}
 
 function sortPinnedFirst(comments: Array<Record<string, unknown>>) {
   return [...comments].sort((a, b) => {
@@ -50,12 +39,16 @@ export async function GET(request: Request) {
     if (!Array.isArray(comments) || comments.length === 0) {
       return Response.json([]);
     }
+    // Skip in-memory demo pin overrides when a live database is configured.
     return Response.json(
-      sortPinnedFirst(withDemoPins(comments as Array<Record<string, unknown>>))
+      sortPinnedFirst(comments as Array<Record<string, unknown>>)
     );
   } catch (error) {
     console.error(error);
-    return Response.json([]);
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json([]);
+    }
+    return Response.json({ error: 'Failed to load comments' }, { status: 500 });
   }
 }
 

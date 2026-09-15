@@ -10,6 +10,11 @@ import {
   parsePlatformRoleCookie,
   pathMatchesPrefix,
 } from '@/lib/platform-role';
+import {
+  REFERRAL_COOKIE,
+  REFERRAL_COOKIE_MAX_AGE,
+  sanitizeReferralCode,
+} from '@/lib/referrals';
 
 /** Platform hosts that should NOT trigger custom-domain rewrites. */
 function isPlatformHost(host: string): boolean {
@@ -24,8 +29,9 @@ function isPlatformHost(host: string): boolean {
 }
 
 /**
- * 1) Custom domain → rewrite to public bio (URL bar stays on customer domain)
- * 2) Platform host → enforce member ↔ creator studio split
+ * 1) Capture ?ref= invite codes into clikd_ref cookie
+ * 2) Custom domain → rewrite to public bio (URL bar stays on customer domain)
+ * 3) Platform host → enforce member ↔ creator studio split
  *
  * Webhooks bypass ALL checks below (auth / session / CSRF / role redirects).
  */
@@ -47,6 +53,19 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api') ||
     pathname.startsWith('/favicon') ||
     /\.\w{2,5}$/.test(pathname);
+
+  // Persist invite attribution from ?ref=CODE (landing + deep links).
+  const refCode = sanitizeReferralCode(request.nextUrl.searchParams.get('ref'));
+  const withRefCookie = (res: NextResponse) => {
+    if (!refCode) return res;
+    res.cookies.set(REFERRAL_COOKIE, refCode, {
+      path: '/',
+      maxAge: REFERRAL_COOKIE_MAX_AGE,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    return res;
+  };
 
   if (!isPlatformHost(host) && !isAsset) {
     try {
@@ -75,7 +94,7 @@ export async function middleware(request: NextRequest) {
           if (target && pathname !== target) {
             const url = request.nextUrl.clone();
             url.pathname = target;
-            return NextResponse.rewrite(url);
+            return withRefCookie(NextResponse.rewrite(url));
           }
         }
       }
@@ -86,7 +105,7 @@ export async function middleware(request: NextRequest) {
 
   // --- Role split (admin vs member) on platform hosts ---
   if (pathname.startsWith('/account/') || pathname === '/forgot-password' || pathname === '/update-password') {
-    return NextResponse.next();
+    return withRefCookie(NextResponse.next());
   }
 
   const parsed = parsePlatformRoleCookie(
@@ -97,18 +116,22 @@ export async function middleware(request: NextRequest) {
   const creator = isCreatorRole(parsed.role);
 
   if (dual) {
-    return NextResponse.next();
+    return withRefCookie(NextResponse.next());
   }
 
   if (creator && pathMatchesPrefix(pathname, MEMBER_ROUTE_PREFIXES)) {
-    return NextResponse.redirect(new URL(homeForRole(parsed.role), request.url));
+    return withRefCookie(
+      NextResponse.redirect(new URL(homeForRole(parsed.role), request.url))
+    );
   }
 
   if (!creator && pathMatchesPrefix(pathname, CREATOR_ROUTE_PREFIXES)) {
-    return NextResponse.redirect(new URL(homeForRole(parsed.role), request.url));
+    return withRefCookie(
+      NextResponse.redirect(new URL(homeForRole(parsed.role), request.url))
+    );
   }
 
-  return NextResponse.next();
+  return withRefCookie(NextResponse.next());
 }
 
 export const config = {

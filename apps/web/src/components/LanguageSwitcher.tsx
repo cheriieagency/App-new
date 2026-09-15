@@ -28,7 +28,7 @@ export default function LanguageSwitcher({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-full bg-zinc-100 hover:bg-zinc-200 text-xs font-extrabold text-zinc-600 transition-colors"
+        className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200/70 bg-transparent hover:bg-zinc-100/70 text-xs font-semibold text-zinc-500 transition-colors"
         aria-label={t('nav.language')}
         aria-expanded={open}
       >

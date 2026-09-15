@@ -26,6 +26,7 @@ import {
 } from '@/lib/mock-content-planner';
 import { useLanguage } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 
 type CopilotMode = 'ideas' | 'caption' | 'hashtags' | 'hooks' | 'saved';
 
@@ -162,6 +163,7 @@ export default function AiCopilotPanel({
   }) => void;
 }) {
   const { locale } = useLanguage();
+  const { canAccessPlatform } = usePendingApiPlatformAccess();
   const [mode, setMode] = useState<CopilotMode>('ideas');
   const [prompt, setPrompt] = useState('');
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
@@ -178,6 +180,10 @@ export default function AiCopilotPanel({
   const [copied, setCopied] = useState<string | null>(null);
   const [savedIdeas, setSavedIdeas] = useState<SavedIdea[]>([]);
   const [justSaved, setJustSaved] = useState<string | null>(null);
+
+  const visiblePlatformOptions = PLATFORM_OPTIONS.filter((opt) =>
+    canAccessPlatform(opt.key)
+  );
 
   useEffect(() => {
     setSavedIdeas(loadSavedIdeas());
@@ -373,7 +379,7 @@ export default function AiCopilotPanel({
                   Plattformar
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {PLATFORM_OPTIONS.map(({ key, label }) => {
+                  {visiblePlatformOptions.map(({ key, label }) => {
                     const checked = platforms.includes(key);
                     return (
                       <label

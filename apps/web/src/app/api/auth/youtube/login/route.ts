@@ -42,6 +42,16 @@ export async function GET(request: Request) {
     return NextResponse.redirect(signIn);
   }
 
+  const { canAccessPendingApiPlatform } = await import(
+    '@/lib/config/pending-api-platforms'
+  );
+  if (!canAccessPendingApiPlatform(session.user.email, 'youtube')) {
+    return NextResponse.json(
+      { error: 'platform_unavailable', platform: 'youtube' },
+      { status: 403 }
+    );
+  }
+
   const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
   const origin = url.origin;
 

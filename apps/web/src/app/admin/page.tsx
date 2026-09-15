@@ -111,6 +111,7 @@ import {
 import BioBuilderDesignTab from '@/components/admin/BioBuilderDesignTab';
 import BioHandleInput from '@/components/admin/BioHandleInput';
 import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import {
   SOCIAL_BRAND_ICONS,
   type SocialBrandId,
@@ -1719,6 +1720,7 @@ export default function AdminPage() {
   const adminCommunityId = activeWorkspace.community.community_id;
   const { section, setSection } = useAdminNav();
   const { hasConnectedSocials, isLoading: socialsLoading } = useConnectedSocials();
+  const { showGoogle } = usePendingApiPlatformAccess();
 
   // Keep heavy admin panels mounted after first visit so tab switches stay instant
   // (React Query cache + no remount refetch for Analytics / Projects / Bio / etc.).
@@ -3735,16 +3737,17 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium text-[#2C2621] px-0.5">
-                        Booking integrations
-                      </h3>
-                      <p className="text-xs text-[#8A857D] px-0.5 mb-1">
-                        Connect Google so 1:1 Coaching blocks can create Calendar events + Meet links on purchase.
-                      </p>
-                      <GoogleIntegrationCard />
-                    </div>
-                  </div>
+                    {showGoogle ? (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-medium text-[#2C2621] px-0.5">
+                          Booking integrations
+                        </h3>
+                        <p className="text-xs text-[#8A857D] px-0.5 mb-1">
+                          Connect Google so 1:1 Coaching blocks can create Calendar events + Meet links on purchase.
+                        </p>
+                        <GoogleIntegrationCard />
+                      </div>
+                    ) : null}                  </div>
                 )}
               </div>
 

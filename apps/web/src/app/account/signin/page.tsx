@@ -39,7 +39,7 @@ function SignInForm() {
   const searchParams = useSearchParams();
   const { locale } = useLanguage();
   const rawCallbackUrl = searchParams.get('callbackUrl') || '';
-  const hideCreateAccountLink = true; // Hide signup CTA while launching waitlist
+  const hideCreateAccountLink = false;
   const inferredRole: Role = rawCallbackUrl.startsWith('/admin') ? 'creator' : 'member';
   const [role, setRole] = useState<Role>(inferredRole);
   const callbackUrl = role === 'creator' ? '/admin' : '/dashboard';
@@ -51,7 +51,7 @@ function SignInForm() {
 
   const demoMode = isDemoAuthUiEnabled();
 
-  // If we were redirected from `/admin`, start in creator mode and block signup UX.
+  // Creator mode when redirected from `/admin`.
   useEffect(() => {
     setRole(inferredRole);
   }, [inferredRole]);

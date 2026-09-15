@@ -52,11 +52,16 @@ import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 import { signOutAndRedirect } from '@/lib/sign-out-client';
 import AccountMenuButton from '@/components/account/AccountMenuButton';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import {
   CommunitySearchAutocomplete,
   type SearchableCommunity,
 } from '@/components/landing/CommunitySearchAutocomplete';
-import { getMockCommunitiesForUser, normalizeCommunities, recommendCommunitiesFromMemberships, joinedCommunityCategories } from '@/lib/mock-communities';
+import {
+  normalizeCommunities,
+  recommendCommunitiesFromMemberships,
+  joinedCommunityCategories,
+} from '@/lib/mock-communities';
 import ClassroomView from '@/components/classroom/ClassroomView';
 import StoreView from '@/components/store/StoreView';
 import { normalizeClassroomCourses, filterCoursesForCommunity } from '@/lib/classroom-content';
@@ -108,9 +113,9 @@ const LEVELS = [
     min: 500,
     max: Infinity,
     labelKey: 'levelPlatinum' as const satisfies LevelLabelKey,
-    color: '#2B2568',
-    bg: '#E9D5FF',
-    ring: '#F472B6',
+    color: '#2C3B2E',
+    bg: '#E8EDE9',
+    ring: '#B85C38',
     icon: Crown,
   },
 ];
@@ -129,15 +134,15 @@ const TAGS = [
     slug: 'questions',
     // Match stored post tags across locales / legacy Swedish forms
     aliases: ['questions', 'frågor', 'kysymykset'],
-    color: 'bg-violet-100 text-violet-700',
+    color: 'bg-[#E8EDE9] text-[#2C3B2E]',
     dot: '#7C3AED',
   },
   {
     labelKey: 'tagInspiration' as const satisfies TagLabelKey,
     slug: 'inspiration',
     aliases: ['inspiration'],
-    color: 'bg-[#E9D5FF]/60 text-[#2B2568]',
-    dot: '#2B2568',
+    color: 'bg-[#E8EDE9]/60 text-[#2C3B2E]',
+    dot: '#2C3B2E',
   },
   {
     labelKey: 'tagResults' as const satisfies TagLabelKey,
@@ -219,14 +224,14 @@ function LevelAvatar({
 function CommentMedia({ url, type }: { url: string; type: string }) {
   if (type?.startsWith('image/')) {
     return (
-      <div className="mt-2 rounded-xl overflow-hidden border border-slate-100 max-w-xs">
+      <div className="mt-2 rounded-xl overflow-hidden border border-[#E6E3DB] max-w-xs">
         <img src={url} alt="" className="w-full max-h-48 object-cover" />
       </div>
     );
   }
   if (type?.startsWith('video/')) {
     return (
-      <div className="mt-2 rounded-xl overflow-hidden border border-slate-100 max-w-xs">
+      <div className="mt-2 rounded-xl overflow-hidden border border-[#E6E3DB] max-w-xs">
         <video src={url} controls className="w-full max-h-48" />
       </div>
     );
@@ -237,10 +242,10 @@ function CommentMedia({ url, type }: { url: string; type: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-2 flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors w-fit max-w-xs"
+      className="mt-2 flex items-center gap-2 p-2 rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] hover:bg-[#E6E3DB]/50 transition-colors w-fit max-w-xs"
     >
-      <FileText size={14} className="text-slate-500 flex-shrink-0" />
-      <span className="text-xs font-bold text-slate-700 truncate">{filename}</span>
+      <FileText size={14} className="text-[#8A857D] flex-shrink-0" />
+      <span className="text-xs font-bold text-[#2C2621] truncate">{filename}</span>
     </a>
   );
 }
@@ -314,7 +319,7 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
   const nested = (comments as any[]).filter((c) => !!c.parent_id);
 
   return (
-    <div className="border-t border-slate-50 pt-3 mt-3">
+    <div className="border-t border-[#E6E3DB]/60 pt-3 mt-3">
       <input
         ref={imgInputRef}
         type="file"
@@ -359,19 +364,19 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
                   <div
                     className={`rounded-xl rounded-tl-none px-3 py-2 ${
                       c.is_pinned
-                        ? 'bg-violet-50 border border-violet-200'
-                        : 'bg-slate-50'
+                        ? 'bg-[#F0EFEA] border border-[#E6E3DB]'
+                        : 'bg-[#F0EFEA]'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                      <span className="text-xs font-extrabold text-slate-800">{c.user_name}</span>
+                      <span className="text-xs font-extrabold text-[#2C2621]">{c.user_name}</span>
                       {c.is_pinned && (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#2C3B2E] bg-[#E8EDE9] px-1.5 py-0.5 rounded-full">
                           <Pin size={9} /> {t('pinnedBadge', locale)}
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-slate-600 leading-relaxed">{c.content}</span>
+                    <span className="text-xs text-[#8A857D] leading-relaxed">{c.content}</span>
                     {c.media_url && <CommentMedia url={c.media_url} type={c.media_type} />}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 ml-1 flex-wrap">
@@ -382,7 +387,7 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
                         setReplyToName(c.user_name);
                         setTimeout(() => inputRef.current?.focus(), 50);
                       }}
-                      className="flex items-center gap-1 h-9 min-h-[36px] px-2 text-[10px] font-bold text-slate-400 hover:text-[#2B2568] transition-colors"
+                      className="flex items-center gap-1 h-9 min-h-[36px] px-2 text-[10px] font-bold text-[#8A857D] hover:text-[#2C3B2E] transition-colors"
                     >
                       <Reply size={10} /> {t('reply', locale)}
                     </button>
@@ -394,9 +399,9 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
                 .map((n: any) => (
                   <div key={n.id} className="flex gap-2 mt-2 ml-8">
                     <LevelAvatar name={n.user_name} size={24} />
-                    <div className="flex-1 bg-[#FCE7F3] rounded-xl rounded-tl-none px-3 py-2">
-                      <span className="text-xs font-extrabold text-[#2B2568]">{n.user_name} </span>
-                      <span className="text-xs text-slate-600 leading-relaxed">{n.content}</span>
+                    <div className="flex-1 bg-[#F0EFEA] rounded-xl rounded-tl-none px-3 py-2">
+                      <span className="text-xs font-extrabold text-[#2C3B2E]">{n.user_name} </span>
+                      <span className="text-xs text-[#8A857D] leading-relaxed">{n.content}</span>
                       {n.media_url && <CommentMedia url={n.media_url} type={n.media_type} />}
                     </div>
                   </div>
@@ -410,8 +415,8 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
         <LevelAvatar name={session?.user?.name ?? '?'} image={session?.user?.image} size={28} />
         <div className="flex-1">
           {replyTo && (
-            <div className="flex items-center gap-1.5 mb-1.5 px-2 py-1 bg-[#FCE7F3] rounded-lg w-fit">
-              <Reply size={10} className="text-[#2B2568]" />
+            <div className="flex items-center gap-1.5 mb-1.5 px-2 py-1 bg-[#F0EFEA] rounded-lg w-fit">
+              <Reply size={10} className="text-[#2C3B2E]" />
               <span className="text-[10px] font-bold text-blue-600">
                 {t('reply', locale)} {replyToName}
               </span>
@@ -421,42 +426,42 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
                   setReplyToName('');
                 }}
               >
-                <X size={10} className="text-[#2B2568] hover:text-[#2B2568]" />
+                <X size={10} className="text-[#2C3B2E] hover:text-[#2C3B2E]" />
               </button>
             </div>
           )}
           {pendingMedia && (
-            <div className="flex items-center gap-2 mb-2 p-2 bg-[#FCE7F3] rounded-xl border border-[#FCE7F3]">
+            <div className="flex items-center gap-2 mb-2 p-2 bg-[#F0EFEA] rounded-xl border border-[#F0EFEA]">
               {pendingMedia.type?.startsWith('image/') ? (
                 <img src={pendingMedia.url} alt="" className="w-10 h-10 rounded-lg object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-lg bg-[#FCE7F3] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-[#F0EFEA] flex items-center justify-center">
                   {pendingMedia.type?.startsWith('video/') ? (
-                    <Video size={16} className="text-[#2B2568]" />
+                    <Video size={16} className="text-[#2C3B2E]" />
                   ) : (
-                    <FileText size={16} className="text-[#2B2568]" />
+                    <FileText size={16} className="text-[#2C3B2E]" />
                   )}
                 </div>
               )}
-              <span className="text-xs font-bold text-[#2B2568] flex-1 truncate">
+              <span className="text-xs font-bold text-[#2C3B2E] flex-1 truncate">
                 {t('attachmentSelected', locale)}
               </span>
               <button
                 onClick={() => setPendingMedia(null)}
-                className="text-[#2B2568] hover:text-[#2B2568]"
+                className="text-[#2C3B2E] hover:text-[#2C3B2E]"
               >
                 <X size={12} />
               </button>
             </div>
           )}
           {uploading && (
-            <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-slate-50 rounded-xl">
+            <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-[#F0EFEA] rounded-xl">
               <Loader2
                 size={12}
-                className="text-slate-400"
+                className="text-[#8A857D]"
                 style={{ animation: 'spin 1s linear infinite' }}
               />
-              <span className="text-xs text-slate-500 font-medium">{t('uploading', locale)}</span>
+              <span className="text-xs text-[#8A857D] font-medium">{t('uploading', locale)}</span>
             </div>
           )}
           <div className="flex gap-2">
@@ -467,7 +472,7 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
                   ? `${t('reply', locale)} ${replyToName}...`
                   : t('writeCommentPlaceholder', locale)
               }
-              className="flex-1 text-xs bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[#F472B6]/40 focus:ring-1 focus:ring-[#FCE7F3] min-h-[36px] max-h-[80px]"
+              className="flex-1 text-xs bg-[#F0EFEA] border border-[#E6E3DB] rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[#2C3B2E]/40 focus:ring-1 focus:ring-[#E8EDE9] min-h-[36px] max-h-[80px]"
               value={reply}
               onChange={(e) => setReply(e.target.value)}
               onKeyDown={(e) => {
@@ -489,19 +494,19 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
           <div className="flex items-center gap-1 mt-1.5">
             <button
               onClick={() => imgInputRef.current?.click()}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-slate-400 hover:text-[#2B2568] hover:bg-[#FCE7F3] transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-[#8A857D] hover:text-[#2C3B2E] hover:bg-[#F0EFEA] transition-all"
             >
               <ImageIcon size={11} /> {t('uploadImage', locale)}
             </button>
             <button
               onClick={() => vidInputRef.current?.click()}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-slate-400 hover:text-[#F472B6] hover:bg-[#FCE7F3] transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-[#8A857D] hover:text-[#B85C38] hover:bg-[#F0EFEA] transition-all"
             >
               <Video size={11} /> {t('uploadVideo', locale)}
             </button>
             <button
               onClick={() => docInputRef.current?.click()}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-[#8A857D] hover:text-amber-500 hover:bg-amber-50 transition-all"
             >
               <FileText size={11} /> {t('uploadDoc', locale)}
             </button>
@@ -513,12 +518,14 @@ function CommentsSection({ postId, session }: { postId: number; session: any }) 
 }
 
 const TAB_KEYS: TabKey[] = ['community', 'events', 'classroom', 'store'];
+/** Ref & Earn UI hidden until launch; backend flow stays wired. */
+const SHOW_REF_AND_EARN = false;
 
 export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center text-slate-400 text-sm font-medium">
+        <div className="min-h-screen bg-[#F9F8F6] flex items-center justify-center text-[#8A857D] text-sm font-medium">
           Loading…
         </div>
       }
@@ -610,23 +617,11 @@ function DashboardPageInner() {
     retry: 1,
   });
 
-  // Prefer API data; fall back to local mocks while loading or on error.
+  // Live DB only — never inject catalog/mock rows while loading or on error.
   const communities = useMemo((): SearchableCommunity[] => {
-    if (Array.isArray(apiCommunities) && apiCommunities.length > 0) return apiCommunities;
-    if (isCommunitiesLoading || isCommunitiesError || !apiCommunities) {
-      return getMockCommunitiesForUser({
-        email: session?.user?.email,
-        name: session?.user?.name,
-      });
-    }
-    return apiCommunities;
-  }, [
-    apiCommunities,
-    isCommunitiesLoading,
-    isCommunitiesError,
-    session?.user?.email,
-    session?.user?.name,
-  ]);
+    if (Array.isArray(apiCommunities)) return apiCommunities;
+    return [];
+  }, [apiCommunities]);
   const { data: feed, isLoading: isFeedLoading } = useQuery({
     queryKey: ['feed'],
     queryFn: async () => {
@@ -667,7 +662,7 @@ function DashboardPageInner() {
       if (!r.ok) return null;
       return r.json();
     },
-    enabled: !!session,
+    enabled: SHOW_REF_AND_EARN && !!session,
   });
 
   const joinMutation = useMutation({
@@ -677,7 +672,13 @@ function DashboardPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ community_id: id, action }),
       });
-      return res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          typeof data?.error === 'string' ? data.error : 'Failed to update membership'
+        );
+      }
+      return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['communities'] }),
   });
@@ -709,6 +710,12 @@ function DashboardPageInner() {
 
   const createPostMutation = useMutation({
     mutationFn: async () => {
+      const communityId =
+        selectedCommunity?.id != null
+          ? Number(selectedCommunity.id)
+          : joinedCommunities[0]?.id != null
+            ? Number(joinedCommunities[0].id)
+            : null;
       const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -717,6 +724,7 @@ function DashboardPageInner() {
           // Store slug so tags stay locale-stable; tagStyle also matches legacy labels
           tag: postTag ?? null,
           image_url: postImage || null,
+          community_id: communityId,
         }),
       });
       if (!res.ok) throw new Error('Failed');
@@ -737,9 +745,21 @@ function DashboardPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ post_id: postId }),
       });
-      return res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof data?.error === 'string' ? data.error : 'Failed to toggle like');
+      }
+      return data;
     },
     onMutate: (postId) => {
+      setLikedPosts((prev) => {
+        const n = new Set(prev);
+        n.has(postId) ? n.delete(postId) : n.add(postId);
+        return n;
+      });
+      return { postId };
+    },
+    onError: (_err, postId) => {
       setLikedPosts((prev) => {
         const n = new Set(prev);
         n.has(postId) ? n.delete(postId) : n.add(postId);
@@ -751,13 +771,26 @@ function DashboardPageInner() {
 
   const sortedFeed = useMemo(() => {
     if (!Array.isArray(feed)) return [];
-    return [...feed].sort((a: any, b: any) => {
+    const joinedIds = new Set(
+      communities.filter((c) => c.is_joined).map((c) => Number(c.id))
+    );
+    const scoped = feed.filter((post: any) => {
+      const postCommunityId =
+        post?.community_id != null ? Number(post.community_id) : null;
+      if (selectedCommunity?.id != null && sidebarView === 'community') {
+        return postCommunityId === Number(selectedCommunity.id);
+      }
+      // Home feed: only posts from communities the member has joined.
+      if (postCommunityId == null) return false;
+      return joinedIds.has(postCommunityId);
+    });
+    return [...scoped].sort((a: any, b: any) => {
       const ap = a.is_pinned ? 1 : 0;
       const bp = b.is_pinned ? 1 : 0;
       if (ap !== bp) return bp - ap;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [feed]);
+  }, [feed, communities, selectedCommunity?.id, sidebarView]);
   const rsvpMutation = useMutation({
     mutationFn: async (eventId: number) => {
       const res = await fetch('/api/rsvp', {
@@ -765,7 +798,11 @@ function DashboardPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event_id: eventId }),
       });
-      return res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof data?.error === 'string' ? data.error : 'Failed to toggle RSVP');
+      }
+      return data;
     },
     onMutate: (id) => {
       setRsvpdEvents((p) => {
@@ -773,8 +810,15 @@ function DashboardPageInner() {
         n.has(id) ? n.delete(id) : n.add(id);
         return n;
       });
-      queryClient.invalidateQueries({ queryKey: ['events'] });
     },
+    onError: (_err, id) => {
+      setRsvpdEvents((p) => {
+        const n = new Set(p);
+        n.has(id) ? n.delete(id) : n.add(id);
+        return n;
+      });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
   });
 
   const formatDate = (d: string) => {
@@ -841,7 +885,7 @@ function DashboardPageInner() {
                 router.push(`/classroom?course=${course.id}`);
               }
             }}
-            className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FCE7F3] text-[#2B2568] rounded-md text-xs font-bold hover:bg-[#F472B6]/20 transition-colors mx-0.5 underline underline-offset-2"
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F0EFEA] text-[#2C3B2E] rounded-md text-xs font-bold hover:bg-[#B85C38]/15 transition-colors mx-0.5 underline underline-offset-2"
           >
             <PlayCircle size={10} /> {lessonTitle}
           </button>
@@ -904,14 +948,14 @@ function DashboardPageInner() {
 
   if (isAuthPending)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white ">
-        <div className="text-slate-400">{t('authenticating', locale)}</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#F9F8F6] ">
+        <div className="text-[#8A857D]">{t('authenticating', locale)}</div>
       </div>
     );
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white ">
-        <div className="text-slate-400">{t('authenticating', locale)}</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#F9F8F6] ">
+        <div className="text-[#8A857D]">{t('authenticating', locale)}</div>
       </div>
     );
   }
@@ -919,7 +963,7 @@ function DashboardPageInner() {
   if (liveEvent)
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex flex-col ">
-        <div className="flex items-center gap-3 px-4 py-3 bg-[#2B2568] border-b border-white/10">
+        <div className="flex items-center gap-3 px-4 py-3 bg-[#2C3B2E] border-b border-white/10">
           <button
             onClick={() => setLiveEvent(null)}
             className="p-2 rounded-lg hover:bg-zinc-800 transition-colors"
@@ -949,13 +993,13 @@ function DashboardPageInner() {
             </div>
             <div className="p-4">
               <h3 className="text-lg font-extrabold">{liveEvent.title}</h3>
-              <p className="text-sm text-slate-400 mt-1">{liveEvent.description}</p>
+              <p className="text-sm text-[#8A857D] mt-1">{liveEvent.description}</p>
             </div>
           </div>
-          <div className="w-full lg:w-80 bg-[#1a1848] flex flex-col border-l border-white/10">
+          <div className="w-full lg:w-80 bg-[#2C3B2E] flex flex-col border-l border-white/10">
             <div className="p-3 border-b border-zinc-800 flex items-center gap-2">
               <Radio size={14} className="text-red-400" />
-              <span className="text-xs font-extrabold uppercase tracking-widest text-slate-300">
+              <span className="text-xs font-extrabold uppercase tracking-widest text-[#8A857D]/70">
                 {t('liveChat', locale)}
               </span>
             </div>
@@ -966,8 +1010,8 @@ function DashboardPageInner() {
                     {name[0]}
                   </div>
                   <div>
-                    <span className="text-xs font-extrabold text-[#2B2568]">{name}: </span>
-                    <span className="text-xs text-slate-300">Fantastiskt content!</span>
+                    <span className="text-xs font-extrabold text-[#2C3B2E]">{name}: </span>
+                    <span className="text-xs text-[#8A857D]/70">Fantastiskt content!</span>
                   </div>
                 </div>
               ))}
@@ -975,9 +1019,9 @@ function DashboardPageInner() {
             <div className="p-3 border-t border-zinc-800 flex gap-2">
               <Input
                 placeholder={t('writeMessage', locale)}
-                className="flex-1 h-9 rounded-lg bg-zinc-800 border-zinc-700 text-white text-xs placeholder:text-slate-500"
+                className="flex-1 h-9 rounded-lg bg-zinc-800 border-zinc-700 text-white text-xs placeholder:text-[#8A857D]"
               />
-              <button className="w-9 h-9 rounded-lg bg-[#2B2568] flex items-center justify-center">
+              <button className="w-9 h-9 rounded-lg bg-[#2C3B2E] flex items-center justify-center">
                 <Send size={14} className="text-white" />
               </button>
             </div>
@@ -1078,10 +1122,10 @@ function DashboardPageInner() {
       type="button"
       onClick={onClick}
       className={[
-        'w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 transition-all duration-200',
+        'w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 transition-colors duration-200 border-l-2',
         active
-          ? 'rounded-2xl bg-[#1a1848] text-white font-semibold shadow-sm'
-          : 'rounded-2xl text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium',
+          ? 'border-[#2C3B2E] text-[#2C2621] font-medium bg-transparent'
+          : 'border-transparent text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]/60 font-normal',
       ].join(' ')}
       aria-current={active ? 'page' : undefined}
     >
@@ -1094,21 +1138,29 @@ function DashboardPageInner() {
   const renderPlatformHome = () => (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
       <div className="mb-8">
-        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D]">
           {t('dashboard', locale)}
         </p>
-        <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mt-1">
+        <h1 className="font-playfair font-extrabold text-[28px] sm:text-[32px] leading-tight text-[#2C2621] tracking-tight mt-1">
           {t('hi', locale)}, {session.user.name.split(' ')[0]}
         </h1>
-        <p className="text-sm text-slate-500 font-medium mt-1">{t('dashboardSub', locale)}</p>
+        <p className="text-sm text-[#8A857D] font-medium mt-1">{t('dashboardSub', locale)}</p>
       </div>
+      {isCommunitiesError ? (
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl border border-[#E6E3DB] bg-[#F0EFEA] px-4 py-3 text-sm font-medium text-[#2C2621]"
+        >
+          Couldn&apos;t load communities. Refresh the page or try again in a moment.
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
           {
             label: t('joined', locale),
             value: joinedCommunities.length,
             sub: t('communitiesStat', locale),
-            color: '#2B2568',
+            color: '#2C3B2E',
           },
           {
             label: t('posts', locale),
@@ -1120,7 +1172,7 @@ function DashboardPageInner() {
             label: t('eventsAndWebinars', locale).split(' ')[0] || 'Events',
             value: (events as any[])?.length ?? 0,
             sub: t('upcoming', locale),
-            color: '#F472B6',
+            color: '#B85C38',
           },
           {
             label: t('courses', locale),
@@ -1131,9 +1183,9 @@ function DashboardPageInner() {
         ].map((s) => (
           <div
             key={s.label}
-            className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 hover:border-slate-300/90 transition-colors shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+            className="bg-white border border-[#E6E3DB] rounded-2xl p-5 sm:p-6 hover:border-[#D4D0C8] transition-colors shadow-[0_1px_2px_rgba(44,38,33,0.04)]"
           >
-            <p className="font-clikd-wordmark text-2xl font-extrabold text-slate-900 tracking-tight">
+            <p className="font-playfair text-2xl font-extrabold text-[#2C2621] tracking-tight">
               {s.value}
             </p>
             <p
@@ -1142,12 +1194,12 @@ function DashboardPageInner() {
             >
               {s.label}
             </p>
-            <p className="text-[11px] text-slate-400 font-medium mt-0.5">{s.sub}</p>
+            <p className="text-[11px] text-[#8A857D] font-medium mt-0.5">{s.sub}</p>
           </div>
         ))}
       </div>
       <div className="mb-8">
-        <h2 className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-4">
+        <h2 className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D] mb-4">
           {t('myCommunities', locale)}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1159,11 +1211,11 @@ function DashboardPageInner() {
                 setSidebarView('community');
                 setActiveTab('community');
               }}
-              className="group flex items-center gap-4 p-4 bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] hover:shadow-md hover:border-slate-200 transition-all text-left"
+              className="group flex items-center gap-4 p-4 bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] hover:shadow-md hover:border-[#E6E3DB] transition-all text-left"
             >
               <div
-                className="w-12 h-12 rounded-xl overflow-hidden border-2 border-slate-100 flex-shrink-0"
-                style={{ background: c.cover_color ?? '#2B2568' }}
+                className="w-12 h-12 rounded-xl overflow-hidden border-2 border-[#E6E3DB] flex-shrink-0"
+                style={{ background: c.cover_color ?? '#2C3B2E' }}
               >
                 {c.creator_image ? (
                   <img src={c.creator_image} alt={c.name} className="w-full h-full object-cover" />
@@ -1174,41 +1226,41 @@ function DashboardPageInner() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-extrabold text-slate-900 truncate group-hover:text-[var(--nc-coral)] transition-colors">
+                <p className="text-sm font-extrabold text-[#2C2621] truncate group-hover:text-[var(--nc-coral)] transition-colors">
                   {c.name}
                 </p>
-                <p className="text-xs text-slate-400 font-medium">
+                <p className="text-xs text-[#8A857D] font-medium">
                   {c.category} · {c.member_count.toLocaleString('sv-SE')} {t('members', locale)}
                 </p>
               </div>
               <ChevronRight
                 size={14}
-                className="text-slate-300 group-hover:text-[#F472B6] transition-colors flex-shrink-0"
+                className="text-[#8A857D]/70 group-hover:text-[#B85C38] transition-colors flex-shrink-0"
               />
             </button>
           ))}
           <button
             onClick={() => setSidebarView('search')}
-            className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-100 transition-all text-left group"
+            className="flex items-center gap-4 p-4 bg-[#F0EFEA] rounded-2xl border border-dashed border-[#E6E3DB] hover:border-[#D4D0C8] hover:bg-[#E6E3DB]/50 transition-all text-left group"
           >
-            <div className="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center group-hover:bg-slate-300 transition-colors">
-              <Plus size={20} className="text-slate-500" />
+            <div className="w-12 h-12 rounded-xl bg-[#E6E3DB] flex items-center justify-center group-hover:bg-[#D4D0C8] transition-colors">
+              <Plus size={20} className="text-[#8A857D]" />
             </div>
             <div>
-              <p className="text-sm font-extrabold text-slate-500 group-hover:text-slate-700">
+              <p className="text-sm font-extrabold text-[#8A857D] group-hover:text-[#2C2621]">
                 {t('findMore', locale)}
               </p>
-              <p className="text-xs text-slate-400">{t('explorePlatform', locale)}</p>
+              <p className="text-xs text-[#8A857D]">{t('explorePlatform', locale)}</p>
             </div>
           </button>
         </div>
       </div>
       <div>
-        <h2 className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-4">
+        <h2 className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D] mb-4">
           {t('latestFromCommunities', locale)}
         </h2>
         {isFeedLoading ? (
-          <div className="text-center py-12 text-slate-400 text-sm">{t('loadingFeed', locale)}</div>
+          <div className="text-center py-12 text-[#8A857D] text-sm">{t('loadingFeed', locale)}</div>
         ) : (
           <div className="space-y-4">
             {sortedFeed.slice(0, 5).map((post: any) => {
@@ -1218,8 +1270,8 @@ function DashboardPageInner() {
               return (
                 <div
                   key={post.id}
-                  className={`bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5 ${
-                    post.is_pinned ? 'ring-1 ring-violet-200' : ''
+                  className={`bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] p-5 ${
+                    post.is_pinned ? 'ring-1 ring-[#E6E3DB]' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-3">
@@ -1231,9 +1283,9 @@ function DashboardPageInner() {
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-extrabold text-slate-900">{post.user_name}</p>
+                        <p className="text-sm font-extrabold text-[#2C2621]">{post.user_name}</p>
                         {post.is_pinned && (
-<span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded-full">
+<span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#2C3B2E] bg-[#E8EDE9] px-1.5 py-0.5 rounded-full">
                             <Pin size={9} /> {t('pinnedBadge', locale)}
                           </span>
                         )}
@@ -1245,25 +1297,25 @@ function DashboardPageInner() {
                             {post.tag}
                           </span>
                         )}
-                        <span className="text-[10px] text-slate-300 bg-slate-50 px-2 py-0.5 rounded-full font-bold">
+                        <span className="text-[10px] text-[#8A857D]/70 bg-[#F0EFEA] px-2 py-0.5 rounded-full font-bold">
                           clikd:
                         </span>
                       </div>
                       <p
-                        className="text-[10px] text-slate-400 font-semibold"
+                        className="text-[10px] text-[#8A857D] font-semibold"
                         suppressHydrationWarning
                       >
                         {formatDate(post.created_at)}
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-3">
+                  <p className="text-sm text-[#2C2621] leading-relaxed whitespace-pre-wrap mb-3">
                     {post.content}
                   </p>
-                  <div className="flex items-center gap-1 pt-3 border-t border-slate-50 flex-wrap">
+                  <div className="flex items-center gap-1 pt-3 border-t border-[#E6E3DB]/60 flex-wrap">
                     <button
                       onClick={() => likeMutation.mutate(post.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isLiked ? 'bg-red-50 text-red-500' : 'text-slate-400 hover:bg-slate-50 hover:text-red-400'}`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isLiked ? 'bg-red-50 text-red-500' : 'text-[#8A857D] hover:bg-[#F0EFEA] hover:text-red-400'}`}
                     >
                       <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
                       {Number(post.like_count) + (isLiked ? 1 : 0)}
@@ -1276,7 +1328,7 @@ function DashboardPageInner() {
                           return n;
                         })
                       }
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-50 hover:text-[#2B2568] transition-all min-h-[44px]"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C3B2E] transition-all min-h-[44px]"
                     >
                       <MessageSquare size={14} />
                       {post.comment_count}
@@ -1296,7 +1348,7 @@ function DashboardPageInner() {
                           setSidebarView('community');
                         }
                       }}
-                      className="ml-auto flex items-center gap-1 text-xs font-bold text-[#2B2568] hover:text-[var(--nc-coral)] transition-colors min-h-[44px]"
+                      className="ml-auto flex items-center gap-1 text-xs font-bold text-[#2C3B2E] hover:text-[var(--nc-coral)] transition-colors min-h-[44px]"
                     >
                       {t('openCommunity', locale)} <ChevronRight size={12} />
                     </button>
@@ -1314,13 +1366,13 @@ function DashboardPageInner() {
   // ── Search View ──────────────────────────────────────────────────────────
   const renderSearch = () => (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
-      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-1">
+      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D] mb-1">
         Discover
       </p>
-      <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mb-2">
+      <h1 className="font-playfair font-extrabold text-[28px] sm:text-[32px] leading-tight text-[#2C2621] tracking-tight mb-2">
         {t('searchCommunities', locale)}
       </h1>
-      <p className="text-slate-500 text-sm mb-6 font-medium">
+      <p className="text-[#8A857D] text-sm mb-6 font-medium">
         {communitySearch.trim()
           ? t('searchCommSub', locale)
           : memberCategories.length > 0
@@ -1340,11 +1392,11 @@ function DashboardPageInner() {
       <div className="flex items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           {!communitySearch.trim() && (
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#8A857D]">
               {t('recommendedCommunities', locale)}
             </span>
           )}
-          <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-bold text-[#8A857D] bg-[#E6E3DB]/50 px-2.5 py-1 rounded-full">
             {filteredCommunities.length}
           </span>
         </div>
@@ -1352,7 +1404,7 @@ function DashboardPageInner() {
           <button
             type="button"
             onClick={() => setCommunitySearch('')}
-            className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors min-h-11 px-2"
+            className="text-xs font-bold text-[#8A857D] hover:text-[#2C2621] transition-colors min-h-11 px-2"
           >
             {t('clearFilter', locale)}
           </button>
@@ -1364,12 +1416,12 @@ function DashboardPageInner() {
             key={c.id}
             type="button"
             onClick={() => router.push(`/communities/${c.id}?from=dashboard`)}
-            className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden hover:shadow-md transition-all text-left w-full"
+            className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] overflow-hidden hover:shadow-md transition-all text-left w-full"
           >
             <div
               className="h-20 relative"
               style={{
-                background: `linear-gradient(135deg, ${c.cover_color ?? '#2B2568'}, #0F172A)`,
+                background: `linear-gradient(135deg, ${c.cover_color ?? '#2C3B2E'}, #0F172A)`,
               }}
             >
               <div className="absolute top-3 left-3">
@@ -1380,7 +1432,7 @@ function DashboardPageInner() {
               <div className="absolute -bottom-4 left-3">
                 <div
                   className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm"
-                  style={{ background: c.cover_color ?? '#2B2568' }}
+                  style={{ background: c.cover_color ?? '#2C3B2E' }}
                 >
                   {c.creator_image ? (
                     <img
@@ -1397,13 +1449,13 @@ function DashboardPageInner() {
               </div>
             </div>
             <div className="pt-6 p-4">
-              <p className="text-[10px] font-bold text-slate-400 mb-0.5">{c.creator_name}</p>
-              <h3 className="text-sm font-extrabold text-slate-900 mb-1">{c.name}</h3>
-              <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 mb-3">
+              <p className="text-[10px] font-bold text-[#8A857D] mb-0.5">{c.creator_name}</p>
+              <h3 className="text-sm font-extrabold text-[#2C2621] mb-1">{c.name}</h3>
+              <p className="text-xs text-[#8A857D] leading-relaxed line-clamp-2 mb-3">
                 {c.description}
               </p>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-slate-400">
+                <div className="flex items-center gap-1 text-[#8A857D]">
                   <Users size={11} />
                   <span className="text-xs font-bold">
                     {c.member_count.toLocaleString('sv-SE')}
@@ -1420,7 +1472,7 @@ function DashboardPageInner() {
       </div>
       {filteredCommunities.length === 0 && (
         <div className="text-center py-16">
-          <p className="text-slate-500 font-bold">
+          <p className="text-[#8A857D] font-bold">
             {communitySearch.trim()
               ? `${t('noResults', locale)} "${communitySearch}"`
               : t('noRecommendationsYet', locale)}
@@ -1429,7 +1481,7 @@ function DashboardPageInner() {
             <button
               type="button"
               onClick={() => setCommunitySearch('')}
-              className="mt-3 text-sm text-slate-900 font-bold hover:underline min-h-11"
+              className="mt-3 text-sm text-[#2C2621] font-bold hover:underline min-h-11"
             >
               {t('showAll', locale)}
             </button>
@@ -1442,18 +1494,18 @@ function DashboardPageInner() {
   // ── Profile View ─────────────────────────────────────────────────────────
   const renderProfile = () => (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 pb-24 lg:pb-8">
-      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-1">
+      <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D] mb-1">
         {t('accountEyebrow', locale)}
       </p>
-      <h1 className="font-clikd-wordmark font-extrabold text-[28px] sm:text-[32px] leading-tight text-slate-900 tracking-tight mb-6">
+      <h1 className="font-playfair font-extrabold text-[28px] sm:text-[32px] leading-tight text-[#2C2621] tracking-tight mb-6">
         {t('profileAndSettings', locale)}
       </h1>
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6 mb-4">
+      <div className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] p-6 mb-4">
         <div className="flex items-center gap-4 mb-6">
           <LevelAvatar name={session.user.name} image={session.user.image} points={0} size={56} />
           <div>
-            <p className="text-lg font-extrabold text-slate-900">{session.user.name}</p>
-            <p className="text-sm text-slate-500">{session.user.email}</p>
+            <p className="text-lg font-extrabold text-[#2C2621]">{session.user.name}</p>
+            <p className="text-sm text-[#8A857D]">{session.user.email}</p>
             <div className="flex items-center gap-1 mt-1">
               <Medal size={12} style={{ color: LEVELS[0].color }} />
               <span className="text-xs font-extrabold" style={{ color: LEVELS[0].color }}>
@@ -1468,9 +1520,9 @@ function DashboardPageInner() {
             { label: t('posts', locale), val: 0 },
             { label: t('pointsLabel', locale), val: 0 },
           ].map((s) => (
-            <div key={s.label} className="bg-slate-50 rounded-xl p-3 text-center">
-              <p className="text-xl font-extrabold text-slate-900">{s.val}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+            <div key={s.label} className="bg-[#F0EFEA] rounded-xl p-3 text-center">
+              <p className="text-xl font-extrabold text-[#2C2621]">{s.val}</p>
+              <p className="text-[10px] font-bold text-[#8A857D] uppercase tracking-wide">
                 {s.label}
               </p>
             </div>
@@ -1479,14 +1531,14 @@ function DashboardPageInner() {
         <button
           type="button"
           onClick={handleSignOut}
-          className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-colors"
+          className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-[#E6E3DB] text-[#8A857D] text-sm font-bold hover:bg-[#F0EFEA] transition-colors"
         >
           <LogOut size={14} /> {t('signOut', locale)}
         </button>
       </div>
-      {referral && (
-        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-6">
-          <h3 className="text-sm font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+      {SHOW_REF_AND_EARN && referral && (
+        <div className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] p-6">
+          <h3 className="text-sm font-extrabold text-[#8A857D] uppercase tracking-widest mb-4 flex items-center gap-2">
             <Gift size={13} className="text-green-500" /> {t('refAndEarn', locale)}
           </h3>
           <div className="grid grid-cols-3 gap-3 mb-4">
@@ -1495,25 +1547,26 @@ function DashboardPageInner() {
               { label: t('earnedSek', locale), val: Number(referral.earned_commission_sek).toFixed(0) },
               { label: t('bonusXp', locale), val: referral.bonus_xp },
             ].map((s) => (
-              <div key={s.label} className="bg-slate-50 rounded-xl p-3 text-center">
-                <p className="text-xl font-extrabold text-slate-900">{s.val}</p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-tight mt-0.5">
+              <div key={s.label} className="bg-[#F0EFEA] rounded-xl p-3 text-center">
+                <p className="text-xl font-extrabold text-[#2C2621]">{s.val}</p>
+                <p className="text-[9px] font-bold text-[#8A857D] uppercase tracking-wide leading-tight mt-0.5">
                   {s.label}
                 </p>
               </div>
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 flex items-center gap-1.5 min-w-0">
-              <LinkIcon size={10} className="text-slate-400 flex-shrink-0" />
-              <span className="text-[10px] font-bold text-slate-600 truncate">
-                creator.app/join?ref={referral.referral_code}
+            <div className="flex-1 bg-[#F0EFEA] border border-[#E6E3DB] rounded-xl px-3 py-2 flex items-center gap-1.5 min-w-0">
+              <LinkIcon size={10} className="text-[#8A857D] flex-shrink-0" />
+              <span className="text-[10px] font-bold text-[#8A857D] truncate">
+                clikd.app/?ref={referral.referral_code}
               </span>
             </div>
             <button
+              type="button"
               onClick={async () => {
                 await navigator.clipboard.writeText(
-                  `${window.location.origin}?ref=${referral.referral_code}`
+                  `${window.location.origin}/?ref=${referral.referral_code}`
                 );
                 setRefLinkCopied(true);
                 setTimeout(() => setRefLinkCopied(false), 2200);
@@ -1535,14 +1588,14 @@ function DashboardPageInner() {
     return (
       <div>
         {/* Skool-style top bar */}
-        <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-20">
+        <div className="bg-[#F9F8F6]/90 backdrop-blur-md border-b border-[#E6E3DB] sticky top-0 z-20">
           <div className="max-w-5xl mx-auto px-3 sm:px-6">
             <div className="h-14 sm:h-16 flex items-center gap-2 sm:gap-4">
               {/* Left: logo + community selector */}
               <div className="flex items-center gap-2 flex-shrink-0 min-w-0">
                 <div
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center text-white font-extrabold"
-                  style={{ background: comm?.cover_color ?? '#2B2568' }}
+                  style={{ background: comm?.cover_color ?? '#2C3B2E' }}
                 >
                   {comm?.creator_image ? (
                     <img
@@ -1563,7 +1616,7 @@ function DashboardPageInner() {
                       );
                       if (next) setSelectedCommunity(next);
                     }}
-                    className="appearance-none h-11 min-h-[44px] max-w-[130px] sm:max-w-[220px] pl-1.5 pr-6 bg-transparent text-sm font-extrabold text-slate-900 truncate focus:outline-none cursor-pointer"
+                    className="appearance-none h-11 min-h-[44px] max-w-[130px] sm:max-w-[220px] pl-1.5 pr-6 bg-transparent text-sm font-extrabold text-[#2C2621] truncate focus:outline-none cursor-pointer"
                     aria-label={t('chooseCommunity', locale)}
                   >
                     {(joinedForSelect.length ? joinedForSelect : [comm].filter(Boolean)).map(
@@ -1576,7 +1629,7 @@ function DashboardPageInner() {
                   </select>
                   <ChevronDown
                     size={14}
-                    className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#8A857D]"
                   />
                 </div>
               </div>
@@ -1586,22 +1639,23 @@ function DashboardPageInner() {
                 <div className="relative w-full max-w-md">
                   <Search
                     size={15}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8A857D]"
                   />
                   <input
                     value={communitySearch}
                     onChange={(e) => setCommunitySearch(e.target.value)}
                     placeholder={t('searchCommPlaceholder', locale)}
-                    className="w-full h-11 min-h-[44px] rounded-full bg-slate-100 border border-transparent focus:border-slate-200 focus:bg-white pl-10 pr-4 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                    className="w-full h-11 min-h-[44px] rounded-full bg-[#E6E3DB]/50 border border-transparent focus:border-[#E6E3DB] focus:bg-white pl-10 pr-4 text-sm font-medium text-[#2C2621] placeholder:text-[#8A857D] focus:outline-none"
                   />
                 </div>
               </div>
 
-              {/* Right: notifications + account menu */}
+              {/* Right: language + notifications + account menu */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
+                <LanguageSwitcher className="[&>button]:bg-transparent [&>button]:hover:bg-[#E6E3DB]/45 [&>button]:border [&>button]:border-[#E6E3DB]/90 [&>button]:shadow-none [&>button]:rounded-xl [&>button]:min-h-11 [&>button]:h-11 [&>button]:text-[#8A857D] [&>button]:font-medium" />
                 <button
                   type="button"
-                  className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 relative"
+                  className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-full bg-[#E6E3DB]/50 hover:bg-[#E6E3DB] flex items-center justify-center text-[#8A857D] relative"
                   aria-label="Notiser"
                 >
                   <Bell size={16} />
@@ -1624,7 +1678,7 @@ function DashboardPageInner() {
                       router.replace(`/dashboard?tab=${key}`, { scroll: false });
                     }}
                     className={`relative flex items-center gap-1.5 h-11 min-h-[44px] px-3.5 text-xs font-extrabold whitespace-nowrap transition-colors flex-shrink-0 ${
-                      active ? 'text-slate-900' : 'text-slate-400 hover:text-slate-700'
+                      active ? 'text-[#2C2621]' : 'text-[#8A857D] hover:text-[#2C2621]'
                     }`}
                   >
                     <Icon size={13} />
@@ -1643,7 +1697,7 @@ function DashboardPageInner() {
             {activeTab === 'community' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
-                  <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-2xl w-fit">
+                  <div className="flex items-center gap-1 bg-white border border-[#E6E3DB] shadow-sm p-1 rounded-2xl w-fit">
                     {(
                       [
                         { key: 'feed', label: 'Feed', icon: MessageSquare },
@@ -1653,7 +1707,7 @@ function DashboardPageInner() {
                       <button
                         key={key}
                         onClick={() => setCommunitySubTab(key as CommunitySubTab)}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${communitySubTab === key ? 'bg-[var(--nc-coral)] text-white shadow-sm' : 'text-slate-400 hover:text-slate-700'}`}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${communitySubTab === key ? 'bg-[var(--nc-coral)] text-white shadow-sm' : 'text-[#8A857D] hover:text-[#2C2621]'}`}
                       >
                         <Icon size={13} />
                         {label}
@@ -1663,7 +1717,7 @@ function DashboardPageInner() {
 
                   {communitySubTab === 'feed' && (
                     <>
-                      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
+                      <div className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] overflow-hidden">
                         <div className="p-5">
                           <div className="flex gap-3">
                             <LevelAvatar
@@ -1675,7 +1729,7 @@ function DashboardPageInner() {
                             <div className="flex-1 space-y-3">
                               <Textarea
                                 placeholder={t('communityPlaceholder', locale)}
-                                className="min-h-[90px] bg-slate-50 border-slate-100 resize-none rounded-xl text-sm focus:border-[#F472B6]/40 focus:ring-[#FCE7F3]"
+                                className="min-h-[90px] bg-[#F0EFEA] border-[#E6E3DB] resize-none rounded-xl text-sm focus:border-[#2C3B2E]/40 focus:ring-[#E8EDE9]"
                                 value={newPost}
                                 onChange={(e) => setNewPost(e.target.value)}
                               />
@@ -1685,13 +1739,13 @@ function DashboardPageInner() {
                                     placeholder="Klistra in bild-URL..."
                                     value={postImage}
                                     onChange={(e) => setPostImage(e.target.value)}
-                                    className="flex-1 h-9 rounded-xl bg-slate-50 border-slate-100 text-xs"
+                                    className="flex-1 h-9 rounded-xl bg-[#F0EFEA] border-[#E6E3DB] text-xs"
                                   />
                                   {postImage && (
                                     <img
                                       src={postImage}
                                       alt="preview"
-                                      className="w-9 h-9 rounded-lg object-cover border border-slate-200"
+                                      className="w-9 h-9 rounded-lg object-cover border border-[#E6E3DB]"
                                       onError={(e) => ((e.target as HTMLImageElement).src = '')}
                                     />
                                   )}
@@ -1700,7 +1754,7 @@ function DashboardPageInner() {
                                       setShowImage(false);
                                       setPostImage('');
                                     }}
-                                    className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 flex-shrink-0"
+                                    className="w-8 h-8 rounded-lg bg-[#E6E3DB]/50 flex items-center justify-center text-[#8A857D] hover:text-[#2C2621] flex-shrink-0"
                                   >
                                     <X size={14} />
                                   </button>
@@ -1714,7 +1768,7 @@ function DashboardPageInner() {
                                   <button
                                     key={tag.slug}
                                     onClick={() => setPostTag(selected ? null : tag.slug)}
-                                    className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all ${selected ? `${tag.color} border-current scale-[1.04] shadow-sm` : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                                    className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all ${selected ? `${tag.color} border-current scale-[1.04] shadow-sm` : 'bg-[#F0EFEA] border-[#E6E3DB] text-[#8A857D] hover:border-[#D4D0C8]'}`}
                                   >
                                     <span
                                       className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -1730,15 +1784,15 @@ function DashboardPageInner() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between px-5 py-3 bg-slate-50 border-t border-slate-100">
+                        <div className="flex items-center justify-between px-5 py-3 bg-[#F0EFEA] border-t border-[#E6E3DB]">
                           <button
                             onClick={() => setShowImage(!showImage)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${showImage ? 'bg-[#FCE7F3] text-blue-600' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${showImage ? 'bg-[#F0EFEA] text-blue-600' : 'text-[#8A857D] hover:text-[#2C2621] hover:bg-[#E6E3DB]/50'}`}
                           >
                             <ImageIcon size={13} /> {t('uploadImage', locale)}
                           </button>
                           <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-slate-300 font-medium tabular-nums">
+                            <span className="text-[10px] text-[#8A857D]/70 font-medium tabular-nums">
                               {newPost.length}/500
                             </span>
                             <Button
@@ -1757,7 +1811,7 @@ function DashboardPageInner() {
                       </div>
 
                       {isFeedLoading ? (
-                        <div className="text-center py-16 text-slate-400 text-sm">
+                        <div className="text-center py-16 text-[#8A857D] text-sm">
                           {t('loadingFeed', locale)}
                         </div>
                       ) : (
@@ -1768,8 +1822,8 @@ function DashboardPageInner() {
                           return (
                             <div
                               key={post.id}
-                              className={`bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden ${
-                                post.is_pinned ? 'ring-1 ring-violet-200' : ''
+                              className={`bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] overflow-hidden ${
+                                post.is_pinned ? 'ring-1 ring-[#E6E3DB]' : ''
                               }`}
                             >
                               <div className="p-5">
@@ -1782,11 +1836,11 @@ function DashboardPageInner() {
                                   />
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <p className="text-sm font-extrabold text-slate-900">
+                                      <p className="text-sm font-extrabold text-[#2C2621]">
                                         {post.user_name}
                                       </p>
                                       {post.is_pinned && (
-<span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded-full">
+<span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#2C3B2E] bg-[#E8EDE9] px-1.5 py-0.5 rounded-full">
                                           <Pin size={9} /> {t('pinnedBadge', locale)}
                                         </span>
                                       )}
@@ -1803,18 +1857,18 @@ function DashboardPageInner() {
                                       )}
                                     </div>
                                     <p
-                                      className="text-[10px] text-slate-400 font-semibold"
+                                      className="text-[10px] text-[#8A857D] font-semibold"
                                       suppressHydrationWarning
                                     >
                                       {formatDate(post.created_at)}
                                     </p>
                                   </div>
                                 </div>
-                                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-3">
+                                <p className="text-sm text-[#2C2621] leading-relaxed whitespace-pre-wrap mb-3">
                                   {post.content}
                                 </p>
                                 {post.image_url && (
-                                  <div className="rounded-xl overflow-hidden mb-3 border border-slate-100">
+                                  <div className="rounded-xl overflow-hidden mb-3 border border-[#E6E3DB]">
                                     <img
                                       src={post.image_url}
                                       alt="Post"
@@ -1825,10 +1879,10 @@ function DashboardPageInner() {
                                     />
                                   </div>
                                 )}
-                                <div className="flex items-center gap-1 pt-3 border-t border-slate-50 flex-wrap">
+                                <div className="flex items-center gap-1 pt-3 border-t border-[#E6E3DB]/60 flex-wrap">
                                   <button
                                     onClick={() => likeMutation.mutate(post.id)}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isLiked ? 'bg-red-50 text-red-500' : 'text-slate-400 hover:bg-slate-50 hover:text-red-400'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isLiked ? 'bg-red-50 text-red-500' : 'text-[#8A857D] hover:bg-[#F0EFEA] hover:text-red-400'}`}
                                   >
                                     <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
                                     {Number(post.like_count) + (isLiked ? 1 : 0)}
@@ -1841,7 +1895,7 @@ function DashboardPageInner() {
                                         return n;
                                       })
                                     }
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isExpanded ? 'bg-[#FCE7F3] text-blue-600' : 'text-slate-400 hover:bg-slate-50 hover:text-[#2B2568]'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${isExpanded ? 'bg-[#F0EFEA] text-blue-600' : 'text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C3B2E]'}`}
                                   >
                                     <MessageSquare size={14} />
                                     {post.comment_count}{' '}
@@ -1872,7 +1926,7 @@ function DashboardPageInner() {
                         className="rounded-2xl overflow-hidden"
                         style={{
                           background:
-                            'linear-gradient(135deg, #2B2568 0%, #1a1848 55%, #F472B6 160%)',
+                            'linear-gradient(135deg, #2C3B2E 0%, #243228 55%, #B85C38 160%)',
                         }}
                       >
                         <div className="px-6 py-6 text-white">
@@ -1880,7 +1934,7 @@ function DashboardPageInner() {
                           <p className="text-sm text-white/70">Toppmedlemmar rankas efter poäng</p>
                         </div>
                       </div>
-                      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden divide-y divide-slate-50">
+                      <div className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] overflow-hidden divide-y divide-[#E6E3DB]/60">
                         {leaderboard?.map((member: any, idx: number) => {
                           const lvl = getLevel(member.points);
                           const LIcon = lvl.icon;
@@ -1888,18 +1942,18 @@ function DashboardPageInner() {
                           return (
                             <div
                               key={member.id}
-                              className={`flex items-center gap-4 px-5 py-3.5 ${isMe ? 'bg-[#FCE7F3]/60' : 'hover:bg-slate-50/50'}`}
+                              className={`flex items-center gap-4 px-5 py-3.5 ${isMe ? 'bg-[#F0EFEA]/60' : 'hover:bg-[#F0EFEA]/50'}`}
                             >
                               <div className="w-8 text-center">
                                 <span
                                   className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-extrabold ${
                                     idx === 0
-                                      ? 'bg-[#F472B6] text-white'
+                                      ? 'bg-[#B85C38] text-white'
                                       : idx === 1
-                                        ? 'bg-[#2B2568] text-white'
+                                        ? 'bg-[#2C3B2E] text-white'
                                         : idx === 2
-                                          ? 'bg-[#E9D5FF] text-[#2B2568]'
-                                          : 'text-slate-400'
+                                          ? 'bg-[#E8EDE9] text-[#2C3B2E]'
+                                          : 'text-[#8A857D]'
                                   }`}
                                 >
                                   {idx + 1}
@@ -1913,11 +1967,11 @@ function DashboardPageInner() {
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <p className="text-sm font-extrabold text-slate-900 truncate">
+                                  <p className="text-sm font-extrabold text-[#2C2621] truncate">
                                     {member.name}
                                   </p>
                                   {isMe && (
-                                    <span className="text-[9px] font-extrabold bg-[#FCE7F3]0 text-white px-1.5 py-0.5 rounded-full">
+                                    <span className="text-[9px] font-extrabold bg-[#2C3B2E] text-white px-1.5 py-0.5 rounded-full">
                                       DU
                                     </span>
                                   )}
@@ -1932,7 +1986,7 @@ function DashboardPageInner() {
                                   </span>
                                 </div>
                               </div>
-                              <p className="text-lg font-extrabold text-slate-900">{member.points}</p>
+                              <p className="text-lg font-extrabold text-[#2C2621]">{member.points}</p>
                             </div>
                           );
                         })}
@@ -1942,8 +1996,8 @@ function DashboardPageInner() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5">
-                    <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4">
+                  <div className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] p-5">
+                    <h3 className="text-xs font-extrabold text-[#8A857D] uppercase tracking-widest mb-4">
                       {t('yourProfile', locale)}
                     </h3>
                     <div className="flex items-center gap-3 mb-4">
@@ -1954,7 +2008,7 @@ function DashboardPageInner() {
                         size={48}
                       />
                       <div>
-                        <p className="text-sm font-extrabold text-slate-900">{session.user.name}</p>
+                        <p className="text-sm font-extrabold text-[#2C2621]">{session.user.name}</p>
                         <p className="text-xs font-extrabold" style={{ color: LEVELS[0].color }}>
                           {t('levelBronze', locale)}
                         </p>
@@ -1966,17 +2020,17 @@ function DashboardPageInner() {
                         { label: t('likesLabel', locale), val: '0' },
                         { label: t('pointsLabel', locale), val: '0' },
                       ].map((s) => (
-                        <div key={s.label} className="bg-slate-50 rounded-xl p-2">
-                          <p className="text-base font-extrabold text-slate-900">{s.val}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                        <div key={s.label} className="bg-[#F0EFEA] rounded-xl p-2">
+                          <p className="text-base font-extrabold text-[#2C2621]">{s.val}</p>
+                          <p className="text-[9px] font-bold text-[#8A857D] uppercase tracking-wider">
                             {s.label}
                           </p>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5">
-                    <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">
+                  <div className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] p-5">
+                    <h3 className="text-xs font-extrabold text-[#8A857D] uppercase tracking-widest mb-3">
                       {t('rules', locale)}
                     </h3>
                     {[
@@ -1985,40 +2039,43 @@ function DashboardPageInner() {
                       t('ruleLanguages', locale),
                       t('ruleHelpEachOther', locale),
                     ].map((r) => (
-                      <div key={r} className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                        <div className="w-1 h-1 bg-[#F472B6] rounded-full" />
+                      <div key={r} className="flex items-center gap-2 text-xs text-[#8A857D] mb-2">
+                        <div className="w-1 h-1 bg-[#B85C38] rounded-full" />
                         {r}
                       </div>
                     ))}
                   </div>
-                  <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5">
-                    <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <Gift size={11} className="text-green-500" /> {t('refAndEarn', locale)}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 flex items-center gap-1.5 min-w-0">
-                        <LinkIcon size={10} className="text-slate-400 flex-shrink-0" />
-                        <span className="text-[10px] font-bold text-slate-600 truncate">
-                          {referral
-                            ? `creator.app/join?ref=${referral.referral_code}`
-                            : t('generating', locale)}
-                        </span>
+                  {SHOW_REF_AND_EARN && (
+                    <div className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] p-5">
+                      <h3 className="text-xs font-extrabold text-[#8A857D] uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Gift size={11} className="text-green-500" /> {t('refAndEarn', locale)}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-[#F0EFEA] border border-[#E6E3DB] rounded-xl px-3 py-2 flex items-center gap-1.5 min-w-0">
+                          <LinkIcon size={10} className="text-[#8A857D] flex-shrink-0" />
+                          <span className="text-[10px] font-bold text-[#8A857D] truncate">
+                            {referral
+                              ? `clikd.app/?ref=${referral.referral_code}`
+                              : t('generating', locale)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!referral) return;
+                            await navigator.clipboard.writeText(
+                              `${window.location.origin}/?ref=${referral.referral_code}`
+                            );
+                            setRefLinkCopied(true);
+                            setTimeout(() => setRefLinkCopied(false), 2200);
+                          }}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${refLinkCopied ? 'bg-green-100 text-green-600' : 'bg-[var(--nc-coral)] text-white hover:opacity-90'}`}
+                        >
+                          {refLinkCopied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                        </button>
                       </div>
-                      <button
-                        onClick={async () => {
-                          if (!referral) return;
-                          await navigator.clipboard.writeText(
-                            `${window.location.origin}?ref=${referral.referral_code}`
-                          );
-                          setRefLinkCopied(true);
-                          setTimeout(() => setRefLinkCopied(false), 2200);
-                        }}
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${refLinkCopied ? 'bg-green-100 text-green-600' : 'bg-[var(--nc-coral)] text-white hover:opacity-90'}`}
-                      >
-                        {refLinkCopied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2026,7 +2083,7 @@ function DashboardPageInner() {
             {activeTab === 'events' && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-extrabold text-slate-900">{t('upcomingEventsTab', locale)}</h2>
+                  <h2 className="text-2xl font-extrabold text-[#2C2621]">{t('upcomingEventsTab', locale)}</h2>
                   <Link
                     href="/events"
                     className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-[var(--nc-coral)] hover:opacity-90 text-white text-xs font-extrabold transition-all"
@@ -2035,7 +2092,7 @@ function DashboardPageInner() {
                   </Link>
                 </div>
                 {isEventsLoading ? (
-                  <div className="text-center py-16 text-slate-400 text-sm">{t('loadingEvents', locale)}</div>
+                  <div className="text-center py-16 text-[#8A857D] text-sm">{t('loadingEvents', locale)}</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                     {events?.map((event: any) => {
@@ -2044,10 +2101,10 @@ function DashboardPageInner() {
                       return (
                         <div
                           key={event.id}
-                          className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden hover:shadow-lg transition-all"
+                          className="bg-white border border-[#E6E3DB] rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.04)] overflow-hidden hover:shadow-lg transition-all"
                         >
                           <div
-                            className={`h-44 relative flex items-center justify-center ${isLive ? 'bg-red-950' : 'bg-gradient-to-br from-[#2B2568] to-[#0F172A]'}`}
+                            className={`h-44 relative flex items-center justify-center ${isLive ? 'bg-red-950' : 'bg-gradient-to-br from-[#2C3B2E] to-[#1a241c]'}`}
                           >
                             <Calendar size={48} className="text-white/20" strokeWidth={1} />
                             <div className="absolute top-3 left-3">
@@ -2070,15 +2127,15 @@ function DashboardPageInner() {
                           </div>
                           <div className="p-5">
                             <p
-                              className="text-[10px] font-extrabold text-[#F472B6] uppercase tracking-widest mb-1"
+                              className="text-[10px] font-extrabold text-[#B85C38] uppercase tracking-widest mb-1"
                               suppressHydrationWarning
                             >
                               {formatEventDate(event.start_time)}
                             </p>
-                            <h3 className="text-base font-extrabold text-slate-900 leading-snug mb-2">
+                            <h3 className="text-base font-extrabold text-[#2C2621] leading-snug mb-2">
                               {event.title}
                             </h3>
-                            <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 mb-4">
+                            <p className="text-xs text-[#8A857D] leading-relaxed line-clamp-2 mb-4">
                               {event.description}
                             </p>
                             <div className="flex gap-2">
@@ -2124,10 +2181,10 @@ function DashboardPageInner() {
                 <div className="fixed bottom-6 right-6 z-30 flex flex-col items-end gap-3">
                   {showMemberChat && (
                     <div
-                      className="w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"
+                      className="w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-[#E6E3DB] flex flex-col overflow-hidden"
                       style={{ height: 490 }}
                     >
-                      <div className="flex items-center justify-between px-4 py-3 bg-[#2B2568] flex-shrink-0">
+                      <div className="flex items-center justify-between px-4 py-3 bg-[#2C3B2E] flex-shrink-0">
                         <div className="flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
                             <Sparkles size={14} className="text-white" />
@@ -2149,13 +2206,13 @@ function DashboardPageInner() {
                       <div ref={memberChatRef} className="flex-1 overflow-y-auto p-4 space-y-3">
                         {memberChatMessages.length === 0 && (
                           <div className="text-center py-3">
-                            <div className="w-12 h-12 rounded-2xl bg-[#FCE7F3] flex items-center justify-center mx-auto mb-3">
-                              <GraduationCap size={22} className="text-[#2B2568]" />
+                            <div className="w-12 h-12 rounded-2xl bg-[#F0EFEA] flex items-center justify-center mx-auto mb-3">
+                              <GraduationCap size={22} className="text-[#2C3B2E]" />
                             </div>
-                            <p className="text-xs font-extrabold text-slate-600">
+                            <p className="text-xs font-extrabold text-[#8A857D]">
                               {t('aiCourseAssistant', locale)}
                             </p>
-                            <p className="text-xs text-slate-400 mt-1 mb-3">
+                            <p className="text-xs text-[#8A857D] mt-1 mb-3">
                               {t('aiCourseAssistantSub', locale)}
                             </p>
                           </div>
@@ -2166,7 +2223,7 @@ function DashboardPageInner() {
                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
-                              className={`max-w-[85%] rounded-2xl px-3 py-2.5 text-xs leading-relaxed ${msg.role === 'user' ? 'bg-[#2B2568] text-white rounded-br-none' : 'bg-slate-100 text-slate-700 rounded-bl-none'}`}
+                              className={`max-w-[85%] rounded-2xl px-3 py-2.5 text-xs leading-relaxed ${msg.role === 'user' ? 'bg-[#2C3B2E] text-white rounded-br-none' : 'bg-[#E6E3DB]/50 text-[#2C2621] rounded-bl-none'}`}
                             >
                               {msg.role === 'assistant'
                                 ? renderChatMessage(msg.content)
@@ -2176,18 +2233,18 @@ function DashboardPageInner() {
                         ))}
                         {memberStreamingMsg && (
                           <div className="flex justify-start">
-                            <div className="max-w-[85%] bg-slate-100 text-slate-700 rounded-2xl rounded-bl-none px-3 py-2.5 text-xs leading-relaxed">
+                            <div className="max-w-[85%] bg-[#E6E3DB]/50 text-[#2C2621] rounded-2xl rounded-bl-none px-3 py-2.5 text-xs leading-relaxed">
                               {renderChatMessage(memberStreamingMsg)}
                             </div>
                           </div>
                         )}
                         {memberChatLoading && !memberStreamingMsg && (
                           <div className="flex justify-start">
-                            <div className="bg-slate-100 rounded-2xl rounded-bl-none px-4 py-3 flex gap-1.5 items-center">
+                            <div className="bg-[#E6E3DB]/50 rounded-2xl rounded-bl-none px-4 py-3 flex gap-1.5 items-center">
                               {[0, 1, 2].map((i) => (
                                 <div
                                   key={i}
-                                  className="w-1.5 h-1.5 bg-zinc-400 rounded-full"
+                                  className="w-1.5 h-1.5 bg-[#8A857D] rounded-full"
                                   style={{
                                     animation: `memberChatPulse 1s ease-in-out infinite`,
                                     animationDelay: `${i * 0.2}s`,
@@ -2198,7 +2255,7 @@ function DashboardPageInner() {
                           </div>
                         )}
                       </div>
-                      <div className="p-3 border-t border-slate-100 flex gap-2 flex-shrink-0">
+                      <div className="p-3 border-t border-[#E6E3DB] flex gap-2 flex-shrink-0">
                         <input
                           type="text"
                           placeholder={t('aiCourseAssistantSub', locale)}
@@ -2210,12 +2267,12 @@ function DashboardPageInner() {
                               sendMemberChat();
                             }
                           }}
-                          className="flex-1 text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#F472B6]/50"
+                          className="flex-1 text-xs bg-[#F0EFEA] border border-[#E6E3DB] rounded-xl px-3 py-2 focus:outline-none focus:border-[#B85C38]/50"
                         />
                         <button
                           onClick={sendMemberChat}
                           disabled={!memberChatInput.trim() || memberChatLoading}
-                          className="w-9 h-9 flex-shrink-0 rounded-xl bg-[#2B2568] flex items-center justify-center disabled:opacity-40 hover:bg-[#1a1848]"
+                          className="w-9 h-9 flex-shrink-0 rounded-xl bg-[#2C3B2E] flex items-center justify-center disabled:opacity-40 hover:bg-[#2C3B2E]"
                         >
                           <Send size={13} className="text-white" />
                         </button>
@@ -2224,7 +2281,7 @@ function DashboardPageInner() {
                   )}
                   <button
                     onClick={() => setShowMemberChat((v) => !v)}
-                    className="w-14 h-14 rounded-2xl bg-[#2B2568] shadow-lg shadow-[#2B2568]/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                    className="w-14 h-14 rounded-2xl bg-[#2C3B2E] shadow-lg shadow-[#2C3B2E]/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
                   >
                     {showMemberChat ? (
                       <X size={22} className="text-white" />
@@ -2241,9 +2298,9 @@ function DashboardPageInner() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#FAFAFA] text-slate-900 font-sans">
+    <div className="flex min-h-screen bg-[#F9F8F6] text-[#2C2621] font-sans">
       {/* Desktop sidebar — light canvas, matches admin chrome */}
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 w-64 flex-col justify-between bg-white border-r border-slate-200/80 h-screen rounded-bl-[28px]">
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 w-64 flex-col justify-between bg-[#F9F8F6] border-r border-[#E6E3DB] text-[#2C2621] h-screen">
         <div className="flex flex-col min-h-0 flex-1">
           <div className="px-4 pt-5 pb-4">
             <Link
@@ -2251,7 +2308,7 @@ function DashboardPageInner() {
               className="flex items-center px-0.5 min-h-11 hover:opacity-80 transition-opacity"
               aria-label="Clikd home"
             >
-              <span className="font-serif text-3xl font-medium text-[#2C2621] tracking-tight leading-none">
+              <span className="font-playfair italic text-3xl font-medium tracking-tight text-[#2C2621] leading-none">
                 C.
               </span>
             </Link>
@@ -2282,7 +2339,7 @@ function DashboardPageInner() {
 
             {joinedCommunities.length > 0 && (
               <div className="pt-4 pb-1">
-                <p className="px-3.5 text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-1.5">
+                <p className="px-3.5 text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D] mb-1.5">
                   {t('myCommunities', locale)}
                 </p>
                 <div className="space-y-0.5">
@@ -2299,15 +2356,15 @@ function DashboardPageInner() {
                           setActiveTab('community');
                         }}
                         className={[
-                          'w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 transition-all duration-200',
+                          'w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 transition-colors duration-200 border-l-2',
                           isActive
-                            ? 'rounded-2xl bg-[#1a1848] text-white font-semibold shadow-sm'
-                            : 'rounded-2xl text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium',
+                            ? 'border-[#2C3B2E] text-[#2C2621] font-medium bg-transparent'
+                            : 'border-transparent text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]/60 font-normal',
                         ].join(' ')}
                       >
                         <div
-                          className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 border border-white/20"
-                          style={{ background: c.cover_color ?? '#2B2568' }}
+                          className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 border border-[#E6E3DB]"
+                          style={{ background: c.cover_color ?? '#2C3B2E' }}
                         >
                           {c.creator_image ? (
                             <img src={c.creator_image} alt="" className="w-full h-full object-cover" />
@@ -2326,9 +2383,9 @@ function DashboardPageInner() {
                   <button
                     type="button"
                     onClick={() => setSidebarView('search')}
-                    className="w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 rounded-2xl text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium transition-all"
+                    className="w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 rounded-2xl text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C2621] font-medium transition-all"
                   >
-                    <div className="w-7 h-7 rounded-lg border border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-lg border border-dashed border-[#E6E3DB] flex items-center justify-center flex-shrink-0">
                       <Plus size={14} />
                     </div>
                     <span className="text-[13px] tracking-tight">{t('findMore', locale)}</span>
@@ -2339,11 +2396,11 @@ function DashboardPageInner() {
           </nav>
         </div>
 
-        <div className="px-3 pb-4 pt-2 border-t border-slate-100">
+        <div className="px-3 pb-4 pt-2 border-t border-[#E6E3DB]">
           <button
             type="button"
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 rounded-2xl text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-medium transition-all"
+            className="w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 rounded-2xl text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C2621] font-medium transition-all"
           >
             <LogOut size={18} strokeWidth={1.75} className="flex-shrink-0 opacity-90" aria-hidden />
             <span className="text-[13px] tracking-tight">{t('signOut', locale)}</span>
@@ -2352,22 +2409,23 @@ function DashboardPageInner() {
       </aside>
 
       {/* Main area */}
-      <div className="relative z-10 flex-1 lg:pl-64 flex flex-col min-h-screen bg-[#F8FAFC]/60">
+      <div className="relative z-10 flex-1 lg:pl-64 flex flex-col min-h-screen bg-[#F9F8F6]">
         {/* Sticky account chrome — matches Admin avatar menu (member context) */}
         {sidebarView !== 'community' ? (
-          <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between gap-4">
+          <header className="sticky top-0 z-30 h-16 bg-[#F9F8F6]/90 backdrop-blur-md border-b border-[#E6E3DB] px-4 sm:px-8 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                 {t('accountMenuTitle', locale)}
               </p>
-              <p className="text-sm font-extrabold text-slate-900 truncate">
+              <p className="text-sm font-extrabold text-[#2C2621] truncate">
                 {session.user.name || t('roleMember', locale)}
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+              <LanguageSwitcher className="[&>button]:bg-transparent [&>button]:hover:bg-[#E6E3DB]/45 [&>button]:border [&>button]:border-[#E6E3DB]/90 [&>button]:shadow-none [&>button]:rounded-xl [&>button]:min-h-11 [&>button]:h-11 [&>button]:text-[#8A857D] [&>button]:font-medium" />
               <button
                 type="button"
-                className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-500 relative transition-colors"
+                className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full hover:bg-[#F0EFEA] flex items-center justify-center text-[#8A857D] relative transition-colors"
                 aria-label="Notiser"
               >
                 <Bell size={17} strokeWidth={1.75} />
@@ -2390,13 +2448,13 @@ function DashboardPageInner() {
           className="fixed inset-0 z-40 lg:hidden"
           onClick={() => setMobileCommunitiesOpen(false)}
         >
-          <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-[#2C2621]/30 backdrop-blur-sm" />
           <div
-            className="absolute bottom-20 left-3 right-3 bg-white border border-slate-200/80 rounded-[1.75rem] p-4 pt-3 shadow-xl"
+            className="absolute bottom-20 left-3 right-3 bg-white border border-[#E6E3DB] rounded-[1.75rem] p-4 pt-3 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-4" />
-            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400 mb-3">
+            <div className="w-10 h-1 bg-[#E6E3DB] rounded-full mx-auto mb-4" />
+            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D] mb-3">
               {t('myCommunities', locale)}
             </p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -2410,11 +2468,11 @@ function DashboardPageInner() {
                     setActiveTab('community');
                     setMobileCommunitiesOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all min-h-[44px] ${selectedCommunity?.id === c.id ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
+                  className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all min-h-[44px] ${selectedCommunity?.id === c.id ? 'bg-[#E6E3DB]/50' : 'hover:bg-[#F0EFEA]'}`}
                 >
                   <div
                     className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0"
-                    style={{ background: c.cover_color ?? '#2B2568' }}
+                    style={{ background: c.cover_color ?? '#2C3B2E' }}
                   >
                     {c.creator_image ? (
                       <img
@@ -2429,8 +2487,8 @@ function DashboardPageInner() {
                     )}
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-extrabold text-slate-900">{c.name}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-sm font-extrabold text-[#2C2621]">{c.name}</p>
+                    <p className="text-xs text-[#8A857D]">
                       {c.member_count.toLocaleString('sv-SE')} {t('members', locale)}
                     </p>
                   </div>
@@ -2445,12 +2503,12 @@ function DashboardPageInner() {
                   setSidebarView('search');
                   setMobileCommunitiesOpen(false);
                 }}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-all min-h-[44px]"
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-[#F0EFEA] transition-all min-h-[44px]"
               >
-                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
-                  <Plus size={18} className="text-slate-500" />
+                <div className="w-10 h-10 rounded-xl bg-[#E6E3DB]/50 flex items-center justify-center">
+                  <Plus size={18} className="text-[#8A857D]" />
                 </div>
-                <p className="text-sm font-bold text-slate-500">{t('findMore', locale)}</p>
+                <p className="text-sm font-bold text-[#8A857D]">{t('findMore', locale)}</p>
               </button>
             </div>
           </div>

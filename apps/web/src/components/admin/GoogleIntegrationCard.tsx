@@ -9,6 +9,7 @@ import { CheckCircle2, Loader2, Unplug } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/lib/i18n';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 
 function GoogleGlyph({ size = 16 }: { size?: number }) {
   return (
@@ -35,6 +36,7 @@ export default function GoogleIntegrationCard({
   const workspace = useWorkspaceOptional();
   const workspaceId = workspace?.activeWorkspace?.id ?? null;
   const qc = useQueryClient();
+  const { showGoogle } = usePendingApiPlatformAccess();
 
   const { data, isLoading } = useQuery({
     queryKey: ['google-status', workspaceId],
@@ -51,8 +53,10 @@ export default function GoogleIntegrationCard({
         platformUserId: string | null;
       }>;
     },
-    enabled: Boolean(workspaceId),
+    enabled: Boolean(workspaceId) && showGoogle,
   });
+
+  if (!showGoogle) return null;
 
   const connectUrl = workspaceId
     ? `/api/auth/google/login?workspaceId=${encodeURIComponent(workspaceId)}`

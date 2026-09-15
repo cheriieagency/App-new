@@ -90,6 +90,13 @@ export async function GET(request: Request) {
     return NextResponse.redirect(signIn);
   }
 
+  const { canAccessPendingApiPlatform } = await import(
+    '@/lib/config/pending-api-platforms'
+  );
+  if (!canAccessPendingApiPlatform(session.user.email, 'pinterest')) {
+    return popupFail(origin, 'platform_unavailable');
+  }
+
   // CSRF nonce + workspace binding embedded in OAuth state.
   const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
 

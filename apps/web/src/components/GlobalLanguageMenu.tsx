@@ -9,10 +9,13 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
  */
 export function GlobalLanguageMenu() {
   const pathname = usePathname() || '';
-  // Landing, admin, and planner embed LanguageSwitcher in their own chrome.
+  // Landing, pricing, admin, planner, and member dashboard embed LanguageSwitcher in chrome.
   const hasEmbeddedSwitcher =
     pathname === '/' ||
+    pathname.startsWith('/landing') ||
+    pathname.startsWith('/pricing') ||
     pathname.startsWith('/admin') ||
+    pathname.startsWith('/dashboard') ||
     pathname.includes('/planner');
 
   if (hasEmbeddedSwitcher) return null;

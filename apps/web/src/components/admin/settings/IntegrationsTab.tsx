@@ -21,6 +21,7 @@ import { openOAuthPopup } from '@/lib/oauth/popup';
 import { t, tf, type Locale } from '@/lib/i18n';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 
 const PLATFORM_ORDER: SocialPlatform[] = [
   'instagram',
@@ -77,7 +78,9 @@ export default function IntegrationsTab({
   loading,
 }: IntegrationsTabProps) {
   const queryClient = useQueryClient();
+  const { showGoogle, filterPlatforms } = usePendingApiPlatformAccess();
   const byPlatform = new Map(accounts.map((a) => [a.platform, a]));
+  const visiblePlatforms = filterPlatforms(PLATFORM_ORDER);
 
   const connect = async (platform: SocialPlatform) => {
     const path = LOGIN_PATH[platform];
@@ -138,9 +141,11 @@ export default function IntegrationsTab({
         </Link>
       </div>
 
-      <div className="mb-4">
-        <GoogleIntegrationCard />
-      </div>
+      {showGoogle ? (
+        <div className="mb-4">
+          <GoogleIntegrationCard />
+        </div>
+      ) : null}
 
       <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#8A857D] mb-2">
         {t('settingsIntegrationsOverview', locale)}
@@ -152,7 +157,7 @@ export default function IntegrationsTab({
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {PLATFORM_ORDER.map((platform) => {
+          {visiblePlatforms.map((platform) => {
             const account = byPlatform.get(platform);
             const connected = Boolean(account?.connected);
             const Icon = SOCIAL_ICONS[platform];

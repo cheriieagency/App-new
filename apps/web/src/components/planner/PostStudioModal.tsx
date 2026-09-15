@@ -80,6 +80,7 @@ import {
 import { useLocale } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import {
   listFavoriteHashtags,
@@ -191,11 +192,16 @@ export default function PostStudioModal({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const workspaceCtx = useWorkspaceOptional();
+  const { canAccessPlatform } = usePendingApiPlatformAccess();
   const workspaceId =
     workspaceCtx?.activeWorkspaceId?.trim() ||
     workspaceCtx?.activeWorkspace?.id?.trim() ||
     '';
   const { data: socialsData } = useSocialAccounts(open);
+  const visiblePlatformOptions = useMemo(
+    () => PLATFORM_OPTIONS.filter((opt) => canAccessPlatform(opt.key)),
+    [canAccessPlatform]
+  );
   const connectedPlatforms = useMemo(() => {
     const set = new Set<SocialPlatform>();
     for (const a of socialsData?.accounts || []) {
@@ -953,7 +959,7 @@ export default function PostStudioModal({
       <div>
         <FieldLabel>Platforms</FieldLabel>
         <div className="flex flex-wrap items-center gap-1.5">
-          {PLATFORM_OPTIONS.map(({ key, label, Icon }) => {
+          {visiblePlatformOptions.map(({ key, label, Icon }) => {
             const active = platforms.includes(key);
             const connected = connectedPlatforms.has(key);
             return (

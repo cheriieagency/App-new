@@ -35,6 +35,7 @@ export type NestedDict = {
     pricing: string;
     exploreCommunities: string;
     platform: string;
+    faq: string;
     prices: string;
     signIn: string;
     logIn: string;
@@ -276,8 +277,9 @@ export const DICT_EN: NestedDict = {
   nav: {
     features: 'Features',
     pricing: 'Pricing',
-    exploreCommunities: 'Explore Communities',
+    exploreCommunities: 'Communities',
     platform: 'Platform',
+    faq: 'FAQ',
     prices: 'Pricing',
     signIn: 'Sign in',
     logIn: 'Log in',
@@ -290,8 +292,8 @@ export const DICT_EN: NestedDict = {
   },
   hero: {
     badge: 'The all-in-one platform',
-    headline1: 'Content planning',
-    headline2: 'built for social media.',
+    headline1: 'Join the new era of social media planning.',
+    headline2: 'Clikd studio',
     sub: 'Built for creators who move at the speed of social. Plan multi-channel calendars, monetize your link-in-bio, and host gamified communities — all in one unified studio.',
     ctaPrimary: 'Get started for free →',
     ctaSecondary: 'Learn more',
@@ -528,8 +530,9 @@ export const DICT_SV: NestedDict = {
   nav: {
     features: 'Funktioner',
     pricing: 'Priser',
-    exploreCommunities: 'Utforska Communities',
+    exploreCommunities: 'Communities',
     platform: 'Plattformen',
+    faq: 'FAQ',
     prices: 'Priser',
     signIn: 'Logga in',
     logIn: 'Logga in',
@@ -542,8 +545,8 @@ export const DICT_SV: NestedDict = {
   },
   hero: {
     badge: 'Allt-i-ett-plattformen',
-    headline1: 'Content planning',
-    headline2: 'byggd för sociala medier.',
+    headline1: 'Gå med i den nya eran av social media-planering.',
+    headline2: 'Clikd studio',
     sub: 'Byggd för kreatörer som rör sig i social medias tempo. Planera flerkalendrar, tjäna på din link-in-bio och hosta gamifierade communities — allt i en studio.',
     ctaPrimary: 'Kom igång gratis →',
     ctaSecondary: 'Läs mer',
@@ -783,8 +786,9 @@ export const DICT_NO: NestedDict = {
     ...DICT_SV.nav,
     features: 'Funksjoner',
     pricing: 'Priser',
-    exploreCommunities: 'Utforsk communities',
+    exploreCommunities: 'Communities',
     platform: 'Plattformen',
+    faq: 'FAQ',
     prices: 'Priser',
     signIn: 'Logg inn',
     logIn: 'Logg inn',
@@ -797,8 +801,8 @@ export const DICT_NO: NestedDict = {
   hero: {
     ...DICT_SV.hero,
     badge: 'Alt-i-ett-plattformen',
-    headline1: 'Content planning',
-    headline2: 'bygget for sosiale medier.',
+    headline1: 'Bli med i den nye æraen for sosial medieplanlegging.',
+    headline2: 'Clikd studio',
     sub: 'Bygget for skapere som beveger seg i sosiale mediers tempo. Planlegg flerkanal-kalendere, tjen på link-in-bio og host gamifiserte communities — alt i ett studio.',
     ctaPrimary: 'Kom i gang gratis →',
     ctaSecondary: 'Les mer',
@@ -894,8 +898,9 @@ export const DICT_DA: NestedDict = {
     ...DICT_SV.nav,
     features: 'Funktioner',
     pricing: 'Priser',
-    exploreCommunities: 'Udforsk communities',
+    exploreCommunities: 'Communities',
     platform: 'Platformen',
+    faq: 'FAQ',
     signIn: 'Log ind',
     logIn: 'Log ind',
     getStartedFree: 'Kom i gang gratis',
@@ -907,7 +912,8 @@ export const DICT_DA: NestedDict = {
   hero: {
     ...DICT_SV.hero,
     badge: 'Alt-i-én platformen',
-    headline2: 'bygget til sociale medier.',
+    headline1: 'Bliv en del af den nye æra inden for social medieplanlægning.',
+    headline2: 'Clikd studio',
     sub: 'Bygget til creators der bevæger sig i sociale mediers tempo. Planlæg flerkanalskalendere, tjen på din link-in-bio og host gamificerede communities — alt i ét studio.',
     ctaPrimary: 'Kom i gang gratis →',
     ctaSecondary: 'Læs mere',
@@ -1000,8 +1006,9 @@ export const DICT_FI: NestedDict = {
   nav: {
     features: 'Ominaisuudet',
     pricing: 'Hinnat',
-    exploreCommunities: 'Tutustu yhteisöihin',
+    exploreCommunities: 'Yhteisöt',
     platform: 'Alusta',
+    faq: 'UKK',
     prices: 'Hinnat',
     signIn: 'Kirjaudu',
     logIn: 'Kirjaudu',
@@ -1014,8 +1021,8 @@ export const DICT_FI: NestedDict = {
   },
   hero: {
     badge: 'Kaikki yhdessä -alusta',
-    headline1: 'Sisällön suunnittelu',
-    headline2: 'rakennettu someen.',
+    headline1: 'Liity some-suunnittelun uuteen aikakauteen.',
+    headline2: 'Clikd studio',
     sub: 'Rakennettu tekijöille, jotka liikkuvat somen tahdissa. Suunnittele monikanavakalentereita, myy link-in-biolla ja isännöi pelillistettyjä yhteisöjä — kaikki yhdessä studiossa.',
     ctaPrimary: 'Aloita ilmaiseksi →',
     ctaSecondary: 'Lue lisää',

@@ -7,6 +7,7 @@ import type { ConnectedSocialAccount } from '@/lib/mock-content-planner';
 import { useSession } from '@/lib/auth-client';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { NC_WORKSPACE_STORAGE_KEY } from '@/lib/mock-workspace-profiles';
+import { canAccessPendingApiPlatform } from '@/lib/config/pending-api-platforms';
 
 export type SocialAccountsResponse = {
   accounts: ConnectedSocialAccount[];
@@ -201,7 +202,11 @@ export function useSocialAccounts(enabled = true) {
     workspaceId,
   ]);
 
-  const accounts = query.data?.accounts ?? [];
+  const accounts = useMemo(() => {
+    const raw = query.data?.accounts ?? [];
+    const email = session?.user?.email ?? null;
+    return raw.filter((a) => canAccessPendingApiPlatform(email, a.platform));
+  }, [query.data?.accounts, session?.user?.email]);
   const connectedAccounts = useMemo(
     () => accounts.filter((a) => a.connected),
     [accounts]

@@ -37,6 +37,7 @@ import {
 } from '@/lib/mock-content-planner';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 
 const EMOJIS = ['🔥', '✨', '🙌', '💡', '🚀', '❤️', '👇', '😊', '💪', '🎯', '📈', '✅'];
 
@@ -85,6 +86,7 @@ export default function PostComposer({
   onSaved: () => void;
 }) {
   const { locale } = useLanguage();
+  const { canAccessPlatform } = usePendingApiPlatformAccess();
   const [caption, setCaption] = useState('');
   const [platforms, setPlatforms] = useState<SocialPlatform[]>(['instagram']);
   const [scheduledAt, setScheduledAt] = useState('');
@@ -96,7 +98,10 @@ export default function PostComposer({
   const [polishing, setPolishing] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
 
-  const hasYoutube = platforms.includes('youtube');
+  const visiblePlatformOptions = PLATFORM_OPTIONS.filter((opt) =>
+    canAccessPlatform(opt.key)
+  );
+  const hasYoutube = platforms.includes('youtube') && canAccessPlatform('youtube');
 
   // Sync form when dialog opens with new seed/initial.
   useEffect(() => {
@@ -285,7 +290,7 @@ export default function PostComposer({
                 {t('crossPosting', locale)}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {PLATFORM_OPTIONS.map(({ key, label }) => {
+                {visiblePlatformOptions.map(({ key, label }) => {
                   const checked = platforms.includes(key);
                   return (
                     <label

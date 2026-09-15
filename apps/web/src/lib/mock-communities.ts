@@ -14,7 +14,11 @@ export function getMockCommunitiesForUser(_opts?: {
   const catalog = listPublicCatalogCommunities();
   const byId = new Map<number, SearchableCommunity>();
   for (const c of [...MOCK_COMMUNITIES, ...catalog]) {
-    byId.set(c.id, { ...c, is_joined: Boolean(c.is_joined) });
+    // Never trust catalog membership — it's a shared cache, not per-user truth.
+    byId.set(c.id, {
+      ...c,
+      is_joined: Boolean(_opts?.forceJoined),
+    });
   }
   return [...byId.values()];
 }

@@ -3,31 +3,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 import { authClient } from '@/lib/auth-client';
 import { LandingHeader } from '@/components/landing/LandingHeader';
-import { WaitlistHeroSection } from '@/components/landing/WaitlistHeroSection';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { PlatformSuiteSection } from '@/components/landing/PlatformSuiteSection';
 import { PlatformShowcaseSection } from '@/components/landing/PlatformShowcaseSection';
+import { SocialPhonesFanSection } from '@/components/landing/SocialPhonesFanSection';
 import { RoiCalculator } from '@/components/landing/RoiCalculator';
 import { ShowcaseSection } from '@/components/landing/ShowcaseSection';
 import { FaqSection } from '@/components/landing/FaqSection';
-import { PricingSection } from '@/components/landing/PricingSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import { NewsletterSignupSection } from '@/components/landing/NewsletterSignupSection';
 import type { SearchableCommunity } from '@/components/landing/CommunitySearchAutocomplete';
-import { getMockCommunitiesForUser, normalizeCommunities } from '@/lib/mock-communities';
-import { useLanguage } from '@/lib/locale-context';
-import { t } from '@/lib/i18n';
-import {
-  ltCta,
-  ltEyebrow,
-  ltSection,
-  ltSectionSub,
-} from '@/components/landing/landingType';
-
+import { normalizeCommunities } from '@/lib/mock-communities';
 function filterCommunities(list: SearchableCommunity[], query: string): SearchableCommunity[] {
   const q = query.trim().toLowerCase();
   if (!q) return list;
@@ -51,7 +40,6 @@ function filterCommunities(list: SearchableCommunity[], query: string): Searchab
 export function LandingPageClient() {
   const { data: session } = authClient.useSession();
   const router = useRouter();
-  const { locale } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
@@ -74,17 +62,11 @@ export function LandingPageClient() {
     retry: 1,
   });
 
-  // Prefer API data; fall back to local mocks while loading or on error.
+  // Live API only — empty while loading / on error (no catalog mock injection).
   const list = useMemo(() => {
-    if (Array.isArray(apiCommunities) && apiCommunities.length > 0) return apiCommunities;
-    if (isLoading || isError || !apiCommunities) {
-      return getMockCommunitiesForUser({
-        email: session?.user?.email,
-        name: session?.user?.name,
-      });
-    }
-    return apiCommunities;
-  }, [apiCommunities, isLoading, isError, session?.user?.email, session?.user?.name]);
+    if (Array.isArray(apiCommunities)) return apiCommunities;
+    return [];
+  }, [apiCommunities]);
 
   const joinMutation = useMutation({
     mutationFn: async ({ id, action }: { id: number; action: 'join' | 'leave' }) => {
@@ -107,7 +89,7 @@ export function LandingPageClient() {
   };
 
   return (
-    <div className="nc-landing min-h-screen bg-[#FAFAFA]">
+    <div className="editorial-landing nc-landing min-h-screen bg-[#F9F8F6] text-[#2C2621]">
       <LandingHeader
         isLoggedIn={!!session}
         user={
@@ -120,13 +102,11 @@ export function LandingPageClient() {
             : null
         }
       />
-      {/* VIP waitlist signup stays as the top conversion block. */}
-      <WaitlistHeroSection />
       <HeroSection />
       <PlatformSuiteSection />
+      <SocialPhonesFanSection />
       <PlatformShowcaseSection />
       <ComparisonSection />
-      <PricingSection />
       <ShowcaseSection
         featured={featured}
         allCommunities={list}
@@ -148,32 +128,7 @@ export function LandingPageClient() {
       <RoiCalculator />
       <FaqSection />
 
-      <section className="relative py-16 sm:py-24 text-center overflow-hidden bg-[#FAFAFA]">
-        <div className="relative max-w-2xl mx-auto px-4 sm:px-6">
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] py-12 px-6 sm:px-10">
-            <p className={`${ltEyebrow} mb-3`}>{t('getStartedEyebrow', locale)}</p>
-            <h2 className={`${ltSection} mb-4`}>{t('landingReadyHeadline', locale)}</h2>
-            <p className={`${ltSectionSub} mb-9`}>{t('landingReadySub', locale)}</p>
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-              <Link
-                href="/onboarding"
-                className={`flex items-center gap-2 min-h-12 px-8 rounded-xl ${ltCta} text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]`}
-              >
-                {t('landingCtaStartFree', locale)} <ArrowRight size={14} />
-              </Link>
-              <button
-                type="button"
-                onClick={() =>
-                  document.getElementById('communities')?.scrollIntoView({ behavior: 'smooth' })
-                }
-                className={`flex items-center gap-2 min-h-12 px-8 rounded-xl bg-white border border-slate-200/80 text-slate-800 ${ltCta} hover:bg-slate-50 hover:border-slate-300 transition-all`}
-              >
-                {t('landingCtaExplore', locale)}
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <NewsletterSignupSection />
 
       <LandingFooter />
     </div>

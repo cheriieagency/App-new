@@ -43,7 +43,7 @@ const WAITLIST_FEATURES: {
 ];
 
 /**
- * Editorial waitlist landing — currently shown on `/` until launch.
+ * Editorial waitlist landing — kept for reference; `/` now serves LandingPageClient.
  * High-end magazine aesthetic: Playfair + Inter, alabaster paper, forest green CTAs.
  */
 export function WaitlistPageClient() {

@@ -10,6 +10,7 @@ import { FolderOpen, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/lib/i18n';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 
 type DriveFile = {
   id: string;
@@ -42,6 +43,7 @@ export default function GoogleDriveImportButton({
   const workspaceId = workspace?.activeWorkspace?.id ?? null;
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const { showGoogle } = usePendingApiPlatformAccess();
 
   const statusQuery = useQuery({
     queryKey: ['google-status', workspaceId],
@@ -53,7 +55,7 @@ export default function GoogleDriveImportButton({
       if (!r.ok) throw new Error('status failed');
       return r.json() as Promise<{ connected: boolean; email: string | null }>;
     },
-    enabled: Boolean(workspaceId),
+    enabled: Boolean(workspaceId) && showGoogle,
   });
 
   const filesQuery = useQuery({
@@ -70,9 +72,8 @@ export default function GoogleDriveImportButton({
         message?: string;
       }>;
     },
-    enabled: open && Boolean(workspaceId),
+    enabled: open && Boolean(workspaceId) && showGoogle,
   });
-
   const importMutation = useMutation({
     mutationFn: async (file: DriveFile) => {
       const r = await fetch('/api/admin/drive/import', {
@@ -122,6 +123,8 @@ export default function GoogleDriveImportButton({
     if (!workspaceId) return '/api/auth/google/login';
     return `/api/auth/google/login?workspaceId=${encodeURIComponent(workspaceId)}`;
   }, [workspaceId]);
+
+  if (!showGoogle) return null;
 
   const handleClick = () => {
     if (!workspaceId) {

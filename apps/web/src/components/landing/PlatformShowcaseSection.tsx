@@ -10,33 +10,23 @@ import {
   getShowcaseCopy,
   type ShowcaseTabId,
 } from '@/lib/i18n/showcase-copy';
-import { ltAccent, ltHeaderWrap, ltSection, ltSectionSub } from '@/components/landing/landingType';
 
 const TAB_ICON: Record<ShowcaseTabId, string> = {
-  planner: 'fa-solid fa-paper-plane text-[#F472B6]',
-  biostore: 'fa-solid fa-store text-[#F472B6]',
-  metaads: 'fa-solid fa-rectangle-ad text-[#2B2568]',
-  crm: 'fa-regular fa-envelope text-[#2B2568]',
-  inbox: 'fa-regular fa-comments text-[#F472B6]',
-  community: 'fa-solid fa-users text-[#2B2568]',
-  analytics: 'fa-solid fa-chart-simple text-[#F472B6]',
+  planner: 'fa-solid fa-paper-plane text-[#2C3B2E]',
+  biostore: 'fa-solid fa-store text-[#2C3B2E]',
+  analytics: 'fa-solid fa-chart-line text-[#2C3B2E]',
+  crm: 'fa-regular fa-envelope text-[#2C2621]',
+  inbox: 'fa-regular fa-comments text-[#2C3B2E]',
+  community: 'fa-solid fa-users text-[#2C2621]',
 };
 
 /** Circle-style tabbed product showcase — live studio chrome per category. */
 export function PlatformShowcaseSection() {
   const { locale } = useLanguage();
   const copy = getShowcaseCopy(locale);
-  const [active, setActive] = useState<ShowcaseTabId>('planner');
+  const [active, setActive] = useState<ShowcaseTabId>('analytics');
   const tab = copy.tabs[active];
   const baseId = useId();
-  // Split “Made by …, for …” / Swedish “…, för …” so the second line is solid brand pink
-  const forSplit = copy.headline.includes(', for ')
-    ? { sep: ', for ' as const, prefix: 'for ' as const }
-    : copy.headline.includes(', för ')
-      ? { sep: ', för ' as const, prefix: 'för ' as const }
-      : null;
-  const headlineParts = forSplit ? copy.headline.split(forSplit.sep) : [copy.headline];
-  const shouldSplitHeadline = Boolean(forSplit && headlineParts.length === 2);
 
   const onTabKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -56,27 +46,10 @@ export function PlatformShowcaseSection() {
   return (
     <section
       id="the-platform"
-      className="relative py-16 sm:py-24 overflow-hidden bg-[#FAFAFA]"
-      aria-labelledby="platform-showcase-heading"
+      className="relative py-16 sm:py-24 overflow-hidden bg-[#F9F8F6]"
+      aria-label={copy.headline}
     >
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 space-y-10">
-        <header className={`${ltHeaderWrap} max-w-3xl`}>
-          <h2 id="platform-showcase-heading" className={ltSection}>
-            {shouldSplitHeadline ? (
-              <>
-                {headlineParts[0]},
-                <span className={`block ${ltAccent}`}>
-                  {forSplit!.prefix}
-                  {headlineParts[1]}
-                </span>
-              </>
-            ) : (
-              copy.headline
-            )}
-          </h2>
-          <p className={`${ltSectionSub} max-w-2xl mx-auto`}>{copy.sub}</p>
-        </header>
-
         <div
           role="tablist"
           aria-label={copy.headline}
@@ -97,17 +70,12 @@ export function PlatformShowcaseSection() {
                 onKeyDown={(event) => onTabKeyDown(event, index)}
                 className={`shrink-0 px-3 sm:px-4 min-h-[44px] py-2.5 rounded-full border flex items-center gap-2 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   selected
-                    ? 'bg-[#2B2568] text-white border-[#2B2568] shadow-[0_4px_14px_rgba(43,37,104,0.18)]'
-                    : 'border-zinc-200 text-zinc-600 hover:bg-white hover:text-[#2B2568] hover:border-[#E9D5FF]'
+                    ? 'bg-[#2C2621] text-white border-[#2C2621] shadow-[0_4px_14px_rgba(44,59,46,0.18)]'
+                    : 'border-zinc-200 text-zinc-600 hover:bg-white hover:text-[#2C2621] hover:border-[#E6E3DB]'
                 }`}
               >
                 <i className={TAB_ICON[id]} aria-hidden />
                 <span>{copy.tabs[id].label}</span>
-                {id === 'metaads' ? (
-                  <span className="text-[9px] font-mono font-bold text-[#2B2568] bg-[#E9D5FF]/70 px-1.5 py-0.5 rounded-md border border-[#E9D5FF]">
-                    {t('suiteAdsNew', locale)}
-                  </span>
-                ) : null}
               </button>
             );
           })}

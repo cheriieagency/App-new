@@ -40,7 +40,6 @@ function SignUpForm() {
 			? "creator"
 			: "member";
 	const callbackUrl = role === "creator" ? "/admin" : "/dashboard";
-	const signupDisabled = rawCallback.startsWith('/admin');
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [workspaceName, setWorkspaceName] = useState("");
@@ -61,10 +60,6 @@ function SignUpForm() {
 
 	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		if (signupDisabled) {
-			setError('Sign up is disabled during waitlist launch.');
-			return;
-		}
 		setLoading(true);
 		setError(null);
 
@@ -131,113 +126,123 @@ function SignUpForm() {
 	};
 
 	return (
-		<main className="nc-app nc-app-shell flex min-h-screen w-full items-center justify-center p-4 relative z-10">
-			{created ? (
-				<div className="nc-glass flex w-full max-w-[400px] flex-col gap-4 rounded-[1.5rem] p-7 relative z-10">
-					<h1 className="font-display text-2xl font-extrabold text-[#2c3340]">
-						Check your email
-					</h1>
-					<p className="text-sm font-medium text-zinc-600 leading-relaxed">
-						{ACCOUNT_CREATED_VERIFY_EMAIL}
-					</p>
-					<a
-						href={`/account/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-						className="rounded-full bg-[var(--nc-coral)] p-3 text-center text-[16px] font-extrabold text-white hover:opacity-90 transition-all"
+		<main className="flex min-h-screen w-full items-center justify-center bg-[#F9F8F6] text-[#2C2621] p-4 relative z-10">
+			<div className="w-full max-w-[420px]">
+				{created ? (
+					<div className="rounded-xl border border-[#E6E3DB] bg-white p-7 flex flex-col gap-4">
+						<h1 className="font-playfair text-2xl font-medium text-[#2C2621] tracking-tight">
+							Check your email
+						</h1>
+						<p className="text-sm font-medium text-[#8A857D] leading-relaxed">
+							{ACCOUNT_CREATED_VERIFY_EMAIL}
+						</p>
+						<a
+							href={`/account/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+							className="min-h-12 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] p-3 text-center text-sm font-medium text-[#F9F8F6] transition-colors"
+						>
+							{t('signInHere', locale)}
+						</a>
+					</div>
+				) : (
+					<form
+						onSubmit={(e) => {
+							void onSubmit(e);
+						}}
+						className="rounded-xl border border-[#E6E3DB] bg-white p-7 flex flex-col gap-4"
 					>
-						{t('signInHere', locale)}
-					</a>
-				</div>
-			) : (
-			<form
-				onSubmit={(e) => {
-					void onSubmit(e);
-				}}
-				className="nc-glass flex w-full max-w-[400px] flex-col gap-4 rounded-[1.5rem] p-7 relative z-10"
-			>
-				<h1 className="font-display text-2xl font-extrabold text-[#2c3340]">{t('createAccount', locale)}</h1>
+						<div>
+							<h1 className="font-playfair text-2xl font-medium text-[#2C2621] tracking-tight">
+								{t('createAccount', locale)}
+							</h1>
+							<p className="text-sm text-[#8A857D] font-medium mt-1">
+								{t('alreadyHaveAccount', locale)}{' '}
+								<a
+									href={`/account/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+									className="text-[#2C3B2E] hover:underline"
+								>
+									{t('signInHere', locale)}
+								</a>
+							</p>
+						</div>
 
-				{demoMode && (
-					<div className="rounded-[8px] border border-amber-300 bg-amber-50 p-[10px] text-[13px] text-amber-900">
-						Demo mode: Supabase env missing/placeholder — signup uses in-memory auth for local testing.
-					</div>
+						{demoMode && (
+							<div className="rounded-xl border border-[rgba(184,92,56,0.25)] bg-[rgba(184,92,56,0.08)] px-4 py-2.5 text-xs font-medium text-[#B85C38]">
+								Demo mode: Supabase env missing/placeholder — signup uses in-memory auth for local
+								testing.
+							</div>
+						)}
+
+						<label className="flex flex-col gap-1.5 text-[10px] font-medium text-[#8A857D] uppercase tracking-[0.14em]">
+							Workspace name
+							<input
+								type="text"
+								required
+								name="workspaceName"
+								minLength={2}
+								maxLength={80}
+								value={workspaceName}
+								onChange={(e) => setWorkspaceName(e.target.value)}
+								autoComplete="organization"
+								placeholder="e.g. Ebba Creator Lab"
+								className="min-h-11 rounded-xl border border-[#E6E3DB] bg-white px-4 py-3 text-sm text-[#2C2621] font-medium outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[rgba(44,59,46,0.12)] transition-all placeholder:text-[#8A857D]/70"
+							/>
+						</label>
+
+						<label className="flex flex-col gap-1.5 text-[10px] font-medium text-[#8A857D] uppercase tracking-[0.14em]">
+							{t('emailAddress', locale)}
+							<input
+								type="email"
+								required
+								name="email"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								autoComplete="email"
+								className="min-h-11 rounded-xl border border-[#E6E3DB] bg-white px-4 py-3 text-sm text-[#2C2621] font-medium outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[rgba(44,59,46,0.12)] transition-all"
+							/>
+						</label>
+
+						<label className="flex flex-col gap-1.5 text-[10px] font-medium text-[#8A857D] uppercase tracking-[0.14em]">
+							{t('password', locale)}
+							<input
+								type="password"
+								required
+								minLength={8}
+								name="password"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								autoComplete="new-password"
+								className="min-h-11 rounded-xl border border-[#E6E3DB] bg-white px-4 py-3 text-sm text-[#2C2621] font-medium outline-none focus:border-[#2C3B2E] focus:ring-2 focus:ring-[rgba(44,59,46,0.12)] transition-all"
+							/>
+						</label>
+
+						<label className="inline-flex items-center gap-2.5 min-h-[44px] text-sm font-medium text-[#8A857D] cursor-pointer select-none">
+							<input
+								type="checkbox"
+								checked={rememberMe}
+								onChange={(e) => setRememberMe(e.target.checked)}
+								className="h-4 w-4 rounded border-[#E6E3DB] text-[#2C3B2E] focus:ring-[#2C3B2E]/30"
+							/>
+							{t('rememberMe', locale)}
+						</label>
+
+						{error && (
+							<div className="rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.2)] px-4 py-3 text-sm font-medium text-[#B85C38] break-words">
+								{error}
+							</div>
+						)}
+
+						<button
+							type="submit"
+							disabled={loading}
+							className="min-h-12 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] p-3 text-sm font-medium text-[#F9F8F6] disabled:opacity-50 transition-colors"
+						>
+							{loading ? t('loading', locale) : t('signUp', locale)}
+						</button>
+
+						<SocialSignInButtons callbackUrl={callbackUrl} />
+					</form>
 				)}
-
-				<label className="flex flex-col gap-[4px] text-[14px]">
-					Workspace name
-					<input
-						type="text"
-						required
-						name="workspaceName"
-						minLength={2}
-						maxLength={80}
-						value={workspaceName}
-						onChange={(e) => setWorkspaceName(e.target.value)}
-						autoComplete="organization"
-						placeholder="e.g. Ebba Creator Lab"
-						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff]"
-					/>
-				</label>
-
-				<label className="flex flex-col gap-[4px] text-[14px]">
-					{t('emailAddress', locale)}
-					<input
-						type="email"
-						required
-						name="email"
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
-						autoComplete="email"
-						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff]"
-					/>
-				</label>
-
-				<label className="flex flex-col gap-[4px] text-[14px]">
-					{t('password', locale)}
-					<input
-						type="password"
-						required
-						minLength={8}
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						autoComplete="new-password"
-						className="rounded-2xl border border-[#d5dce8] bg-white/70 p-3 text-[16px] outline-none focus:border-[var(--nc-coral)] focus:ring-2 focus:ring-[#f2eeff]"
-					/>
-				</label>
-
-				<label className="inline-flex items-center gap-2.5 min-h-[44px] text-sm font-bold text-zinc-600 cursor-pointer select-none">
-					<input
-						type="checkbox"
-						checked={rememberMe}
-						onChange={(e) => setRememberMe(e.target.checked)}
-						className="h-4 w-4 rounded border-zinc-300 text-[var(--nc-coral)] focus:ring-[var(--nc-coral)]"
-					/>
-					{t('rememberMe', locale)}
-				</label>
-
-				{error && (
-					<div className="rounded-[8px] bg-red-50 p-[10px] text-[14px] text-red-600 break-words">
-						{error}
-					</div>
-				)}
-
-				<button
-					type="submit"
-					disabled={loading || signupDisabled}
-					className="rounded-full bg-[var(--nc-coral)] p-3 text-[16px] font-extrabold text-white disabled:opacity-50 hover:opacity-90 transition-all"
-				>
-					{loading ? t('loading', locale) : t('signUp', locale)}
-				</button>
-
-				<SocialSignInButtons callbackUrl={callbackUrl} />
-
-				<a
-					href={`/account/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-					className="text-center text-[14px] text-[var(--nc-coral)] hover:opacity-80"
-				>
-					{t('alreadyHaveAccount', locale)} {t('signInHere', locale)}
-				</a>
-			</form>
-			)}
+			</div>
 		</main>
 	);
 }

@@ -21,7 +21,6 @@ import {
   Link2,
   Lock,
   Mail,
-  Megaphone,
   MessageSquare,
   Pin,
   Plus,
@@ -44,6 +43,7 @@ import {
 } from '@/components/icons/SocialBrandIcons';
 import { PlatformIcon } from '@/components/planner/PlatformBadge';
 import { PLATFORM_META, type SocialPlatform } from '@/lib/mock-content-planner';
+import { HeroPlannerMockup } from '@/components/landing/HeroSection';
 import type { ShowcaseTabId } from '@/lib/i18n/showcase-copy';
 
 const NAV_ROWS: Array<{
@@ -56,8 +56,7 @@ const NAV_ROWS: Array<{
   { id: 'media', label: 'Media Library', icon: ImageIcon },
   { id: 'projects', label: 'Projects', icon: FolderKanban },
   { id: 'inbox', label: 'Social Inbox', icon: Inbox },
-  { id: 'charts', label: 'Analytics', icon: BarChart3 },
-  { id: 'metaads', label: 'Ads', icon: Megaphone },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'biostore', label: 'Bio Builder', icon: Link2 },
   { id: 'community', label: 'Community', icon: Users },
   { id: 'crm', label: 'Email CRM', icon: Mail },
@@ -66,13 +65,12 @@ const NAV_ROWS: Array<{
 
 /** Map showcase tabs → which sidebar row is selected. */
 function sidebarActive(tab: ShowcaseTabId, navId: string) {
-  if (tab === 'analytics') return navId === 'home';
   return tab === navId;
 }
 
 function Avatar({
   letter,
-  tone = 'bg-[#1a1848] text-white',
+  tone = 'bg-[#243228] text-white',
   size = 'w-7 h-7 text-[11px]',
 }: {
   letter: string;
@@ -114,7 +112,7 @@ function StudioSidebar({ tab }: { tab: ShowcaseTabId }) {
               key={`${row.id}-${row.label}`}
               className={`w-full flex items-center gap-3 h-11 px-3.5 ${
                 active
-                  ? 'rounded-2xl bg-[#1a1848] text-white font-semibold shadow-sm'
+                  ? 'rounded-2xl bg-[#243228] text-white font-semibold shadow-sm'
                   : 'rounded-2xl text-slate-500 font-medium'
               }`}
             >
@@ -160,9 +158,9 @@ function StudioTopbar({ search }: { search: string }) {
         </span>
         <span className="relative h-9 w-9 inline-flex items-center justify-center rounded-full text-slate-500">
           <Bell size={16} />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#F472B6]" />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#2C3B2E]" />
         </span>
-        <Avatar letter="E" tone="bg-[#1a1848] text-white" />
+        <Avatar letter="E" tone="bg-[#243228] text-white" />
       </div>
     </div>
   );
@@ -179,7 +177,7 @@ function PlannerChip({
 }) {
   const primary = platforms[0];
   const meta = PLATFORM_META[primary];
-  const labelColor = primary === 'tiktok' ? '#0F172A' : meta.color;
+  const labelColor = primary === 'tiktok' ? '#2C3B2E' : meta.color;
 
   return (
     <div
@@ -218,11 +216,11 @@ const PLANNER_PLATFORMS: SocialPlatform[] = [
 ];
 
 const PLANNER_STATUSES = [
-  'bg-[#F472B6]',
-  'bg-[#2B2568]',
-  'bg-[#E9D5FF]',
-  'bg-[#2B2568]',
-  'bg-[#F472B6]',
+  'bg-[#2C3B2E]',
+  'bg-[#2C2621]',
+  'bg-[#E6E3DB]',
+  'bg-[#2C2621]',
+  'bg-[#2C3B2E]',
 ] as const;
 
 const PLANNER_TITLES: Record<SocialPlatform, string[]> = {
@@ -308,7 +306,7 @@ function buildAugustPlannerPosts(): Record<
       dayPosts.push({
         title: 'Cross-post bundle',
         platforms: ['instagram', 'tiktok'],
-        status: 'bg-[#2B2568]',
+        status: 'bg-[#2C2621]',
       });
     }
     if (day === 18) {
@@ -316,12 +314,12 @@ function buildAugustPlannerPosts(): Record<
         {
           title: 'Live Q&A promo',
           platforms: ['instagram'],
-          status: 'bg-[#F472B6]',
+          status: 'bg-[#2C3B2E]',
         },
         {
           title: 'Waitlist broadcast',
           platforms: ['facebook', 'linkedin'],
-          status: 'bg-[#2B2568]',
+          status: 'bg-[#2C2621]',
         }
       );
     }
@@ -442,7 +440,7 @@ function PlannerBody() {
                     className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-[12px] font-semibold ${
                       day === 18 ? 'text-white' : 'text-slate-700'
                     }`}
-                    style={day === 18 ? { background: '#9089F0' } : undefined}
+                    style={day === 18 ? { background: '#2C3B2E' } : undefined}
                   >
                     {day}
                   </span>
@@ -468,367 +466,699 @@ function PlannerBody() {
   );
 }
 
+function BioSeg({
+  options,
+  active = 0,
+}: {
+  options: string[];
+  active?: number;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt, i) => (
+        <span
+          key={opt}
+          className={`inline-flex h-9 min-h-[36px] items-center px-3 rounded-xl text-[11px] font-inter font-medium border ${
+            i === active
+              ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.06)] text-[#2C2621]'
+              : 'border-[#E6E3DB] bg-white text-[#8A857D]'
+          }`}
+        >
+          {opt}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function BioColorSwatch({ hex, label }: { hex: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-[#E6E3DB] bg-white px-2.5 py-2">
+      <span
+        className="h-8 w-8 shrink-0 rounded-lg border border-[#E6E3DB]"
+        style={{ background: hex }}
+      />
+      <div className="min-w-0">
+        <p className="font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+          {label}
+        </p>
+        <p className="font-inter text-[11px] font-medium text-[#2C2621] tabular-nums">{hex}</p>
+      </div>
+    </div>
+  );
+}
+
 function BioBody() {
   const themes = [
-    { name: 'Midnight Glass', a: '#1a1848', b: '#312e81' },
-    { name: 'Champagne Luxe', a: '#F5E6C8', b: '#C9A227' },
-    { name: 'Aurora Glow', a: '#2B2568', b: '#F472B6', on: true },
-    { name: 'Nordic Minimal', a: '#E2E8F0', b: '#94A3B8' },
+    { name: 'Nordic', a: '#2C3B2E', b: '#1E2A20', on: true, light: false },
+    { name: 'Champagne', a: '#F5E6C8', b: '#C9A227', on: false, light: true },
+    { name: 'Midnight', a: '#1A1F2E', b: '#0F1320', on: false, light: false },
+    { name: 'Arctic', a: '#E8EEF2', b: '#B8C5D0', on: false, light: true },
+    { name: 'Emerald', a: '#0F766E', b: '#134E4A', on: false, light: false },
+    { name: 'Noir', a: '#171717', b: '#404040', on: false, light: false },
   ];
+  const fonts = [
+    { name: 'Playfair Display', sample: 'Aa', on: true },
+    { name: 'Plus Jakarta', sample: 'Aa', on: false },
+    { name: 'Space Grotesk', sample: 'Aa', on: false },
+    { name: 'Inter', sample: 'Aa', on: false },
+  ];
+  const blocks = [
+    { name: 'Frosted', hint: 'Soft glass', on: true },
+    { name: 'Solid', hint: 'Filled blocks', on: false },
+    { name: 'Luxe', hint: 'Rich contrast', on: false },
+    { name: 'Minimal', hint: 'Outline only', on: false },
+  ];
+  const links = [
+    { title: 'Shop the edit', sub: 'New arrivals' },
+    { title: 'Join the community', sub: 'Free to join' },
+    { title: 'Book a consult', sub: '15 min · Zoom' },
+  ];
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div className="rounded-xl sm:rounded-3xl border border-[#E6E3DB] bg-white shadow-[0_24px_80px_-24px_rgba(44,38,33,0.12)] overflow-hidden">
+      {/* Header — mirrors real Bio Builder */}
+      <div className="px-3 sm:px-5 pt-4 pb-3 border-b border-[#E6E3DB] bg-[#F9F8F6]">
         <div className="min-w-0">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
-            Bio builder · @clikd.app
+          <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
+            Bio Builder · @clikd.app
           </p>
-          <h3 className="font-clikd-wordmark font-extrabold text-[22px] sm:text-[32px] text-slate-900 tracking-tight mt-1">
+          <h3 className="font-playfair font-medium text-[22px] sm:text-[26px] text-[#2C2621] tracking-tight leading-none mt-1">
             Link in Bio
           </h3>
+          <p className="mt-1.5 font-inter text-xs text-[#8A857D] truncate">
+            Clikd Studio · Publish to clikd.app/clikd
+          </p>
         </div>
-        <span className="h-11 px-4 rounded-xl bg-[#1a1848] text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center shrink-0">
-          Publish Changes
-        </span>
       </div>
-      <div className="flex items-end gap-4 sm:gap-6 border-b border-slate-200/80 overflow-x-auto scrollbar-none pb-px">
-        {['Design & Theme', 'Blocks & Links', 'UTM Analytics', 'Settings'].map((t) => {
-          const active = t === 'Design & Theme';
-          return (
-            <span
-              key={t}
-              className={`shrink-0 pb-3 text-[12px] sm:text-[13px] font-extrabold whitespace-nowrap ${
-                active ? 'text-slate-900 border-b-2 border-[#F472B6]' : 'text-slate-500'
-              }`}
-            >
-              {t}
-            </span>
-          );
-        })}
+
+      {/* Sub-tabs */}
+      <div className="flex items-center gap-1 px-3 sm:px-5 py-2 border-b border-[#E6E3DB] bg-[#F9F8F6]/80 overflow-x-auto scrollbar-none">
+        {['Design', 'Blocks', 'Analytics', 'Settings'].map((t, i) => (
+          <span
+            key={t}
+            className={`shrink-0 h-9 min-h-[36px] px-3.5 rounded-xl text-[11px] font-inter font-medium inline-flex items-center ${
+              i === 0
+                ? 'bg-white text-[#2C2621] border border-[#E6E3DB]'
+                : 'text-[#8A857D]'
+            }`}
+          >
+            {t}
+          </span>
+        ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-7 space-y-4">
-          <div className={`${adminCardClass} p-4 space-y-3`}>
-            <div className="flex items-start justify-between gap-4">
+
+      {/* Editor + phone preview */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 p-3 sm:p-5 bg-white">
+        <div className="lg:col-span-7 space-y-3 max-h-[640px] lg:max-h-[720px] overflow-y-auto pr-1 scrollbar-none">
+          {/* Themes */}
+          <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4">
+            <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Themes</p>
+            <p className="mt-1 font-inter text-[11px] text-[#8A857D]">
+              Exclusive looks — preview updates live.
+            </p>
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {themes.map((th) => (
+                <div
+                  key={th.name}
+                  className={`relative rounded-xl overflow-hidden border ${
+                    th.on ? 'border-[#2C3B2E] ring-2 ring-[#2C3B2E]/15' : 'border-[#E6E3DB]'
+                  }`}
+                >
+                  <div
+                    className="h-14 sm:h-16"
+                    style={{ background: `linear-gradient(135deg, ${th.a}, ${th.b})` }}
+                  />
+                  <div className="absolute inset-x-0 bottom-0 p-2 flex items-end justify-between">
+                    <p
+                      className={`text-[11px] font-inter font-medium drop-shadow-sm ${
+                        th.light ? 'text-[#2C2621]' : 'text-white'
+                      }`}
+                    >
+                      {th.name}
+                    </p>
+                    {th.on ? (
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-[#2C3B2E]">
+                        <Check size={12} strokeWidth={2.5} />
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Profile photo */}
+          <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4">
+            <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Profile photo</p>
+            <p className="mt-1 font-inter text-[11px] text-[#8A857D]">
+              Avatar shown above your name on the page.
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[#E6E3DB] bg-[#2C3B2E] text-[15px] font-playfair font-medium text-[#F9F8F6]">
+                C.
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="inline-flex h-9 min-h-[36px] items-center rounded-xl border border-[#E6E3DB] bg-white px-3 text-[11px] font-inter font-medium text-[#2C2621]">
+                  Upload
+                </span>
+                <span className="inline-flex h-9 min-h-[36px] items-center rounded-xl px-3 text-[11px] font-inter font-medium text-[#8A857D]">
+                  Remove
+                </span>
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="mb-2 font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+                Avatar shape
+              </p>
+              <BioSeg options={['Circle', 'Rounded', 'Square']} active={0} />
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#E6E3DB] bg-white px-3 py-2.5">
               <div>
-                <p className="text-xs font-bold text-slate-900">Exclusive Themes</p>
-                <p className="text-[11px] text-slate-500 font-display mt-0.5">
-                  Luxury preset selector with live swatches
+                <p className="font-inter text-[12px] font-medium text-[#2C2621]">Verified badge</p>
+                <p className="font-inter text-[10px] text-[#8A857D]">Show checkmark next to name</p>
+              </div>
+              <span className="relative inline-flex h-6 w-11 shrink-0 rounded-full bg-[#2C3B2E]">
+                <span className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-white shadow" />
+              </span>
+            </div>
+          </div>
+
+          {/* Cover */}
+          <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Cover</p>
+                <p className="mt-1 font-inter text-[11px] text-[#8A857D]">
+                  Optional header image above your profile.
                 </p>
               </div>
+              <span className="relative inline-flex h-6 w-11 shrink-0 rounded-full bg-[#2C3B2E]">
+                <span className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-white shadow" />
+              </span>
             </div>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="h-14 w-24 rounded-xl bg-gradient-to-br from-[#2C3B2E] to-[#1E2A20] border border-[#E6E3DB]" />
+              <div className="flex flex-col gap-1.5">
+                <span className="inline-flex h-8 min-h-[32px] items-center rounded-lg border border-[#E6E3DB] bg-white px-3 text-[11px] font-inter font-medium text-[#2C2621]">
+                  Replace
+                </span>
+                <span className="inline-flex h-8 min-h-[32px] items-center rounded-lg px-3 text-[11px] font-inter font-medium text-[#8A857D]">
+                  Remove
+                </span>
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="mb-2 font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+                Social icons
+              </p>
+              <BioSeg options={['Header', 'Dock']} active={0} />
+            </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3">
-            {themes.map((th) => (
-              <div
-                key={th.name}
-                className={`relative rounded-xl overflow-hidden border ${
-                  th.on ? 'border-[#1a1848] ring-2 ring-[#1a1848]/15' : 'border-slate-200/80'
-                }`}
-              >
+          {/* Typography */}
+          <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4">
+            <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Typography</p>
+            <p className="mt-1 font-inter text-[11px] text-[#8A857D]">
+              Font for your name and link titles.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {fonts.map((f) => (
                 <div
-                  className="h-20"
-                  style={{
-                    background: `linear-gradient(90deg, ${th.a}, ${th.b})`,
-                  }}
-                />
-
-                <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                  <p className="text-[11px] font-semibold text-white tracking-tight">{th.name}</p>
+                  key={f.name}
+                  className={`rounded-xl border p-3 ${
+                    f.on
+                      ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.06)]'
+                      : 'border-[#E6E3DB] bg-white'
+                  }`}
+                >
+                  <p
+                    className={`text-[20px] leading-none text-[#2C2621] ${
+                      f.name.includes('Playfair')
+                        ? 'font-playfair'
+                        : f.name.includes('Space')
+                          ? 'font-clikd-wordmark'
+                          : 'font-inter'
+                    }`}
+                  >
+                    {f.sample}
+                  </p>
+                  <p className="mt-2 font-inter text-[11px] font-medium text-[#2C2621]">{f.name}</p>
                 </div>
-
-                {th.on ? (
-                  <div className="absolute right-2 top-2 w-6 h-6 rounded-full bg-white/20 border border-white/20 flex items-center justify-center">
-                    <Check size={14} className="text-white" />
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-          </div>
-
-          <div className={`${adminCardClass} p-4 space-y-4`}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold text-slate-900">Header &amp; Cover Banner</p>
-                <p className="text-[11px] text-slate-500 font-display mt-1">HD Cover Photo</p>
-              </div>
-
-              {/* Toggle mock */}
-              <div className="w-11 h-6 rounded-full bg-slate-200 relative shrink-0">
-                <div className="absolute top-1 left-1.5 w-4 h-4 rounded-full bg-[#2B2568] shadow" />
-              </div>
+              ))}
             </div>
+          </div>
 
+          {/* Canvas & colors */}
+          <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4 space-y-3">
             <div>
-              <p className="text-[11px] font-mono font-bold uppercase tracking-wide text-slate-400">Cover image</p>
-              <div className="mt-3 flex items-start gap-3">
-                <div className="w-24 h-16 rounded-xl bg-gradient-to-r from-[#2B2568] to-[#F472B6]" />
-                <div className="flex flex-col gap-2 pt-1">
-                  <span className="inline-flex items-center justify-center rounded-full bg-[#E9D5FF]/70 text-[#2B2568] px-3 py-1 text-[11px] font-extrabold">
-                    Replace image
-                  </span>
-                  <span className="inline-flex items-center justify-center rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-[11px] font-extrabold">
-                    Remove
-                  </span>
-                </div>
+              <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Canvas</p>
+              <p className="mt-1 font-inter text-[11px] text-[#8A857D]">
+                Background, tint, and text colors.
+              </p>
+            </div>
+            <div>
+              <p className="mb-2 font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+                Background
+              </p>
+              <BioSeg options={['Solid', 'Image', 'Liquid']} active={0} />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E6E3DB] bg-white px-3 py-2.5">
+              <div>
+                <p className="font-inter text-[12px] font-medium text-[#2C2621]">Mesh gradient</p>
+                <p className="font-inter text-[10px] text-[#8A857D]">Soft layered wash</p>
               </div>
-              <p className="mt-2 text-[10px] text-slate-500 font-display">JPG, PNG or WebP · Max 5MB</p>
+              <span className="relative inline-flex h-6 w-11 shrink-0 rounded-full bg-[#E6E3DB]">
+                <span className="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow" />
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <BioColorSwatch hex="#F9F8F6" label="Canvas" />
+              <BioColorSwatch hex="#2C3B2E" label="Accent" />
+              <BioColorSwatch hex="#2C2621" label="Text" />
+              <BioColorSwatch hex="#8A857D" label="Muted" />
+            </div>
+          </div>
+
+          {/* Block designs */}
+          <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4 space-y-3">
+            <div>
+              <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Block designs</p>
+              <p className="mt-1 font-inter text-[11px] text-[#8A857D]">
+                How your links and buttons look.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {blocks.map((b) => (
+                <div
+                  key={b.name}
+                  className={`rounded-xl border p-3 text-left ${
+                    b.on
+                      ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.06)]'
+                      : 'border-[#E6E3DB] bg-white'
+                  }`}
+                >
+                  <p className="font-inter text-[12px] font-medium text-[#2C2621]">{b.name}</p>
+                  <p className="mt-0.5 font-inter text-[10px] text-[#8A857D]">{b.hint}</p>
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="mb-2 font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+                Corner curvature
+              </p>
+              <BioSeg options={['Curved', 'Sharp', 'Pill']} active={0} />
+            </div>
+            <div>
+              <p className="mb-2 font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+                Hover effect
+              </p>
+              <BioSeg options={['Lift', 'Shimmer', 'Scale']} active={0} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <BioColorSwatch hex="#FFFFFF" label="Block fill" />
+              <BioColorSwatch hex="#2C2621" label="Block text" />
             </div>
           </div>
         </div>
-        <div className="lg:col-span-5 flex flex-col items-center justify-center pt-2 lg:pt-0">
-          <div className="w-[200px] sm:w-[220px] rounded-[40px] border-[6px] border-slate-900 overflow-hidden bg-gradient-to-b from-[#2B2568] via-[#3D3680] to-[#0F172A] text-white shadow-xl">
-            <div className="relative px-4 pt-3 pb-5">
-              {/* Status bar */}
-              <div className="relative flex items-start justify-between text-[10px] font-mono text-white/70">
-                <span className="pt-0.5">9:41</span>
-                <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[86px] h-2.5 rounded-full bg-black/25" />
-                <div className="flex items-center gap-2 pt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/60" />
-                  <span className="w-3 h-1.5 rounded-full bg-white/20" />
-                </div>
+
+        {/* Phone preview — sticky on desktop while options scroll */}
+        <div className="lg:col-span-5 flex flex-col items-center justify-start pt-1 lg:sticky lg:top-3 lg:self-start">
+          <div className="w-[200px] sm:w-[220px] rounded-[2rem] border-[6px] border-[#1A1816] bg-[#F9F8F6] overflow-hidden shadow-[0_24px_48px_-20px_rgba(44,38,33,0.35)]">
+            <div className="relative h-16 bg-gradient-to-br from-[#2C3B2E] to-[#1E2A20]">
+              <div className="absolute left-1/2 top-1.5 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/30" />
+            </div>
+            <div className="relative -mt-8 flex flex-col items-center px-4 pb-5">
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-white bg-[#2C3B2E] text-[15px] font-playfair font-medium text-[#F9F8F6] shadow-sm">
+                C.
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#2C3B2E] border-2 border-white text-white">
+                  <Check size={10} strokeWidth={3} />
+                </span>
+              </div>
+              <p className="mt-2.5 font-playfair text-[16px] font-medium text-[#2C2621] leading-none">
+                Clikd Studio
+              </p>
+              <p className="mt-1.5 font-inter text-[10px] text-[#8A857D]">@clikd.app</p>
+              <p className="mt-2 text-center font-inter text-[11px] leading-snug text-[#8A857D]">
+                Nordic creator tools — plan, sell, and grow.
+              </p>
+
+              <div className="mt-3 flex w-full rounded-xl border border-[#E6E3DB] bg-white p-0.5">
+                <span className="flex-1 rounded-[10px] bg-[#2C3B2E] py-1.5 text-center text-[10px] font-inter font-medium text-[#F9F8F6]">
+                  Links
+                </span>
+                <span className="flex-1 py-1.5 text-center text-[10px] font-inter font-medium text-[#8A857D]">
+                  Store
+                </span>
               </div>
 
-              {/* Crown + check badge */}
-              <div className="relative mt-10 flex items-center justify-center">
-                <div className="w-20 h-20 rounded-full bg-[#E9D5FF]/40 border border-white/20 flex items-center justify-center">
-                  <Trophy size={30} className="text-white/90" />
-                </div>
-                <div className="absolute right-8 bottom-8 w-8 h-8 rounded-full bg-[#0F172A]/30 border border-white/15 flex items-center justify-center">
-                  <div className="w-5 h-5 rounded-full bg-[#F472B6]/25 border border-white/10 flex items-center justify-center">
-                    <Check size={14} className="text-white" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Identity */}
-              <div className="mt-2 text-center">
-                <p className="text-[18px] font-extrabold leading-none">Clikd QA</p>
-                <p className="text-[10px] text-white/60 font-mono mt-2">@clikdqa</p>
-                <p className="text-[12px] text-white/35 font-semibold mt-1">My bio store</p>
-              </div>
-
-              {/* LINKS / STORE switch */}
-              <div className="mt-4 rounded-2xl bg-white/10 border border-white/10 p-1 flex items-center justify-between">
-                <div className="flex-1 mx-0.5 rounded-xl bg-white/10 py-2 text-center text-[12px] font-extrabold text-white/90">
-                  LINKS
-                </div>
-                <div className="flex-1 mx-0.5 rounded-xl px-2 py-2 text-center text-[12px] font-extrabold text-white/60 flex items-center justify-center gap-1">
-                  STORE <Lock size={12} className="text-white/35" />
-                </div>
-              </div>
-
-              {/* Cards */}
-              <div className="mt-4 space-y-3">
-                <div className="rounded-2xl bg-white/10 border border-white/10 px-3 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
-                        <BookOpen size={18} className="text-white/80" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-extrabold truncate">Grátis E-bok</p>
-                        <p className="text-[10px] text-white/60 font-semibold truncate">Ladda ned gratis</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-extrabold bg-[#FCE7F3] text-[#2B2568] rounded-full px-2 py-1 whitespace-nowrap border border-[#F472B6]/25">
-                      FREE
-                    </span>
-                  </div>
-                </div>
-
-                {[
-                  { title: 'Join the Commu...', sub: 'Free &amp; open' },
-                  { title: 'Join the Commu...', sub: 'Free &amp; open' },
-                ].map((item, idx) => (
+              <div className="mt-3 w-full space-y-2">
+                {links.map((link) => (
                   <div
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={idx}
-                    className="rounded-2xl bg-[#2B2568]/40 border border-white/10 px-3 py-3"
+                    key={link.title}
+                    className="flex items-center gap-2.5 rounded-xl border border-[#E6E3DB] bg-white/90 px-2.5 py-2 backdrop-blur-sm"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
-                          <Home size={18} className="text-white/80" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[12px] font-extrabold truncate">{item.title}</p>
-                          <p className="text-[10px] text-white/60 font-semibold truncate">
-                            {item.sub.replace('&amp;', '&')}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-extrabold bg-[#FCE7F3] text-[#2B2568] rounded-full px-2 py-1 whitespace-nowrap border border-[#F472B6]/25">
-                        FREE
-                      </span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F9F8F6] text-[#2C3B2E]">
+                      <Link2 size={13} strokeWidth={2} />
+                    </span>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate font-inter text-[11px] font-medium text-[#2C2621]">
+                        {link.title}
+                      </p>
+                      <p className="truncate font-inter text-[9px] text-[#8A857D]">{link.sub}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Footer */}
-              <div className="mt-6 text-center">
-                <p className="text-[9px] text-white/55 tracking-[0.16em] font-bold">POWERED BY CLIKD: STUDIO</p>
-              </div>
+              <p className="mt-4 font-inter text-[8px] font-medium uppercase tracking-[0.14em] text-[#8A857D]/80">
+                Powered by clikd
+              </p>
             </div>
           </div>
-          <p className="text-[10px] text-slate-400 font-mono mt-2">clikd.app/@clikdqa</p>
         </div>
       </div>
     </div>
   );
 }
 
-function AdsBody() {
-  const rows = [
-    ['Course Launch – Retargeting', 'Sales', '75', '56.3K', '234', 'on'],
-    ['Brand Awareness – Nordic', 'Awareness', '45', '42.1K', '128', 'on'],
-    ['Bio Store Traffic', 'Traffic', '30', '18.5K', '89', 'on'],
-    ['Email Capture – Waitlist', 'Leads', '20', '12.4K', '41', 'off'],
+
+function AnalyticsBody() {
+  const kpis = [
+    { l: 'Reach', v: '128.4K', delta: '+18%' },
+    { l: 'Engagement', v: '4.8%', delta: '+0.6 pts' },
+    { l: 'Followers', v: '24.1K', delta: '+312' },
+    { l: 'Impressions', v: '412K', delta: '+22%' },
+  ];
+  const breakdown = [
+    { l: 'Likes', v: '8.2K', pct: 52 },
+    { l: 'Comments', v: '1.4K', pct: 18 },
+    { l: 'Shares', v: '980', pct: 16 },
+    { l: 'Saves', v: '1.1K', pct: 14 },
+  ];
+  const posts = [
+    { title: 'Carousel · Nordic desk edit', type: 'Carousel', reach: '42.1K', eng: '6.2%' },
+    { title: 'Reel · Morning coffee hook', type: 'Reel', reach: '88.4K', eng: '7.1%' },
+    { title: 'Story set · Behind the shoot', type: 'Stories', reach: '19.6K', eng: '4.4%' },
+    { title: 'Post · Waitlist open', type: 'Post', reach: '31.2K', eng: '5.3%' },
   ];
   const spark = 'M0 42 C 28 38, 40 22, 70 26 S 110 48, 140 32 S 190 8, 240 14 S 280 36, 320 20';
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div className="rounded-xl sm:rounded-3xl border border-[#E6E3DB] bg-white shadow-[0_24px_80px_-24px_rgba(44,38,33,0.12)] overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 px-3 sm:px-5 pt-4 pb-3 border-b border-[#E6E3DB] bg-[#F9F8F6]">
         <div className="min-w-0">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
-            Meta · Ads
+          <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
+            Analytics · Instagram, TikTok & Facebook
           </p>
-          <h3 className="font-clikd-wordmark font-extrabold text-[26px] sm:text-[32px] text-slate-900 tracking-tight mt-1">
-            Ads Manager
+          <h3 className="font-playfair font-medium text-[22px] sm:text-[26px] text-[#2C2621] tracking-tight leading-none mt-1">
+            Performance
           </h3>
+          <p className="mt-1.5 font-inter text-xs text-[#8A857D]">
+            Reach, engagement, and growth across every connected channel.
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <span className="h-11 px-3 sm:px-4 rounded-xl bg-[#F472B6] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-1.5 whitespace-nowrap">
-            <Plus size={14} /> Create campaign
-          </span>
-          <span className="h-11 px-3 sm:px-4 rounded-xl bg-[#2B2568] text-white text-xs sm:text-sm font-medium inline-flex items-center whitespace-nowrap">
-            Last 30 days
-          </span>
-        </div>
+        <span className="inline-flex items-center h-9 min-h-[36px] px-3 rounded-xl border border-[#E6E3DB] bg-white text-[11px] font-inter font-medium text-[#8A857D] self-start sm:self-auto">
+          Last 30 days
+        </span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { l: 'Spend', v: 'US$483', bar: '#F472B6' },
-          { l: 'Conversions', v: '197', bar: '#1a1848' },
-          { l: 'ROAS', v: '2.44x', bar: '#F472B6' },
-          { l: 'CPC', v: 'US$0.07', bar: '#6366F1' },
-        ].map((k, i) => (
-          <div
-            key={k.l}
-            className={`${adminCardClass} min-h-[88px] p-4 ${i === 0 ? 'ring-2 ring-[#F472B6]' : ''}`}
+
+      <div className="flex items-center gap-1.5 px-3 sm:px-5 py-2 border-b border-[#E6E3DB] bg-[#F9F8F6]/80 overflow-x-auto scrollbar-none">
+        {['Overview', 'Posts', 'Reels', 'Audience', 'Hashtags'].map((tab, i) => (
+          <span
+            key={tab}
+            className={`shrink-0 h-9 min-h-[36px] px-3.5 rounded-xl text-[11px] font-inter font-medium inline-flex items-center ${
+              i === 0
+                ? 'bg-white text-[#2C2621] border border-[#E6E3DB]'
+                : 'text-[#8A857D]'
+            }`}
           >
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{k.l}</p>
-            <p className="mt-1 font-[family-name:var(--font-fira-code)] text-xl font-semibold text-[#0F172A] tabular-nums">
-              {k.v}
-            </p>
-            <span className="mt-2 inline-block h-1 w-8 rounded-full" style={{ background: k.bar }} />
-          </div>
+            {tab}
+          </span>
         ))}
       </div>
-      <div className={`${adminCardClass} p-4 sm:p-5`}>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-medium text-[#0F172A]">Spend trend</p>
-          <p className="text-xs text-slate-400">19 Jul → 18 Aug</p>
+
+      <div className="p-3 sm:p-5 space-y-3 bg-white">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {kpis.map((k, i) => (
+            <div
+              key={k.l}
+              className={`rounded-xl border bg-[#F9F8F6] p-3.5 ${
+                i === 1 ? 'border-[#2C3B2E] ring-2 ring-[#2C3B2E]/10' : 'border-[#E6E3DB]'
+              }`}
+            >
+              <p className="font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+                {k.l}
+              </p>
+              <p className="mt-1 font-playfair text-[22px] font-medium text-[#2C2621] tabular-nums leading-none">
+                {k.v}
+              </p>
+              <p className="mt-2 font-inter text-[11px] font-medium text-[#2C3B2E]">{k.delta}</p>
+            </div>
+          ))}
         </div>
-        <svg viewBox="0 0 320 56" className="w-full h-28" aria-hidden>
-          <defs>
-            <linearGradient id="ads-spark" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F472B6" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#F472B6" stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-          <path d={`${spark} L 320 56 L 0 56 Z`} fill="url(#ads-spark)" />
-          <path d={spark} fill="none" stroke="#F472B6" strokeWidth="2.2" />
-        </svg>
-      </div>
-      <div className={`${adminCardClass} overflow-x-auto scrollbar-none`}>
-        <div className="min-w-[520px]">
-        <div className="grid grid-cols-12 px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-          <span className="col-span-1">On</span>
-          <span className="col-span-4">Campaign</span>
-          <span className="col-span-2">Budget</span>
-          <span className="col-span-2">Impr.</span>
-          <span className="col-span-3">Spend</span>
-        </div>
-        {rows.map((r) => (
-          <div
-            key={r[0]}
-            className="grid grid-cols-12 px-3 py-2.5 text-[11px] items-center border-b border-slate-50 last:border-0"
-          >
-            <span className="col-span-1">
-              <span
-                className={`inline-block w-8 h-4 rounded-full ${
-                  r[5] === 'on' ? 'bg-[#F472B6]' : 'bg-slate-200'
-                }`}
-              />
-            </span>
-            <span className="col-span-4 font-semibold text-slate-800 truncate">{r[0]}</span>
-            <span className="col-span-2 tabular-nums text-slate-600">US${r[2]}</span>
-            <span className="col-span-2 tabular-nums text-slate-600">{r[3]}</span>
-            <span className="col-span-3 tabular-nums font-semibold text-slate-900">US${r[4]}</span>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="lg:col-span-7 rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Reach trend</p>
+                <p className="mt-0.5 font-inter text-[11px] text-[#8A857D]">All platforms combined</p>
+              </div>
+              <p className="font-inter text-[11px] text-[#8A857D] tabular-nums">19 Jul → 18 Aug</p>
+            </div>
+            <svg viewBox="0 0 320 56" className="w-full h-24 sm:h-28" aria-hidden>
+              <defs>
+                <linearGradient id="analytics-spark" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2C3B2E" stopOpacity="0.28" />
+                  <stop offset="100%" stopColor="#2C3B2E" stopOpacity="0.02" />
+                </linearGradient>
+              </defs>
+              <path d={`${spark} L 320 56 L 0 56 Z`} fill="url(#analytics-spark)" />
+              <path d={spark} fill="none" stroke="#2C3B2E" strokeWidth="2.2" strokeLinecap="round" />
+            </svg>
           </div>
-        ))}
+
+          <div className="lg:col-span-5 rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4">
+            <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Engagement mix</p>
+            <p className="mt-0.5 font-inter text-[11px] text-[#8A857D] mb-3">11.7K total interactions</p>
+            <div className="space-y-2.5">
+              {breakdown.map((b) => (
+                <div key={b.l}>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-inter text-[11px] font-medium text-[#2C2621]">{b.l}</span>
+                    <span className="font-inter text-[11px] tabular-nums text-[#8A857D]">
+                      {b.v} · {b.pct}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-[#E6E3DB] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#2C3B2E]"
+                      style={{ width: `${b.pct}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-3.5 sm:px-4 pt-3.5 pb-2">
+            <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Top content</p>
+            <span className="font-inter text-[11px] text-[#8A857D]">By reach</span>
+          </div>
+          <div className="overflow-x-auto scrollbar-none">
+            <div className="min-w-[520px]">
+              <div className="grid grid-cols-12 gap-2 px-3.5 sm:px-4 py-2 text-[10px] font-inter font-medium uppercase tracking-[0.12em] text-[#8A857D] border-y border-[#E6E3DB]">
+                <span className="col-span-6">Content</span>
+                <span className="col-span-2">Type</span>
+                <span className="col-span-2">Reach</span>
+                <span className="col-span-2 text-right">Eng.</span>
+              </div>
+              {posts.map((p) => (
+                <div
+                  key={p.title}
+                  className="grid grid-cols-12 gap-2 px-3.5 sm:px-4 py-3 items-center border-b border-[#E6E3DB]/70 last:border-0 bg-white/60"
+                >
+                  <span className="col-span-6 font-inter text-[12px] font-medium text-[#2C2621] truncate">
+                    {p.title}
+                  </span>
+                  <span className="col-span-2">
+                    <span className="inline-flex rounded-md border border-[#E6E3DB] bg-white px-1.5 py-0.5 font-inter text-[10px] font-medium text-[#8A857D]">
+                      {p.type}
+                    </span>
+                  </span>
+                  <span className="col-span-2 font-inter text-[11px] tabular-nums text-[#8A857D]">
+                    {p.reach}
+                  </span>
+                  <span className="col-span-2 text-right font-inter text-[12px] font-medium tabular-nums text-[#2C3B2E]">
+                    {p.eng}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 function CrmBody() {
   const members = [
-    ['Ebba Brobeck', 'ebba@clikd.app', 'Owner', '12 Aug'],
-    ['Anna Ståhl', 'anna@cherii.se', 'Member', '14 Aug'],
-    ['Marcus Lindqvist', 'marcus@growthnordic.se', 'Purchase', '15 Aug'],
-    ['Sara Berg', 'sara@nordicmind.se', 'Community', '16 Aug'],
-    ['Johan Holm', 'johan@techspark.se', 'Imported', '17 Aug'],
-    ['Nova Creates', 'hello@novacreates.com', 'Waitlist', '18 Aug'],
+    { name: 'Ebba Brobeck', email: 'ebba@clikd.app', tag: 'Owner', date: '12 Aug', letter: 'E' },
+    { name: 'Anna Ståhl', email: 'anna@cherii.se', tag: 'Member', date: '14 Aug', letter: 'A' },
+    { name: 'Marcus Lindqvist', email: 'marcus@growthnordic.se', tag: 'Purchase', date: '15 Aug', letter: 'M' },
+    { name: 'Sara Berg', email: 'sara@nordicmind.se', tag: 'Community', date: '16 Aug', letter: 'S' },
+    { name: 'Johan Holm', email: 'johan@techspark.se', tag: 'Imported', date: '17 Aug', letter: 'J' },
+    { name: 'Nova Creates', email: 'hello@novacreates.com', tag: 'Waitlist', date: '18 Aug', letter: 'N' },
   ];
+  const broadcasts = [
+    { title: 'Welcome sequence', status: 'Active', opens: '62%', sent: '1,120' },
+    { title: 'Course launch — week 1', status: 'Sent', opens: '48%', sent: '890' },
+    { title: 'Member digest', status: 'Draft', opens: '—', sent: '—' },
+  ];
+
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
-          Email CRM
+    <div className="rounded-xl sm:rounded-3xl border border-[#E6E3DB] bg-white shadow-[0_24px_80px_-24px_rgba(44,38,33,0.12)] overflow-hidden">
+      {/* Header */}
+      <div className="px-3 sm:px-5 pt-4 pb-3 border-b border-[#E6E3DB] bg-[#F9F8F6]">
+        <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
+          Email CRM · Resend
         </p>
-        <h3 className="font-clikd-wordmark font-extrabold text-[26px] text-slate-900 tracking-tight">
+        <h3 className="font-playfair font-medium text-[22px] sm:text-[26px] text-[#2C2621] tracking-tight leading-none mt-1">
           Email & CRM
         </h3>
+        <p className="mt-1.5 font-inter text-xs text-[#8A857D]">
+          Subscriber directory, segments, and broadcasts — 99.8% inbox delivery.
+        </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[
-          { l: 'Total subscribers', v: '1,340' },
-          { l: 'Average open rate', v: '48.2%' },
-          { l: 'Broadcasts sent', v: '24' },
-        ].map((k) => (
-          <div key={k.l} className={`${adminCardClass} p-3`}>
-            <p className="text-[9px] font-mono font-bold uppercase text-slate-400">{k.l}</p>
-            <p className="font-clikd-wordmark font-extrabold text-2xl text-slate-900 tabular-nums">
-              {k.v}
-            </p>
-          </div>
-        ))}
-      </div>
-      <div className={`${adminCardClass} overflow-hidden`}>
-        <div className="px-3 py-2 flex items-center justify-between border-b border-slate-100">
-          <p className="text-xs font-bold text-slate-900">Subscriber directory · 1,340 members</p>
-          <span className="text-[10px] font-bold text-[#F472B6]">Export CSV</span>
-        </div>
-        {members.map((m) => (
-          <div
-            key={m[1]}
-            className="px-3 py-2 flex items-center gap-3 border-b border-slate-50 last:border-0 text-[11px]"
+
+      {/* Sub-tabs */}
+      <div className="flex items-center gap-1.5 px-3 sm:px-5 py-2 border-b border-[#E6E3DB] bg-[#F9F8F6]/80 overflow-x-auto scrollbar-none">
+        {['Directory', 'Broadcasts', 'Sequences', 'Segments'].map((t, i) => (
+          <span
+            key={t}
+            className={`shrink-0 h-9 min-h-[36px] px-3.5 rounded-xl text-[11px] font-inter font-medium inline-flex items-center ${
+              i === 0
+                ? 'bg-white text-[#2C2621] border border-[#E6E3DB]'
+                : 'text-[#8A857D]'
+            }`}
           >
-            <Avatar letter={m[0][0]} size="w-7 h-7 text-[10px]" />
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 truncate">{m[0]}</p>
-              <p className="text-slate-500 truncate">{m[1]}</p>
-            </div>
-            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-              {m[2]}
-            </span>
-            <span className="hidden sm:inline text-slate-400 tabular-nums w-14 text-right">{m[3]}</span>
-          </div>
+            {t}
+          </span>
         ))}
+      </div>
+
+      <div className="p-3 sm:p-5 space-y-3 bg-white">
+        {/* KPIs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          {[
+            { l: 'Total subscribers', v: '1,340', delta: '+86 this week' },
+            { l: 'Average open rate', v: '48.2%', delta: '+3.1 pts' },
+            { l: 'Broadcasts sent', v: '24', delta: 'Last 90 days' },
+          ].map((k) => (
+            <div
+              key={k.l}
+              className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5"
+            >
+              <p className="font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+                {k.l}
+              </p>
+              <p className="mt-1 font-playfair text-[22px] font-medium text-[#2C2621] tabular-nums leading-none">
+                {k.v}
+              </p>
+              <p className="mt-2 font-inter text-[11px] text-[#8A857D]">{k.delta}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* Subscriber directory */}
+          <div className="lg:col-span-7 rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-3.5 sm:px-4 pt-3.5 pb-2">
+              <div>
+                <p className="font-playfair text-[15px] font-medium text-[#2C2621]">
+                  Subscriber directory
+                </p>
+                <p className="mt-0.5 font-inter text-[11px] text-[#8A857D]">1,340 members synced</p>
+              </div>
+              <span className="inline-flex h-8 min-h-[32px] items-center rounded-lg border border-[#E6E3DB] bg-white px-2.5 text-[11px] font-inter font-medium text-[#8A857D]">
+                Export CSV
+              </span>
+            </div>
+            <div className="divide-y divide-[#E6E3DB]/70">
+              {members.map((m) => (
+                <div
+                  key={m.email}
+                  className="flex items-center gap-3 px-3.5 sm:px-4 py-2.5 bg-white/60"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2C3B2E] text-[12px] font-playfair font-medium text-[#F9F8F6]">
+                    {m.letter}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-inter text-[12px] font-medium text-[#2C2621] truncate">
+                      {m.name}
+                    </p>
+                    <p className="font-inter text-[11px] text-[#8A857D] truncate">{m.email}</p>
+                  </div>
+                  <span className="shrink-0 rounded-lg border border-[#E6E3DB] bg-white px-2 py-0.5 text-[10px] font-inter font-medium text-[#8A857D]">
+                    {m.tag}
+                  </span>
+                  <span className="hidden sm:inline shrink-0 w-14 text-right font-inter text-[11px] tabular-nums text-[#8A857D]">
+                    {m.date}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Broadcasts */}
+          <div className="lg:col-span-5 rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-3.5 sm:px-4 pt-3.5 pb-2">
+              <div>
+                <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Broadcasts</p>
+                <p className="mt-0.5 font-inter text-[11px] text-[#8A857D]">Recent campaigns</p>
+              </div>
+              <span className="inline-flex h-8 min-h-[32px] items-center gap-1 rounded-lg border border-[#E6E3DB] bg-white px-2.5 text-[11px] font-inter font-medium text-[#8A857D]">
+                <Plus size={12} strokeWidth={2.5} /> New
+              </span>
+            </div>
+            <div className="space-y-2 px-3.5 sm:px-4 pb-3.5">
+              {broadcasts.map((b) => (
+                <div
+                  key={b.title}
+                  className="rounded-xl border border-[#E6E3DB] bg-white p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-inter text-[12px] font-medium text-[#2C2621]">{b.title}</p>
+                    <span
+                      className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-inter font-medium ${
+                        b.status === 'Active'
+                          ? 'bg-[rgba(44,59,46,0.1)] text-[#2C3B2E]'
+                          : b.status === 'Sent'
+                            ? 'bg-[#F9F8F6] text-[#8A857D] border border-[#E6E3DB]'
+                            : 'bg-[#F9F8F6] text-[#8A857D]'
+                      }`}
+                    >
+                      {b.status}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3 font-inter text-[11px] text-[#8A857D]">
+                    <span>
+                      Opens <span className="font-medium text-[#2C2621] tabular-nums">{b.opens}</span>
+                    </span>
+                    <span>
+                      Sent <span className="font-medium text-[#2C2621] tabular-nums">{b.sent}</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -842,32 +1172,62 @@ function InboxBody() {
     { n: 'marcus.k', m: 'Can we co-host a live next week?', t: '5h', on: false, ig: true, unread: 0 },
     { n: 'johan.holm', m: 'Imported 240 emails from ConvertKit.', t: '1d', on: false, ig: false, unread: 0 },
   ];
+
   return (
-    <div className="space-y-3 h-full flex flex-col">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <h3 className="font-clikd-wordmark font-extrabold text-[22px] sm:text-[32px] text-slate-900 tracking-tight min-w-0">
-          Inbox <span className="text-slate-400 font-bold text-base sm:text-lg">@clikd.app</span>
-        </h3>
-        <span className="text-[11px] font-bold bg-[#1a1848] text-white px-3 h-8 rounded-lg inline-flex items-center shrink-0 self-start sm:self-auto">
+    <div className="rounded-xl sm:rounded-3xl border border-[#E6E3DB] bg-white shadow-[0_24px_80px_-24px_rgba(44,38,33,0.12)] overflow-hidden">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 px-3 sm:px-5 pt-4 pb-3 border-b border-[#E6E3DB] bg-[#F9F8F6]">
+        <div className="min-w-0">
+          <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
+            Social Inbox · Instagram & TikTok
+          </p>
+          <h3 className="font-playfair font-medium text-[22px] sm:text-[26px] text-[#2C2621] tracking-tight leading-none mt-1">
+            Inbox
+          </h3>
+          <p className="mt-1.5 font-inter text-xs text-[#8A857D]">
+            @clikd.app · Comment-to-DM and unified conversations
+          </p>
+        </div>
+        <span className="inline-flex h-9 min-h-[36px] items-center rounded-xl border border-[#E6E3DB] bg-white px-3 text-[11px] font-inter font-medium text-[#8A857D] self-start sm:self-auto">
           All messages
         </span>
       </div>
-      <div className={`${adminCardClass} overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-0 md:min-h-[420px]`}>
-        <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-slate-100 max-h-[280px] md:max-h-none overflow-y-auto">
+
+      {/* Filters */}
+      <div className="flex items-center gap-1.5 px-3 sm:px-5 py-2 border-b border-[#E6E3DB] bg-[#F9F8F6]/80 overflow-x-auto scrollbar-none">
+        {['All', 'Unread', 'Instagram', 'TikTok', 'Automations'].map((t, i) => (
+          <span
+            key={t}
+            className={`shrink-0 h-9 min-h-[36px] px-3.5 rounded-xl text-[11px] font-inter font-medium inline-flex items-center ${
+              i === 0
+                ? 'bg-white text-[#2C2621] border border-[#E6E3DB]'
+                : 'text-[#8A857D]'
+            }`}
+          >
+            {t}
+          </span>
+        ))}
+      </div>
+
+      {/* Thread list + conversation */}
+      <div className="grid grid-cols-1 md:grid-cols-12 bg-white min-h-[420px] md:min-h-[520px]">
+        <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-[#E6E3DB] max-h-[280px] md:max-h-none overflow-y-auto bg-[#F9F8F6]/50">
           {threads.map((th) => (
             <div
               key={th.n}
               className={`relative flex items-start gap-3 px-3.5 py-3 border-l-2 ${
-                th.on ? 'bg-[#E9D5FF]/40 border-l-[#F472B6]' : 'border-l-transparent'
+                th.on
+                  ? 'bg-white border-l-[#2C3B2E]'
+                  : 'border-l-transparent'
               }`}
             >
               <span className="relative shrink-0">
-                <Avatar letter={th.n[0].toUpperCase()} size="w-10 h-10 text-[12px]" />
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2C3B2E] text-[12px] font-playfair font-medium text-[#F9F8F6]">
+                  {th.n[0].toUpperCase()}
+                </span>
                 <span
                   className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center ring-2 ring-white ${
-                    th.ig
-                      ? 'bg-gradient-to-br from-[#F472B6] to-[#2B2568] text-white'
-                      : 'bg-slate-900 text-white'
+                    th.ig ? 'bg-[#2C3B2E] text-white' : 'bg-[#2C2621] text-white'
                   }`}
                 >
                   {th.ig ? <InstagramIcon size={9} /> : <TikTokIcon size={9} />}
@@ -875,40 +1235,48 @@ function InboxBody() {
               </span>
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-[12px] font-bold text-slate-900 truncate">{th.n}</p>
-                  <span className="text-[10px] text-slate-400">{th.t}</span>
+                  <p className="font-inter text-[12px] font-medium text-[#2C2621] truncate">{th.n}</p>
+                  <span className="font-inter text-[10px] text-[#8A857D] tabular-nums">{th.t}</span>
                 </div>
-                <p className="text-[11px] text-slate-500 truncate">{th.m}</p>
+                <p className="font-inter text-[11px] text-[#8A857D] truncate">{th.m}</p>
               </div>
               {th.unread ? (
-                <span className="mt-1 h-5 min-w-[20px] px-1.5 rounded-full bg-[#F472B6] text-white text-[10px] font-bold inline-flex items-center justify-center">
+                <span className="mt-1 h-5 min-w-[20px] px-1.5 rounded-full bg-[#2C3B2E] text-[#F9F8F6] text-[10px] font-inter font-medium inline-flex items-center justify-center">
                   {th.unread}
                 </span>
               ) : null}
             </div>
           ))}
         </div>
-        <div className="md:col-span-8 p-4 flex flex-col min-h-[240px]">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <Avatar letter="A" tone="bg-[#F472B6] text-white" />
-            <div>
-              <p className="text-xs font-bold text-slate-900">anker_nordics</p>
-              <p className="text-[10px] text-slate-400">Instagram · DM</p>
+
+        <div className="md:col-span-8 p-4 sm:p-5 flex flex-col min-h-[280px]">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-[#E6E3DB]">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2C3B2E] text-[12px] font-playfair font-medium text-[#F9F8F6]">
+              A
+            </span>
+            <div className="min-w-0">
+              <p className="font-inter text-[12px] font-medium text-[#2C2621]">anker_nordics</p>
+              <p className="font-inter text-[10px] text-[#8A857D]">Instagram · DM</p>
             </div>
+            <span className="ml-auto inline-flex h-8 min-h-[32px] items-center rounded-lg border border-[#E6E3DB] bg-[#F9F8F6] px-2.5 text-[10px] font-inter font-medium text-[#8A857D]">
+              Comment → DM
+            </span>
           </div>
-          <div className="flex-1 py-3 space-y-2 text-[12px]">
-            <div className="bg-slate-100 rounded-2xl rounded-tl-md px-3 py-2 w-[78%] text-slate-700">
+
+          <div className="flex-1 py-4 space-y-2.5 font-inter text-[12px]">
+            <div className="bg-[#F9F8F6] border border-[#E6E3DB] rounded-2xl rounded-tl-md px-3.5 py-2.5 w-[82%] text-[#2C2621]">
               Hej! Jag kommenterade #MASTERCLASS — är det fortfarande öppet?
             </div>
-            <div className="bg-[#1a1848] text-white rounded-2xl rounded-tr-md px-3 py-2 w-[78%] ml-auto">
+            <div className="bg-[#2C3B2E] text-[#F9F8F6] rounded-2xl rounded-tr-md px-3.5 py-2.5 w-[82%] ml-auto">
               Hej! Tack för din kommentar. Här är direktlänken till min nya Masterclass:
               clikd.app/bio/masterclass
             </div>
-            <div className="bg-slate-100 rounded-2xl rounded-tl-md px-3 py-2 w-[70%] text-slate-700">
+            <div className="bg-[#F9F8F6] border border-[#E6E3DB] rounded-2xl rounded-tl-md px-3.5 py-2.5 w-[72%] text-[#2C2621]">
               Tack! Just booked the masterclass.
             </div>
           </div>
-          <div className="h-9 rounded-full border border-slate-200 bg-slate-50 px-3 flex items-center text-[11px] text-slate-400">
+
+          <div className="h-10 min-h-[40px] rounded-full border border-[#E6E3DB] bg-[#F9F8F6] px-4 flex items-center font-inter text-[11px] text-[#8A857D]">
             Write a reply…
           </div>
         </div>
@@ -917,10 +1285,11 @@ function InboxBody() {
   );
 }
 
+
 function LevelRing({
   letter,
-  ring = '#F59E0B',
-  fill = '#D97706',
+  ring = '#2C3B2E',
+  fill = '#1E2A20',
   progress = 62,
   size = 38,
   level = 3,
@@ -936,18 +1305,18 @@ function LevelRing({
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <div
         className="absolute inset-0 rounded-full"
-        style={{ background: `conic-gradient(${ring} ${progress}%, #E5E7EB 0)` }}
+        style={{ background: `conic-gradient(${ring} ${progress}%, #E6E3DB 0)` }}
       />
       <div className="absolute inset-[2px] rounded-full bg-white overflow-hidden flex items-center justify-center">
         <div
-          className="w-full h-full rounded-full flex items-center justify-center font-extrabold text-white text-sm"
+          className="w-full h-full rounded-full flex items-center justify-center font-playfair font-medium text-[#F9F8F6] text-sm"
           style={{ background: `linear-gradient(135deg, ${ring}, ${fill})` }}
         >
           {letter}
         </div>
       </div>
       <div
-        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border-[1.5px] border-white text-white font-extrabold"
+        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border-[1.5px] border-white text-white font-inter font-medium"
         style={{ background: fill, fontSize: 7 }}
       >
         {level}
@@ -963,31 +1332,23 @@ function MemberCommunityPreview() {
       letter: 'E',
       time: 'Pinned · 2h',
       tag: 'Tips',
-      tagClass: 'bg-[#FCE7F3] text-[#2B2568]',
-      tagDot: '#F59E0B',
       pinned: true,
       body: 'This week’s hook formula is live in Classroom. Drop your first line below — best one gets featured on the leaderboard.',
       likes: 48,
       comments: 12,
       hot: true,
-      ring: '#F472B6',
-      fill: '#2B2568',
       level: 4,
     },
     {
       name: 'Anna Ståhl',
       letter: 'A',
       time: '34m',
-      tag: 'Results',
-      tagClass: 'bg-[#E9D5FF]/70 text-[#2B2568]',
-      tagDot: '#F472B6',
+      tag: 'Wins',
       pinned: false,
       body: 'Closed 4 Swish checkouts from the bio store after the carousel. Masterclass at 1,499 SEK is converting.',
       likes: 31,
       comments: 8,
       hot: true,
-      ring: '#F59E0B',
-      fill: '#D97706',
       level: 3,
     },
     {
@@ -995,404 +1356,288 @@ function MemberCommunityPreview() {
       letter: 'M',
       time: '2h',
       tag: 'Questions',
-      tagClass: 'bg-[#FCE7F3] text-[#F472B6]',
-      tagDot: '#7C3AED',
       pinned: false,
       body: 'Anyone running Meta retargeting on waitlist emails? Sharing my ROAS in the thread.',
       likes: 14,
       comments: 6,
       hot: false,
-      ring: '#9CA3AF',
-      fill: '#6B7280',
       level: 2,
     },
   ];
   const board = [
-    { n: 'Ebba Brobeck', pts: 842, lvl: 'Platinum', tone: 'bg-[#F472B6] text-white' },
-    { n: 'Anna Ståhl', pts: 512, lvl: 'Gold', tone: 'bg-[#2B2568] text-white', me: true },
-    { n: 'Marcus Lindqvist', pts: 388, lvl: 'Gold', tone: 'bg-[#E9D5FF] text-[#2B2568]' },
-    { n: 'Sara Berg', pts: 210, lvl: 'Silver', tone: 'text-slate-400' },
+    { n: 'Ebba Brobeck', pts: '842', me: false },
+    { n: 'Anna Ståhl', pts: '512', me: true },
+    { n: 'Marcus Lindqvist', pts: '388', me: false },
+    { n: 'Sara Berg', pts: '210', me: false },
   ];
 
   return (
-    <div className="flex flex-col h-full min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] bg-[#FAFAFA]">
-      <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 shrink-0">
-        <div className="px-4 sm:px-6">
-          <div className="h-auto sm:h-16 py-3 sm:py-0 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2 shrink-0 min-w-0">
-              <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center text-white font-extrabold bg-[#2B2568]">
-                C
-              </div>
-              <span className="text-sm font-extrabold text-slate-900 truncate">Clikd insiders</span>
-              <ChevronDown size={14} className="text-slate-400 shrink-0" />
-            </div>
-            <div className="hidden sm:flex flex-1 justify-center min-w-0">
-              <div className="relative w-full max-w-md">
-                <Search
-                  size={15}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <div className="w-full h-11 rounded-full bg-slate-100 pl-10 pr-4 text-sm font-medium text-slate-400 flex items-center">
-                  Search the community…
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-              <span className="relative h-11 w-11 rounded-full bg-slate-100 inline-flex items-center justify-center text-slate-600">
-                <Bell size={16} />
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#F472B6]" />
-              </span>
-              <LevelRing letter="A" size={36} />
-            </div>
+    <div className="rounded-xl sm:rounded-3xl border border-[#E6E3DB] bg-white shadow-[0_24px_80px_-24px_rgba(44,38,33,0.12)] overflow-hidden">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 px-3 sm:px-5 pt-4 pb-3 border-b border-[#E6E3DB] bg-[#F9F8F6]">
+        <div className="min-w-0">
+          <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
+            Community · Clikd Insiders
+          </p>
+          <h3 className="font-playfair font-medium text-[22px] sm:text-[26px] text-[#2C2621] tracking-tight leading-none mt-1">
+            Member space
+          </h3>
+          <p className="mt-1.5 font-inter text-xs text-[#8A857D]">
+            Feed, classroom, events & leaderboard — one home for members.
+          </p>
+        </div>
+        <div className="relative hidden sm:block w-full max-w-[220px]">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A857D]"
+          />
+          <div className="h-10 min-h-[40px] rounded-xl border border-[#E6E3DB] bg-white pl-9 pr-3 font-inter text-[11px] text-[#8A857D] flex items-center">
+            Search community…
           </div>
-          <nav className="flex items-center gap-1 -mb-px overflow-x-auto scrollbar-none pb-px">
-            {(
-              [
-                { label: 'Community', Icon: MessageSquare, on: true },
-                { label: 'Events', Icon: CalendarDays, on: false },
-                { label: 'Classroom', Icon: GraduationCap, on: false },
-                { label: 'Store', Icon: ShoppingBag, on: false },
-              ] as const
-            ).map((tab) => (
-              <span
-                key={tab.label}
-                className={`relative shrink-0 flex items-center gap-1.5 h-11 px-3.5 text-xs font-extrabold whitespace-nowrap ${
-                  tab.on ? 'text-slate-900' : 'text-slate-400'
-                }`}
-              >
-                <tab.Icon size={13} />
-                {tab.label}
-                {tab.on ? (
-                  <span className="absolute left-2 right-2 bottom-0 h-0.5 rounded-full bg-[#2c3340]" />
-                ) : null}
-              </span>
-            ))}
-          </nav>
         </div>
       </div>
 
-      <div className="flex-1 px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5 overflow-x-hidden">
-        <div className="lg:col-span-8 space-y-3 min-w-0">
-          <div className="flex items-center gap-1 bg-white border border-slate-100 shadow-sm p-1 rounded-2xl w-fit">
-            <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#F472B6] text-white shadow-sm">
-              <MessageSquare size={13} /> Feed
-            </span>
-            <span className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-400">
-              <Trophy size={13} /> Leaderboard
-            </span>
-          </div>
-
-          <div className={`${adminCardClass} overflow-hidden`}>
-            <div className="p-4 flex gap-3">
-              <LevelRing letter="A" size={38} />
-              <div className="flex-1 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-sm text-slate-400 min-h-[72px]">
-                Share a win, ask a question, or drop a tip…
-              </div>
-            </div>
-            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-t border-slate-100">
-              <span className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
-                <ImageIcon size={13} /> Upload image
-              </span>
-              <span className="inline-flex items-center gap-1.5 h-9 px-5 rounded-xl bg-[#F472B6] text-white text-xs font-bold">
-                <Send size={12} /> Publish
-              </span>
-            </div>
-          </div>
-
-          {posts.map((p) => (
-            <div
-              key={p.name + p.time}
-              className={`${adminCardClass} overflow-hidden ${p.pinned ? 'ring-1 ring-[#E9D5FF]' : ''}`}
-            >
-              <div className="p-4">
-                <div className="flex items-center gap-3 mb-2.5">
-                  <LevelRing letter={p.letter} ring={p.ring} fill={p.fill} level={p.level} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-extrabold text-slate-900">{p.name}</p>
-                      {p.pinned ? (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#2B2568] bg-[#E9D5FF]/70 px-1.5 py-0.5 rounded-full">
-                          <Pin size={9} /> Pinned
-                        </span>
-                      ) : null}
-                      <span
-                        className={`flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full ${p.tagClass}`}
-                      >
-                        <span className="w-1 h-1 rounded-full" style={{ background: p.tagDot }} />
-                        {p.tag}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-semibold">{p.time}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-slate-700 leading-relaxed mb-3">{p.body}</p>
-                <div className="flex items-center gap-1 pt-2.5 border-t border-slate-50">
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-500 bg-red-50">
-                    <Heart size={14} fill="currentColor" /> {p.likes}
-                  </span>
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400">
-                    <MessageSquare size={14} /> {p.comments}
-                  </span>
-                  {p.hot ? (
-                    <span className="ml-auto flex items-center gap-1 text-[10px] font-extrabold text-[#F472B6] bg-[#FCE7F3] px-2 py-1 rounded-lg">
-                      <Flame size={11} /> Popular
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="lg:col-span-4 space-y-4 min-w-0">
-          <div className={`${adminCardClass} p-5`}>
-            <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4">
-              Your profile
-            </h3>
-            <div className="flex items-center gap-3 mb-4">
-              <LevelRing letter="A" size={48} progress={74} />
-              <div>
-                <p className="text-sm font-extrabold text-slate-900">Anna Ståhl</p>
-                <p className="text-xs font-extrabold text-[#F472B6]">Gold · Lvl 3</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              {[
-                ['12', 'Posts'],
-                ['86', 'Likes'],
-                ['512', 'XP'],
-              ].map(([v, l]) => (
-                <div key={l} className="bg-slate-50 rounded-xl p-2">
-                  <p className="text-base font-extrabold text-slate-900 tabular-nums">{v}</p>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{l}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={`${adminCardClass} overflow-hidden`}>
-            <div
-              className="px-5 py-4 text-white"
-              style={{
-                background: 'linear-gradient(135deg, #2B2568 0%, #1a1848 55%, #F472B6 160%)',
-              }}
-            >
-              <p className="text-sm font-extrabold">Leaderboard</p>
-              <p className="text-[11px] text-white/70">Top members this week</p>
-            </div>
-            <div className="divide-y divide-slate-50">
-              {board.map((m, i) => (
-                <div
-                  key={m.n}
-                  className={`flex items-center gap-3 px-4 py-2.5 ${m.me ? 'bg-[#FCE7F3]/60' : ''}`}
-                >
-                  <span
-                    className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-extrabold ${m.tone}`}
-                  >
-                    {i + 1}
-                  </span>
-                  <p className="flex-1 text-[12px] font-extrabold text-slate-900 truncate">{m.n}</p>
-                  <p className="text-sm font-extrabold text-slate-900 tabular-nums">{m.pts}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className={`${adminCardClass} overflow-hidden`}>
-            <div className="h-24 bg-gradient-to-br from-[#2B2568] to-[#0F172A] relative flex items-center justify-center">
-              <CalendarDays size={32} className="text-white/20" strokeWidth={1} />
-              <span className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 bg-white rounded-full" /> Live soon
-              </span>
-            </div>
-            <div className="p-4">
-              <p className="text-[10px] font-extrabold text-[#F472B6] uppercase tracking-widest">
-                Wed 19 Aug · 19:00
-              </p>
-              <p className="text-sm font-extrabold text-slate-900 mt-1">Live Q&A · Hook formula</p>
-              <span className="mt-3 inline-flex items-center justify-center w-full h-9 rounded-xl bg-[#F472B6] text-white text-xs font-extrabold">
-                RSVP confirmed
-              </span>
-            </div>
-          </div>
-        </div>
+      {/* Sub-tabs */}
+      <div className="flex items-center gap-1.5 px-3 sm:px-5 py-2 border-b border-[#E6E3DB] bg-[#F9F8F6]/80 overflow-x-auto scrollbar-none">
+        {[
+          { label: 'Feed', Icon: MessageSquare },
+          { label: 'Events', Icon: CalendarDays },
+          { label: 'Classroom', Icon: GraduationCap },
+          { label: 'Store', Icon: ShoppingBag },
+          { label: 'Leaderboard', Icon: Trophy },
+        ].map((t, i) => (
+          <span
+            key={t.label}
+            className={`shrink-0 h-9 min-h-[36px] px-3.5 rounded-xl text-[11px] font-inter font-medium inline-flex items-center gap-1.5 ${
+              i === 0
+                ? 'bg-white text-[#2C2621] border border-[#E6E3DB]'
+                : 'text-[#8A857D]'
+            }`}
+          >
+            <t.Icon size={13} strokeWidth={2} />
+            {t.label}
+          </span>
+        ))}
       </div>
-    </div>
-  );
-}
 
-function HomeBody() {
-  return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
-          Command center
-        </p>
-        <h3 className="font-clikd-wordmark font-extrabold text-[26px] sm:text-[32px] text-slate-900 tracking-tight mt-1">
-          Admin Home
-        </h3>
-        <p className="text-sm text-slate-500 font-medium mt-1">
-          Today’s focus, shortcuts, Kanban and latest activity — all in one place.
-        </p>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
-        <div className="lg:col-span-5 rounded-2xl bg-[#E9D5FF]/50 border border-[#E9D5FF] p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
-              Today’s Focus & To-Do&apos;s
-            </h4>
-            <span className="inline-flex items-center rounded-full bg-white/80 border border-[#E9D5FF] px-2.5 py-1 text-[10px] font-bold text-[#2B2568]">
-              Tuesday 18 Aug
-            </span>
-          </div>
-          {[
-            { t: 'Publish IG carousel', done: true },
-            { t: 'Post on TikTok · Hook formula', done: false },
-            { t: 'Send waitlist broadcast', done: false },
-            { t: 'Reply to anker_nordics DM', done: false },
-          ].map((s) => (
-            <div key={s.t} className="flex items-start gap-2.5 min-h-[44px] px-2 py-1.5">
-              <span
-                className={`mt-0.5 h-5 w-5 rounded-md border-2 inline-flex items-center justify-center shrink-0 ${
-                  s.done
-                    ? 'bg-[#F472B6] border-[#F472B6] text-white'
-                    : 'bg-white/80 border-[#E9D5FF]'
+      <div className="p-3 sm:p-5 bg-white">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* Feed */}
+          <div className="lg:col-span-7 space-y-3 min-w-0">
+            <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] overflow-hidden">
+              <div className="p-3.5 flex gap-3">
+                <LevelRing letter="A" size={36} progress={74} />
+                <div className="flex-1 rounded-xl border border-[#E6E3DB] bg-white px-3 py-2.5 font-inter text-[12px] text-[#8A857D] min-h-[64px]">
+                  Share a win, ask a question, or drop a tip…
+                </div>
+              </div>
+              <div className="flex items-center justify-between px-3.5 py-2.5 border-t border-[#E6E3DB] bg-white/70">
+                <span className="inline-flex items-center gap-1.5 font-inter text-[11px] font-medium text-[#8A857D]">
+                  <ImageIcon size={13} /> Upload image
+                </span>
+                <span className="inline-flex h-8 min-h-[32px] items-center gap-1.5 rounded-lg bg-[#2C3B2E] px-3 text-[11px] font-inter font-medium text-[#F9F8F6]">
+                  <Send size={12} strokeWidth={2.5} /> Publish
+                </span>
+              </div>
+            </div>
+
+            {posts.map((p) => (
+              <div
+                key={p.name + p.time}
+                className={`rounded-xl border bg-[#F9F8F6] overflow-hidden ${
+                  p.pinned ? 'border-[#2C3B2E]/35' : 'border-[#E6E3DB]'
                 }`}
               >
-                {s.done ? <Check size={12} strokeWidth={3} /> : null}
-              </span>
-              <span
-                className={`text-sm font-semibold leading-snug ${
-                  s.done ? 'text-slate-500 line-through decoration-slate-400' : 'text-slate-800'
-                }`}
-              >
-                {s.t}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          {[
-            { t: 'Content Planner', s: '14 posts this week', accent: 'bg-[#E9D5FF]/70 text-[#2B2568]', Icon: CalendarDays },
-            { t: 'Analytics & Revenue', s: '94.2K reach', accent: 'bg-[#E9D5FF]/70 text-[#2B2568]', Icon: BarChart3 },
-            { t: 'Bio Store & Links', s: '38 Swish checkouts', accent: 'bg-pink-50 text-[#F472B6]', Icon: Link2 },
-          ].map((c) => (
-            <div key={c.t} className={`${adminCardClass} p-4 sm:p-5`}>
-              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${c.accent}`}>
-                <c.Icon size={18} strokeWidth={2.25} />
-              </span>
-              <p className="mt-3 font-clikd-wordmark font-extrabold text-base text-slate-900 tracking-tight leading-tight">
-                {c.t}
-              </p>
-              <p className="mt-1 text-xs font-medium text-slate-500 leading-snug">{c.s}</p>
-            </div>
-          ))}
-        </div>
-        <div className={`lg:col-span-7 ${adminCardClass} p-4 sm:p-5`}>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
-              Kanban To-Do Board
-            </h4>
-            <span className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#2B2568] text-white text-xs font-bold">
-              <Plus size={14} strokeWidth={2.5} /> New task
-            </span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            {[
-              { h: 'To Do / Ideas', dot: 'bg-[#F472B6]', n: '2', items: [{ t: 'Script 5 hooks', a: 'EB' }, { t: 'Film B-roll', a: 'AS' }] },
-              { h: 'In progress', dot: 'bg-[#2B2568]', n: '2', items: [{ t: 'August calendar', a: 'EB' }, { t: 'Meta retargeting', a: 'ML' }] },
-              { h: 'Done / Review', dot: 'bg-[#F472B6]', n: '2', items: [{ t: 'Masterclass landing', a: 'EB' }, { t: 'Welcome sequence', a: 'SB' }] },
-            ].map((col) => (
-              <div key={col.h} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3 min-h-[180px]">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`h-2 w-2 rounded-full ${col.dot}`} />
-                  <p className="text-[11px] font-extrabold text-slate-700">{col.h}</p>
-                  <span className="ml-auto text-[10px] font-mono font-bold text-slate-400">{col.n}</span>
-                </div>
-                <div className="space-y-2">
-                  {col.items.map((it) => (
-                    <div
-                      key={it.t}
-                      className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
-                    >
-                      <p className="text-[12px] font-bold text-slate-900 leading-snug">{it.t}</p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                          General
-                        </span>
-                        <span className="h-6 w-6 rounded-full bg-[#2B2568] text-white text-[10px] font-extrabold flex items-center justify-center">
-                          {it.a}
+                <div className="p-3.5 sm:p-4">
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <LevelRing letter={p.letter} level={p.level} size={36} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-inter text-[13px] font-medium text-[#2C2621]">{p.name}</p>
+                        {p.pinned ? (
+                          <span className="inline-flex items-center gap-0.5 rounded-md border border-[#E6E3DB] bg-white px-1.5 py-0.5 font-inter text-[9px] font-medium uppercase tracking-wide text-[#8A857D]">
+                            <Pin size={9} strokeWidth={2.5} /> Pinned
+                          </span>
+                        ) : null}
+                        <span className="inline-flex items-center rounded-md bg-white border border-[#E6E3DB] px-1.5 py-0.5 font-inter text-[10px] font-medium text-[#8A857D]">
+                          {p.tag}
                         </span>
                       </div>
+                      <p className="font-inter text-[10px] text-[#8A857D]">{p.time}</p>
                     </div>
-                  ))}
+                  </div>
+                  <p className="font-inter text-[13px] leading-relaxed text-[#2C2621]/90 mb-3">
+                    {p.body}
+                  </p>
+                  <div className="flex items-center gap-1.5 pt-2.5 border-t border-[#E6E3DB]/80">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-[#E6E3DB] px-2.5 py-1.5 font-inter text-[11px] font-medium text-[#2C2621]">
+                      <Heart size={13} className="text-[#B85C38]" /> {p.likes}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-inter text-[11px] font-medium text-[#8A857D]">
+                      <MessageSquare size={13} /> {p.comments}
+                    </span>
+                    {p.hot ? (
+                      <span className="ml-auto inline-flex items-center gap-1 rounded-lg bg-[rgba(44,59,46,0.08)] px-2 py-1 font-inter text-[10px] font-medium text-[#2C3B2E]">
+                        <Flame size={11} /> Popular
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-        <div className={`lg:col-span-5 ${adminCardClass} p-4 sm:p-5`}>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-clikd-wordmark font-extrabold text-lg text-slate-900 tracking-tight">
-              Latest activity & alerts
-            </h4>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FCE7F3] border border-[#F472B6]/20 px-2.5 py-1 text-[10px] font-extrabold text-[#F472B6]">
-              <Radio size={11} strokeWidth={2.5} /> Live
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {['All', '💬 Feedback', '💰 Purchases', '👥 Community'].map((f, i) => (
-              <span
-                key={f}
-                className={`inline-flex items-center min-h-[40px] px-3 rounded-full text-[11px] font-extrabold ${
-                  i === 0 ? 'bg-[#2B2568] text-white' : 'bg-white border border-slate-200 text-slate-500'
-                }`}
-              >
-                {f}
-              </span>
-            ))}
-          </div>
-          <div className="space-y-3">
-            {[
-              { t: 'Anna purchased Masterclass', b: '1,499 SEK · Swish', time: '12m' },
-              { t: 'Nova commented #MASTERCLASS', b: 'Reel · Instagram', time: '34m' },
-              { t: 'Marcus joined Clikd insiders', b: 'Community · VIP waitlist', time: '2h' },
-              { t: 'DM from anker_nordics', b: 'Booked · Instagram', time: '2h' },
-            ].map((a) => (
-              <div key={a.t} className="flex items-start gap-2.5">
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#F472B6] shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-bold text-slate-900">{a.t}</p>
-                  <p className="text-[11px] text-slate-500">{a.b}</p>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-5 space-y-3 min-w-0">
+            <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3.5 sm:p-4">
+              <p className="font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#8A857D]">
+                Your profile
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <LevelRing letter="A" size={48} progress={74} level={3} />
+                <div>
+                  <p className="font-inter text-[13px] font-medium text-[#2C2621]">Anna Ståhl</p>
+                  <p className="font-inter text-[11px] text-[#2C3B2E]">Gold · Level 3</p>
                 </div>
-                <span className="text-[10px] text-slate-400 tabular-nums">{a.time}</span>
               </div>
-            ))}
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {[
+                  ['12', 'Posts'],
+                  ['86', 'Likes'],
+                  ['512', 'XP'],
+                ].map(([v, l]) => (
+                  <div
+                    key={l}
+                    className="rounded-xl border border-[#E6E3DB] bg-white p-2 text-center"
+                  >
+                    <p className="font-playfair text-[16px] font-medium text-[#2C2621] tabular-nums leading-none">
+                      {v}
+                    </p>
+                    <p className="mt-1 font-inter text-[9px] font-medium uppercase tracking-wider text-[#8A857D]">
+                      {l}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] overflow-hidden">
+              <div className="px-3.5 sm:px-4 pt-3.5 pb-2">
+                <p className="font-playfair text-[15px] font-medium text-[#2C2621]">Leaderboard</p>
+                <p className="mt-0.5 font-inter text-[11px] text-[#8A857D]">Top members this week</p>
+              </div>
+              <div className="divide-y divide-[#E6E3DB]/70">
+                {board.map((m, i) => (
+                  <div
+                    key={m.n}
+                    className={`flex items-center gap-3 px-3.5 sm:px-4 py-2.5 ${
+                      m.me ? 'bg-white' : 'bg-white/50'
+                    }`}
+                  >
+                    <span
+                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-inter font-medium ${
+                        i === 0
+                          ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                          : 'bg-white border border-[#E6E3DB] text-[#8A857D]'
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <p className="flex-1 font-inter text-[12px] font-medium text-[#2C2621] truncate">
+                      {m.n}
+                      {m.me ? (
+                        <span className="ml-1.5 font-inter text-[10px] text-[#8A857D]">you</span>
+                      ) : null}
+                    </p>
+                    <p className="font-inter text-[12px] font-medium text-[#2C2621] tabular-nums">
+                      {m.pts}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] overflow-hidden">
+              <div className="relative h-20 bg-gradient-to-br from-[#2C2621] to-[#2C3B2E] flex items-center justify-center">
+                <CalendarDays size={28} className="text-white/25" strokeWidth={1.25} />
+                <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-[#B85C38] px-2 py-0.5 font-inter text-[9px] font-medium text-white">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" /> Live soon
+                </span>
+              </div>
+              <div className="p-3.5">
+                <p className="font-inter text-[10px] font-medium uppercase tracking-[0.12em] text-[#2C3B2E]">
+                  Wed 19 Aug · 19:00
+                </p>
+                <p className="mt-1 font-playfair text-[15px] font-medium text-[#2C2621]">
+                  Live Q&A · Hook formula
+                </p>
+                <span className="mt-3 inline-flex h-9 min-h-[36px] w-full items-center justify-center rounded-xl bg-[#2C3B2E] font-inter text-[11px] font-medium text-[#F9F8F6]">
+                  RSVP confirmed
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 const SEARCH: Record<ShowcaseTabId, string> = {
   planner: 'Search posts…',
   biostore: 'Search admin…',
-  metaads: 'Search admin…',
+  analytics: 'Search admin…',
   crm: 'Search admin…',
   inbox: 'Search conversations…',
   community: 'Search admin…',
-  analytics: 'Search admin…',
 };
 
 /** Vector-sharp replica of the real clikd: admin chrome, with populated demo data. */
 export function PlatformShowcaseStudio({ tab }: { tab: ShowcaseTabId }) {
+  if (tab === 'planner') {
+    return (
+      <div className="bg-[#F9F8F6] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] text-left overflow-x-hidden p-3 sm:p-5">
+        <HeroPlannerMockup />
+      </div>
+    );
+  }
+
+  if (tab === 'biostore') {
+    return (
+      <div className="bg-[#F9F8F6] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] text-left overflow-x-hidden p-3 sm:p-5">
+        <BioBody />
+      </div>
+    );
+  }
+
+  if (tab === 'analytics') {
+    return (
+      <div className="bg-[#F9F8F6] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] text-left overflow-x-hidden p-3 sm:p-5">
+        <AnalyticsBody />
+      </div>
+    );
+  }
+
+  if (tab === 'crm') {
+    return (
+      <div className="bg-[#F9F8F6] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] text-left overflow-x-hidden p-3 sm:p-5">
+        <CrmBody />
+      </div>
+    );
+  }
+
+  if (tab === 'inbox') {
+    return (
+      <div className="bg-[#F9F8F6] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] text-left overflow-x-hidden p-3 sm:p-5">
+        <InboxBody />
+      </div>
+    );
+  }
+
   if (tab === 'community') {
     return (
-      <div
-        className="bg-[#FAFAFA] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] text-left pointer-events-none select-none overflow-x-hidden"
-        aria-hidden
-      >
+      <div className="bg-[#F9F8F6] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] text-left overflow-x-hidden p-3 sm:p-5">
         <MemberCommunityPreview />
       </div>
     );
@@ -1400,19 +1645,14 @@ export function PlatformShowcaseStudio({ tab }: { tab: ShowcaseTabId }) {
 
   return (
     <div
-      className="bg-[#FAFAFA] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] flex text-left pointer-events-none select-none overflow-x-hidden"
+      className="bg-[#F9F8F6] min-h-[520px] sm:min-h-[720px] lg:min-h-[860px] flex text-left pointer-events-none select-none overflow-x-hidden"
       aria-hidden
     >
       <StudioSidebar tab={tab} />
       <div className="flex-1 min-w-0 flex flex-col">
         <StudioTopbar search={SEARCH[tab]} />
         <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-x-hidden">
-          {tab === 'planner' && <PlannerBody />}
-          {tab === 'biostore' && <BioBody />}
-          {tab === 'metaads' && <AdsBody />}
-          {tab === 'crm' && <CrmBody />}
-          {tab === 'inbox' && <InboxBody />}
-          {tab === 'analytics' && <HomeBody />}
+          {/* all showcase tabs early-return above */}
         </div>
       </div>
     </div>

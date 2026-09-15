@@ -33,6 +33,7 @@ import { t, tf, localeTag, type Locale } from '@/lib/i18n';
 import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 import { useMetaSync } from '@/hooks/useMetaSync';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import {
   useAnalytics,
   type AnalyticsDemographics,
@@ -323,10 +324,17 @@ export default function LaterAnalyticsPanel() {
     hasInstagram,
     needsIgBusiness,
     instagramAccount,
-    connectedAccounts,
+    connectedAccounts: connectedAccountsRaw,
     isLoading: socialsLoading,
   } = useConnectedSocials();
-  const { data: metaSync, refetch: refetchMetaSync } = useMetaSync(
+  const { canAccessPlatform } = usePendingApiPlatformAccess();
+  const connectedAccounts = useMemo(
+    () =>
+      connectedAccountsRaw.filter((account) =>
+        canAccessPlatform(account.platform)
+      ),
+    [connectedAccountsRaw, canAccessPlatform]
+  );  const { data: metaSync, refetch: refetchMetaSync } = useMetaSync(
     hasInstagram || hasConnectedSocials
   );
   const [sub, setSub] = useState<AnalyticsSubTab>(() => {

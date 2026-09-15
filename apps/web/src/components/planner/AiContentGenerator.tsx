@@ -19,6 +19,7 @@ import {
   type ContentTone,
   type SocialPlatform,
 } from '@/lib/mock-content-planner';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 
 const PLATFORM_OPTIONS: { key: SocialPlatform; label: string }[] = [
   { key: 'instagram', label: 'Instagram Reel / Post' },
@@ -38,6 +39,7 @@ export default function AiContentGenerator({
   onOpenChange: (open: boolean) => void;
   onUseIdea: (idea: AiContentIdea, platform: SocialPlatform) => void;
 }) {
+  const { canAccessPlatform } = usePendingApiPlatformAccess();
   const [prompt, setPrompt] = useState('');
   const [platforms, setPlatforms] = useState<SocialPlatform[]>([
     'instagram',
@@ -48,6 +50,10 @@ export default function AiContentGenerator({
   const [loading, setLoading] = useState(false);
   const [ideas, setIdeas] = useState<AiContentIdea[]>([]);
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
+
+  const visiblePlatformOptions = PLATFORM_OPTIONS.filter((opt) =>
+    canAccessPlatform(opt.key)
+  );
 
   const togglePlatform = (p: SocialPlatform) => {
     setPlatforms((prev) =>
@@ -111,7 +117,7 @@ export default function AiContentGenerator({
               Plattformar
             </label>
             <div className="space-y-2">
-              {PLATFORM_OPTIONS.map(({ key, label }) => {
+              {visiblePlatformOptions.map(({ key, label }) => {
                 const checked = platforms.includes(key);
                 return (
                   <label

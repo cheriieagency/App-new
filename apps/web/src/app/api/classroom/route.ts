@@ -52,6 +52,9 @@ export async function GET(request: Request) {
     return respond(coursesWithLessons);
   } catch (error) {
     console.error(error);
-    return respond([]);
+    if (!process.env.DATABASE_URL?.trim()) {
+      return respond([]);
+    }
+    return Response.json({ error: 'Failed to load classroom' }, { status: 500 });
   }
 }

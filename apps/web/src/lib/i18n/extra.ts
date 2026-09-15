@@ -150,6 +150,8 @@ export type ExtraKey =
   | 'faqBioA'
   | 'faqTaggingQ'
   | 'faqTaggingA'
+  | 'faqAnalyticsQ'
+  | 'faqAnalyticsA'
   | 'faqSocialQ'
   | 'faqSocialA'
   | 'faqImportQ'
@@ -258,6 +260,8 @@ export type ExtraKey =
   | 'navFeatures'
   | 'navPricing'
   | 'navCommunities'
+  | 'navPlatform'
+  | 'navFaq'
   | 'logInShort'
   | 'getStartedShort'
   | 'pillarsEyebrow'
@@ -378,6 +382,24 @@ export type ExtraKey =
   | 'featuresTryAdmin'
   | 'featuresLivePreview'
   | 'getStartedEyebrow'
+  | 'newsletterEyebrow'
+  | 'newsletterHeadline'
+  | 'newsletterHeadlineLead'
+  | 'newsletterHeadlineEm'
+  | 'newsletterSub'
+  | 'newsletterEmailLabel'
+  | 'newsletterEmailPlaceholder'
+  | 'newsletterCta'
+  | 'newsletterSubmitting'
+  | 'newsletterPrivacy'
+  | 'newsletterInvalidEmail'
+  | 'newsletterError'
+  | 'newsletterOffline'
+  | 'newsletterNetworkError'
+  | 'newsletterSuccessEyebrow'
+  | 'newsletterSuccessTitle'
+  | 'newsletterSuccessBody'
+  | 'newsletterAnotherEmail'
   | 'footerProduct'
   | 'footerAccount'
   | 'footerLegal'
@@ -1396,8 +1418,8 @@ export const EXTRA_EN: ExtraDict = {
   landingHeroHeadline: 'The All-in-One Creator Engine',
   landingHeroSub:
     'Stop juggling Later, Linktree, Skool and Stripe. Sell digital products, host courses, plan social media content, and take instant mobile payments — all in one app.',
-  landingCtaStartFree: 'Start Your Free Community →',
-  landingCtaExplore: 'Explore Popular Communities',
+  landingCtaStartFree: 'Start for free',
+  landingCtaExplore: 'Explore communities',
   trustPillCheckout: '⚡ Built-in Instant Checkout',
   trustPillVat: '🧾 Automatic Fortnox & VAT',
   trustPillAi: '🤖 3x AI Copilots Included',
@@ -1483,7 +1505,7 @@ export const EXTRA_EN: ExtraDict = {
   suiteInboxTrigger: 'Auto Comment-to-DM Trigger',
   suiteBioCheckout: '1-Tap Swish & Card Checkout',
   suiteCommunityXp: 'Gamified Member Hub & XP',
-  suiteAdsNew: 'NEW',
+  suiteAdsNew: 'Launching soon',
   suiteAdsTitle: 'Meta Ads Manager & ROAS',
   suiteAdsSummary:
     'Launch Facebook & Instagram ad campaigns directly from your studio with real-time ROAS tracking and conversion attribution.',
@@ -1521,31 +1543,35 @@ export const EXTRA_EN: ExtraDict = {
   faqEyebrow: 'Help & Frequently Asked Questions',
   faqHeadline: 'Got questions?',
   faqHeadlineAccent: "We've got answers",
-  faqSub: 'Payments, bio, social tagging, VAT and migrating members.',
-  faqPaymentsQ: 'How do mobile payments work?',
+  faqSub: 'Planner, analytics, bio, community, Nordic checkout, and migrating your members.',
+  faqPaymentsQ: 'How does checkout work for Nordic buyers?',
   faqPaymentsA:
-    'Members pay with mobile payment in checkout — often in under 10 seconds. Funds link to your creator account so you never rebuild checkout yourself.',
+    'Buyers can pay with Swish or card in your bio storefront and community checkout. Payments land in your creator balance so you never rebuild a payment flow yourself.',
   faqVatQ: 'How is VAT and accounting handled?',
   faqVatA:
-    'The platform applies correct Nordic VAT (e.g. 6% or 25%) and can generate Fortnox receipts automatically — built for Swedish and Nordic rules from day one.',
+    'clikd: applies Nordic VAT rates (e.g. 6% or 25%) and can generate Fortnox-ready receipts — built for Swedish and Nordic rules from day one.',
   faqBioQ: 'What is included in Bio Builder?',
   faqBioA:
-    'Four tabs — Blocks, Design, Analytics and Settings. Add links and products, pick Later-style themes, track UTM clicks, and manage Google Analytics parameters.',
-  faqTaggingQ: 'How does post link-tagging work?',
+    'Design your link-in-bio page with themes, cover, profile, typography, and link blocks. Publish to clikd.app/yourhandle, track clicks, and sell products from the same page.',
+  faqTaggingQ: 'What can I do in the Content Planner?',
   faqTaggingA:
-    'In Media / Post Tagging, open an Instagram or TikTok preview, add product links (e.g. Eye cream, Cleanser), and show a Track Every Sale badge on tagged posts.',
-  faqSocialQ: 'Can I run multiple brands or Social Sets?',
+    'Plan posts across Instagram, TikTok, Facebook, LinkedIn and more in one calendar. Draft captions, attach media from your library, schedule, and track progress from Ideas to Published.',
+  faqAnalyticsQ: 'What does Analytics show?',
+  faqAnalyticsA:
+    'One overview for reach, engagement, followers, and impressions across connected channels — plus top posts, Reels, audience insights, and hashtag performance for the last 30 days.',
+  faqSocialQ: 'Can I connect multiple brands and social accounts?',
   faqSocialA:
-    'Yes. Switch Active Social Sets in Creator Admin. Plans scale from Starter (1 set / 8 profiles) to Creator and Pro/Agency for more brands and profiles.',
-  faqImportQ: 'Can I import my members from Facebook or Skool?',
+    'Yes. Workspaces and Social Sets let you switch brands in Creator Admin. Connect Instagram, TikTok, Facebook, YouTube, LinkedIn and more, then plan and publish from one place.',
+  faqImportQ: 'Can I move my community from Facebook or Skool?',
   faqImportA:
-    'Yes. Import members via email lists and invite them into your new community. They sign in with email or BankID and keep access to your courses and events.',
+    'Yes. Import members via email lists and invite them into your clikd: community. They sign in with email and keep access to courses, events, and discussions.',
   faqPayoutQ: 'When do I get paid out?',
   faqPayoutA:
-    'Revenue appears in Analytics and pays out to your bank account on the platform payout schedule. Track status, amounts, and history without chasing Stripe reports.',
+    'Sales show up in Analytics and pay out to your bank on the platform schedule. Track status, amounts, and history without exporting Stripe reports by hand.',
   faqTrialQ: 'Is there a free plan?',
   faqTrialA:
-    'Starter is free forever. Creator and Pro/Agency can be started when you are ready — no long lock-in. Yearly billing saves 17%.',
+    'Starter is free forever with a bio storefront and core tools. Upgrade to Creator or Pro/Agency when you need full planner, analytics depth, and lower fees — yearly billing saves 17%.',
+
   searchCommunitiesHeading: 'Search communities',
   searchCommunitiesEyebrow: 'Discover',
   catMarketing: 'Marketing',
@@ -1646,7 +1672,9 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   landingHeroLine3: 'Monetize Every Click.',
   navFeatures: 'Features',
   navPricing: 'Pricing',
-  navCommunities: 'Explore Communities',
+  navCommunities: 'Communities',
+  navPlatform: 'Platform',
+  navFaq: 'FAQ',
   logInShort: 'Log in',
   getStartedShort: 'Get started',
   pillarsEyebrow: 'Value Pillars',
@@ -1760,14 +1788,32 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   faqStillQuestion: 'Still have a question?',
   faqStillSub: 'Our Nordic creator support team is here to help you move over smoothly.',
   faqContactSupport: 'Contact Support Team',
-  faqDomainQ: 'Can I link my own custom domain (e.g., yourname.se)?',
-  faqDomainA: 'Absolutely! You can use our default short links or connect your own domain (e.g., hub.yourdomain.se) with automated SSL certificates included on Pro/Agency plans.',
+  faqDomainQ: 'Can I use my own domain?',
+  faqDomainA: 'Yes. Use clikd.app short links on every plan, or connect a custom domain (e.g. hub.yourbrand.se) with automated SSL on Creator and Pro/Agency.',
   faqBusinessQ: 'Do I need a registered business to start selling?',
-  faqBusinessA: 'No! You can launch as an individual creator or sole proprietor using Mobile BankID verification. As your sales grow, you can update business profile details, VAT ID, or company information in settings.',
+  faqBusinessA: 'No. Launch as an individual creator with BankID verification. As sales grow, add company details, VAT ID, or switch entity type in settings.',
   featuresTryAdmin: 'Try in Admin Dashboard →',
   featuresLivePreview: 'Live Admin Preview',
   getStartedEyebrow: 'Get started',
-  footerProduct: 'Product',
+  newsletterEyebrow: 'Newsletter',
+  newsletterHeadline: 'Stay in the loop',
+  newsletterHeadlineLead: 'Stay in the',
+  newsletterHeadlineEm: 'loop',
+  newsletterSub: 'Product updates, creator playbooks, and launch notes — no spam.',
+  newsletterEmailLabel: 'Email address',
+  newsletterEmailPlaceholder: 'Email address',
+  newsletterCta: 'Join the newsletter',
+  newsletterSubmitting: 'Joining…',
+  newsletterPrivacy: 'Product updates, creator playbooks and much more. Unsubscribe anytime.',
+  newsletterInvalidEmail: 'Please enter a valid email address.',
+  newsletterError: 'Could not subscribe. Please try again.',
+  newsletterOffline: 'Newsletter is temporarily unavailable. Please try again later.',
+  newsletterNetworkError: 'Network error—please try again.',
+  newsletterSuccessEyebrow: 'You\'re in',
+  newsletterSuccessTitle: 'Thanks for subscribing.',
+  newsletterSuccessBody: 'We will send product updates and creator notes to your inbox.',
+  newsletterAnotherEmail: 'Subscribe with a different email',
+  footerProduct: 'Menu',
   footerAccount: 'Account',
   footerLegal: 'Legal',
   footerSupport: 'Support',
@@ -2888,7 +2934,7 @@ export const EXTRA_SV: ExtraDict = {
   suiteInboxTrigger: 'Auto kommentar-till-DM',
   suiteBioCheckout: '1-trycks Swish- & kortcheckout',
   suiteCommunityXp: 'Gamifierad medlemsyta & XP',
-  suiteAdsNew: 'NYTT',
+  suiteAdsNew: 'Kommer snart',
   suiteAdsTitle: 'Meta Ads Manager & ROAS',
   suiteAdsSummary:
     'Lansera Facebook- och Instagram-kampanjer direkt från studion med realtids-ROAS och konverteringsattribution.',
@@ -2923,33 +2969,38 @@ export const EXTRA_SV: ExtraDict = {
   roiEstimatedRevenue: 'Uppskattad månadsintäkt',
   roiEarnLine: 'Med bara {pct}% konvertering tjänar du ${amount} / månad',
   roiPayingMembers: 'Ca {count} betalande medlemmar à {price} SEK',
-  faqEyebrow: 'FAQ',
-  faqHeadline: 'Vanliga',
-  faqHeadlineAccent: 'frågor',
-  faqSub: 'Betalningar, bio, social tagging, moms och migrering av medlemmar.',
-  faqPaymentsQ: 'Hur fungerar mobilbetalningar?',
+  faqEyebrow: 'Hjälp & vanliga frågor',
+  faqHeadline: 'Har du frågor?',
+  faqHeadlineAccent: 'Vi har svaren',
+  faqSub: 'Planner, analytics, bio, community, nordisk checkout och migrering av medlemmar.',
+  faqPaymentsQ: 'Hur fungerar checkout för nordiska köpare?',
   faqPaymentsA:
-    'Medlemmar betalar med mobilbetalning i kassan — ofta under 10 sekunder. Pengarna kopplas till ditt creator-konto.',
+    'Köpare betalar med Swish eller kort i bio-storefront och community-checkout. Pengarna landar i ditt creator-saldo — du behöver aldrig bygga egen betalning.',
   faqVatQ: 'Hur hanteras moms och bokföring?',
   faqVatA:
-    'Plattformen räknar rätt nordisk moms (t.ex. 6% eller 25%) och kan generera Fortnox-kvitton automatiskt.',
+    'clikd: räknar nordisk moms (t.ex. 6% eller 25%) och kan generera Fortnox-klara kvitton — byggt för svenska och nordiska regler från start.',
   faqBioQ: 'Vad ingår i Bio Builder?',
   faqBioA:
-    'Fyra flikar — Blocks, Design, Analytics och Settings. Lägg till länkar och produkter, välj teman, spåra UTM-klick och hantera Google Analytics-parametrar.',
-  faqTaggingQ: 'Hur fungerar post link-tagging?',
+    'Designa din link-in-bio med teman, cover, profil, typografi och länkblock. Publicera till clikd.app/dithandle, spåra klick och sälj produkter från samma sida.',
+  faqTaggingQ: 'Vad kan jag göra i Content Planner?',
   faqTaggingA:
-    'I Media / Post Tagging öppnar du en Instagram- eller TikTok-förhandsvisning, lägger till produktlänkar och visar Track Every Sale på taggade inlägg.',
-  faqSocialQ: 'Kan jag köra flera varumärken / Social Sets?',
+    'Planera inlägg över Instagram, TikTok, Facebook, LinkedIn med mera i en kalender. Skriv captions, hämta media från biblioteket, schemalägg och följ status från Idé till Publicerat.',
+  faqAnalyticsQ: 'Vad visar Analytics?',
+  faqAnalyticsA:
+    'En översikt för räckvidd, engagemang, följare och visningar över kopplade kanaler — plus toppinlägg, Reels, publikinsikter och hashtag-prestanda för senaste 30 dagarna.',
+  faqSocialQ: 'Kan jag koppla flera varumärken och sociala konton?',
   faqSocialA:
-    'Ja. Byt Active Social Set i Creator Admin. Planer skalar från Starter (1 set / 8 profiler) till Creator och Pro/Agency.',
-  faqImportQ: 'Kan jag importera medlemmar från Facebook eller Skool?',
+    'Ja. Workspaces och Social Sets låter dig byta varumärke i Creator Admin. Koppla Instagram, TikTok, Facebook, YouTube, LinkedIn med mera och planera/publicera från ett ställe.',
+  faqImportQ: 'Kan jag flytta min community från Facebook eller Skool?',
   faqImportA:
-    'Ja. Importera via e-postlistor och bjud in dem till din nya community. De loggar in med e-post eller BankID.',
+    'Ja. Importera medlemmar via e-postlistor och bjud in dem till din clikd:-community. De loggar in med e-post och behåller tillgång till kurser, event och diskussioner.',
   faqPayoutQ: 'När får jag utbetalning?',
   faqPayoutA:
-    'Intäkter syns i Analytics och betalas ut enligt payout-schemat. Följ status utan att jaga Stripe-rapporter.',
+    'Försäljning syns i Analytics och betalas ut till ditt bankkonto enligt payout-schemat. Följ status utan att exportera Stripe-rapporter manuellt.',
   faqTrialQ: 'Finns det en gratisplan?',
-  faqTrialA: 'Starter är gratis för alltid. Creator och Pro/Agency kan startas när du är redo — ingen lång bindningstid.',
+  faqTrialA:
+    'Starter är gratis för alltid med bio-storefront och kärnverktyg. Uppgradera till Creator eller Pro/Agency när du behöver full planner, djupare analytics och lägre avgifter — årsbetalning sparar 17%.',
+
   searchCommunitiesHeading: 'Sök communities',
   searchCommunitiesEyebrow: 'Upptäck',
   catMarketing: 'Marknadsföring',
@@ -3050,7 +3101,9 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   landingHeroLine3: 'Tjäna på varje klick.',
   navFeatures: 'Funktioner',
   navPricing: 'Priser',
-  navCommunities: 'Utforska Communities',
+  navCommunities: 'Communities',
+  navPlatform: 'Plattformen',
+  navFaq: 'FAQ',
   logInShort: 'Logga in',
   getStartedShort: 'Kom igång',
   pillarsEyebrow: 'Value Pillars',
@@ -3164,14 +3217,32 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   faqStillQuestion: 'Har du fortfarande en fråga?',
   faqStillSub: 'Vårt nordiska creator-supportteam hjälper dig att flytta över smidigt.',
   faqContactSupport: 'Kontakta support',
-  faqDomainQ: 'Kan jag koppla egen domän (t.ex. dittnamn.se)?',
-  faqDomainA: 'Absolut! Använd våra standardlänkar eller koppla egen domän (t.ex. hub.dindomän.se) med automatiskt SSL på Pro/Agency-planer.',
+  faqDomainQ: 'Kan jag använda egen domän?',
+  faqDomainA: 'Ja. Använd clikd.app-kortlänkar på alla planer, eller koppla egen domän (t.ex. hub.dittvarumärke.se) med automatiskt SSL på Creator och Pro/Agency.',
   faqBusinessQ: 'Behöver jag ett registrerat företag för att börja sälja?',
-  faqBusinessA: 'Nej! Du kan starta som enskild creator med BankID. När försäljningen växer kan du uppdatera företagsprofil, momsregistreringsnummer eller bolagsuppgifter i inställningarna.',
+  faqBusinessA: 'Nej. Starta som enskild creator med BankID. När försäljningen växer lägger du till bolagsuppgifter, moms-ID eller byter bolagsform i inställningarna.',
   featuresTryAdmin: 'Testa i Admin Dashboard →',
   featuresLivePreview: 'Live Admin Preview',
   getStartedEyebrow: 'Kom igång',
-  footerProduct: 'Produkt',
+  newsletterEyebrow: 'Nyhetsbrev',
+  newsletterHeadline: 'Håll dig uppdaterad',
+  newsletterHeadlineLead: 'Håll dig',
+  newsletterHeadlineEm: 'uppdaterad',
+  newsletterSub: 'Produktuppdateringar, creator-playbooks och launchnoter — ingen spam.',
+  newsletterEmailLabel: 'E-postadress',
+  newsletterEmailPlaceholder: 'E-postadress',
+  newsletterCta: 'Prenumerera',
+  newsletterSubmitting: 'Skickar…',
+  newsletterPrivacy: 'Produktuppdateringar, creator-playbooks och mycket mer. Avprenumerera när som helst.',
+  newsletterInvalidEmail: 'Ange en giltig e-postadress.',
+  newsletterError: 'Kunde inte prenumerera. Försök igen.',
+  newsletterOffline: 'Nyhetsbrevet är tillfälligt otillgängligt. Försök igen senare.',
+  newsletterNetworkError: 'Nätverksfel—försök igen.',
+  newsletterSuccessEyebrow: 'Du är med',
+  newsletterSuccessTitle: 'Tack för att du prenumererar.',
+  newsletterSuccessBody: 'Vi skickar produktuppdateringar och creator-tips till din inkorg.',
+  newsletterAnotherEmail: 'Prenumerera med en annan e-post',
+  footerProduct: 'Meny',
   footerAccount: 'Konto',
   footerLegal: 'Juridik',
   footerSupport: 'Support',
@@ -4235,7 +4306,7 @@ export const EXTRA_NO: ExtraDict = {
   faqEyebrow: 'FAQ',
   faqHeadline: 'Vanlige',
   faqHeadlineAccent: 'spørsmål',
-  faqSub: 'Betalinger, bio, social tagging, MVA og migrering av medlemmer.',
+  faqSub: 'Planner, analytics, bio, community, nordisk checkout og migrering av medlemmer.',
   searchCommunitiesHeading: 'Søk communities',
   searchCommunitiesEyebrow: 'Oppdag',
   catMarketing: 'Markedsføring',
@@ -4246,6 +4317,24 @@ export const EXTRA_NO: ExtraDict = {
   activeMembersLabel: 'Aktive medlemmer',
   viewCommunity: 'Vis community',
   landingReadyHeadline: 'Klar for én plattform — ikke fem abonnement?',
+  newsletterEyebrow: 'Nyhetsbrev',
+  newsletterHeadline: 'Hold deg oppdatert',
+  newsletterHeadlineLead: 'Hold deg',
+  newsletterHeadlineEm: 'oppdatert',
+  newsletterSub: 'Produktoppdateringer, creator-playbooks og lanseringsnotater — ingen spam.',
+  newsletterEmailLabel: 'E-postadresse',
+  newsletterEmailPlaceholder: 'E-postadresse',
+  newsletterCta: 'Meld deg på nyhetsbrevet',
+  newsletterSubmitting: 'Sender…',
+  newsletterPrivacy: 'Produktoppdateringer, creator-playbooks og mye mer. Avmeld når som helst.',
+  newsletterInvalidEmail: 'Skriv inn en gyldig e-postadresse.',
+  newsletterError: 'Kunne ikke abonnere. Prøv igjen.',
+  newsletterOffline: 'Nyhetsbrevet er midlertidig utilgjengelig. Prøv igjen senere.',
+  newsletterNetworkError: 'Nettverksfeil—prøv igjen.',
+  newsletterSuccessEyebrow: 'Du er med',
+  newsletterSuccessTitle: 'Takk for at du abonnerer.',
+  newsletterSuccessBody: 'Vi sender produktoppdateringer og creator-tips til innboksen din.',
+  newsletterAnotherEmail: 'Abonner med en annen e-post',
   landingReadySub:
     'Social Sets, Bio Builder, post-tagging, analytics, community, checkout og AI — innebygd fra start.',
   popularCategories: 'Populære kategorier',
@@ -4386,7 +4475,7 @@ export const EXTRA_DA: ExtraDict = {
     'Erstat fem fragmenterede abonnementer med ét samlet studio. Direkte publicering, bio-storefront, community og e-mail-CRM — med 100 % dataejerskab.',
   faqHeadline: 'Ofte stillede',
   faqHeadlineAccent: 'spørgsmål',
-  faqSub: 'Betalinger, bio, social tagging, moms og migrering af medlemmer.',
+  faqSub: 'Planner, analytics, bio, community, nordisk checkout og migrering af medlemmer.',
   searchCommunitiesHeading: 'Søg communities',
   searchCommunitiesEyebrow: 'Opdag',
   catMarketing: 'Marketing',
@@ -4396,6 +4485,24 @@ export const EXTRA_DA: ExtraDict = {
   activeMembersLabel: 'Aktive medlemmer',
   viewCommunity: 'Se community',
   landingReadyHeadline: 'Klar til én platform — ikke fem abonnementer?',
+  newsletterEyebrow: 'Nyhedsbrev',
+  newsletterHeadline: 'Hold dig opdateret',
+  newsletterHeadlineLead: 'Hold dig',
+  newsletterHeadlineEm: 'opdateret',
+  newsletterSub: 'Produktopdateringer, creator-playbooks og lanceringsnoter — ingen spam.',
+  newsletterEmailLabel: 'E-mailadresse',
+  newsletterEmailPlaceholder: 'E-mailadresse',
+  newsletterCta: 'Tilmeld nyhedsbrevet',
+  newsletterSubmitting: 'Tilmelder…',
+  newsletterPrivacy: 'Produktopdateringer, creator-playbooks og meget mere. Afmeld når som helst.',
+  newsletterInvalidEmail: 'Indtast en gyldig e-mailadresse.',
+  newsletterError: 'Kunne ikke tilmelde. Prøv igen.',
+  newsletterOffline: 'Nyhedsbrevet er midlertidigt utilgængeligt. Prøv igen senere.',
+  newsletterNetworkError: 'Netværksfejl—prøv igen.',
+  newsletterSuccessEyebrow: 'Du er med',
+  newsletterSuccessTitle: 'Tak for din tilmelding.',
+  newsletterSuccessBody: 'Vi sender produktopdateringer og creator-tips til din indbakke.',
+  newsletterAnotherEmail: 'Tilmeld med en anden e-mail',
   landingReadySub:
     'Social Sets, Bio Builder, post-tagging, analytics, community, checkout og AI — indbygget fra start.',
   popularCategories: 'Populære kategorier',
@@ -4586,30 +4693,35 @@ export const EXTRA_FI: ExtraDict = {
   faqEyebrow: 'UKK',
   faqHeadline: 'Usein kysytyt',
   faqHeadlineAccent: 'kysymykset',
-  faqSub: 'Maksut, bio, social tagging, ALV ja jäsenten migrointi.',
-  faqPaymentsQ: 'Miten mobiilimaksut toimivat?',
+  faqSub: 'Planner, analytics, bio, community, pohjoismainen checkout ja jäsenten siirto.',
+  faqPaymentsQ: 'Miten checkout toimii pohjoismaisille ostajille?',
   faqPaymentsA:
-    'Jäsenet maksavat mobiilimaksulla tai kortilla kassalla — usein alle 10 sekunnissa. Rahat yhdistetään creator-tiliisi.',
+    'Ostajat voivat maksaa Swishillä tai kortilla bio-storefrontissa ja community-kassalla. Maksut menevät creator-saldollesi.',
   faqVatQ: 'Miten ALV ja kirjanpito hoidetaan?',
   faqVatA:
-    'Alusta laskee oikean pohjoismaisen ALV:n (esim. 6 % tai 25 %) ja voi luoda Fortnox-kuitit automaattisesti.',
+    'clikd: laskee pohjoismaisen ALV:n (esim. 6 % tai 25 %) ja voi luoda Fortnox-valmiit kuitit.',
   faqBioQ: 'Mitä Bio Builder sisältää?',
   faqBioA:
-    'Neljä välilehteä — Blocks, Design, Analytics ja Settings. Lisää linkkejä ja tuotteita, valitse teemoja, seuraa UTM-klikkauksia.',
-  faqTaggingQ: 'Miten post link-tagging toimii?',
+    'Suunnittele link-in-bio teemoilla, coverilla, profiililla ja linkkiblokeilla. Julkaise clikd.app/käyttäjänimi-osoitteeseen ja myy tuotteita samalta sivulta.',
+  faqTaggingQ: 'Mitä voin tehdä Content Plannerissa?',
   faqTaggingA:
-    'Media / Post Taggingissa avaat Instagram- tai TikTok-esikatselun, lisäät tuotelinkkejä ja näet Track Every Sale -tiedot.',
-  faqSocialQ: 'Voinko käyttää useita brändejä / Social Sets?',
+    'Suunnittele julkaisuja Instagramiin, TikTokiin, Facebookiin ja LinkedIniin yhdessä kalenterissa. Kirjoita captionit, liitä media ja ajasta julkaisut.',
+  faqAnalyticsQ: 'Mitä Analytics näyttää?',
+  faqAnalyticsA:
+    'Yksi näkymä reachille, engagementille, seuraajille ja impressioille — sekä top-julkaisut, Reels, yleisöinsights ja hashtag-suoritus.',
+  faqSocialQ: 'Voinko yhdistää useita brändejä ja some-tilejä?',
   faqSocialA:
-    'Kyllä. Vaihda Active Social Set Creator Adminissa. Suunnitelmat skaalautuvat Starterista Creatoriin ja Pro/Agencyyn.',
-  faqImportQ: 'Voinko tuoda jäseniä Facebookista tai Skoolista?',
+    'Kyllä. Workspacet ja Social Sets vaihtavat brändiä Creator Adminissa. Yhdistä Instagram, TikTok, Facebook, YouTube ja LinkedIn.',
+  faqImportQ: 'Voinko siirtää communityn Facebookista tai Skoolista?',
   faqImportA:
-    'Kyllä. Tuo sähköpostilistoilla ja kutsu heidät uuteen yhteisöön. He kirjautuvat sähköpostilla tai BankID:llä.',
+    'Kyllä. Tuo jäsenet sähköpostilistoilla ja kutsu heidät clikd:-yhteisöön. Kirjautuminen sähköpostilla.',
   faqPayoutQ: 'Milloin saan maksun?',
   faqPayoutA:
-    'Tulot näkyvät Analyticsissa ja maksetaan payout-aikataulun mukaan.',
+    'Myynti näkyy Analyticsissa ja maksetaan pankkitilille payout-aikataulun mukaan.',
   faqTrialQ: 'Onko ilmainen suunnitelma?',
-  faqTrialA: 'Starter on ilmainen ikuisesti. Creator ja Pro/Agency voi aloittaa kun olet valmis.',
+  faqTrialA:
+    'Starter on ilmainen ikuisesti. Creator ja Pro/Agency kun tarvitset täyden plannerin ja syvemmän analyticsin — vuosimaksu säästää 17 %.',
+
   searchCommunitiesHeading: 'Hae yhteisöjä',
   searchCommunitiesEyebrow: 'Tutustu',
   catMarketing: 'Markkinointi',
@@ -4620,6 +4732,24 @@ export const EXTRA_FI: ExtraDict = {
   activeMembersLabel: 'Aktiiviset jäsenet',
   viewCommunity: 'Näytä yhteisö',
   landingReadyHeadline: 'Valmis yhdelle alustalle — etkä viidelle tilaukselle?',
+  newsletterEyebrow: 'Uutiskirje',
+  newsletterHeadline: 'Pysy ajan tasalla',
+  newsletterHeadlineLead: 'Pysy ajan',
+  newsletterHeadlineEm: 'tasalla',
+  newsletterSub: 'Tuotepäivityksiä, creator-playbookeja ja julkaisuhuomioita — ei roskapostia.',
+  newsletterEmailLabel: 'Sähköpostiosoite',
+  newsletterEmailPlaceholder: 'Sähköpostiosoite',
+  newsletterCta: 'Liity uutiskirjeeseen',
+  newsletterSubmitting: 'Liitytään…',
+  newsletterPrivacy: 'Tuotepäivityksiä, creator-playbookeja ja paljon muuta. Peru milloin tahansa.',
+  newsletterInvalidEmail: 'Anna kelvollinen sähköpostiosoite.',
+  newsletterError: 'Tilaus epäonnistui. Yritä uudelleen.',
+  newsletterOffline: 'Uutiskirje ei ole tilapäisesti saatavilla. Yritä myöhemmin.',
+  newsletterNetworkError: 'Verkkovirhe—yritä uudelleen.',
+  newsletterSuccessEyebrow: 'Olet mukana',
+  newsletterSuccessTitle: 'Kiitos tilauksesta.',
+  newsletterSuccessBody: 'Lähetämme tuotepäivityksiä ja creator-vinkkejä sähköpostiisi.',
+  newsletterAnotherEmail: 'Tilaa toisella sähköpostilla',
   landingReadySub:
     'Social Sets, Bio Builder, post-tagging, analytics, yhteisö, checkout ja AI — sisäänrakennettuna alusta alkaen.',
   popularCategories: 'Suositut kategoriat',
@@ -4707,7 +4837,9 @@ export const EXTRA_FI: ExtraDict = {
   shareProfileBtn: 'Jaa profiili',
 navFeatures: 'Ominaisuudet',
   navPricing: 'Hinnat',
-  navCommunities: 'Tutustu yhteisöihin',
+  navCommunities: 'Yhteisöt',
+  navPlatform: 'Alusta',
+  navFaq: 'UKK',
   logInShort: 'Kirjaudu',
   getStartedShort: 'Aloita',
   mostPopular: 'Suosituin',
@@ -4716,7 +4848,7 @@ navFeatures: 'Ominaisuudet',
   legalVillkor: 'Käyttöehdot',
   legalCookies: 'Evästekäytäntö',
   footerLegal: 'Juridiikka',
-  footerProduct: 'Tuote',
+  footerProduct: 'Valikko',
   footerAccount: 'Tili',
   footerSupport: 'Tuki',
   pinnedBadge: 'Kiinnitetty',

@@ -6,13 +6,12 @@
 import type { Locale } from '@/lib/i18n';
 
 export const SHOWCASE_TABS = [
+  'analytics',
   'planner',
   'biostore',
-  'metaads',
   'crm',
   'inbox',
   'community',
-  'analytics',
 ] as const;
 
 export type ShowcaseTabId = (typeof SHOWCASE_TABS)[number];
@@ -63,7 +62,7 @@ const EN: ShowcaseCopy = {
   weekdays: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
   tabs: {
     planner: {
-      label: 'Auto-Posting & Planner',
+      label: 'Planner',
       title: 'Publish videos everywhere without push notification hassles.',
       subtitle:
         'Schedule once and publish directly to TikTok, Instagram Reels, and Facebook using official OAuth scopes.',
@@ -87,7 +86,7 @@ const EN: ShowcaseCopy = {
       previewBadge: '100% Direct API Active',
     },
     biostore: {
-      label: 'Bio Link Storefront',
+      label: 'Bio Builder',
       title: 'High-converting bio storefront with 1-tap mobile checkout.',
       subtitle:
         'Sell e-books, masterclasses, coaching, and subscriptions with luxury theme presets and BankID Swish checkout.',
@@ -110,29 +109,29 @@ const EN: ShowcaseCopy = {
       previewTitle: 'Link in Bio Studio',
       previewBadge: 'Publish Changes',
     },
-    metaads: {
-      label: 'Meta Ads & ROAS',
-      title: 'Launch FB & IG ad campaigns with real-time ROAS tracking.',
+    analytics: {
+      label: 'Analytics',
+      title: 'See what works across every channel — reach, engagement, and growth.',
       subtitle:
-        'Run Meta Ad campaigns directly from your studio without logging into complex Business Manager dashboards.',
+        'Unified Instagram, TikTok, and Facebook analytics with hashtags, audience insights, and monthly reports.',
       bullets: [
-        'Direct Meta Ads Manager integration',
-        'Real-time ROAS tracking and conversion attribution',
-        'One-click retargeting for storefront visitors',
-        'Automated daily budget management & notifications',
-        'Unified analytics report for organic & paid reach',
+        'Cross-platform reach, impressions, and engagement rates',
+        'Post, Reel, and Story performance in one feed',
+        'Hashtag rankings and audience demographics',
+        'Follower growth and best-time-to-post insights',
+        'Exportable monthly reports for clients and stakeholders',
       ],
       quote:
-        'Launching Meta retargeting ads directly from Clikd gave us a 4.2x ROAS on our latest course release without touching Meta Ads Manager.',
+        'Finally one analytics board for all our Nordic brands — we stopped exporting CSVs from five dashboards every Monday.',
       quoteName: 'Anna Ståhl',
       quoteRole: 'Performance Lead @ Cherii Agency',
       quoteAvatar: ANNA,
-      url: 'https://admin.clikd.app/meta-ads/ebbacreator',
+      url: 'https://admin.clikd.app/analytics/ebbacreator',
       caption:
-        'Launch Facebook & Instagram ads directly with real-time ROAS tracking.',
-      previewKicker: 'Meta Ads Manager & ROAS',
-      previewTitle: 'Campaign Performance',
-      previewBadge: '4.2x ROAS Active',
+        'Cross-platform analytics with engagement, audience, and growth in one place.',
+      previewKicker: 'Analytics & growth',
+      previewTitle: 'Performance Overview',
+      previewBadge: '4.8% Eng. rate',
     },
     crm: {
       label: 'Email CRM',
@@ -159,7 +158,7 @@ const EN: ShowcaseCopy = {
       previewBadge: '99.8% Inbox',
     },
     inbox: {
-      label: 'Unified Inbox',
+      label: 'Social Inbox',
       title: 'Unified Social Inbox & Comment-to-DM automations.',
       subtitle:
         'Auto-reply to Instagram & TikTok comments, send instant private DMs with lead links, and manage all chats in one inbox.',
@@ -183,7 +182,7 @@ const EN: ShowcaseCopy = {
       previewBadge: '4 Active Triggers',
     },
     community: {
-      label: 'Gamified Community',
+      label: 'Community',
       title: 'Gamified community, classroom courses & live events.',
       subtitle:
         'Give your members a space they actually want to be in with member feeds, classroom courses, and XP leaderboards.',
@@ -206,29 +205,6 @@ const EN: ShowcaseCopy = {
       previewTitle: 'Member Leaderboard',
       previewBadge: '1,340 Members',
     },
-    analytics: {
-      label: 'Command Center',
-      title: "Today's focus, shortcuts, Kanban and latest activity — all in one place.",
-      subtitle:
-        'Admin Home keeps stickies, shortcuts, your Kanban board, and live alerts together.',
-      bullets: [
-        "Today's focus and sticky to-dos",
-        'One-tap shortcuts to Planner, Analytics, and Bio',
-        'Kanban board for ideas, in progress, and review',
-        'Live activity across purchases, community, and DMs',
-        'Workspace-scoped search with ⌘K',
-      ],
-      quote:
-        'Starting every morning in Command Center means I see tasks, Kanban, and alerts before I open five other tools.',
-      quoteName: 'Ebba Brobeck',
-      quoteRole: 'Founder, Ebba Creator Lab',
-      quoteAvatar: EBBA,
-      url: 'https://admin.clikd.app/home/ebbacreator',
-      caption: 'Admin Home — focus, shortcuts, Kanban, and latest activity.',
-      previewKicker: 'Command Center',
-      previewTitle: 'Admin Home',
-      previewBadge: 'Live',
-    },
   },
 };
 
@@ -241,7 +217,7 @@ const SV: ShowcaseCopy = {
   weekdays: ['M', 'T', 'O', 'T', 'F', 'L', 'S'],
   tabs: {
     planner: {
-      label: 'Auto-posting & Planner',
+      label: 'Planner',
       title: 'Publicera videor överallt — utan push-godkännanden.',
       subtitle:
         'Schemalägg en gång och publicera direkt till TikTok, Instagram Reels och Facebook med officiella OAuth-scopes.',
@@ -265,7 +241,7 @@ const SV: ShowcaseCopy = {
       previewBadge: '100 % Direct API aktiv',
     },
     biostore: {
-      label: 'Bio-länk & storefront',
+      label: 'Bio Builder',
       title: 'Konverterande bio-storefront med 1-trycks mobilcheckout.',
       subtitle:
         'Sälj e-böcker, masterclass, coaching och prenumerationer med lyxiga teman och BankID Swish-checkout.',
@@ -288,29 +264,29 @@ const SV: ShowcaseCopy = {
       previewTitle: 'Link in Bio Studio',
       previewBadge: 'Publicera ändringar',
     },
-    metaads: {
-      label: 'Meta Ads & ROAS',
-      title: 'Lansera FB- & IG-kampanjer med ROAS i realtid.',
+    analytics: {
+      label: 'Analys',
+      title: 'Se vad som fungerar på varje kanal — räckvidd, engagemang och tillväxt.',
       subtitle:
-        'Kör Meta-kampanjer direkt från studion — utan att logga in i krångliga Business Manager-dashboards.',
+        'Samlad Instagram-, TikTok- och Facebook-analys med hashtags, publikinsikter och månadsrapporter.',
       bullets: [
-        'Direkt integration mot Meta Ads Manager',
-        'ROAS och konverteringsattribution i realtid',
-        '1-klicks retargeting av storefront-besökare',
-        'Automatisk dagsbudget och notiser',
-        'Samlad rapport för organisk och betald räckvidd',
+        'Räckvidd, visningar och engagemang över alla plattformar',
+        'Post-, Reel- och Story-prestanda i ett flöde',
+        'Hashtag-ranking och publikdemografi',
+        'Följartillväxt och bästa tider att posta',
+        'Exporterbara månadsrapporter för klienter',
       ],
       quote:
-        'Att lansera Meta-retargeting direkt från Clikd gav oss 4,2x ROAS på senaste kursreleasen — utan att öppna Ads Manager.',
+        'Äntligen en analytics-vy för alla våra nordiska varumärken — vi slutade exportera CSV från fem dashboards varje måndag.',
       quoteName: 'Anna Ståhl',
       quoteRole: 'Performance Lead @ Cherii Agency',
       quoteAvatar: ANNA,
-      url: 'https://admin.clikd.app/meta-ads/ebbacreator',
+      url: 'https://admin.clikd.app/analytics/ebbacreator',
       caption:
-        'Lansera Facebook- och Instagram-annonser direkt med ROAS i realtid.',
-      previewKicker: 'Meta Ads Manager & ROAS',
-      previewTitle: 'Kampanjprestanda',
-      previewBadge: '4,2x ROAS aktiv',
+        'Kanalöverskridande analytics med engagemang, publik och tillväxt på ett ställe.',
+      previewKicker: 'Analys & tillväxt',
+      previewTitle: 'Prestandaöversikt',
+      previewBadge: '4,8 % eng. rate',
     },
     crm: {
       label: 'E-post CRM',
@@ -336,7 +312,7 @@ const SV: ShowcaseCopy = {
       previewBadge: '99,8 % inbox',
     },
     inbox: {
-      label: 'Unified Inbox',
+      label: 'Social Inbox',
       title: 'Samlad social inbox och kommentar-till-DM.',
       subtitle:
         'Svara automatiskt på Instagram- och TikTok-kommentarer, skicka privata DM:ar med lead-länkar och hantera alla chattar i en inbox.',
@@ -360,7 +336,7 @@ const SV: ShowcaseCopy = {
       previewBadge: '4 aktiva triggers',
     },
     community: {
-      label: 'Gamifierad community',
+      label: 'Community',
       title: 'Gamifierad community, kurser och live-event.',
       subtitle:
         'Ge medlemmarna en plats de faktiskt vill vara i — med flöden, classroom-kurser och XP-leaderboards.',
@@ -382,29 +358,6 @@ const SV: ShowcaseCopy = {
       previewKicker: 'Community & kurser',
       previewTitle: 'Member Leaderboard',
       previewBadge: '1 340 medlemmar',
-    },
-    analytics: {
-      label: 'Command Center',
-      title: 'Dagens fokus, genvägar, Kanban och senaste aktiviteten — på ett ställe.',
-      subtitle:
-        'Admin Home samlar stickies, genvägar, Kanban och live-notiser.',
-      bullets: [
-        'Dagens fokus och sticky to-dos',
-        'Genvägar till Planner, Analytics och Bio',
-        'Kanban för idéer, pågående och review',
-        'Live-aktivitet för köp, community och DM:ar',
-        'Workspace-sök med ⌘K',
-      ],
-      quote:
-        'Att börja morgonen i Command Center gör att jag ser tasks, Kanban och alerts innan jag öppnar fem andra verktyg.',
-      quoteName: 'Ebba Brobeck',
-      quoteRole: 'Founder, Ebba Creator Lab',
-      quoteAvatar: EBBA,
-      url: 'https://admin.clikd.app/home/ebbacreator',
-      caption: 'Admin Home — fokus, genvägar, Kanban och senaste aktivitet.',
-      previewKicker: 'Command Center',
-      previewTitle: 'Admin Home',
-      previewBadge: 'Live',
     },
   },
 };

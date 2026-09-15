@@ -29,6 +29,7 @@ import TeamWorkspaceModal from '@/components/planner/TeamWorkspaceModal';
 import { AdminPageHeader } from '@/components/admin/AdminUi';
 import Link from 'next/link';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import {
   FacebookIcon,
   InstagramIcon,
@@ -94,6 +95,7 @@ export default function ContentPlannerShell({
     activeWorkspaceId,
     activeWorkspace,
   } = useWorkspace();
+  const { filterPlatforms } = usePendingApiPlatformAccess();
 
   const [view, setView] = useState<ViewMode>('board');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
@@ -103,6 +105,14 @@ export default function ContentPlannerShell({
   const [teamOpen, setTeamOpen] = useState(false);
   const [activePost, setActivePost] = useState<PlannerPost | null>(null);
   const [defaultScheduledAt, setDefaultScheduledAt] = useState<string | null>(null);
+
+  const plannerPlatformFilters = filterPlatforms([
+    'instagram',
+    'facebook',
+    'tiktok',
+    'linkedin',
+    'youtube',
+  ] as const);
 
   const project = activeWorkspace?.name ?? 'Ebba Creator Lab';
 
@@ -397,7 +407,7 @@ export default function ContentPlannerShell({
             >
               {t('allPlatforms', locale)}
             </button>
-            {(['instagram', 'facebook', 'tiktok', 'linkedin', 'youtube'] as SocialPlatform[]).map((p) => {
+            {plannerPlatformFilters.map((p) => {
               const active = platformFilter === p;
               const Icon = PLATFORM_ICONS[p];
               return (

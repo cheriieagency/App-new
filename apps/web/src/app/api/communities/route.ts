@@ -10,6 +10,11 @@ import { getMockCommunitiesForUser } from '@/lib/mock-communities';
 import { fireEmailAutomations, persistSubscriber } from '@/lib/email/crm-persist';
 import { syncSubscriber } from '@/lib/mock-email-crm';
 import { getSiteUrl } from '@/lib/site';
+import {
+  REFERRAL_COOKIE,
+  attributeReferralUse,
+} from '@/lib/referrals';
+import { cookies } from 'next/headers';
 import { extractCommunityPrice } from '@/lib/communities/pricing';
 import { publishCommunityToPublicCatalog } from '@/lib/public-communities-store';
 
@@ -69,7 +74,8 @@ export async function GET() {
           workspace_id: pricing.workspace_id,
           creator_id: pricing.creator_id,
         };
-        publishCommunityToPublicCatalog(row);
+        // Never persist per-user membership into the shared public catalog.
+        publishCommunityToPublicCatalog({ ...row, is_joined: false });
         return row;
       });
       return Response.json(publicRows);
@@ -108,6 +114,30 @@ export async function POST(request: Request) {
       await sql`
         UPDATE communities SET member_count = member_count + 1 WHERE id = ${community_id}
       `;
+
+      // Attribute Ref & Earn when the joiner arrived via ?ref=CODE (cookie).
+      if (session.user.email && process.env.DATABASE_URL?.trim()) {
+        const purchaseAmount = Number(body.purchase_amount ?? 0);
+        const productName =
+          typeof body.product_name === 'string' && body.product_name.trim()
+            ? body.product_name.trim()
+            : `Community ${community_id}`;
+        try {
+          const result = await attributeReferralUse({
+            usedByEmail: session.user.email,
+            usedByUserId: session.user.id,
+            productName,
+            purchaseAmount: Number.isFinite(purchaseAmount) ? purchaseAmount : 0,
+          });
+          if (result.ok && result.attributed) {
+            const jar = await cookies();
+            jar.set(REFERRAL_COOKIE, '', { path: '/', maxAge: 0 });
+          }
+        } catch (err) {
+          console.warn('[communities/join] referral attribution failed', err);
+        }
+      }
+
       // Auto-sync to creator Email CRM + fire welcome automation.
       try {
         const owners = await sql`

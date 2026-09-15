@@ -1,21 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Bolt,
-  Briefcase,
-  CalendarDays,
-  Globe,
-  Minus,
-  Plus,
-  Import,
-  Receipt,
-  Shield,
-  Sparkles,
-  Users,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import { useLanguage } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
 import {
@@ -28,82 +14,24 @@ import {
   ltSectionSub,
 } from '@/components/landing/landingType';
 
-type FaqCategory = 'all' | 'payments' | 'community' | 'vat' | 'workspace';
-
 type FaqItemDef = {
   id: string;
-  category: Exclude<FaqCategory, 'all'>;
   qKey: TranslationKey;
   aKey: TranslationKey;
-  icon: LucideIcon;
-  iconWrap: string;
 };
 
+/** FAQ set aligned with the current clikd: product surface. */
 const FAQ_ITEMS: FaqItemDef[] = [
-  {
-    id: 'checkout',
-    category: 'payments',
-    qKey: 'faqPaymentsQ',
-    aKey: 'faqPaymentsA',
-    icon: Bolt,
-    iconWrap: 'bg-[#FCE7F3] text-[#F472B6]',
-  },
-  {
-    id: 'vat',
-    category: 'vat',
-    qKey: 'faqVatQ',
-    aKey: 'faqVatA',
-    icon: Receipt,
-    iconWrap: 'bg-[#E9D5FF]/50 text-[#2B2568]',
-  },
-  {
-    id: 'import',
-    category: 'community',
-    qKey: 'faqImportQ',
-    aKey: 'faqImportA',
-    icon: Import,
-    iconWrap: 'bg-[#E9D5FF]/50 text-[#2B2568]',
-  },
-  {
-    id: 'payouts',
-    category: 'payments',
-    qKey: 'faqPayoutQ',
-    aKey: 'faqPayoutA',
-    icon: Wallet,
-    iconWrap: 'bg-slate-100 text-slate-700',
-  },
-  {
-    id: 'social-sets',
-    category: 'workspace',
-    qKey: 'faqSocialQ',
-    aKey: 'faqSocialA',
-    icon: CalendarDays,
-    iconWrap: 'bg-[#FCE7F3] text-[#F472B6]',
-  },
-  {
-    id: 'domain',
-    category: 'workspace',
-    qKey: 'faqDomainQ',
-    aKey: 'faqDomainA',
-    icon: Globe,
-    iconWrap: 'bg-[#E9D5FF]/50 text-[#2B2568]',
-  },
-  {
-    id: 'business',
-    category: 'vat',
-    qKey: 'faqBusinessQ',
-    aKey: 'faqBusinessA',
-    icon: Briefcase,
-    iconWrap: 'bg-slate-100 text-slate-700',
-  },
-  {
-    id: 'trial',
-    category: 'payments',
-    qKey: 'faqTrialQ',
-    aKey: 'faqTrialA',
-    icon: Shield,
-    iconWrap: 'bg-[#E9D5FF]/50 text-[#2B2568]',
-  },
+  { id: 'checkout', qKey: 'faqPaymentsQ', aKey: 'faqPaymentsA' },
+  { id: 'trial', qKey: 'faqTrialQ', aKey: 'faqTrialA' },
+  { id: 'planner', qKey: 'faqTaggingQ', aKey: 'faqTaggingA' },
+  { id: 'analytics', qKey: 'faqAnalyticsQ', aKey: 'faqAnalyticsA' },
+  { id: 'bio', qKey: 'faqBioQ', aKey: 'faqBioA' },
+  { id: 'import', qKey: 'faqImportQ', aKey: 'faqImportA' },
+  { id: 'social-sets', qKey: 'faqSocialQ', aKey: 'faqSocialA' },
+  { id: 'vat', qKey: 'faqVatQ', aKey: 'faqVatA' },
+  { id: 'payouts', qKey: 'faqPayoutQ', aKey: 'faqPayoutA' },
+  { id: 'domain', qKey: 'faqDomainQ', aKey: 'faqDomainA' },
 ];
 
 export function FaqSection() {
@@ -112,7 +40,8 @@ export function FaqSection() {
 
   return (
     <section
-      className="relative py-16 sm:py-24 overflow-hidden bg-[#FAFAFA]"
+      id="faq"
+      className="relative py-16 sm:py-24 overflow-hidden bg-[#F9F8F6]"
       aria-labelledby="faq-heading"
     >
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
@@ -126,42 +55,40 @@ export function FaqSection() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-10 items-start">
-          {/* Left: "Still have questions?" card */}
-          <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] border border-slate-200/70 px-6 py-10">
+          <div className="bg-white rounded-2xl shadow-[0_1px_2px_rgba(44,38,33,0.03)] border border-[#E6E3DB] px-6 py-10">
             <div className="flex items-center justify-start mb-6">
               <div className="flex -space-x-2">
                 {['AK', 'SB', 'ML'].map((initials, idx) => (
                   <span
                     // eslint-disable-next-line react/no-array-index-key
                     key={`${initials}-${idx}`}
-                    className="w-10 h-10 rounded-full overflow-hidden border border-white bg-[#E9D5FF] flex items-center justify-center text-[11px] font-extrabold text-[#2B2568]"
+                    className="w-10 h-10 rounded-full overflow-hidden border border-white bg-[#E6E3DB] flex items-center justify-center text-[11px] font-medium text-[#2C3B2E]"
                     aria-hidden
                   >
                     {initials}
                   </span>
                 ))}
               </div>
-              <span className="ml-3 inline-flex items-center rounded-full bg-[#2B2568] text-white px-3 h-6 text-[10px] font-extrabold">
+              <span className="ml-3 inline-flex items-center rounded-full bg-[#2C3B2E] text-[#F9F8F6] px-3 h-6 text-[10px] font-inter font-medium">
                 + You
               </span>
             </div>
 
             <div className="text-left">
               <p className={ltCardTitleLg}>{t('faqStillQuestion', locale)}</p>
-              <p className="text-sm font-medium text-slate-600 mt-2 font-display leading-relaxed">
+              <p className="text-sm font-inter font-normal text-[#8A857D] mt-2 leading-relaxed">
                 {t('faqStillSub', locale)}
               </p>
             </div>
 
             <a
               href="mailto:support@clikd.app"
-              className={`mt-6 inline-flex items-center justify-center min-h-[44px] bg-[#2B2568] hover:bg-[#1a1848] text-white ${ltCta} px-6 py-2 rounded-xl shadow-md shadow-[#2B2568]/20 transition-all active:scale-[0.98]`}
+              className={`mt-6 inline-flex items-center justify-center min-h-[44px] bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] ${ltCta} px-6 py-2 rounded-xl shadow-none transition-all active:scale-[0.98]`}
             >
               {t('faqContactSupport', locale)}
             </a>
           </div>
 
-          {/* Right: FAQ accordion list */}
           <div className="space-y-3">
             {FAQ_ITEMS.map((item) => {
               const open = openId === item.id;
@@ -170,8 +97,8 @@ export function FaqSection() {
                   key={item.id}
                   className={`rounded-2xl overflow-hidden border transition-all duration-200 ${
                     open
-                      ? 'bg-gradient-to-br from-[#E9D5FF] via-[#F5F3FF] to-[#FCE7F3] border-transparent shadow-[0_18px_60px_rgba(233,213,255,0.35)]'
-                      : 'bg-white border-slate-200/80 hover:border-slate-300/90 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
+                      ? 'bg-gradient-to-br from-[#2C3B2E] via-[#354A38] to-[#1E2A20] border-transparent shadow-[0_18px_50px_rgba(44,59,46,0.28)]'
+                      : 'bg-white border-[#E6E3DB] hover:border-[#D5D0C6] shadow-[0_1px_2px_rgba(44,38,33,0.03)]'
                   }`}
                 >
                   <button
@@ -180,19 +107,23 @@ export function FaqSection() {
                     onClick={() => setOpenId(open ? null : item.id)}
                     className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4 min-h-[56px]"
                   >
-                    <span className="flex-1 font-outfit font-bold text-base tracking-tight text-slate-900">
+                    <span
+                      className={`flex-1 text-left font-playfair font-medium text-base tracking-tight ${
+                        open ? 'text-[#F9F8F6]' : 'text-[#2C2621]'
+                      }`}
+                    >
                       {t(item.qKey, locale)}
                     </span>
                     {open ? (
-                      <Minus size={22} className="shrink-0 text-[#2B2568]" aria-hidden />
+                      <Minus size={22} className="shrink-0 text-[#F9F8F6]/80" aria-hidden />
                     ) : (
-                      <Plus size={22} className="shrink-0 text-slate-900" aria-hidden />
+                      <Plus size={22} className="shrink-0 text-[#2C2621]" aria-hidden />
                     )}
                   </button>
 
                   {open ? (
                     <div className="px-5 sm:px-6 pb-6 pt-0">
-                      <p className="text-sm text-slate-600 font-medium leading-relaxed font-display">
+                      <p className="text-sm text-[#F9F8F6]/75 font-inter font-normal leading-relaxed">
                         {t(item.aKey, locale)}
                       </p>
                     </div>

@@ -116,6 +116,8 @@ export function InstantCheckoutDrawer({
         body: JSON.stringify({
           community_id: communityId,
           action: 'join',
+          purchase_amount: priceSek > 0 ? priceSek : 0,
+          product_name: `${communityName} membership`,
         }),
       });
       if (!joinRes.ok) {

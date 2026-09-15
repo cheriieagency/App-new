@@ -1,19 +1,7 @@
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { applyPostPinOverride } from '@/lib/demo-pin-state';
 import { ensureCommunitiesSchema } from '@/lib/communities/schema';
-
-function withDemoPins(posts: Array<Record<string, unknown>>) {
-  return posts.map((p) =>
-    applyPostPinOverride({
-      ...p,
-      id: Number(p.id),
-      is_pinned: Boolean(p.is_pinned),
-      pinned_at: (p.pinned_at as string | null | undefined) ?? null,
-    })
-  );
-}
 
 function sortPinnedFirst(posts: Array<Record<string, unknown>>) {
   return [...posts].sort((a, b) => {
@@ -44,12 +32,15 @@ export async function GET() {
     if (!Array.isArray(posts) || posts.length === 0) {
       return Response.json([]);
     }
-    return Response.json(
-      sortPinnedFirst(withDemoPins(posts as Array<Record<string, unknown>>))
-    );
+    // Demo pin overrides only apply when there is no live database.
+    const rows = posts as Array<Record<string, unknown>>;
+    return Response.json(sortPinnedFirst(rows));
   } catch (error) {
     console.error(error);
-    return Response.json([]);
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json([]);
+    }
+    return Response.json({ error: 'Failed to load feed' }, { status: 500 });
   }
 }
 

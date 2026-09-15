@@ -1,56 +1,65 @@
 /**
- * Shared landing typography — keep headers / subs / body coherent site-wide.
+ * Shared landing typography — Editorial Minimalism (Playfair + Inter).
+ * Matches waitlist / admin: alabaster paper, ink, forest accents & CTAs.
  * Product mockups (PlatformShowcaseStudio) may keep denser internal UI type.
  */
 
-/** Solid brand pink for headline accents (matches hero “built for social media.”) */
-export const ltAccent = 'text-[#F472B6]';
+/** Italic Playfair emphasis — same ink as headlines, cursive accent words */
+export const ltAccent = 'font-playfair italic font-normal text-[#2C2621]';
 
-/** Pink mono eyebrow above section titles */
+/** Quiet Inter eyebrow above section titles */
 export const ltEyebrow =
-  'text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6]';
+  'text-[10px] font-inter font-medium uppercase tracking-[0.18em] text-[#8A857D]';
 
 /** Soft pill badge (hero / comparison) */
 export const ltBadge =
-  'inline-flex items-center rounded-full bg-[#FCE7F3] border border-[#F472B6]/20 px-3.5 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#2B2568]';
+  'inline-flex items-center rounded-full border border-[#E6E3DB] bg-[rgba(44,59,46,0.06)] px-3.5 py-1.5 text-[10px] font-inter font-medium uppercase tracking-[0.18em] text-[#2C3B2E]';
 
-/** Primary page hero (waitlist + product hero) */
+/** Primary page hero */
 export const ltHero =
-  'font-outfit font-extrabold text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.08] text-slate-900';
+  'font-playfair font-medium text-4xl sm:text-5xl lg:text-[4.25rem] tracking-[-0.02em] leading-[1.08] text-[#2C2621]';
 
 /** Supporting line under hero */
 export const ltHeroSub =
-  'mt-4 mx-auto max-w-2xl text-slate-600 font-display text-base sm:text-lg leading-relaxed font-medium';
+  'mt-4 mx-auto max-w-2xl text-[#8A857D] font-inter text-base sm:text-lg leading-relaxed font-normal';
 
 /** Standard section H2 */
 export const ltSection =
-  'font-outfit font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 tracking-tight leading-tight';
+  'font-playfair font-medium text-3xl sm:text-4xl lg:text-5xl text-[#2C2621] tracking-[-0.02em] leading-[1.12]';
 
 /** Section supporting paragraph */
 export const ltSectionSub =
-  'mt-3 text-slate-600 font-medium text-base sm:text-lg leading-relaxed font-display';
+  'mt-3 text-[#8A857D] font-inter font-normal text-base sm:text-lg leading-relaxed';
 
 /** Card / feature title */
 export const ltCardTitle =
-  'font-outfit font-bold text-xl text-slate-900 tracking-tight';
+  'font-playfair font-medium text-xl text-[#2C2621] tracking-tight';
 
 /** Larger feature title (featured bento) */
 export const ltCardTitleLg =
-  'font-outfit font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight';
+  'font-playfair font-medium text-xl sm:text-2xl text-[#2C2621] tracking-tight';
 
 /** Card body copy */
 export const ltCardBody =
-  'mt-2 text-sm text-slate-600 font-display leading-relaxed';
+  'mt-2 text-sm text-[#8A857D] font-inter leading-relaxed';
 
 /** Muted helper / fine print */
-export const ltMuted = 'text-sm text-slate-500 font-display leading-relaxed';
+export const ltMuted = 'text-sm text-[#8A857D] font-inter leading-relaxed';
 
 /** Primary / secondary CTA label */
-export const ltCta = 'text-sm font-extrabold';
+export const ltCta = 'text-sm font-inter font-medium tracking-wide';
 
-/** Soft pink → white → lilac panel (matches comparison winner card) */
+/** Soft paper panel (replaces pink → lilac gradient) */
 export const ltGradientPanel =
-  'border border-[#E9D5FF] bg-gradient-to-br from-[#FCE7F3] via-white to-[#E9D5FF]/70 text-slate-900 shadow-[0_16px_40px_-12px_rgba(43,37,104,0.12)]';
+  'border border-[#E6E3DB] bg-gradient-to-br from-[#FFFFFF] via-[#F9F8F6] to-[rgba(44,59,46,0.06)] text-[#2C2621] shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]';
 
 /** Centered section header stack */
 export const ltHeaderWrap = 'max-w-2xl mx-auto text-center mb-8 sm:mb-10';
+
+/** Primary forest CTA fill */
+export const ltCtaPrimary =
+  'bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] shadow-none';
+
+/** Secondary outlined CTA */
+export const ltCtaSecondary =
+  'bg-[#FFFFFF] border border-[#E6E3DB] text-[#2C2621] hover:bg-[#F0EFEA] hover:border-[#D5D0C6]';

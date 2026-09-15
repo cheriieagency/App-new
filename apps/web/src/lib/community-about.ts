@@ -1,8 +1,5 @@
 import type { SearchableCommunity } from '@/components/landing/CommunitySearchAutocomplete';
-import {
-  getMockCommunitiesForUser,
-  normalizeCommunities,
-} from '@/lib/mock-communities';
+import { normalizeCommunities } from '@/lib/mock-communities';
 
 export type CommunityAbout = SearchableCommunity & {
   privacy: 'private' | 'public';
@@ -47,7 +44,7 @@ function monthlyPrice(c: SearchableCommunity): number {
   return 0;
 }
 
-/** Enrich a community row with About-page fields (API + mock safe). */
+/** Enrich a community row with About-page fields (API-backed only). */
 export function toCommunityAbout(c: SearchableCommunity): CommunityAbout {
   const price = monthlyPrice(c);
   const includes = INCLUDE_SETS[Number(c.id) % INCLUDE_SETS.length] ?? INCLUDE_SETS[0];
@@ -70,15 +67,8 @@ export function toCommunityAbout(c: SearchableCommunity): CommunityAbout {
   };
 }
 
+/** Resolve a community About page from live APIs only — never inject mock rows. */
 export async function fetchCommunityAbout(idOrSlug: string): Promise<CommunityAbout | null> {
-  const fromMock = () => {
-    const mock =
-      getMockCommunitiesForUser({ forceJoined: true }).find(
-        (c) => String(c.id) === idOrSlug || c.slug === idOrSlug
-      ) ?? null;
-    return mock ? toCommunityAbout(mock) : null;
-  };
-
   try {
     // Prefer direct lookup so newly created communities resolve immediately.
     const direct = await fetch(`/api/communities/${encodeURIComponent(idOrSlug)}`, {
@@ -90,13 +80,13 @@ export async function fetchCommunityAbout(idOrSlug: string): Promise<CommunityAb
     }
 
     const res = await fetch('/api/communities', { cache: 'no-store' });
+    if (!res.ok) return null;
     const data = await res.json();
     const list = normalizeCommunities(Array.isArray(data) ? data : []);
     const found =
       list.find((c) => String(c.id) === idOrSlug || c.slug === idOrSlug) ?? null;
-    if (found) return toCommunityAbout(found);
-    return fromMock();
+    return found ? toCommunityAbout(found) : null;
   } catch {
-    return fromMock();
+    return null;
   }
 }
