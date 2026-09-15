@@ -42,7 +42,7 @@ export function PricingSection() {
   return (
     <section
       id="pricing"
-      className="relative py-16 sm:py-24 overflow-hidden bg-[#FAFAFA]"
+      className="relative py-16 sm:py-24 overflow-hidden bg-[#F9F8F6]"
       aria-labelledby="pricing-heading"
     >
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
@@ -63,7 +63,7 @@ export function PricingSection() {
               key={labelKey}
               className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200/80 px-3.5 py-2 text-xs sm:text-sm font-bold text-slate-800 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
             >
-              <Icon size={14} className="text-[#F472B6] shrink-0" aria-hidden />
+              <Icon size={14} className="text-[#2C3B2E] shrink-0" aria-hidden />
               <span className="font-display">{t(labelKey, locale)}</span>
             </div>
           ))}
@@ -77,7 +77,7 @@ export function PricingSection() {
               onClick={() => setBillingCycle('monthly')}
               className={`h-11 min-h-[44px] px-5 rounded-xl text-sm font-extrabold transition-all ${
                 billingCycle === 'monthly'
-                  ? 'bg-[#1a1848] text-white shadow-sm'
+                  ? 'bg-[#243228] text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -88,12 +88,12 @@ export function PricingSection() {
               onClick={() => setBillingCycle('yearly')}
               className={`h-11 min-h-[44px] px-5 rounded-xl text-sm font-extrabold transition-all inline-flex items-center gap-2 ${
                 billingCycle === 'yearly'
-                  ? 'bg-[#1a1848] text-white shadow-sm'
+                  ? 'bg-[#243228] text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               {t('pricingYearly', locale)}
-              <span className="inline-flex items-center rounded-full bg-[#F472B6] text-white text-[10px] font-black uppercase tracking-wide px-2 py-0.5">
+              <span className="inline-flex items-center rounded-full bg-[#2C3B2E] text-white text-[10px] font-black uppercase tracking-wide px-2 py-0.5">
                 {t('pricingSave17', locale)}
               </span>
             </button>
@@ -118,14 +118,14 @@ export function PricingSection() {
             </p>
             <div className="mb-6">
               <div className="flex items-end gap-1.5">
-                <span className="font-outfit font-extrabold text-4xl text-slate-900 tabular-nums tracking-tight">
+                <span className="font-playfair font-extrabold text-4xl text-slate-900 tabular-nums tracking-tight">
                   0
                 </span>
                 <span className="text-sm font-bold text-slate-500 mb-1.5 font-mono">
                   {t('sekPerMo', locale)}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-[#F472B6] mt-1">
+              <p className="text-[11px] font-bold text-[#2C3B2E] mt-1">
                 {t('planFreeForever', locale)}
               </p>
             </div>
@@ -158,9 +158,9 @@ export function PricingSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-40px' }}
             transition={{ duration: 0.4, delay: 0.06 }}
-            className="relative bg-white border-2 border-[#F472B6] rounded-2xl p-6 sm:p-7 flex flex-col shadow-lg shadow-[#F472B6]/10"
+            className="relative bg-white border-2 border-[#2C3B2E] rounded-2xl p-6 sm:p-7 flex flex-col shadow-lg shadow-[#2C3B2E]/10"
           >
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide text-white px-3.5 py-1.5 rounded-full whitespace-nowrap bg-[#F472B6] shadow-md shadow-[#F472B6]/30">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide text-white px-3.5 py-1.5 rounded-full whitespace-nowrap bg-[#2C3B2E] shadow-md shadow-[#2C3B2E]/30">
               {t('mostPopular', locale)}
             </span>
             <h3 className={`${ltCardTitle} mt-1`}>
@@ -171,7 +171,7 @@ export function PricingSection() {
             </p>
             <div className="mb-6">
               <div className="flex items-end gap-1.5">
-                <span className="font-outfit font-extrabold text-4xl text-slate-900 tabular-nums tracking-tight">
+                <span className="font-playfair font-extrabold text-4xl text-slate-900 tabular-nums tracking-tight">
                   {creatorPrice}
                 </span>
                 <span className="text-sm font-bold text-slate-500 mb-1.5 font-mono">
@@ -180,7 +180,7 @@ export function PricingSection() {
               </div>
               <p
                 className={`text-[11px] font-bold mt-1 ${
-                  yearly ? 'text-[#F472B6]' : 'text-[#F472B6]'
+                  yearly ? 'text-[#2C3B2E]' : 'text-[#2C3B2E]'
                 }`}
               >
                 {yearly
@@ -209,7 +209,7 @@ export function PricingSection() {
                 >
                   <Check
                     size={16}
-                    className="mt-0.5 flex-shrink-0 text-[#F472B6]"
+                    className="mt-0.5 flex-shrink-0 text-[#2C3B2E]"
                   />
                   {t(f.key, locale)}
                 </li>
@@ -217,7 +217,7 @@ export function PricingSection() {
             </ul>
             <Link
               href={`/onboarding?plan=creator&billing=${billingCycle}`}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] bg-[#F472B6] hover:bg-[#F472B6]/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] bg-[#2C3B2E] hover:bg-[#2C3B2E]/90 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-none transition-all active:scale-[0.98]"
             >
               {t('planCreatorCta', locale)}
             </Link>
@@ -231,7 +231,7 @@ export function PricingSection() {
             transition={{ duration: 0.4, delay: 0.12 }}
             className="relative bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 flex flex-col shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
           >
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide text-[#2B2568] bg-[#E9D5FF]/70 border border-[#E9D5FF] px-3 py-1.5 rounded-full whitespace-nowrap">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-wide text-[#2C2621] bg-[#E6E3DB]/70 border border-[#E6E3DB] px-3 py-1.5 rounded-full whitespace-nowrap">
               {t('planProBadge', locale)}
             </span>
             <h3 className={`${ltCardTitle} mt-1`}>
@@ -242,7 +242,7 @@ export function PricingSection() {
             </p>
             <div className="mb-6">
               <div className="flex items-end gap-1.5">
-                <span className="font-outfit font-extrabold text-4xl text-slate-900 tabular-nums tracking-tight">
+                <span className="font-playfair font-extrabold text-4xl text-slate-900 tabular-nums tracking-tight">
                   {proPrice}
                 </span>
                 <span className="text-sm font-bold text-slate-500 mb-1.5 font-mono">
@@ -251,7 +251,7 @@ export function PricingSection() {
               </div>
               <p
                 className={`text-[11px] font-bold mt-1 ${
-                  yearly ? 'text-[#F472B6]' : 'text-[#F472B6]'
+                  yearly ? 'text-[#2C3B2E]' : 'text-[#2C3B2E]'
                 }`}
               >
                 {yearly ? t('planProSubYearly', locale) : t('planBilledMonthly', locale)}
@@ -273,13 +273,13 @@ export function PricingSection() {
                   key={f.key}
                   className={`flex items-start gap-2 text-sm font-display ${
                     f.highlight
-                      ? 'font-extrabold text-[#F472B6]'
+                      ? 'font-extrabold text-[#2C3B2E]'
                       : 'font-medium text-slate-800'
                   }`}
                 >
                   <Check
                     size={16}
-                    className="mt-0.5 flex-shrink-0 text-[#F472B6]"
+                    className="mt-0.5 flex-shrink-0 text-[#2C3B2E]"
                   />
                   {t(f.key, locale)}
                 </li>
@@ -287,7 +287,7 @@ export function PricingSection() {
             </ul>
             <Link
               href={`/onboarding?plan=pro&billing=${billingCycle}`}
-              className="inline-flex items-center justify-center min-h-[44px] bg-[#0F172A] hover:bg-[#1a1848] text-white font-bold py-3.5 rounded-xl transition-colors"
+              className="inline-flex items-center justify-center min-h-[44px] bg-[#2C3B2E] hover:bg-[#243228] text-white font-bold py-3.5 rounded-xl transition-colors"
             >
               {t('planProCta', locale)}
             </Link>
@@ -298,7 +298,7 @@ export function PricingSection() {
         <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-8 text-sm font-bold text-slate-600">
           {TRUST_ROW.map(({ icon: Icon, labelKey }) => (
             <p key={labelKey} className="inline-flex items-center gap-2 font-display">
-              <Icon size={15} className="text-[#F472B6] shrink-0" aria-hidden />
+              <Icon size={15} className="text-[#2C3B2E] shrink-0" aria-hidden />
               {t(labelKey, locale)}
             </p>
           ))}

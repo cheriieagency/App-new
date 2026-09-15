@@ -53,7 +53,7 @@ const CATEGORY_PILLS: { labelKey: TranslationKey; filter: string; icon: LucideIc
   { labelKey: 'catCoaching', filter: 'Coaching', icon: Users },
 ];
 
-const COVER_TONES = ['bg-[#2B2568]', 'bg-[#0F172A]', 'bg-[#1a1848]'] as const;
+const COVER_TONES = ['bg-[#2C2621]', 'bg-[#2C3B2E]', 'bg-[#243228]'] as const;
 
 function formatMembers(count: number, locale: string) {
   return count.toLocaleString(locale === 'en' ? 'en-US' : 'sv-SE');
@@ -98,7 +98,7 @@ export function ShowcaseSection({
   return (
     <section
       id="communities"
-      className="relative py-16 sm:py-24 scroll-mt-20 overflow-visible bg-[#FAFAFA]"
+      className="relative py-16 sm:py-24 scroll-mt-20 overflow-visible bg-[#F9F8F6]"
       aria-labelledby="communities-heading"
     >
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 overflow-visible">
@@ -134,11 +134,11 @@ export function ShowcaseSection({
                 onClick={() => onSearchChange(active && cat.filter ? '' : cat.filter)}
                 className={
                   active
-                    ? 'inline-flex items-center gap-1.5 bg-[#1a1848] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm min-h-[44px]'
+                    ? 'inline-flex items-center gap-1.5 bg-[#243228] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm min-h-[44px]'
                     : 'inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] min-h-[44px]'
                 }
               >
-                <Icon size={14} className={active ? 'text-[#F472B6]' : 'text-slate-400'} aria-hidden />
+                <Icon size={14} className={active ? 'text-[#2C3B2E]' : 'text-slate-400'} aria-hidden />
                 {t(cat.labelKey, locale)}
               </button>
             );
@@ -149,7 +149,7 @@ export function ShowcaseSection({
         {hero && (
           <div className="mb-12">
             <div className="flex items-center gap-3 mb-5">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#F472B6]">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-[#2C3B2E]">
                 {t('communityOfWeek', locale)}
               </p>
               <div className="flex-1 h-px bg-slate-200/80" />
@@ -161,13 +161,13 @@ export function ShowcaseSection({
               <div className="relative grid lg:grid-cols-[1.4fr_0.7fr] gap-8 items-center">
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="inline-flex items-center text-xs font-bold bg-[#F472B6]/15 text-[#F472B6] border border-[#F472B6]/25 px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center text-xs font-bold bg-[#2C3B2E]/15 text-[#2C3B2E] border border-[#2C3B2E]/25 px-2.5 py-1 rounded-full">
                       #{categoryTag(hero.category, locale)}
                     </span>
-                    <span className="inline-flex items-center text-xs font-bold text-[#2B2568] bg-white/80 border border-[#E9D5FF] px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center text-xs font-bold text-[#2C2621] bg-white/80 border border-[#E6E3DB] px-2.5 py-1 rounded-full">
                       Sofia Bergström
                     </span>
-                    <span className="inline-flex items-center text-xs font-bold bg-white/80 text-[#2B2568] border border-[#E9D5FF] px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center text-xs font-bold bg-white/80 text-[#2C2621] border border-[#E6E3DB] px-2.5 py-1 rounded-full">
                       {t('reviewsLabel', locale)}
                     </span>
                   </div>
@@ -179,25 +179,25 @@ export function ShowcaseSection({
                   </p>
 
                   <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-slate-700">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E9D5FF] px-3 py-1.5">
-                      <Users size={14} className="text-[#F472B6]" aria-hidden />
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E6E3DB] px-3 py-1.5">
+                      <Users size={14} className="text-[#2C3B2E]" aria-hidden />
                       {formatMembers(hero.member_count, locale)} {t('activeMembersLabel', locale)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E9D5FF] px-3 py-1.5">
-                      <Zap size={14} className="text-[#F472B6]" aria-hidden />{' '}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E6E3DB] px-3 py-1.5">
+                      <Zap size={14} className="text-[#2C3B2E]" aria-hidden />{' '}
                       {t('instantAccessBadge', locale)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E9D5FF] px-3 py-1.5">
-                      <BookOpen size={14} className="text-[#2B2568]" aria-hidden />{' '}
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-[#E6E3DB] px-3 py-1.5">
+                      <BookOpen size={14} className="text-[#2C2621]" aria-hidden />{' '}
                       {t('coursesIncluded', locale)}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-[#E9D5FF] flex items-center shadow-sm">
+                <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-[#E6E3DB] flex items-center shadow-sm">
                   <Link
                     href={`/communities/${hero.id}`}
-                    className={`w-full bg-[#F472B6] hover:bg-[#F472B6]/90 text-white ${ltCta} px-6 py-3.5 rounded-xl shadow-lg shadow-[#F472B6]/25 flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-[0.98]`}
+                    className={`w-full bg-[#2C3B2E] hover:bg-[#2C3B2E]/90 text-white ${ltCta} px-6 py-3.5 rounded-xl shadow-lg shadow-none flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-[0.98]`}
                   >
                     {t('viewCommunity', locale)} →
                   </Link>
@@ -218,7 +218,7 @@ export function ShowcaseSection({
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="text-xs font-bold text-[#F472B6] hover:text-[#2B2568] min-h-11 px-2 transition-colors"
+              className="text-xs font-bold text-[#2C3B2E] hover:text-[#2C2621] min-h-11 px-2 transition-colors"
             >
               {t('clearFilterShort', locale)}
             </button>
@@ -237,7 +237,7 @@ export function ShowcaseSection({
                 </span>
               </div>
               <div className="p-5 flex flex-col flex-1">
-                <h3 className="font-outfit text-lg font-bold text-slate-900 mb-1 tracking-tight">
+                <h3 className="font-playfair text-lg font-bold text-slate-900 mb-1 tracking-tight">
                   {community.name}
                 </h3>
                 <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4 flex-1 font-display">
@@ -248,7 +248,7 @@ export function ShowcaseSection({
                 </p>
                 <Link
                   href={`/communities/${community.id}`}
-                  className={`inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-[#0F172A] hover:bg-[#1a1848] text-white ${ltCta} px-4 py-3 rounded-xl transition-colors`}
+                  className={`inline-flex items-center justify-center gap-1.5 min-h-[44px] bg-[#2C3B2E] hover:bg-[#243228] text-white ${ltCta} px-4 py-3 rounded-xl transition-colors`}
                 >
                   {t('joinArrow', locale)}
                 </Link>
@@ -266,7 +266,7 @@ export function ShowcaseSection({
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="mt-3 text-sm text-[#F472B6] font-bold hover:text-[#2B2568] min-h-11 transition-colors"
+              className="mt-3 text-sm text-[#2C3B2E] font-bold hover:text-[#2C2621] min-h-11 transition-colors"
             >
               {t('showAllShort', locale)}
             </button>

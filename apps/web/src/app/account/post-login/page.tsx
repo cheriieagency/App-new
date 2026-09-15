@@ -52,9 +52,9 @@ function PostLoginInner() {
   }, [isPending, session?.user, searchParams]);
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center gap-4 px-6">
+    <div className="min-h-screen bg-[#F9F8F6] flex flex-col items-center justify-center gap-4 px-6">
       <ClikdMark size={40} className="rounded-xl" />
-      <p className="text-sm font-bold text-slate-600">{message}</p>
+      <p className="text-sm font-bold text-[#8A857D]">{message}</p>
     </div>
   );
 }
@@ -63,7 +63,7 @@ export default function PostLoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center text-sm font-bold text-slate-500">
+        <div className="min-h-screen bg-[#F9F8F6] flex items-center justify-center text-sm font-bold text-[#8A857D]">
           Signing you in…
         </div>
       }

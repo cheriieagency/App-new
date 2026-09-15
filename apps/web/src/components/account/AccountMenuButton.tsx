@@ -39,8 +39,8 @@ type AccountMenuButtonProps = {
 };
 
 function ActionIcon({ icon }: { icon?: AccountMenuAction['icon'] }) {
-  if (icon === 'settings') return <Settings size={14} className="text-slate-400" />;
-  if (icon === 'user') return <User size={14} className="text-slate-400" />;
+  if (icon === 'settings') return <Settings size={14} className="text-[#8A857D]" />;
+  if (icon === 'user') return <User size={14} className="text-[#8A857D]" />;
   if (icon === 'logout') return <LogOut size={14} />;
   return null;
 }
@@ -78,7 +78,7 @@ export default function AccountMenuButton({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`${btnSize} relative rounded-full overflow-hidden border border-slate-200 shadow-sm bg-slate-900 flex items-center justify-center text-white text-xs font-bold`}
+        className={`${btnSize} relative rounded-full overflow-hidden border border-[#E6E3DB] shadow-sm bg-[#2C3B2E] flex items-center justify-center text-white text-xs font-bold`}
         title={displayName}
         aria-expanded={open}
         aria-haspopup="menu"
@@ -106,10 +106,10 @@ export default function AccountMenuButton({
           />
           <div
             role="menu"
-            className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-80 bg-white border border-[#E6E3DB] rounded-2xl shadow-xl z-50 overflow-hidden"
           >
-            <div className="px-4 py-4 border-b border-slate-100 flex items-center gap-3">
-              <div className="relative h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+            <div className="px-4 py-4 border-b border-[#E6E3DB] flex items-center gap-3">
+              <div className="relative h-11 w-11 min-h-[44px] min-w-[44px] rounded-full overflow-hidden border border-[#E6E3DB] bg-[#2C3B2E] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                 {user.image ? (
                   <OptimizedImage
                     src={user.image}
@@ -123,30 +123,30 @@ export default function AccountMenuButton({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-extrabold text-slate-900 truncate">
+                <p className="text-sm font-extrabold text-[#2C2621] truncate">
                   {displayName}
                 </p>
-                <p className="text-xs font-medium text-slate-500 truncate flex items-center gap-1 mt-0.5">
-                  <Mail size={11} className="flex-shrink-0 text-slate-400" />
+                <p className="text-xs font-medium text-[#8A857D] truncate flex items-center gap-1 mt-0.5">
+                  <Mail size={11} className="flex-shrink-0 text-[#8A857D]" />
                   {user.email || '—'}
                 </p>
               </div>
             </div>
 
-            <div className="px-4 py-3 border-b border-slate-100 space-y-2">
-              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400">
+            <div className="px-4 py-3 border-b border-[#E6E3DB] space-y-2">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-[#8A857D]">
                 {title}
               </p>
-              <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 space-y-1.5">
+              <div className="rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] px-3 py-2.5 space-y-1.5">
                 {rows.map((row) => (
                   <div
                     key={row.label}
                     className="flex items-start justify-between gap-2"
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#8A857D]">
                       {row.label}
                     </span>
-                    <span className="text-xs font-semibold text-slate-700 text-right break-all">
+                    <span className="text-xs font-semibold text-[#2C2621] text-right break-all">
                       {row.value}
                     </span>
                   </div>
@@ -165,7 +165,7 @@ export default function AccountMenuButton({
                       setOpen(false);
                       action.onClick();
                     }}
-                    className="w-full flex items-center gap-2.5 px-4 py-3 min-h-[44px] text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-4 py-3 min-h-[44px] text-left text-xs font-semibold text-[#2C2621] hover:bg-[#F0EFEA] transition-colors"
                   >
                     <ActionIcon icon={action.icon} />
                     {action.label}
@@ -174,7 +174,7 @@ export default function AccountMenuButton({
               </div>
             ) : null}
 
-            <div className="border-t border-slate-100 p-2">
+            <div className="border-t border-[#E6E3DB] p-2">
               <button
                 type="button"
                 role="menuitem"
@@ -182,7 +182,7 @@ export default function AccountMenuButton({
                   setOpen(false);
                   onSignOut();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-left text-xs font-semibold text-[#B85C38] hover:bg-[rgba(184,92,56,0.08)] transition-colors"
               >
                 <LogOut size={14} />
                 {signOutLabel}

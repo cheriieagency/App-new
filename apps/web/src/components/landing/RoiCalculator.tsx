@@ -24,7 +24,7 @@ const CONVERSION_MAX = 10;
 const CONVERSION_STEP = 0.5;
 
 const sliderAccent =
-  'py-2 [&_[data-slot=slider-track]]:bg-slate-200 [&_[data-slot=slider-range]]:bg-[#F472B6] [&_[data-slot=slider-thumb]]:border-[#F472B6] [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-sm';
+  'py-2 [&_[data-slot=slider-track]]:bg-slate-200 [&_[data-slot=slider-range]]:bg-[#2C3B2E] [&_[data-slot=slider-thumb]]:border-[#2C3B2E] [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-sm';
 
 function formatNum(value: number, locale: string) {
   return value.toLocaleString(locale === 'en' ? 'en-US' : 'sv-SE');
@@ -58,7 +58,7 @@ export function RoiCalculator() {
   return (
     <section
       id="roi"
-      className="relative py-16 sm:py-24 overflow-hidden bg-[#FAFAFA]"
+      className="relative py-16 sm:py-24 overflow-hidden bg-[#F9F8F6]"
       aria-labelledby="roi-heading"
     >
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
@@ -79,7 +79,7 @@ export function RoiCalculator() {
                     <label className="text-sm font-bold text-slate-900 font-display">
                       {t('roiFollowers', locale)}
                     </label>
-                    <span className="text-sm font-extrabold text-[#2B2568] rounded-full bg-[#E9D5FF]/50 border border-[#E9D5FF] px-3 py-1 font-mono tabular-nums">
+                    <span className="text-sm font-extrabold text-[#2C2621] rounded-full bg-[#E6E3DB]/50 border border-[#E6E3DB] px-3 py-1 font-mono tabular-nums">
                       {formatNum(followers, locale)}
                     </span>
                   </div>
@@ -102,7 +102,7 @@ export function RoiCalculator() {
                     <label className="text-sm font-bold text-slate-900 font-display">
                       {t('roiMonthlyPrice', locale)}
                     </label>
-                    <span className="text-sm font-extrabold text-[#2B2568] rounded-full bg-[#E9D5FF]/50 border border-[#E9D5FF] px-3 py-1 font-mono tabular-nums">
+                    <span className="text-sm font-extrabold text-[#2C2621] rounded-full bg-[#E6E3DB]/50 border border-[#E6E3DB] px-3 py-1 font-mono tabular-nums">
                       {formatNum(price, locale)} SEK
                     </span>
                   </div>
@@ -125,7 +125,7 @@ export function RoiCalculator() {
                     <label className="text-sm font-bold text-slate-900 font-display">
                       {t('roiConversion', locale)}
                     </label>
-                    <span className="text-sm font-extrabold text-[#2B2568] rounded-full bg-[#E9D5FF]/50 border border-[#E9D5FF] px-3 py-1 font-mono tabular-nums">
+                    <span className="text-sm font-extrabold text-[#2C2621] rounded-full bg-[#E6E3DB]/50 border border-[#E6E3DB] px-3 py-1 font-mono tabular-nums">
                       {formatPct(conversionPct, locale)}
                     </span>
                   </div>
@@ -150,7 +150,7 @@ export function RoiCalculator() {
             >
               <div className="relative">
                 <p className={`${ltEyebrow} mb-4`}>{t('roiEstimatedRevenue', locale)}</p>
-                <p className="font-outfit font-extrabold text-4xl sm:text-5xl tracking-tight text-slate-900 mb-4 tabular-nums">
+                <p className="font-playfair font-extrabold text-4xl sm:text-5xl tracking-tight text-slate-900 mb-4 tabular-nums">
                   {formatNum(monthlyIncome, locale)}
                   <span className="text-lg font-bold text-slate-500 ml-1.5">SEK/mo</span>
                 </p>
@@ -162,7 +162,7 @@ export function RoiCalculator() {
                 </p>
                 <Link
                   href="/onboarding"
-                  className={`inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-xl ${ltCta} text-white bg-[#F472B6] hover:bg-[#F472B6]/90 shadow-lg shadow-[#F472B6]/25 transition-all active:scale-[0.98]`}
+                  className={`inline-flex items-center justify-center gap-2 min-h-12 px-7 rounded-xl ${ltCta} text-white bg-[#2C3B2E] hover:bg-[#2C3B2E]/90 shadow-lg shadow-none transition-all active:scale-[0.98]`}
                 >
                   {t('landingCtaStartFree', locale)}
                 </Link>
