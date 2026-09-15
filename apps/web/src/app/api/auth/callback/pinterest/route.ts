@@ -16,6 +16,20 @@ import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
 import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 import { NextResponse } from 'next/server';
 
+function resolveRequestOrigin(request: Request): string {
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (forwardedHost) {
+    const proto = forwardedProto || 'http';
+    try {
+      return new URL(`${proto}://${forwardedHost}`).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  return new URL(request.url).origin;
+}
+
 function clearState(res: NextResponse) {
   res.cookies.set(PINTEREST_OAUTH_STATE_COOKIE, '', {
     httpOnly: true,
@@ -31,7 +45,7 @@ export async function GET(request: Request) {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const oauthError = url.searchParams.get('error');
-  const origin = url.origin;
+  const origin = resolveRequestOrigin(request);
 
   const fail = (reason: string, detail?: string) => {
     const dest = new URL('/admin/settings/socials', origin);

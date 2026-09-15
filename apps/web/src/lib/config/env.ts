@@ -172,12 +172,26 @@ function originOf(value?: string | null): string {
 /**
  * Public app origin for OAuth redirect_uri builders and absolute links.
  * Prefer the live request host so localhost Connect does not bounce to
- * production when NEXTAUTH_URL is https://clikd.app.
+ * production when NEXTAUTH_URL still points at https://clikd.app.
+ * Never returns a www host or a trailing slash.
  */
 export function appBaseUrl(requestOrigin?: string | null): string {
-  const request = originOf(requestOrigin);
-  if (request) return request;
+  const normalizeOrigin = (raw: string): string => {
+    const u = new URL(raw);
+    if (u.hostname.startsWith('www.')) u.hostname = u.hostname.slice(4);
+    return u.origin; // origin never includes a trailing slash
+  };
 
+  const request = originOf(requestOrigin);
+  if (request) {
+    try {
+      return normalizeOrigin(request);
+    } catch {
+      return request;
+    }
+  }
+
+  // Prefer Better Auth / public app URL over legacy NEXTAUTH_URL.
   const fromEnv =
     readEnv('BETTER_AUTH_URL') ||
     readEnv('NEXT_PUBLIC_APP_URL') ||
@@ -185,7 +199,7 @@ export function appBaseUrl(requestOrigin?: string | null): string {
     readEnv('NEXTAUTH_URL');
   const candidate = fromEnv || 'https://clikd.app';
   try {
-    return new URL(candidate).origin;
+    return normalizeOrigin(candidate);
   } catch {
     return 'https://clikd.app';
   }

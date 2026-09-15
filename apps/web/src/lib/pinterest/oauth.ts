@@ -27,18 +27,35 @@ function isLocalOrigin(origin: string | null | undefined): boolean {
 }
 
 /**
+ * Normalize OAuth redirect URIs for exact Pinterest matching:
+ * no trailing slash, no www., no query/hash.
+ */
+export function normalizeOAuthRedirectUri(uri: string): string {
+  const parsed = new URL(uri.trim());
+  if (parsed.hostname.startsWith('www.')) {
+    parsed.hostname = parsed.hostname.slice(4);
+  }
+  parsed.search = '';
+  parsed.hash = '';
+  const path = parsed.pathname.replace(/\/+$/, '') || '';
+  return `${parsed.protocol}//${parsed.host}${path}`;
+}
+
+/**
  * Absolute redirect_uri for authorize + token exchange (must be identical).
  * On localhost, always derive from the live request origin so a production
  * PINTEREST_REDIRECT_URI in .env.local does not send the code to clikd.app.
  * Otherwise prefer the explicit env URI when set (must match Pinterest console).
  */
 export function getPinterestCallbackUrl(requestOrigin?: string | null): string {
-  const derived = `${appBaseUrl(requestOrigin)}/api/auth/callback/pinterest`;
+  const derived = normalizeOAuthRedirectUri(
+    `${appBaseUrl(requestOrigin)}/api/auth/callback/pinterest`
+  );
   if (isLocalOrigin(requestOrigin) || isLocalOrigin(derived)) {
     return derived;
   }
-  const explicit = pinterestEnv.redirectUri()?.replace(/\/$/, '');
-  if (explicit) return explicit;
+  const explicit = pinterestEnv.redirectUri()?.trim();
+  if (explicit) return normalizeOAuthRedirectUri(explicit);
   return derived;
 }
 

@@ -31,9 +31,33 @@ function popupFail(origin: string, reason: string, detail?: string) {
   });
 }
 
+function requestOrigin(request: Request): string {
+  // Prefer forwarded host when present (proxies), else the request URL origin.
+  const headersList = request.headers;
+  const forwardedHost = headersList.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const forwardedProto = headersList.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (forwardedHost) {
+    const proto = forwardedProto || 'http';
+    try {
+      const origin = new URL(`${proto}://${forwardedHost}`).origin;
+      // Local Connect must stay on localhost even if a stale NEXTAUTH_URL leaks.
+      if (
+        forwardedHost.startsWith('localhost') ||
+        forwardedHost.startsWith('127.0.0.1')
+      ) {
+        return origin;
+      }
+      return origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  return new URL(request.url).origin;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const origin = url.origin;
+  const origin = requestOrigin(request);
 
   const missing = missingEnvKeys(...pinterestEnv.requiredKeys);
   if (missing.length) {
