@@ -13,6 +13,7 @@ import {
   SOCIAL_PLATFORMS,
 } from '@/lib/social/persist';
 import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace';
+import { healPinterestAccountIdentity } from '@/lib/pinterest/heal-identity';
 import type { ConnectedSocialAccount } from '@/lib/mock-content-planner';
 
 function emptyAccounts(): ConnectedSocialAccount[] {
@@ -117,6 +118,20 @@ export async function GET(request: Request) {
       }
     } else {
       workspaceId = preferredWorkspaceId;
+    }
+
+    // Heal Pinterest chips that still show opaque ids instead of @username.
+    if (workspaceId) {
+      accounts = await Promise.all(
+        accounts.map(async (account) => {
+          if (account.platform !== 'pinterest' || !account.connected) return account;
+          return healPinterestAccountIdentity({
+            userId,
+            workspaceId: workspaceId!,
+            account,
+          });
+        })
+      );
     }
 
     return Response.json(okPayload(accounts, workspaceId));

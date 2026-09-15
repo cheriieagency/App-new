@@ -165,10 +165,50 @@ export async function refreshPinterestAccessToken(
 export type PinterestUserAccount = {
   username?: string;
   account_type?: string;
+  /** Brand / business display name when account_type is BUSINESS. */
+  business_name?: string | null;
   profile_image?: string;
   website_url?: string;
   id?: string;
+  follower_count?: number | null;
 };
+
+/** Resolve a human label + @handle from a Pinterest user_account payload. */
+export function resolvePinterestAccountIdentity(profile: PinterestUserAccount & Record<string, unknown>): {
+  externalId: string;
+  username: string | null;
+  displayName: string;
+  handle: string | null;
+  avatarUrl: string | null;
+} {
+  // Pinterest may expose username under a few shapes depending on account type.
+  const usernameRaw =
+    profile.username ||
+    (typeof profile['user_name'] === 'string' ? profile['user_name'] : '') ||
+    (typeof profile['full_name'] === 'string' ? '' : '') ||
+    '';
+  const username = String(usernameRaw).trim().replace(/^@/, '') || null;
+  const businessName =
+    (profile.business_name || '').trim() ||
+    (typeof profile['businessName'] === 'string' ? profile['businessName'].trim() : '') ||
+    null;
+  const externalId = String(profile.id || username || '').trim();
+  const displayName =
+    businessName ||
+    username ||
+    (externalId && !/^[a-z0-9]{16,}$/i.test(externalId)
+      ? externalId
+      : null) ||
+    'Pinterest account';
+  const handle = username ? `@${username}` : null;
+  const avatarUrl =
+    profile.profile_image?.trim() ||
+    (typeof profile['profile_image_url'] === 'string'
+      ? profile['profile_image_url'].trim()
+      : null) ||
+    null;
+  return { externalId, username, displayName, handle, avatarUrl };
+}
 
 /** Fetch authenticated user_account profile. */
 export async function fetchPinterestUserAccount(

@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/dialog';
 import { localeTag, useLanguage } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
+import { looksLikeOpaquePinterestId } from '@/lib/pinterest/heal-identity';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import WorkspaceOAuthGuideBanner from '@/components/admin/WorkspaceOAuthGuideBanner';
 import GoogleIntegrationCard from '@/components/admin/GoogleIntegrationCard';
@@ -137,11 +138,32 @@ function ConnectedAccountChip({
           : PLATFORM_META.tiktok?.label || 'TikTok'
         : PLATFORM_META[account.platform as SocialPlatform]?.label ||
           account.platform.charAt(0).toUpperCase() + account.platform.slice(1);
+
+  // Prefer human Pinterest username / business name — never show opaque ids in the chip.
+  const rawName = account.display_name?.trim() || null;
+  const rawHandle = account.handle?.trim() || null;
+  const niceName =
+    rawName && !looksLikeOpaquePinterestId(rawName) ? rawName : null;
+  const niceHandle =
+    rawHandle && !looksLikeOpaquePinterestId(rawHandle) ? rawHandle : null;
   const label =
-    account.display_name ||
-    account.handle ||
-    account.page_name ||
-    'Connected account';
+    account.platform === 'pinterest'
+      ? niceName ||
+        (niceHandle ? niceHandle.replace(/^@/, '') : null) ||
+        'Pinterest account'
+      : rawName || rawHandle || account.page_name || 'Connected account';
+  const subtitle =
+    account.platform === 'pinterest'
+      ? niceHandle &&
+        niceHandle.replace(/^@/, '').toLowerCase() !== label.toLowerCase()
+        ? niceHandle
+        : null
+      : rawHandle && rawHandle !== label
+        ? rawHandle
+        : account.page_name && account.page_name !== label
+          ? `Page · ${account.page_name}`
+          : null;
+
   return (
     <div className="flex items-center gap-2 min-w-0 mt-2 px-1">
       {account.avatar_url ? (
@@ -164,13 +186,9 @@ function ConnectedAccountChip({
           {platformLabel}
         </p>
         <p className="text-xs font-medium text-[#2C2621] truncate">{label}</p>
-        {account.handle && account.handle !== label ? (
+        {subtitle ? (
           <p className="text-[11px] font-medium text-[#8A857D] truncate font-mono">
-            {account.handle}
-          </p>
-        ) : account.page_name && account.page_name !== label ? (
-          <p className="text-[11px] font-medium text-[#8A857D] truncate">
-            Page · {account.page_name}
+            {subtitle}
           </p>
         ) : null}
       </div>

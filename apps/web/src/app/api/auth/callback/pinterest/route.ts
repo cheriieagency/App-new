@@ -9,6 +9,7 @@ import {
   PINTEREST_OAUTH_STATE_COOKIE,
   exchangePinterestCode,
   fetchPinterestUserAccount,
+  resolvePinterestAccountIdentity,
 } from '@/lib/pinterest/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
@@ -95,23 +96,22 @@ export async function GET(request: Request) {
   try {
     const tokens = await exchangePinterestCode(code, origin);
     const profile = await fetchPinterestUserAccount(tokens.access_token);
-    const username = (profile.username || '').trim();
-    // Prefer stable id when present; fall back to username.
-    const externalId = String(profile.id || username || '').trim();
-    if (!externalId) return fail('pinterest_missing_account_id');
+    const identity = resolvePinterestAccountIdentity(profile);
+    if (!identity.externalId) return fail('pinterest_missing_account_id');
 
     await upsertOAuthSocialAccount({
       userId,
       platform: 'pinterest',
-      externalId,
-      handle: username ? `@${username.replace(/^@/, '')}` : `@${externalId}`,
-      displayName: username || externalId,
-      avatarUrl: profile.profile_image ?? null,
+      externalId: identity.externalId,
+      handle: identity.handle,
+      displayName: identity.displayName,
+      avatarUrl: identity.avatarUrl,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? null,
       expiresIn: tokens.expires_in ?? null,
       workspaceId: ownedWorkspaceId,
       scope: tokens.scope ?? null,
+      followersCount: profile.follower_count ?? null,
     });
 
     const dest = new URL('/admin/settings/socials', origin);
