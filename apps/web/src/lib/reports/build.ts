@@ -180,6 +180,10 @@ export async function buildAndSaveReport(input: {
   includeAiAnalysis?: boolean;
   hideAiOnPublicLink?: boolean;
   isAutomated?: boolean;
+  /** Guest report modules — frozen into metrics.options in Supabase. */
+  includeInDepth?: boolean;
+  includeCharts?: boolean;
+  includeCsv?: boolean;
 }): Promise<{ report: MonthlyReportRow | null; metrics: ReportMetrics; ai: AiInsights | null }> {
   const startDate =
     String(input.startDate || '').slice(0, 10) ||
@@ -197,13 +201,22 @@ export async function buildAndSaveReport(input: {
     (await resolveWorkspaceDisplayName(input.workspaceId)) ||
     'Workspace';
 
-  const metrics = await collectReportMetrics({
+  const baseMetrics = await collectReportMetrics({
     userId: input.userId,
     workspaceId: input.workspaceId,
     startDate,
     endDate,
     platforms,
   });
+
+  const metrics: ReportMetrics = {
+    ...baseMetrics,
+    options: {
+      includeInDepth: input.includeInDepth !== false,
+      includeCharts: input.includeCharts !== false,
+      includeCsv: input.includeCsv !== false,
+    },
+  };
 
   let ai: AiInsights | null = null;
   if (input.includeAiAnalysis !== false) {

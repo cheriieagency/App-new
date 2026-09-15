@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
   Check,
+  GripVertical,
   Link2,
   Loader2,
   Palette,
@@ -82,12 +83,40 @@ type KanbanColumnId = 'todo' | 'doing' | 'done';
 type KanbanTask = {
   id: string;
   title: string;
-  categoryKey: NestedKey;
+  /** i18n key (`admin.catGeneral`) or a custom free-text label. */
+  category: string;
   assignee: string;
   column: KanbanColumnId;
   /** ISO `YYYY-MM-DD` when set. */
   dueDate: string | null;
 };
+
+/** Built-in category chips; anything else is treated as a custom label. */
+const CATEGORY_PRESETS: { value: string; labelKey?: NestedKey; label?: string }[] =
+  [
+    { value: 'admin.catGeneral', labelKey: 'admin.catGeneral' },
+    { value: 'Marketing', label: 'Marketing' },
+    { value: 'Content', label: 'Content' },
+    { value: 'Community', label: 'Community' },
+    { value: 'Sales', label: 'Sales' },
+  ];
+
+function categoryLabel(
+  category: string,
+  t: (key: NestedKey) => string
+): string {
+  const preset = CATEGORY_PRESETS.find((p) => p.value === category);
+  if (preset?.labelKey) return t(preset.labelKey);
+  if (preset?.label) return preset.label;
+  if (category === 'admin.catGeneral') return t('admin.catGeneral');
+  if (category.startsWith('admin.')) {
+    const translated = t(category as NestedKey);
+    return translated.startsWith('admin.')
+      ? category.replace(/^admin\./, '')
+      : translated;
+  }
+  return category;
+}
 
 type ActivityCategory = 'all' | 'feedback' | 'purchase' | 'community' | 'dm';
 
@@ -121,7 +150,7 @@ function mapKanban(row: Record<string, unknown>): KanbanTask {
   const col = String(row.column || row.column_id || 'todo');
   const column: KanbanColumnId =
     col === 'doing' || col === 'done' ? col : 'todo';
-  const category = String(row.category || 'admin.catGeneral');
+  const rawCategory = String(row.category || 'admin.catGeneral').trim();
   const dueRaw = row.due_date ?? row.dueDate;
   let dueDate: string | null = null;
   if (typeof dueRaw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dueRaw.trim())) {
@@ -130,9 +159,7 @@ function mapKanban(row: Record<string, unknown>): KanbanTask {
   return {
     id: String(row.id),
     title: String(row.title || ''),
-    categoryKey: (category.startsWith('admin.')
-      ? category
-      : 'admin.catGeneral') as NestedKey,
+    category: rawCategory || 'admin.catGeneral',
     assignee: String(row.assignee || 'U').slice(0, 2).toUpperCase(),
     column,
     dueDate,
@@ -255,11 +282,18 @@ export default function AdminHomeDashboard() {
   const [editingSticky, setEditingSticky] = useState<StickyTask | null>(null);
   const [editShortcutsOpen, setEditShortcutsOpen] = useState(false);
   const [draftShortcuts, setDraftShortcuts] = useState<HomeShortcutKey[]>([]);
+  const [draftCategory, setDraftCategory] = useState('admin.catGeneral');
+  const [customCategoryDraft, setCustomCategoryDraft] = useState('');
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dropColumnId, setDropColumnId] = useState<KanbanColumnId | null>(null);
+  const [categoryMenuTaskId, setCategoryMenuTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     if (draftKind) {
       setDraftText('');
       setDraftDueDate('');
+      setDraftCategory('admin.catGeneral');
+      setCustomCategoryDraft('');
       setEditingSticky(null);
     }
   }, [draftKind]);
@@ -285,6 +319,7 @@ export default function AdminHomeDashboard() {
       kind: 'sticky' | 'kanban';
       text: string;
       dueDate?: string;
+      category?: string;
     }) => {
       const res = await fetch('/api/admin/home', {
         method: 'POST',
@@ -299,6 +334,7 @@ export default function AdminHomeDashboard() {
                 kind: 'kanban',
                 title: input.text,
                 dueDate: input.dueDate || null,
+                category: input.category || 'admin.catGeneral',
                 workspaceId: activeWorkspaceId,
               }
         ),
@@ -316,6 +352,8 @@ export default function AdminHomeDashboard() {
       setDraftKind(null);
       setDraftText('');
       setDraftDueDate('');
+      setDraftCategory('admin.catGeneral');
+      setCustomCategoryDraft('');
       void invalidateHome();
     },
     onError: (error) => {
@@ -422,7 +460,11 @@ export default function AdminHomeDashboard() {
   });
 
   const moveKanbanMutation = useMutation({
-    mutationFn: async (input: { id: string; column: KanbanColumnId }) => {
+    mutationFn: async (input: {
+      id: string;
+      column?: KanbanColumnId;
+      category?: string;
+    }) => {
       const res = await fetch('/api/admin/home', {
         method: 'PATCH',
         headers: {
@@ -433,6 +475,7 @@ export default function AdminHomeDashboard() {
           kind: 'kanban',
           id: input.id,
           column: input.column,
+          category: input.category,
           workspaceId: activeWorkspaceId,
         }),
       });
@@ -451,7 +494,13 @@ export default function AdminHomeDashboard() {
         queryClient.setQueryData(homeQueryKey, {
           ...prev,
           kanban: prev.kanban.map((task) =>
-            task.id === input.id ? { ...task, column: input.column } : task
+            task.id === input.id
+              ? {
+                  ...task,
+                  column: input.column ?? task.column,
+                  category: input.category ?? task.category,
+                }
+              : task
           ),
         });
       }
@@ -459,7 +508,7 @@ export default function AdminHomeDashboard() {
     },
     onError: (_err, _input, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(homeQueryKey, ctx.prev);
-      toast.error('Could not move task');
+      toast.error('Could not update task');
     },
     onSettled: () => void invalidateHome(),
   });
@@ -613,10 +662,15 @@ export default function AdminHomeDashboard() {
       return;
     }
     if (!draftKind) return;
+    const category =
+      draftCategory === '__custom__'
+        ? customCategoryDraft.trim() || 'admin.catGeneral'
+        : draftCategory;
     createMutation.mutate({
       kind: draftKind,
       text,
       dueDate: draftKind === 'kanban' ? draftDueDate.trim() || undefined : undefined,
+      category: draftKind === 'kanban' ? category : undefined,
     });
   };
 
@@ -889,10 +943,36 @@ export default function AdminHomeDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               {columns.map((col) => {
                 const tasks = kanban.filter((task) => task.column === col.id);
+                const isDropTarget = dropColumnId === col.id && draggingTaskId;
                 return (
                   <div
                     key={col.id}
-                    className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/50 p-3 min-h-[220px]"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      setDropColumnId(col.id);
+                    }}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        setDropColumnId((cur) => (cur === col.id ? null : cur));
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const id =
+                        e.dataTransfer.getData('text/task-id') || draggingTaskId;
+                      setDropColumnId(null);
+                      setDraggingTaskId(null);
+                      if (!id) return;
+                      const task = kanban.find((t) => t.id === id);
+                      if (!task || task.column === col.id) return;
+                      moveKanbanMutation.mutate({ id, column: col.id });
+                    }}
+                    className={`rounded-xl border p-3 min-h-[220px] transition-colors ${
+                      isDropTarget
+                        ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)]'
+                        : 'border-[#E6E3DB] bg-[#F0EFEA]/50'
+                    }`}
                   >
                     <div className="flex items-center gap-2 mb-3 px-0.5">
                       <span className={`h-2 w-2 rounded-full ${col.dot}`} />
@@ -909,79 +989,182 @@ export default function AdminHomeDashboard() {
                       </div>
                     ) : tasks.length === 0 ? (
                       <p className="text-[11px] text-[#8A857D] font-medium px-0.5 py-4">
-                        {t('admin.kanbanEmpty')}
+                        {draggingTaskId
+                          ? 'Drop here'
+                          : t('admin.kanbanEmpty')}
                       </p>
                     ) : (
                       <ul className="space-y-2">
-                        {tasks.map((task) => (
-                          <li
-                            key={task.id}
-                            className="rounded-xl border border-[#E6E3DB] bg-white p-3 shadow-none"
-                          >
-                            <p
-                              className={`text-[12px] font-medium leading-snug ${
-                                col.id === 'done'
-                                  ? 'text-[#8A857D] line-through'
-                                  : 'text-[#2C2621]'
+                        {tasks.map((task) => {
+                          const menuOpen = categoryMenuTaskId === task.id;
+                          const isPreset = CATEGORY_PRESETS.some(
+                            (p) => p.value === task.category
+                          );
+                          return (
+                            <li
+                              key={task.id}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/task-id', task.id);
+                                e.dataTransfer.effectAllowed = 'move';
+                                setDraggingTaskId(task.id);
+                                setCategoryMenuTaskId(null);
+                              }}
+                              onDragEnd={() => {
+                                setDraggingTaskId(null);
+                                setDropColumnId(null);
+                              }}
+                              className={`rounded-xl border border-[#E6E3DB] bg-white p-3 shadow-none cursor-grab active:cursor-grabbing touch-manipulation ${
+                                draggingTaskId === task.id ? 'opacity-60' : ''
                               }`}
                             >
-                              {task.title}
-                            </p>
-                            {task.dueDate ? (
-                              <p
-                                className={`mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold ${
-                                  col.id === 'done'
-                                    ? 'text-[#8A857D]'
-                                    : 'text-[#8A857D]'
-                                }`}
-                              >
-                                <CalendarDays size={11} strokeWidth={2.25} aria-hidden />
-                                <span>
-                                  {t('admin.taskDeadline')}:{' '}
-                                  {formatTaskDeadline(task.dueDate, language)}
+                              <div className="flex items-start gap-1.5">
+                                <span
+                                  className="mt-0.5 text-[#C4BFB6] flex-shrink-0"
+                                  aria-hidden
+                                >
+                                  <GripVertical size={14} strokeWidth={2.25} />
                                 </span>
-                              </p>
-                            ) : null}
-                            <div className="mt-2 flex items-center justify-between gap-2">
-                              <span className="inline-flex items-center rounded-full bg-[#F0EFEA] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-[#8A857D]">
-                                {t(task.categoryKey)}
-                              </span>
-                              <span className="h-6 w-6 rounded-full bg-[#2C3B2E] text-[#F9F8F6] text-[10px] font-medium flex items-center justify-center">
-                                {task.assignee}
-                              </span>
-                            </div>
-                            <div className="mt-2.5 flex items-center gap-1.5">
-                              <label className="sr-only" htmlFor={`move-${task.id}`}>
-                                Move
-                              </label>
-                              <select
-                                id={`move-${task.id}`}
-                                value={task.column}
-                                onChange={(e) =>
-                                  moveKanbanMutation.mutate({
-                                    id: task.id,
-                                    column: e.target.value as KanbanColumnId,
-                                  })
-                                }
-                                className="flex-1 h-9 min-h-[36px] rounded-lg border border-[#E6E3DB] bg-[#F0EFEA] px-2 text-[10px] font-medium text-[#8A857D]"
-                              >
-                                {columns.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {t(c.titleKey)}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => deleteKanbanMutation.mutate(task.id)}
-                                className="h-9 w-9 min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg text-[#8A857D] hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                aria-label="Delete task"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </li>
-                        ))}
+                                <p
+                                  className={`flex-1 min-w-0 text-[12px] font-medium leading-snug ${
+                                    col.id === 'done'
+                                      ? 'text-[#8A857D] line-through'
+                                      : 'text-[#2C2621]'
+                                  }`}
+                                >
+                                  {task.title}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    deleteKanbanMutation.mutate(task.id)
+                                  }
+                                  className="h-9 w-9 min-h-[36px] min-w-[36px] -mt-1 -mr-1 inline-flex items-center justify-center rounded-lg text-[#8A857D] hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                  aria-label="Delete task"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                              {task.dueDate ? (
+                                <p className="mt-1.5 ml-5 inline-flex items-center gap-1 text-[10px] font-semibold text-[#8A857D]">
+                                  <CalendarDays
+                                    size={11}
+                                    strokeWidth={2.25}
+                                    aria-hidden
+                                  />
+                                  <span>
+                                    {t('admin.taskDeadline')}:{' '}
+                                    {formatTaskDeadline(task.dueDate, language)}
+                                  </span>
+                                </p>
+                              ) : null}
+                              <div className="mt-2 ml-5 flex items-center justify-between gap-2 relative">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCategoryMenuTaskId((cur) =>
+                                      cur === task.id ? null : task.id
+                                    );
+                                    setCustomCategoryDraft(
+                                      isPreset ? '' : task.category
+                                    );
+                                  }}
+                                  className="inline-flex items-center min-h-[28px] rounded-full bg-[#F0EFEA] px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-[#8A857D] hover:bg-[#E6E3DB] transition-colors"
+                                  aria-expanded={menuOpen}
+                                  aria-haspopup="listbox"
+                                >
+                                  {categoryLabel(task.category, t)}
+                                </button>
+                                <span className="h-6 w-6 rounded-full bg-[#2C3B2E] text-[#F9F8F6] text-[10px] font-medium flex items-center justify-center">
+                                  {task.assignee}
+                                </span>
+                                {menuOpen ? (
+                                  <div
+                                    className="absolute left-0 top-full mt-1.5 z-30 w-[200px] rounded-xl border border-[#E6E3DB] bg-white p-2 shadow-[0_12px_30px_-12px_rgba(44,38,33,0.12)]"
+                                    role="listbox"
+                                  >
+                                    {CATEGORY_PRESETS.map((preset) => {
+                                      const selected =
+                                        task.category === preset.value;
+                                      const label = preset.labelKey
+                                        ? t(preset.labelKey)
+                                        : preset.label || preset.value;
+                                      return (
+                                        <button
+                                          key={preset.value}
+                                          type="button"
+                                          role="option"
+                                          aria-selected={selected}
+                                          onClick={() => {
+                                            setCategoryMenuTaskId(null);
+                                            if (task.category === preset.value)
+                                              return;
+                                            moveKanbanMutation.mutate({
+                                              id: task.id,
+                                              category: preset.value,
+                                            });
+                                          }}
+                                          className={`w-full text-left min-h-[40px] px-2.5 rounded-lg text-[11px] font-medium transition-colors ${
+                                            selected
+                                              ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
+                                              : 'text-[#2C2621] hover:bg-[#F0EFEA]'
+                                          }`}
+                                        >
+                                          {label}
+                                        </button>
+                                      );
+                                    })}
+                                    <div className="mt-1.5 pt-1.5 border-t border-[#E6E3DB] space-y-1.5">
+                                      <p className="px-2.5 text-[9px] font-medium uppercase tracking-wide text-[#8A857D]">
+                                        Custom
+                                      </p>
+                                      <div className="flex gap-1.5 px-1">
+                                        <input
+                                          value={customCategoryDraft}
+                                          onChange={(e) =>
+                                            setCustomCategoryDraft(e.target.value)
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (e.key !== 'Enter') return;
+                                            e.preventDefault();
+                                            const next =
+                                              customCategoryDraft.trim();
+                                            if (!next) return;
+                                            setCategoryMenuTaskId(null);
+                                            moveKanbanMutation.mutate({
+                                              id: task.id,
+                                              category: next.slice(0, 48),
+                                            });
+                                          }}
+                                          placeholder="Your category"
+                                          className="flex-1 h-9 min-h-[36px] rounded-lg border border-[#E6E3DB] bg-[#F0EFEA] px-2 text-[11px] font-medium text-[#2C2621]"
+                                          maxLength={48}
+                                        />
+                                        <button
+                                          type="button"
+                                          disabled={!customCategoryDraft.trim()}
+                                          onClick={() => {
+                                            const next =
+                                              customCategoryDraft.trim();
+                                            if (!next) return;
+                                            setCategoryMenuTaskId(null);
+                                            moveKanbanMutation.mutate({
+                                              id: task.id,
+                                              category: next.slice(0, 48),
+                                            });
+                                          }}
+                                          className="h-9 min-h-[36px] px-2.5 rounded-lg bg-[#2C3B2E] text-[#F9F8F6] text-[10px] font-medium disabled:opacity-40"
+                                        >
+                                          Set
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </div>
@@ -1102,22 +1285,72 @@ export default function AdminHomeDashboard() {
               }
             />
             {draftKind === 'kanban' && !editingSticky ? (
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="admin-task-deadline"
-                  className="block text-[11px] font-medium uppercase tracking-wide text-[#8A857D]"
-                >
-                  {t('admin.taskDeadline')}
-                </label>
-                <Input
-                  id="admin-task-deadline"
-                  type="date"
-                  value={draftDueDate}
-                  onChange={(e) => setDraftDueDate(e.target.value)}
-                  className="h-11 min-h-[44px] rounded-xl border-[#E6E3DB] text-sm font-semibold"
-                  disabled={createMutation.isPending}
-                />
-              </div>
+              <>
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="admin-task-deadline"
+                    className="block text-[11px] font-medium uppercase tracking-wide text-[#8A857D]"
+                  >
+                    {t('admin.taskDeadline')}
+                  </label>
+                  <Input
+                    id="admin-task-deadline"
+                    type="date"
+                    value={draftDueDate}
+                    onChange={(e) => setDraftDueDate(e.target.value)}
+                    className="h-11 min-h-[44px] rounded-xl border-[#E6E3DB] text-sm font-semibold"
+                    disabled={createMutation.isPending}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="block text-[11px] font-medium uppercase tracking-wide text-[#8A857D]">
+                    Category
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CATEGORY_PRESETS.map((preset) => {
+                      const selected = draftCategory === preset.value;
+                      const label = preset.labelKey
+                        ? t(preset.labelKey)
+                        : preset.label || preset.value;
+                      return (
+                        <button
+                          key={preset.value}
+                          type="button"
+                          onClick={() => setDraftCategory(preset.value)}
+                          className={`inline-flex items-center min-h-[40px] px-3 rounded-full text-[11px] font-medium transition-colors ${
+                            selected
+                              ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                              : 'bg-white border border-[#E6E3DB] text-[#8A857D] hover:border-[#2C3B2E]/40'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setDraftCategory('__custom__')}
+                      className={`inline-flex items-center min-h-[40px] px-3 rounded-full text-[11px] font-medium transition-colors ${
+                        draftCategory === '__custom__'
+                          ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                          : 'bg-white border border-[#E6E3DB] text-[#8A857D] hover:border-[#2C3B2E]/40'
+                      }`}
+                    >
+                      Custom
+                    </button>
+                  </div>
+                  {draftCategory === '__custom__' ? (
+                    <Input
+                      value={customCategoryDraft}
+                      onChange={(e) => setCustomCategoryDraft(e.target.value)}
+                      placeholder="Your category"
+                      maxLength={48}
+                      className="h-11 min-h-[44px] rounded-xl border-[#E6E3DB] text-sm font-semibold"
+                      disabled={createMutation.isPending}
+                    />
+                  ) : null}
+                </div>
+              </>
             ) : null}
             <DialogFooter className="flex flex-row gap-2 sm:justify-end">
               <button

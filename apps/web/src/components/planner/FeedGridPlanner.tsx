@@ -9,11 +9,13 @@ import {
   Image as ImageIcon,
   Images,
   Lock,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { BrandWorkspace, PlannerPost, SocialPlatform } from '@/lib/mock-content-planner';
 import { useLocale } from '@/lib/locale-context';
 import { t, tf } from '@/lib/i18n';
+import { isPlatformImportedPost } from '@/lib/planner/platform-posts';
 
 type FeedPlatform = 'instagram' | 'tiktok';
 
@@ -121,6 +123,7 @@ export default function FeedGridPlanner({
   posts,
   workspace: _workspace,
   onOpen,
+  onDelete,
   onRefresh,
   /** When set from platform pills, drives IG/TT feed (hides local toggle). */
   activePlatform,
@@ -128,6 +131,7 @@ export default function FeedGridPlanner({
   posts: PlannerPost[];
   workspace: BrandWorkspace | null;
   onOpen: (post: PlannerPost) => void;
+  onDelete?: (post: PlannerPost) => void;
   onRefresh: () => void;
   activePlatform?: FeedPlatform | 'all' | null;
 }) {
@@ -521,6 +525,21 @@ export default function FeedGridPlanner({
                     {draft.workflow.replace('_', ' ')}
                   </p>
                 </div>
+                {onDelete && !isPlatformImportedPost(draft) ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onDelete(draft);
+                    }}
+                    className="inline-flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center rounded-lg text-[#8A857D] hover:bg-[#FEF2F2] hover:text-[#B85C38] flex-shrink-0"
+                    aria-label={t('deletePost', locale)}
+                    title={t('deletePost', locale)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                ) : null}
                 <GripVertical size={14} className="text-zinc-300 flex-shrink-0" />
               </li>
             ))}

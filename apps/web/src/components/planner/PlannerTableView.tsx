@@ -1,6 +1,6 @@
 'use client';
 
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import {
   WORKFLOW_COLUMNS,
   checklistProgress,
@@ -9,6 +9,7 @@ import {
 import { PlatformBadge } from '@/components/planner/PlatformBadge';
 import { useLanguage } from '@/lib/locale-context';
 import { t, localeTag } from '@/lib/i18n';
+import { isPlatformImportedPost } from '@/lib/planner/platform-posts';
 
 function formatDate(iso: string | null, locale: string) {
   if (!iso) return '—';
@@ -28,9 +29,11 @@ function formatDate(iso: string | null, locale: string) {
 export default function PlannerTableView({
   posts,
   onOpen,
+  onDelete,
 }: {
   posts: PlannerPost[];
   onOpen: (post: PlannerPost) => void;
+  onDelete?: (post: PlannerPost) => void;
 }) {
   const { locale } = useLanguage();
   const headers = [
@@ -134,13 +137,26 @@ export default function PlannerTableView({
                       : '—'}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onOpen(post)}
-                      className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-[var(--nc-coral)] hover:bg-[color-mix(in_srgb,var(--nc-coral)_10%,white)]"
-                    >
-                      <Pencil size={13} /> {t('quickEdit', locale)}
-                    </button>
+                    <div className="inline-flex items-center gap-1.5 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => onOpen(post)}
+                        className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-[var(--nc-coral)] hover:bg-[color-mix(in_srgb,var(--nc-coral)_10%,white)]"
+                      >
+                        <Pencil size={13} /> {t('quickEdit', locale)}
+                      </button>
+                      {onDelete && !isPlatformImportedPost(post) ? (
+                        <button
+                          type="button"
+                          onClick={() => onDelete(post)}
+                          className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-[#8A857D] hover:bg-[#FEF2F2] hover:text-[#B85C38] transition-colors"
+                          aria-label={t('deletePost', locale)}
+                          title={t('deletePost', locale)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               );

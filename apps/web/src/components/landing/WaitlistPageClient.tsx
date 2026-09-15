@@ -1,17 +1,13 @@
 'use client';
 
+/**
+ * Pre-launch waitlist home — served on `/` until NEXT_PUBLIC_SHOW_FULL_LANDING=true.
+ * Reuses landing product sections so visitors see the product without a full launch.
+ */
+
 import Link from 'next/link';
-import {
-  BarChart3,
-  CalendarDays,
-  Home,
-  Layers,
-  Mail,
-  MessageSquare,
-  Send,
-  Users,
-  type LucideIcon,
-} from 'lucide-react';
+import { PlatformShowcaseSection } from '@/components/landing/PlatformShowcaseSection';
+import { SocialPhonesFanSection } from '@/components/landing/SocialPhonesFanSection';
 import { WaitlistHeroSection } from '@/components/landing/WaitlistHeroSection';
 import { useLanguage } from '@/lib/i18n';
 import type { TranslationKey } from '@/lib/i18n';
@@ -23,36 +19,13 @@ const WAITLIST_LEGAL_LINKS: { labelKey: TranslationKey; href: string }[] = [
   { labelKey: 'legalIntegritet', href: '/legal/integritet' },
 ];
 
-/**
- * Full Clikd suite — every core function from the platform landing,
- * rendered as editorial feature cards on the waitlist page.
- */
-const WAITLIST_FEATURES: {
-  icon: LucideIcon;
-  titleKey: TranslationKey;
-  summaryKey: TranslationKey;
-}[] = [
-  { icon: Send, titleKey: 'suitePublishTitle', summaryKey: 'suitePublishSummary' },
-  { icon: CalendarDays, titleKey: 'suitePlannerTitle', summaryKey: 'suitePlannerSummary' },
-  { icon: Home, titleKey: 'suiteBioTitle', summaryKey: 'suiteBioSummary' },
-  { icon: Mail, titleKey: 'suiteEmailTitle', summaryKey: 'suiteEmailSummary' },
-  { icon: MessageSquare, titleKey: 'suiteInboxTitle', summaryKey: 'suiteInboxSummary' },
-  { icon: Users, titleKey: 'suiteCommunityTitle', summaryKey: 'suiteCommunitySummary' },
-  { icon: Layers, titleKey: 'suiteAdsTitle', summaryKey: 'suiteAdsSummary' },
-  { icon: BarChart3, titleKey: 'suiteReportsTitle', summaryKey: 'suiteReportsSummary' },
-];
-
-/**
- * Editorial waitlist landing — kept for reference; `/` now serves LandingPageClient.
- * High-end magazine aesthetic: Playfair + Inter, alabaster paper, forest green CTAs.
- */
 export function WaitlistPageClient() {
   const { t } = useLanguage();
   const year = new Date().getFullYear();
 
   return (
-    <div className="editorial-landing min-h-screen overflow-x-hidden">
-      {/* A. Header */}
+    <div className="editorial-landing min-h-screen overflow-x-hidden bg-[#F9F8F6] text-[#2C2621]">
+      {/* Quiet waitlist chrome — not the full marketing header */}
       <header className="mx-auto max-w-6xl px-6 sm:px-10 pt-8 sm:pt-10">
         <div className="flex items-center justify-between gap-4">
           <Link
@@ -72,49 +45,13 @@ export function WaitlistPageClient() {
         </div>
       </header>
 
-      {/* B. Hero + waitlist */}
+      {/* VIP waitlist signup */}
       <WaitlistHeroSection />
 
-      {/* C. Full suite feature grid — all Clikd functions */}
-      <section
-        className="mx-auto max-w-5xl px-6 sm:px-10 pt-24 sm:pt-32 pb-28 sm:pb-36"
-        aria-labelledby="waitlist-suite-heading"
-      >
-        <header className="max-w-2xl mx-auto text-center mb-14 sm:mb-16">
-          <p className="font-inter text-[10px] font-medium tracking-[0.18em] uppercase text-[#8A857D]">
-            The studio
-          </p>
-          <h2
-            id="waitlist-suite-heading"
-            className="mt-4 font-playfair text-3xl sm:text-4xl font-medium tracking-tight text-[#2C2621] leading-snug"
-          >
-            Everything in one calm workspace.
-          </h2>
-          <p className="mt-4 font-inter text-[15px] leading-relaxed text-[#8A857D]">
-            Publishing, storefront, community, CRM, inbox, ads, and analytics — designed for
-            social media managers, brands, creators, and PR teams who prefer precision over
-            clutter.
-          </p>
-        </header>
+      {/* Product preview sections (shared with full landing — HeroSection stays launch-only) */}
+      <SocialPhonesFanSection />
+      <PlatformShowcaseSection />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-          {WAITLIST_FEATURES.map(({ icon: Icon, titleKey, summaryKey }) => (
-            <article key={titleKey} className="editorial-card p-8 sm:p-10">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#E6E3DB] text-[#2C3B2E]">
-                <Icon size={18} strokeWidth={1.5} aria-hidden />
-              </div>
-              <h3 className="mt-8 font-playfair text-2xl sm:text-[1.65rem] font-medium tracking-tight text-[#2C2621] leading-snug">
-                {t(titleKey)}
-              </h3>
-              <p className="mt-4 font-inter text-[15px] leading-relaxed text-[#8A857D]">
-                {t(summaryKey)}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Footer — quiet, legal only */}
       <footer className="border-t border-[#E6E3DB]">
         <div className="mx-auto max-w-6xl px-6 sm:px-10 py-10 sm:py-12 flex flex-col sm:flex-row items-center justify-between gap-5">
           <p className="font-playfair text-sm text-[#8A857D]">

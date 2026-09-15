@@ -353,6 +353,7 @@ export async function updateHomeKanbanTask(input: {
   userId: string;
   id: string;
   title?: string;
+  category?: string;
   column?: HomeKanbanColumn;
   /** Pass `null` to clear; omit to leave unchanged. */
   dueDate?: string | null;
@@ -372,6 +373,10 @@ export async function updateHomeKanbanTask(input: {
     typeof input.title === 'string' && input.title.trim()
       ? input.title.trim()
       : String(row.title || '');
+  const category =
+    typeof input.category === 'string' && input.category.trim()
+      ? input.category.trim().slice(0, 48)
+      : String(row.category || 'admin.catGeneral');
   const column: HomeKanbanColumn =
     input.column === 'todo' || input.column === 'doing' || input.column === 'done'
       ? input.column
@@ -385,6 +390,7 @@ export async function updateHomeKanbanTask(input: {
   const updated = await sql`
     UPDATE public.admin_home_kanban
     SET title = ${title},
+        category = ${category},
         column_id = ${column},
         due_date = ${dueDate},
         updated_at = now()

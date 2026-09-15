@@ -260,6 +260,8 @@ export async function PATCH(request: Request) {
         userId: session.user.id,
         id,
         title: typeof body.title === 'string' ? body.title : undefined,
+        category:
+          typeof body.category === 'string' ? body.category : undefined,
         column:
           body.column === 'todo' ||
           body.column === 'doing' ||

@@ -5,9 +5,12 @@ import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
 
 export default function PlannerPage() {
-  const { hasConnectedSocials, isLoading } = useConnectedSocials();
+  const { hasConnectedSocials, isLoading, isFetching, isFetched } =
+    useConnectedSocials();
 
-  if (isLoading) {
+  // Wait for the first real social-accounts response before showing the
+  // connect gate — avoids a flash while accounts are still loading.
+  if (isLoading || (!isFetched && isFetching)) {
     return (
       <div className="py-16 text-center text-sm font-semibold text-slate-400">
         Loading…

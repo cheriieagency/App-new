@@ -219,7 +219,8 @@ export default function ProfileTab({ locale, flash }: ProfileTabProps) {
                     : t('uploadPhoto', locale)}
                 </button>
                 <p className="text-[11px] text-[#8A857D] font-medium mt-1.5">
-                  Drag & drop or click · PNG/JPG · saved to avatars storage
+                  Drag & drop or click · PNG/JPG · 500×500 px (1:1) · saved to
+                  avatars storage
                 </p>
               </div>
               <input

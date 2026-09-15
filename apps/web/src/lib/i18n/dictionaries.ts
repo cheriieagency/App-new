@@ -416,7 +416,7 @@ export const DICT_EN: NestedDict = {
     homeEyebrow: 'Command Center',
     homeTitle: 'Admin Home',
     homeSub:
-      'Today’s focus, shortcuts, Kanban and latest activity — all in one place.',
+      'Today’s focus, shortcuts and latest activity — all in one place.',
     greetMorning: 'Good morning',
     greetDay: 'Good day',
     greetAfternoon: 'Good afternoon',
@@ -669,7 +669,7 @@ export const DICT_SV: NestedDict = {
     homeEyebrow: 'Command Center',
     homeTitle: 'Admin Hem',
     homeSub:
-      'Dagens fokus, genvägar, Kanban och senaste aktivitet — samlat på ett ställe.',
+      'Dagens fokus, genvägar och senaste aktivitet — samlat på ett ställe.',
     greetMorning: 'God morgon',
     greetDay: 'God dag',
     greetAfternoon: 'God eftermiddag',
@@ -1144,7 +1144,7 @@ export const DICT_FI: NestedDict = {
     homeEyebrow: 'Command Center',
     homeTitle: 'Admin-koti',
     homeSub:
-      'Päivän fokus, oikotiet, Kanban ja viimeisin aktiviteetti — kaikki yhdessä paikassa.',
+      'Päivän fokus, oikotiet ja viimeisin aktiviteetti — kaikki yhdessä paikassa.',
     greetMorning: 'Hyvää huomenta',
     greetDay: 'Hyvää päivää',
     greetAfternoon: 'Hyvää iltapäivää',

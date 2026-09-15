@@ -13,6 +13,7 @@ import {
   Settings2,
   Sparkles,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/lib/locale-context';
@@ -182,6 +183,42 @@ export default function ContentPlannerShell({
       queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
     },
   });
+
+  /** Soft confirm + DELETE planner_posts row (drafts / ideas / scheduled Clikd posts). */
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await fetch('/api/planner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id }),
+      });
+      if (!r.ok) throw new Error('delete failed');
+      const json = (await r.json()) as { ok?: boolean };
+      if (json.ok === false) throw new Error('delete failed');
+      return json;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
+      void queryClient.invalidateQueries({ queryKey: ['planner-platform-posts'] });
+      toast.success(t('toastPostDeleted', locale));
+    },
+    onError: () => {
+      toast.error('Could not delete post. Try again.');
+    },
+  });
+
+  const requestDeletePost = (postOrId: PlannerPost | string) => {
+    const post =
+      typeof postOrId === 'string' ? ({ id: postOrId } as PlannerPost) : postOrId;
+    if (isPlatformImportedPost(post)) return;
+    if (!window.confirm(t('confirmDeletePost', locale))) return;
+    // Close studio if the open draft is the one being removed.
+    if (activePost?.id === post.id) {
+      setStudioOpen(false);
+      setActivePost(null);
+    }
+    deleteMutation.mutate(post.id);
+  };
 
   const rescheduleMutation = useMutation({
     mutationFn: async ({ id, scheduledAt }: { id: string; scheduledAt: Date }) => {
@@ -478,6 +515,7 @@ export default function ContentPlannerShell({
         <PlannerKanbanBoard
           posts={posts}
           onOpen={openStudio}
+          onDelete={requestDeletePost}
           onMove={(id, workflow) => moveMutation.mutate({ id, workflow })}
         />
       ) : view === 'calendar' ? (
@@ -512,6 +550,7 @@ export default function ContentPlannerShell({
                 : null
           }
           onOpen={openStudio}
+          onDelete={requestDeletePost}
           onRefresh={async () => {
             await Promise.all([
               queryClient.invalidateQueries({ queryKey: ['planner-posts'] }),
@@ -522,7 +561,11 @@ export default function ContentPlannerShell({
           }}
         />
       ) : (
-        <PlannerTableView posts={posts} onOpen={openStudio} />
+        <PlannerTableView
+          posts={posts}
+          onOpen={openStudio}
+          onDelete={requestDeletePost}
+        />
       )}
     </>
   );
@@ -541,6 +584,11 @@ export default function ContentPlannerShell({
         defaultScheduledAt={defaultScheduledAt}
         defaultCampaignIds={defaultCampaignIds}
         onSaved={() => queryClient.invalidateQueries({ queryKey: ['planner-posts'] })}
+        onDeleted={() => {
+          setStudioOpen(false);
+          setActivePost(null);
+          void queryClient.invalidateQueries({ queryKey: ['planner-posts'] });
+        }}
       />
 
       <TeamWorkspaceModal

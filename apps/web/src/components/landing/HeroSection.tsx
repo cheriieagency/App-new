@@ -543,7 +543,12 @@ export function HeroPlannerMockup() {
 }
 
 /** Centered Content Planning hero + interactive planner showcase. */
-export function HeroSection() {
+export function HeroSection({
+  /** On the waitlist home, CTAs scroll to signup / product instead of onboarding. */
+  waitlistCtas = false,
+}: {
+  waitlistCtas?: boolean;
+} = {}) {
   const { t } = useLanguage();
 
   return (
@@ -584,23 +589,42 @@ export function HeroSection() {
             transition={{ duration: 0.5, delay: 0.18 }}
             className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3"
           >
-            <Link
-              href="/onboarding"
-              className={`inline-flex items-center justify-center min-h-[48px] bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] ${ltCta} px-7 py-4 rounded-xl shadow-none transition-all`}
-            >
-              {t('hero.ctaPrimary')}
-            </Link>
-            <button
-              type="button"
-              onClick={() =>
-                document
-                  .getElementById('creator-admin')
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }
-              className={`inline-flex items-center justify-center min-h-[48px] bg-white hover:bg-[#F0EFEA] border border-[#E6E3DB] text-[#2C2621] ${ltCta} px-7 py-4 rounded-xl transition-all`}
-            >
-              {t('hero.ctaSecondary')}
-            </button>
+            {waitlistCtas ? (
+              <>
+                <a
+                  href="#waitlist"
+                  className={`inline-flex items-center justify-center min-h-[48px] bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] ${ltCta} px-7 py-4 rounded-xl shadow-none transition-all`}
+                >
+                  Join the waitlist
+                </a>
+                <a
+                  href="#the-platform"
+                  className={`inline-flex items-center justify-center min-h-[48px] bg-white hover:bg-[#F0EFEA] border border-[#E6E3DB] text-[#2C2621] ${ltCta} px-7 py-4 rounded-xl transition-all`}
+                >
+                  See the platform
+                </a>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/onboarding"
+                  className={`inline-flex items-center justify-center min-h-[48px] bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] ${ltCta} px-7 py-4 rounded-xl shadow-none transition-all`}
+                >
+                  {t('hero.ctaPrimary')}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById('creator-admin')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                  className={`inline-flex items-center justify-center min-h-[48px] bg-white hover:bg-[#F0EFEA] border border-[#E6E3DB] text-[#2C2621] ${ltCta} px-7 py-4 rounded-xl transition-all`}
+                >
+                  {t('hero.ctaSecondary')}
+                </button>
+              </>
+            )}
           </motion.div>
         </div>
 

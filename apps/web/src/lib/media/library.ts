@@ -586,6 +586,43 @@ export async function deleteDurableMediaAsset(input: {
   return Array.isArray(rows) && rows.length > 0;
 }
 
+/** Rename a durable media_library row (file_name / display label). */
+export async function renameDurableMediaAsset(input: {
+  workspaceId: string;
+  userId: string;
+  assetId: string;
+  label: string;
+}): Promise<MediaAsset | null> {
+  if (!process.env.DATABASE_URL?.trim()) return null;
+  const next = input.label.trim();
+  if (!next) return null;
+  await ensureMediaLibrarySchema();
+
+  const numericId = Number(input.assetId);
+  const rows = Number.isFinite(numericId)
+    ? await sql`
+        UPDATE public.media_library
+        SET file_name = ${next}, updated_at = now()
+        WHERE id = ${numericId}
+          AND workspace_id = ${input.workspaceId}
+          AND (user_id IS NULL OR user_id = ${input.userId})
+        RETURNING id, workspace_id, file_name, file_url, file_type, size_bytes,
+                  source, external_id, folder_id, created_at
+      `
+    : await sql`
+        UPDATE public.media_library
+        SET file_name = ${next}, updated_at = now()
+        WHERE id::text = ${input.assetId}
+          AND workspace_id = ${input.workspaceId}
+          AND (user_id IS NULL OR user_id = ${input.userId})
+        RETURNING id, workspace_id, file_name, file_url, file_type, size_bytes,
+                  source, external_id, folder_id, created_at
+      `;
+  const row = Array.isArray(rows) ? rows[0] : null;
+  if (!row) return null;
+  return recordToMediaAsset(row as MediaLibraryRecord);
+}
+
 /** Persist sidebar drag-and-drop order for media folders (excludes Brand assets root). */
 export async function reorderDurableMediaFolders(input: {
   workspaceId: string;

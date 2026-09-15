@@ -1,48 +1,74 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import './global.css';
 import { Providers } from './providers';
 import ConsentAwareAnalytics from '@/components/ConsentAwareAnalytics';
+import { isPlatformHost } from '@/lib/domains/host';
+import { getCustomDomainFaviconUrl } from '@/lib/domains/persist';
 import { SITE_URL } from '@/lib/site';
 
 const defaultTitle = 'clikd: — Creator OS';
 const defaultDescription =
   'All-in-one creator platform for the Nordics. Community, Link-in-Bio, courses, social planner, and instant payments — where creators and fans click.';
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: defaultTitle,
-    template: '%s · clikd:',
-  },
-  description: defaultDescription,
-  applicationName: 'clikd:',
-  alternates: {
-    canonical: '/',
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: SITE_URL,
-    siteName: 'clikd:',
-    title: defaultTitle,
-    description: defaultDescription,
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: defaultTitle,
-    description: defaultDescription,
-  },
-  icons: {
-    icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
-      { url: '/favicon.png', type: 'image/png', sizes: '1024x1024' },
-    ],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-    shortcut: '/favicon.svg',
-  },
+const DEFAULT_ICONS: Metadata['icons'] = {
+  icon: [
+    { url: '/favicon.svg', type: 'image/svg+xml' },
+    { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
+    { url: '/favicon.png', type: 'image/png', sizes: '1024x1024' },
+  ],
+  apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  shortcut: '/favicon.svg',
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const headerStore = await headers();
+  const host = headerStore.get('host') || '';
+
+  let icons = DEFAULT_ICONS;
+  if (!isPlatformHost(host)) {
+    try {
+      const faviconUrl = await getCustomDomainFaviconUrl(host);
+      if (faviconUrl) {
+        icons = {
+          icon: [{ url: faviconUrl }],
+          shortcut: faviconUrl,
+          apple: [{ url: faviconUrl }],
+        };
+      }
+    } catch {
+      /* keep platform icons */
+    }
+  }
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: defaultTitle,
+      template: '%s · clikd:',
+    },
+    description: defaultDescription,
+    applicationName: 'clikd:',
+    alternates: {
+      canonical: '/',
+    },
+    openGraph: {
+      type: 'website',
+      locale: 'en_US',
+      url: SITE_URL,
+      siteName: 'clikd:',
+      title: defaultTitle,
+      description: defaultDescription,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: defaultTitle,
+      description: defaultDescription,
+    },
+    icons,
+  };
+}
 
 /**
  * Load brand fonts via CSS (not next/font/google) so Turbopack/Vercel builds

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConnectedSocialAccount } from '@/lib/mock-content-planner';
 import { useSession } from '@/lib/auth-client';
@@ -104,7 +103,6 @@ async function fetchSocialAccounts(
  */
 export function useSocialAccounts(enabled = true) {
   const queryClient = useQueryClient();
-  const pathname = usePathname();
   const { data: session } = useSession();
   const workspaceCtx = useWorkspaceOptional();
   const workspaceId =
@@ -116,10 +114,11 @@ export function useSocialAccounts(enabled = true) {
   const [isLoading, setIsLoading] = useState(Boolean(enabled));
 
   const query = useQuery<SocialAccountsResponse>({
+    // Keep key stable — OAuth refresh is handled via invalidate + URL strip,
+    // not by putting ?success= in the queryKey (that remounted every param).
     queryKey: [
       'social-accounts',
       workspaceId ?? 'none',
-      success ?? '',
       session?.user?.id ?? 'anon',
     ],
     enabled,
@@ -136,11 +135,12 @@ export function useSocialAccounts(enabled = true) {
         setIsLoading(false);
       }
     },
-    staleTime: 5_000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    // Soft placeholder so the panel can render while refetching.
-    placeholderData: (prev) => prev ?? EMPTY_RESPONSE,
+    staleTime: 30_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    // Keep prior workspace result while refetching — never invent an empty
+    // success payload (that briefly flips hasConnectedSocials → false).
+    placeholderData: (prev) => prev,
   });
 
   // Safety: if react-query never settles, clear local loader after 15s.
@@ -153,52 +153,69 @@ export function useSocialAccounts(enabled = true) {
     return () => window.clearTimeout(t);
   }, [enabled, workspaceId, session?.user?.id]);
 
-  // Sync local loading with query settle (covers cache hits / disabled paths).
+  // Sync local loading with a *real* settle — ignore placeholder "success".
   useEffect(() => {
     if (!enabled) {
       setIsLoading(false);
       return;
     }
+    if (query.isPlaceholderData) return;
     if (query.isFetched || query.isError || query.isSuccess) {
       setIsLoading(false);
     }
-  }, [enabled, query.isFetched, query.isError, query.isSuccess]);
+  }, [
+    enabled,
+    query.isFetched,
+    query.isError,
+    query.isSuccess,
+    query.isPlaceholderData,
+  ]);
 
+  // OAuth return (?success=…) — invalidate once, then strip the query param so
+  // this effect cannot re-fire on every query object identity change.
   useEffect(() => {
     const param = readOAuthSuccessParam();
     if (!param || !SUCCESS_PARAMS.has(param)) return;
     void queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
-    void query.refetch();
-  }, [queryClient, query, success]);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('success');
+      url.searchParams.delete('warning');
+      url.searchParams.delete('error');
+      url.searchParams.delete('detail');
+      window.history.replaceState(
+        {},
+        '',
+        `${url.pathname}${url.search}${url.hash}`
+      );
+    } catch {
+      /* ignore history errors */
+    }
+  }, [queryClient, success]);
 
-  useEffect(() => {
-    if (!enabled || !workspaceId) return;
-    void queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
-  }, [workspaceId, enabled, queryClient]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    if (pathname && !pathname.startsWith('/admin')) return;
-    void queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
-  }, [pathname, session?.user?.id, enabled, queryClient]);
+  // NOTE: Do NOT invalidate on workspaceId / pathname / session changes.
+  // workspaceId is already in queryKey — React Query refetches when it changes.
+  // Extra invalidates here caused an infinite /api/socials/accounts storm.
 
   // When the API remaps a foreign/legacy workspace (e.g. default-my-workspace)
   // onto the IG-linked owned workspace, keep the sidebar cookie in sync.
+  // Depend only on the resolved id string — not accounts[] identity.
   useEffect(() => {
     const resolved = query.data?.workspace_id?.trim();
     if (!resolved || !workspaceCtx?.setActiveWorkspaceId) return;
     if (resolved === workspaceId) return;
+    const hasConnected = (query.data?.accounts ?? []).some((a) => a.connected);
     const preferredEmpty =
       !workspaceId ||
       workspaceId === 'default-my-workspace' ||
-      !(query.data?.accounts ?? []).some((a) => a.connected);
+      !hasConnected;
     if (!preferredEmpty && workspaceId) return;
     workspaceCtx.setActiveWorkspaceId(resolved);
   }, [
-    enabled,
     query.data?.workspace_id,
-    query.data?.accounts,
-    workspaceCtx,
+    // Primitive count avoids re-running when accounts array is a new reference.
+    query.data?.connected_count,
+    workspaceCtx?.setActiveWorkspaceId,
     workspaceId,
   ]);
 
@@ -228,8 +245,17 @@ export function useSocialAccounts(enabled = true) {
     return map;
   }, [accounts]);
 
-  // Prefer local isLoading (always cleared) over react-query isLoading.
-  const showLoading = isLoading && !query.isFetched && accounts.length === 0;
+  // Stay in loading until the first real fetch settles when we still have zero
+  // accounts. Empty placeholder must NOT flash the "Connect socials" gate.
+  // Do not key off isFetching alone — window-focus refetch would re-show Loading
+  // for creators who genuinely have no accounts yet.
+  const showLoading =
+    Boolean(enabled) &&
+    connectedAccounts.length === 0 &&
+    (query.isPending ||
+      query.isPlaceholderData ||
+      !query.isFetched ||
+      isLoading);
 
   return {
     ...query,

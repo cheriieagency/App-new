@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Folder, FolderKanban, Pencil, Trash2, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Folder, FolderKanban, Pencil, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import {
@@ -88,6 +88,10 @@ export default function MediaLibraryPanel() {
   const [renameValue, setRenameValue] = useState('');
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [draggingAssetId, setDraggingAssetId] = useState<string | null>(null);
+  const [paneDropActive, setPaneDropActive] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [renamingAssetId, setRenamingAssetId] = useState<string | null>(null);
+  const [assetRenameValue, setAssetRenameValue] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [upload, { loading: uploading, progress: uploadProgress }] = useUpload();
   const creating = createMediaFolderOpen;
@@ -457,6 +461,31 @@ export default function MediaLibraryPanel() {
     onError: () => toast.error(t('toastFileDeleteFailed', locale)),
   });
 
+  const renameAssetMutation = useMutation({
+    mutationFn: async ({ assetId, label }: { assetId: string; label: string }) => {
+      const r = await fetch('/api/admin/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...workspaceHeaders,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'rename_asset', assetId, label }),
+      });
+      if (!r.ok) throw new Error('Could not rename file');
+      return r.json() as Promise<{ asset: MediaAsset }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['media-folder'] });
+      queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+      setRenamingAssetId(null);
+      setAssetRenameValue('');
+      toast.success(`Renamed to “${data.asset.label}”`);
+    },
+    onError: () => toast.error('Could not rename file. Try again.'),
+  });
+
+
   const onDeviceFiles = (files: FileList | null) => {
     if (!files?.length) return;
     Array.from(files).forEach((file) => uploadMutation.mutate(file));
@@ -546,6 +575,70 @@ export default function MediaLibraryPanel() {
       }
     });
   };
+
+
+  const isOsFileDrag = (e: DragEvent) =>
+    Array.from(e.dataTransfer.types || []).includes('Files') &&
+    !Array.from(e.dataTransfer.types || []).includes(MEDIA_DND_TYPE);
+
+  const onPaneDragOver = (e: DragEvent) => {
+    if (!isOsFileDrag(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setPaneDropActive(true);
+  };
+
+  const onPaneDragLeave = (e: DragEvent) => {
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
+    setPaneDropActive(false);
+  };
+
+  const onPaneDrop = (e: DragEvent) => {
+    if (!isOsFileDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setPaneDropActive(false);
+    const files = e.dataTransfer.files;
+    if (!files?.length) return;
+    // Drop into the open folder (Brand assets root or nested folder).
+    onDeviceFiles(files);
+  };
+
+  const openPreview = (assetId: string) => {
+    const idx = visibleAssets.findIndex((a) => a.id === assetId);
+    if (idx >= 0) setPreviewIndex(idx);
+  };
+
+  const previewAsset =
+    previewIndex != null && previewIndex >= 0 && previewIndex < visibleAssets.length
+      ? visibleAssets[previewIndex]
+      : null;
+
+  const stepPreview = (delta: number) => {
+    if (previewIndex == null || visibleAssets.length === 0) return;
+    const next = (previewIndex + delta + visibleAssets.length) % visibleAssets.length;
+    setPreviewIndex(next);
+    setRenamingAssetId(null);
+  };
+
+  useEffect(() => {
+    if (previewIndex == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPreviewIndex(null);
+        setRenamingAssetId(null);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        stepPreview(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        stepPreview(1);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewIndex, visibleAssets.length]);
 
   const deviceUploadButton = (
     <div className="flex flex-col items-stretch sm:items-end gap-2 min-w-0">
@@ -745,30 +838,55 @@ export default function MediaLibraryPanel() {
           {t('loading', locale)}
         </div>
       ) : !hasContent ? (
-        <AdminEmptyState
-          icon={Upload}
-          headline="No media in this folder yet"
-          description="Upload from your device, import from Google Drive, or create a folder to organize brand assets."
-          ctaLabel="+ Create Folder"
-          onCta={() => setCreateMediaFolderOpen(true)}
-          secondary={
-            <span className="inline-flex flex-wrap items-center justify-center gap-2">
-              {deviceUploadButton}
-              <GoogleDriveImportButton
-                target="media_library"
-                onImported={() => {
-                  queryClient.invalidateQueries({
-                    queryKey: ['media-folder', activeId],
-                  });
-                  queryClient.invalidateQueries({ queryKey: ['media-folders'] });
-                  queryClient.invalidateQueries({ queryKey: ['media-folder'] });
-                }}
-              />
-            </span>
-          }
-        />
+        <div
+          onDragOver={onPaneDragOver}
+          onDragLeave={onPaneDragLeave}
+          onDrop={onPaneDrop}
+          className={`rounded-2xl transition-colors ${
+            paneDropActive
+              ? 'ring-2 ring-[#F472B6] ring-offset-2 bg-pink-50/40'
+              : ''
+          }`}
+        >
+          <AdminEmptyState
+            icon={Upload}
+            headline="No media in this folder yet"
+            description="Drag and drop images or videos here, upload from your device, import from Google Drive, or create a folder."
+            ctaLabel="+ Create Folder"
+            onCta={() => setCreateMediaFolderOpen(true)}
+            secondary={
+              <span className="inline-flex flex-wrap items-center justify-center gap-2">
+                {deviceUploadButton}
+                <GoogleDriveImportButton
+                  target="media_library"
+                  onImported={() => {
+                    queryClient.invalidateQueries({
+                      queryKey: ['media-folder', activeId],
+                    });
+                    queryClient.invalidateQueries({ queryKey: ['media-folders'] });
+                    queryClient.invalidateQueries({ queryKey: ['media-folder'] });
+                  }}
+                />
+              </span>
+            }
+          />
+          <p className="pb-4 text-center text-xs font-medium text-slate-400">
+            {paneDropActive
+              ? 'Drop to upload into this folder'
+              : 'Tip: drop files anywhere on this area to upload'}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-5">
+        <div
+          className={`space-y-5 rounded-2xl transition-colors ${
+            paneDropActive
+              ? 'ring-2 ring-[#F472B6] ring-offset-2 bg-pink-50/30 p-2 sm:p-3'
+              : ''
+          }`}
+          onDragOver={onPaneDragOver}
+          onDragLeave={onPaneDragLeave}
+          onDrop={onPaneDrop}
+        >
           {/* Folders row — icon + label only, above the photo grid */}
           <div className="space-y-2">
               {isRoot ? (
@@ -891,7 +1009,16 @@ export default function MediaLibraryPanel() {
                   draggable
                   onDragStart={(e) => onAssetDragStart(e, m.id)}
                   onDragEnd={onAssetDragEnd}
-                  className={`${adminCardClass} group relative overflow-hidden text-left cursor-grab active:cursor-grabbing transition-opacity ${
+                  onClick={() => openPreview(m.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openPreview(m.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className={`${adminCardClass} group relative overflow-hidden text-left cursor-pointer transition-opacity ${
                     draggingAssetId === m.id ? 'opacity-50' : ''
                   }`}
                 >
@@ -911,28 +1038,48 @@ export default function MediaLibraryPanel() {
                         draggable={false}
                       />
                     )}
-                    <button
-                      type="button"
-                      draggable={false}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setAssetToDelete(m);
-                      }}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className="absolute top-2 right-2 z-10 h-11 min-h-[44px] w-11 min-w-[44px] rounded-xl bg-white/95 border border-slate-200 text-rose-600 shadow-sm inline-flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-rose-50"
-                      aria-label={`Delete ${m.label}`}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        draggable={false}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setRenamingAssetId(m.id);
+                          setAssetRenameValue(m.label);
+                          openPreview(m.id);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="h-11 min-h-[44px] w-11 min-w-[44px] rounded-xl bg-white/95 border border-slate-200 text-slate-600 shadow-sm inline-flex items-center justify-center hover:bg-slate-50"
+                        aria-label={`Rename ${m.label}`}
+                        title="Rename"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        draggable={false}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setAssetToDelete(m);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="h-11 min-h-[44px] w-11 min-w-[44px] rounded-xl bg-white/95 border border-slate-200 text-rose-600 shadow-sm inline-flex items-center justify-center hover:bg-rose-50"
+                        aria-label={`Delete ${m.label}`}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                   <div className="p-3">
                     <p className="text-sm font-semibold text-slate-900 truncate">
                       {m.label}
                     </p>
                     <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mt-0.5">
-                      {m.kind} · {m.platform} · drag to folder
+                      {m.kind} · click to preview · drag to folder
                     </p>
                   </div>
                 </div>
@@ -940,11 +1087,160 @@ export default function MediaLibraryPanel() {
             </div>
           ) : isRoot && nestedFolders.length > 0 ? (
             <p className="text-sm text-slate-400 font-medium">
-              No unfiled photos yet — upload files or drag them into a folder.
+              No unfiled photos yet — drop files here or drag them into a folder.
             </p>
           ) : null}
         </div>
       )}
+
+
+      <Dialog
+        open={previewAsset != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewIndex(null);
+            setRenamingAssetId(null);
+          }
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-[min(960px,96vw)] w-full rounded-2xl border-slate-200/90 p-0 gap-0 overflow-hidden bg-[#0F172A]"
+        >
+          <DialogTitle className="sr-only">
+            {previewAsset?.label || 'Media preview'}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            Preview media. Use arrow keys to browse. Rename from the toolbar.
+          </DialogDescription>
+          <div className="relative flex flex-col">
+            <div className="flex items-center gap-2 px-3 sm:px-4 h-14 border-b border-white/10">
+              {renamingAssetId && previewAsset && renamingAssetId === previewAsset.id ? (
+                <form
+                  className="flex-1 min-w-0 flex items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const next = assetRenameValue.trim();
+                    if (!next || !previewAsset) return;
+                    renameAssetMutation.mutate({
+                      assetId: previewAsset.id,
+                      label: next,
+                    });
+                  }}
+                >
+                  <input
+                    autoFocus
+                    value={assetRenameValue}
+                    onChange={(e) => setAssetRenameValue(e.target.value)}
+                    className="flex-1 min-w-0 h-11 min-h-[44px] rounded-xl border border-white/20 bg-white/10 px-3 text-sm font-semibold text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    aria-label="File name"
+                  />
+                  <button
+                    type="submit"
+                    disabled={
+                      !assetRenameValue.trim() || renameAssetMutation.isPending
+                    }
+                    className="h-11 min-h-[44px] px-3 rounded-xl bg-white text-slate-900 text-xs font-extrabold disabled:opacity-40"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenamingAssetId(null);
+                      setAssetRenameValue(previewAsset.label);
+                    }}
+                    className="h-11 min-h-[44px] px-3 rounded-xl text-xs font-semibold text-white/70 hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <p className="flex-1 min-w-0 text-sm font-semibold text-white truncate">
+                    {previewAsset?.label}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!previewAsset) return;
+                      setRenamingAssetId(previewAsset.id);
+                      setAssetRenameValue(previewAsset.label);
+                    }}
+                    className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-white/80 hover:bg-white/10"
+                    aria-label="Rename file"
+                    title="Rename"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewIndex(null);
+                  setRenamingAssetId(null);
+                }}
+                className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-white/80 hover:bg-white/10"
+                aria-label="Close preview"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="relative flex items-center justify-center min-h-[50vh] max-h-[min(72vh,720px)] bg-black">
+              {visibleAssets.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => stepPreview(-1)}
+                  className="absolute left-2 sm:left-3 z-10 inline-flex h-12 w-12 min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm"
+                  aria-label="Previous"
+                >
+                  <ChevronLeft size={22} />
+                </button>
+              ) : null}
+              {previewAsset?.kind === 'video' ? (
+                <video
+                  key={previewAsset.id}
+                  src={previewAsset.image}
+                  className="max-h-[min(72vh,720px)] max-w-full object-contain"
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              ) : previewAsset ? (
+                <img
+                  key={previewAsset.id}
+                  src={previewAsset.image}
+                  alt={previewAsset.label}
+                  className="max-h-[min(72vh,720px)] max-w-full object-contain"
+                />
+              ) : null}
+              {visibleAssets.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => stepPreview(1)}
+                  className="absolute right-2 sm:right-3 z-10 inline-flex h-12 w-12 min-h-[48px] min-w-[48px] items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm"
+                  aria-label="Next"
+                >
+                  <ChevronRight size={22} />
+                </button>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-white/10 text-xs font-medium text-white/60">
+              <span>
+                {previewIndex != null
+                  ? `${previewIndex + 1} / ${visibleAssets.length}`
+                  : ''}
+              </span>
+              <span className="hidden sm:inline">
+                ← → to browse · Esc to close
+              </span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(assetToDelete)}

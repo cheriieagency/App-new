@@ -24,6 +24,7 @@ import { t } from '@/lib/i18n';
 import { adminCardClass } from '@/components/admin/AdminUi';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { getSiteUrl } from '@/lib/site';
+import GuestReportDocument from '@/components/admin/analytics/GuestReportDocument';
 
 type EngineTab = 'directory' | 'automation' | 'builder' | 'preview';
 
@@ -132,6 +133,9 @@ export default function MonthlyReportEngine() {
   ]);
   const [includeAi, setIncludeAi] = useState(true);
   const [hideAiPublic, setHideAiPublic] = useState(false);
+  const [includeInDepth, setIncludeInDepth] = useState(true);
+  const [includeCharts, setIncludeCharts] = useState(true);
+  const [includeCsv, setIncludeCsv] = useState(true);
 
   const [autoEnabled, setAutoEnabled] = useState(false);
   const [autoEmails, setAutoEmails] = useState('');
@@ -261,6 +265,9 @@ export default function MonthlyReportEngine() {
           platforms,
           includeAiAnalysis: includeAi,
           hideAiOnPublicLink: hideAiPublic,
+          includeInDepth,
+          includeCharts,
+          includeCsv,
         }),
       });
       const json = await r.json();
@@ -701,6 +708,41 @@ export default function MonthlyReportEngine() {
             </span>
           </label>
 
+          <label className="flex items-center gap-2 min-h-[44px] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeInDepth}
+              onChange={(e) => setIncludeInDepth(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+            <span className="text-sm font-medium text-[#2C2621]">
+              Include in-depth post table
+            </span>
+          </label>
+          <label className="flex items-center gap-2 min-h-[44px] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeCharts}
+              onChange={(e) => setIncludeCharts(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+            <span className="text-sm font-medium text-[#2C2621]">
+              Include graphs / charts
+            </span>
+          </label>
+          <label className="flex items-center gap-2 min-h-[44px] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeCsv}
+              onChange={(e) => setIncludeCsv(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+            <span className="text-sm font-medium text-[#2C2621]">
+              Include CSV downloads for clients
+            </span>
+          </label>
+
+
           <div className="flex flex-col sm:flex-row gap-2">
             <button
               type="button"
@@ -889,205 +931,18 @@ export default function MonthlyReportEngine() {
 }
 
 function GuestReportPreview({ report }: { report: ReportRow }) {
-  const m = report.metrics || {
-    views: 0,
-    engagementRate: 0,
-    followerGrowth: 0,
-    totalPosts: 0,
-  };
-  const views = num(m.views);
-  const engagementRate = num(m.engagementRate);
-  const totalFollowers = num(m.totalFollowers ?? m.followerGrowth);
-  const totalPosts = num(m.totalPosts);
-  const likes = num(m.likes);
-  const comments = num(m.comments);
-  const shares = num(m.shares);
+  const periodLabel =
+    report.date_range_label ||
+    `${report.period_start} → ${report.period_end}`;
   const showAi = !report.hide_ai_on_public_link && report.ai_insights;
 
   return (
-    <div className="rounded-xl bg-[#2C2621] text-[#F9F8F6] p-5 sm:p-7 space-y-6 border border-[#3A342E]">
-      <div>
-        <p className="text-[10px] font-mono font-medium uppercase tracking-[0.16em] text-[#8A857D]">
-          Verified Static Snapshot · Powered by clikd.app
-        </p>
-        <h3 className="font-playfair font-medium text-2xl mt-2 tracking-tight">
-          {report.workspace_name || 'Workspace'}
-        </h3>
-        <p className="text-sm text-[#8A857D] mt-1">{report.title}</p>
-        <p className="text-xs text-[#8A857D] mt-0.5">
-          {report.date_range_label ||
-            `${report.period_start} → ${report.period_end}`}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: 'Views', value: views.toLocaleString() },
-          { label: 'Eng. rate', value: `${engagementRate}%` },
-          { label: 'Followers', value: totalFollowers.toLocaleString() },
-          { label: 'Posts', value: String(totalPosts) },
-        ].map((k) => (
-          <div
-            key={k.label}
-            className="rounded-xl bg-[#2C2621] border border-[#3A342E] p-4"
-          >
-            <p className="text-[10px] font-mono uppercase tracking-widest text-[#8A857D]">
-              {k.label}
-            </p>
-            <p className="text-xl font-medium mt-2 tabular-nums">{k.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {(likes > 0 || comments > 0 || shares > 0) && (
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'Likes', value: likes.toLocaleString() },
-            { label: 'Comments', value: comments.toLocaleString() },
-            { label: 'Shares', value: shares.toLocaleString() },
-          ].map((k) => (
-            <div
-              key={k.label}
-              className="rounded-xl bg-[#2C2621]/90 border border-[#3A342E] px-3 py-2.5 text-center"
-            >
-              <p className="text-[10px] font-mono uppercase tracking-widest text-[#8A857D]">
-                {k.label}
-              </p>
-              <p className="text-lg font-medium mt-1 tabular-nums">{k.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {(m.followersByPlatform || []).length > 0 && (
-        <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D] mb-2">
-            Audience snapshot
-          </p>
-          <ul className="space-y-2">
-            {(m.followersByPlatform || []).map((f) => (
-              <li
-                key={f.platform}
-                className="flex justify-between text-sm rounded-xl bg-[#2C2621]/90 border border-[#3A342E] px-3 py-2.5"
-              >
-                <span className="capitalize font-medium">
-                  {f.platform}
-                  {f.handle ? (
-                    <span className="text-[#8A857D] font-normal ml-1">
-                      @{f.handle.replace(/^@/, '')}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="text-[#8A857D] tabular-nums">
-                  {f.count.toLocaleString()} followers
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {(m.platformBreakdown || []).length > 0 && (
-        <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D] mb-2">
-            Platform breakdown
-          </p>
-          <ul className="space-y-2">
-            {(m.platformBreakdown || []).map((p) => (
-              <li
-                key={p.platform}
-                className="flex justify-between text-sm rounded-xl bg-[#2C2621]/90 border border-[#3A342E] px-3 py-2.5"
-              >
-                <span className="capitalize font-medium">{p.platform}</span>
-                <span className="text-[#8A857D] tabular-nums">
-                  {p.posts} posts · {p.views.toLocaleString()} views · {p.engagementRate}% ER
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {(m.topPosts || []).length > 0 && (
-        <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D] mb-2">
-            Top posts
-          </p>
-          <ul className="space-y-2">
-            {(m.topPosts || []).slice(0, 8).map((p) => (
-              <li
-                key={p.id}
-                className="rounded-xl bg-[#2C2621] border border-[#3A342E] overflow-hidden flex gap-3"
-              >
-                {p.mediaUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.mediaUrl}
-                    alt=""
-                    className="w-16 h-16 object-cover flex-shrink-0 bg-[#3A342E]"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-[#3A342E] flex-shrink-0" />
-                )}
-                <div className="py-2.5 pr-3 min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{p.title}</p>
-                  <p className="text-[11px] text-[#8A857D] mt-0.5 capitalize">
-                    {p.platform} · {p.impressions.toLocaleString()} views · {p.engagementRate}% ER
-                    {p.likes != null ? ` · ${p.likes.toLocaleString()} likes` : ''}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {showAi && report.ai_insights ? (
-        <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-4 space-y-3">
-          <p className="text-xs font-medium text-[#2C3B2E] uppercase tracking-widest">
-            Strategy notes
-          </p>
-          <p className="text-sm text-[#E6E3DB] leading-relaxed">
-            {report.ai_insights.executiveSummary}
-          </p>
-          {report.ai_insights.wins?.length ? (
-            <div>
-              <p className="text-[11px] font-medium text-emerald-400 uppercase mb-1">
-                Wins
-              </p>
-              <ul className="list-disc list-inside text-sm text-[#8A857D] space-y-1">
-                {report.ai_insights.wins.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {report.ai_insights.improvements?.length ? (
-            <div>
-              <p className="text-[11px] font-medium text-amber-400 uppercase mb-1">
-                Areas to improve
-              </p>
-              <ul className="list-disc list-inside text-sm text-[#8A857D] space-y-1">
-                {report.ai_insights.improvements.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {report.ai_insights.recommendations?.length ? (
-            <div>
-              <p className="text-[11px] font-medium text-sky-400 uppercase mb-1">
-                Recommendations
-              </p>
-              <ul className="list-disc list-inside text-sm text-[#8A857D] space-y-1">
-                {report.ai_insights.recommendations.map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+    <GuestReportDocument
+      workspaceName={report.workspace_name || 'Workspace'}
+      title={report.title}
+      periodLabel={periodLabel}
+      metrics={report.metrics}
+      aiInsights={showAi ? report.ai_insights : null}
+    />
   );
 }

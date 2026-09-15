@@ -199,6 +199,33 @@ export async function resolveDomainHost(host: string): Promise<DomainRecord | nu
   return null;
 }
 
+/**
+ * Public branding favicon for a custom-domain host only.
+ * Returns null on platform hosts or when no favicon is saved.
+ */
+export async function getCustomDomainFaviconUrl(
+  host: string
+): Promise<string | null> {
+  if (!process.env.DATABASE_URL?.trim()) return null;
+  const domain = normalizeDomain(host);
+  if (!domain) return null;
+  await ensureDomainsSchema();
+
+  const rows = await sql`
+    SELECT branding, custom_domain_verified
+    FROM public.workspaces
+    WHERE lower(custom_domain) = ${domain}
+    LIMIT 1
+  `;
+  const row = rows?.[0] as Record<string, unknown> | undefined;
+  if (!row) return null;
+  // Only serve once the domain is connected (verified DNS).
+  if (!row.custom_domain_verified) return null;
+  const branding = (row.branding as { faviconUrl?: string | null } | null) || null;
+  const url = typeof branding?.faviconUrl === 'string' ? branding.faviconUrl.trim() : '';
+  return url || null;
+}
+
 export async function saveCustomDomain(input: {
   userId: string;
   workspaceId: string;

@@ -49,6 +49,12 @@ export type ReportMetrics = {
     likes: number;
     comments: number;
   }>;
+  /** Content modules frozen with the report (guest view + CSV). */
+  options?: {
+    includeInDepth?: boolean;
+    includeCharts?: boolean;
+    includeCsv?: boolean;
+  };
 };
 
 export type MonthlyReportRow = {

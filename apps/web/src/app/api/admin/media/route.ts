@@ -22,6 +22,7 @@ import {
   listMediaFolders,
   MEDIA_LIBRARY_ROOT_ID,
   moveMediaAsset,
+  renameMediaAsset,
   renameMediaFolder,
   reorderMediaFolders,
   updateMediaFolder,
@@ -37,6 +38,7 @@ import {
   listMediaLibraryForWorkspace,
   moveDurableMediaAsset,
   recordToMediaAsset,
+  renameDurableMediaAsset,
   renameDurableMediaFolder,
   reorderDurableMediaFolders,
   updateDurableMediaFolder,
@@ -333,6 +335,29 @@ export async function POST(request: Request) {
         return Response.json({ error: 'delete_failed' }, { status: 404 });
       }
       return Response.json({ ok: true, assetId });
+    }
+
+    if (action === 'rename_asset') {
+      const assetId = String(body.assetId ?? body.id ?? '').trim();
+      const label = String(body.label ?? body.name ?? '').trim();
+      if (!assetId) {
+        return Response.json({ error: 'assetId required' }, { status: 400 });
+      }
+      if (!label) {
+        return Response.json({ error: 'label required' }, { status: 400 });
+      }
+      const asset = durable
+        ? await renameDurableMediaAsset({
+            workspaceId,
+            userId,
+            assetId,
+            label,
+          })
+        : renameMediaAsset(userId, assetId, label);
+      if (!asset) {
+        return Response.json({ error: 'rename_failed' }, { status: 404 });
+      }
+      return Response.json({ asset });
     }
 
     if (action === 'move') {

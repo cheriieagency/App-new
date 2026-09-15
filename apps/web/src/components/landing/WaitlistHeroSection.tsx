@@ -79,7 +79,10 @@ export function WaitlistHeroSection() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl px-6 sm:px-10 pt-24 sm:pt-32 pb-8 text-center">
+    <section
+      id="waitlist"
+      className="mx-auto max-w-3xl px-6 sm:px-10 pt-24 sm:pt-32 pb-8 text-center scroll-mt-8"
+    >
       <span className="inline-flex items-center rounded-full border border-[#E6E3DB] bg-[rgba(184,92,56,0.06)] px-3.5 py-1.5 text-[10px] font-medium tracking-[0.18em] text-[#B85C38]">
         VIP EARLY ACCESS
       </span>
