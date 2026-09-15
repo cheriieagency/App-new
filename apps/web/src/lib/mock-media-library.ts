@@ -236,6 +236,22 @@ export function deleteMediaAsset(userId: string, assetId: string): boolean {
   return true;
 }
 
+/** Rename a single image/video label in the in-memory media library. */
+export function renameMediaAsset(
+  userId: string,
+  assetId: string,
+  label: string
+): MediaAsset | null {
+  const store = storeFor(userId);
+  const asset = store.assets.find((a) => a.id === assetId);
+  if (!asset) return null;
+  const next = label.trim();
+  if (!next) return null;
+  asset.label = next;
+  return { ...asset };
+}
+
+
 /** Persist a manual folder order (sidebar drag-and-drop). Root is excluded. */
 export function reorderMediaFolders(
   userId: string,

@@ -80,6 +80,7 @@ import {
 import { useLocale } from '@/lib/locale-context';
 import { t, type TranslationKey } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
+import { isPlatformImportedPost } from '@/lib/planner/platform-posts';
 import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import {
@@ -177,6 +178,7 @@ export default function PostStudioModal({
   defaultScheduledAt = null,
   defaultCampaignIds,
   onSaved,
+  onDeleted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -188,6 +190,8 @@ export default function PostStudioModal({
   /** Prefill project/campaign tags for new posts (e.g. opened from a Project view). */
   defaultCampaignIds?: string[];
   onSaved: () => void;
+  /** Called after an existing draft/post is deleted. */
+  onDeleted?: () => void;
 }) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -256,6 +260,7 @@ export default function PostStudioModal({
   const [commentImage, setCommentImage] = useState<string | null>(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [emailShareOpen, setEmailShareOpen] = useState(false);
@@ -440,6 +445,32 @@ export default function PostStudioModal({
     title.trim() ||
     caption.split('\n')[0]?.trim().slice(0, 72) ||
     t('newPostDefault', locale);
+
+
+  const canDeletePost = Boolean(post?.id) && !isPlatformImportedPost(post!);
+
+  const deletePost = async () => {
+    if (!post?.id || deleting || isPlatformImportedPost(post)) return;
+    if (!window.confirm(t('confirmDeletePost', locale))) return;
+    setDeleting(true);
+    try {
+      const r = await fetch('/api/planner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: post.id }),
+      });
+      if (!r.ok) throw new Error('delete failed');
+      const json = (await r.json()) as { ok?: boolean };
+      if (json.ok === false) throw new Error('delete failed');
+      toast.success(t('toastPostDeleted', locale));
+      onDeleted?.();
+      onOpenChange(false);
+    } catch {
+      toast.error('Could not delete post. Try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const save = async (
     mode: 'draft' | 'schedule' | 'post'
@@ -1675,6 +1706,22 @@ export default function PostStudioModal({
               {derivedTitle || t('newPostDefault', locale)}
             </p>
           </div>
+          {canDeletePost ? (
+            <button
+              type="button"
+              onClick={() => void deletePost()}
+              disabled={deleting || saving}
+              className="inline-flex h-10 w-10 min-h-[40px] min-w-[40px] items-center justify-center rounded-md text-slate-400 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-40 transition-colors"
+              aria-label={t('deletePost', locale)}
+              title={t('deletePost', locale)}
+            >
+              {deleting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Trash2 size={14} />
+              )}
+            </button>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button

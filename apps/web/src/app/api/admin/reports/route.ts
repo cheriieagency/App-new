@@ -89,6 +89,9 @@ export async function POST(request: Request) {
     platforms?: unknown;
     includeAiAnalysis?: unknown;
     hideAiOnPublicLink?: unknown;
+    includeInDepth?: unknown;
+    includeCharts?: unknown;
+    includeCsv?: unknown;
     workspaceId?: unknown;
     workspace_id?: unknown;
     workspaceName?: unknown;
@@ -159,6 +162,9 @@ export async function POST(request: Request) {
       includeAiAnalysis: body.includeAiAnalysis !== false,
       hideAiOnPublicLink: Boolean(body.hideAiOnPublicLink),
       isAutomated: false,
+      includeInDepth: body.includeInDepth !== false,
+      includeCharts: body.includeCharts !== false,
+      includeCsv: body.includeCsv !== false,
     });
 
     if (!report) {

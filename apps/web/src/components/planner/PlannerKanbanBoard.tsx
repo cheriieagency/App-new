@@ -7,6 +7,7 @@ import {
   Lightbulb,
   PenLine,
   Rocket,
+  Trash2,
   TriangleAlert,
 } from 'lucide-react';
 import {
@@ -19,6 +20,7 @@ import {
 import { PlatformBadge } from '@/components/planner/PlatformBadge';
 import { useLocale } from '@/lib/locale-context';
 import { localeTag, t, type TranslationKey } from '@/lib/i18n';
+import { isPlatformImportedPost } from '@/lib/planner/platform-posts';
 
 const WORKFLOW_LABEL_KEYS: Record<WorkflowStatus, TranslationKey> = {
   IDEA: 'workflowIdeas',
@@ -88,10 +90,12 @@ function formatShortDate(iso: string | null, locale: string) {
 function KanbanCard({
   post,
   onOpen,
+  onDelete,
   onDragStart,
 }: {
   post: PlannerPost;
   onOpen: (post: PlannerPost) => void;
+  onDelete?: (post: PlannerPost) => void;
   onDragStart: (id: string) => void;
 }) {
   const { locale } = useLocale();
@@ -106,8 +110,25 @@ function KanbanCard({
   const progress = checklistProgress(post.subtasks);
   const [done, total] = progress.split('/').map(Number);
   const pct = total ? (done / total) * 100 : 0;
+  const canDelete = Boolean(onDelete) && !isPlatformImportedPost(post);
 
   return (
+    <div className="group relative">
+      {canDelete ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onDelete?.(post);
+          }}
+          className="absolute top-2 right-2 z-10 inline-flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center rounded-lg border border-[#E6E3DB] bg-white text-[#8A857D] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#FEF2F2] hover:text-[#B85C38] hover:border-[#F5C6B8] transition-all"
+          aria-label={t('deletePost', locale)}
+          title={t('deletePost', locale)}
+        >
+          <Trash2 size={14} strokeWidth={2} />
+        </button>
+      ) : null}
     <button
       type="button"
       draggable
@@ -178,16 +199,19 @@ function KanbanCard({
         </div>
       </div>
     </button>
+    </div>
   );
 }
 
 export default function PlannerKanbanBoard({
   posts,
   onOpen,
+  onDelete,
   onMove,
 }: {
   posts: PlannerPost[];
   onOpen: (post: PlannerPost) => void;
+  onDelete?: (post: PlannerPost) => void;
   onMove: (id: string, workflow: WorkflowStatus) => void;
 }) {
   const { locale } = useLocale();
@@ -252,6 +276,7 @@ export default function PlannerKanbanBoard({
                   key={post.id}
                   post={post}
                   onOpen={onOpen}
+                  onDelete={onDelete}
                   onDragStart={setDraggingId}
                 />
               ))}

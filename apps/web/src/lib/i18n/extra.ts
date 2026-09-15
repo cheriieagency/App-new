@@ -1032,6 +1032,14 @@ export type ExtraKey =
   | 'orgLogoLabel'
   | 'orgLogoHint'
   | 'orgFaviconLabel'
+  | 'orgFaviconHint'
+  | 'orgFaviconLockedHint'
+  | 'orgFaviconNeedsDomain'
+  | 'orgFaviconConnectDomainCta'
+  | 'orgFaviconPendingDns'
+  | 'orgFaviconLiveOn'
+  | 'customDomainSectionTitle'
+  | 'customDomainSectionSub'
   | 'uploadLogo'
   | 'uploadFavicon'
   | 'profilePhotoLabel'
@@ -2455,6 +2463,18 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   orgLogoLabel: 'Organization logo',
   orgLogoHint: 'Square PNG/JPG recommended.',
   orgFaviconLabel: 'Favicon',
+  orgFaviconHint:
+    'Browser tab icon for {domain} only — not used on clikd.app.',
+  orgFaviconLockedHint:
+    'Connect a custom domain first. This favicon only appears on your custom domain.',
+  orgFaviconNeedsDomain: 'Connect a custom domain before uploading a favicon',
+  orgFaviconConnectDomainCta: 'Connect custom domain',
+  orgFaviconPendingDns:
+    'Domain {domain} is linked — finish DNS verification to show this favicon live.',
+  orgFaviconLiveOn: 'Live on {domain} browser tabs once uploaded.',
+  customDomainSectionTitle: 'Custom domain',
+  customDomainSectionSub:
+    'Link your own domain and set the favicon visitors see on that domain.',
   uploadLogo: 'Upload logo',
   uploadFavicon: 'Upload favicon',
   profilePhotoLabel: 'Profile photo',
@@ -3884,6 +3904,18 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   orgLogoLabel: 'Organisationslogotyp',
   orgLogoHint: 'Kvadratisk PNG/JPG rekommenderas.',
   orgFaviconLabel: 'Favicon',
+  orgFaviconHint:
+    'Ikon i webbläsarfliken för {domain} — används inte på clikd.app.',
+  orgFaviconLockedHint:
+    'Koppla en egen domän först. Denna favicon visas bara på din custom domain.',
+  orgFaviconNeedsDomain: 'Koppla en custom domain innan du laddar upp en favicon',
+  orgFaviconConnectDomainCta: 'Koppla custom domain',
+  orgFaviconPendingDns:
+    'Domänen {domain} är länkad — slutför DNS-verifiering för att visa favicon live.',
+  orgFaviconLiveOn: 'Visas på {domain} i webbläsarflikar när den är uppladdad.',
+  customDomainSectionTitle: 'Egen domän',
+  customDomainSectionSub:
+    'Länka din egen domän och sätt faviconen besökare ser på den domänen.',
   uploadLogo: 'Ladda upp logotyp',
   uploadFavicon: 'Ladda upp favicon',
   profilePhotoLabel: 'Profilbild',
@@ -5319,6 +5351,18 @@ navFeatures: 'Ominaisuudet',
   orgLogoLabel: 'Organisaation logo',
   orgLogoHint: 'Neliömäinen PNG/JPG suositellaan.',
   orgFaviconLabel: 'Favicon',
+  orgFaviconHint:
+    'Selainvälilehden kuvake vain domainille {domain} — ei käytössä clikd.appissa.',
+  orgFaviconLockedHint:
+    'Yhdistä ensin oma domain. Tämä favicon näkyy vain custom domainillasi.',
+  orgFaviconNeedsDomain: 'Yhdistä custom domain ennen faviconin lataamista',
+  orgFaviconConnectDomainCta: 'Yhdistä custom domain',
+  orgFaviconPendingDns:
+    'Domain {domain} on linkitetty — viimeistele DNS-vahvistus näyttääksesi faviconin.',
+  orgFaviconLiveOn: 'Näkyy domainilla {domain} selainvälilehdissä latauksen jälkeen.',
+  customDomainSectionTitle: 'Oma domain',
+  customDomainSectionSub:
+    'Linkitä oma domain ja aseta favicon, jonka kävijät näkevät sillä domainilla.',
   uploadLogo: 'Lataa logo',
   uploadFavicon: 'Lataa favicon',
   profilePhotoLabel: 'Profiilikuva',
