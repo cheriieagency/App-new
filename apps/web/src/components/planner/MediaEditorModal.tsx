@@ -329,7 +329,7 @@ export default function MediaEditorModal({
     <Dialog open={open} onOpenChange={(v) => !v && !saving && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[min(1180px,98vw)] w-full p-0 gap-0 overflow-hidden rounded-2xl border border-[#E6E3DB] bg-[#F9F8F6] text-[#2C2621] shadow-[0_20px_50px_-24px_rgba(44,38,33,0.28)]"
+        className="max-w-[min(1280px,98vw)] sm:max-w-[min(1280px,98vw)] w-full p-0 gap-0 overflow-hidden rounded-2xl border border-[#E6E3DB] bg-[#F9F8F6] text-[#2C2621] shadow-[0_20px_50px_-24px_rgba(44,38,33,0.28)]"
       >
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-[#E6E3DB] bg-[#F9F8F6]">
           <div className="flex items-start justify-between gap-3">
@@ -355,8 +355,8 @@ export default function MediaEditorModal({
           </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.75fr)_minmax(240px,0.7fr)] min-h-[520px] max-h-[min(88vh,860px)]">
-          <div className="relative bg-[#2C2621] flex flex-col items-center justify-center gap-3 p-3 sm:p-4 min-h-[360px] min-w-0">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2.6fr)_minmax(240px,0.55fr)] min-h-[520px] max-h-[min(90vh,900px)]">
+          <div className="relative bg-[#2C2621] flex flex-col items-center justify-center gap-3 p-3 sm:p-5 min-h-[400px] min-w-0">
             <div className="relative w-full flex-1 min-h-0 flex items-center justify-center px-1">
               <div
                 ref={stageRef}
@@ -368,7 +368,7 @@ export default function MediaEditorModal({
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
                 onClick={() => setSelectedId(null)}
-                className="relative aspect-[4/5] w-[min(100%,560px,calc(min(72vh,760px)*0.8))] rounded-xl overflow-hidden bg-black shadow-[0_12px_40px_-16px_rgba(0,0,0,0.55)] touch-none [container-type:size]"
+                className="relative aspect-[4/5] w-[min(100%,720px,calc(min(78vh,820px)*0.82))] rounded-xl overflow-hidden bg-black shadow-[0_12px_40px_-16px_rgba(0,0,0,0.55)] touch-none [container-type:size]"
               >
                 {item?.type === 'video' ? (
                   <video
@@ -451,7 +451,7 @@ export default function MediaEditorModal({
             </div>
 
             {canNavigate ? (
-              <div className="w-full max-w-[640px] shrink-0">
+              <div className="w-full max-w-[760px] shrink-0">
                 <div
                   ref={stripRef}
                   className="flex gap-2 overflow-x-auto pb-1 px-1 justify-center"
