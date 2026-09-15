@@ -10,8 +10,8 @@ import { t, localeTag, type Locale } from '@/lib/i18n';
 
 const HOUR_HEIGHT = 64;
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const TIME_ACCENT = '#6B8CFF';
-const DAY_ACCENT = '#9089F0';
+const TIME_ACCENT = '#2C3B2E';
+const DAY_ACCENT = '#2C3B2E';
 const SNAP_MINUTES = 15;
 const DRAG_THRESHOLD = 6;
 
@@ -77,7 +77,7 @@ function formatNowLabel(d: Date, locale: Locale) {
 function statusBar(post: PlannerPost) {
   if (post.workflow === 'PUBLISHED' || post.status === 'published') return 'bg-emerald-400';
   if (post.workflow === 'SCHEDULED' || post.status === 'scheduled') return 'bg-sky-400';
-  return 'bg-[#9089F0]';
+  return 'bg-[#2C3B2E]';
 }
 
 function EventChip({
@@ -98,10 +98,10 @@ function EventChip({
       type="button"
       onPointerDown={onPointerDown}
       className={[
-        'absolute left-1 right-1 z-10 rounded-md border border-[#E9D5FF] bg-[#E9D5FF]/55 px-1.5 py-1 text-left overflow-hidden shadow-sm touch-none select-none',
+        'absolute left-1 right-1 z-10 rounded-md border border-[rgba(44,59,46,0.18)] bg-[rgba(44,59,46,0.08)] px-1.5 py-1 text-left overflow-hidden shadow-sm touch-none select-none',
         dragging ? 'opacity-35 cursor-grabbing' : '',
-        ghost ? 'pointer-events-none opacity-100 shadow-lg ring-2 ring-[#9089F0]/40' : '',
-        !dragging && !ghost ? 'hover:bg-[#E9D5FF]/80 cursor-grab active:cursor-grabbing' : '',
+        ghost ? 'pointer-events-none opacity-100 shadow-lg ring-2 ring-[#2C3B2E]/35' : '',
+        !dragging && !ghost ? 'hover:bg-[rgba(44,59,46,0.14)] cursor-grab active:cursor-grabbing' : '',
       ].join(' ')}
       style={style}
       title={post.title || post.idea_title || post.caption}
@@ -112,7 +112,7 @@ function EventChip({
           <PlatformIcon key={p} platform={p} size={10} />
         ))}
       </div>
-      <p className="text-[11px] font-semibold text-slate-800 leading-tight line-clamp-2">
+      <p className="text-[11px] font-semibold text-[#2C2621] leading-tight line-clamp-2">
         {post.title || post.idea_title || post.caption.split('\n')[0]}
       </p>
     </button>
@@ -161,12 +161,12 @@ function MiniMonth({
           onClick={() =>
             setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))
           }
-          className="h-8 w-8 min-h-[32px] rounded-lg text-slate-400 hover:bg-slate-50 inline-flex items-center justify-center"
+          className="h-8 w-8 min-h-[32px] rounded-lg text-[#8A857D] hover:bg-[#F0EFEA] inline-flex items-center justify-center"
           aria-label={t('previous', locale)}
         >
           <ChevronLeft size={16} />
         </button>
-        <p className="text-[13px] font-semibold text-slate-800 capitalize tracking-tight">
+        <p className="text-[13px] font-semibold text-[#2C2621] capitalize tracking-tight">
           {monthLabel}
         </p>
         <button
@@ -174,7 +174,7 @@ function MiniMonth({
           onClick={() =>
             setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))
           }
-          className="h-8 w-8 min-h-[32px] rounded-lg text-slate-400 hover:bg-slate-50 inline-flex items-center justify-center"
+          className="h-8 w-8 min-h-[32px] rounded-lg text-[#8A857D] hover:bg-[#F0EFEA] inline-flex items-center justify-center"
           aria-label={t('next', locale)}
         >
           <ChevronRight size={16} />
@@ -183,7 +183,7 @@ function MiniMonth({
 
       <div className="grid grid-cols-7 mb-1">
         {weekdayKeys.map((key) => (
-          <div key={key} className="text-center text-[10px] font-medium text-slate-400 py-1">
+          <div key={key} className="text-center text-[10px] font-medium text-[#8A857D] py-1">
             {t(key, locale).slice(0, 2)}
           </div>
         ))}
@@ -204,10 +204,10 @@ function MiniMonth({
                 selected
                   ? 'text-white'
                   : isToday
-                    ? 'text-[#9089F0] font-semibold'
+                    ? 'text-[#2C3B2E] font-semibold'
                     : inMonth
-                      ? 'text-slate-700 hover:bg-slate-50'
-                      : 'text-slate-300',
+                      ? 'text-[#2C2621] hover:bg-[#F0EFEA]'
+                      : 'text-[#C4BFB6]',
               ].join(' ')}
               style={selected ? { background: DAY_ACCENT } : undefined}
             >
@@ -392,10 +392,10 @@ export default function CalendarTimeGrid({
   const grid = (
     <div className="flex flex-col min-w-0 flex-1 min-h-0">
       <div
-        className="grid border-b border-slate-200/80 flex-shrink-0"
+        className="grid border-b border-[#E6E3DB] flex-shrink-0"
         style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0, 1fr))` }}
       >
-        <div className="border-r border-slate-100" />
+        <div className="border-r border-[#E6E3DB]/70" />
         {days.map((day) => {
           const isToday = sameDay(day, today);
           const weekday = new Intl.DateTimeFormat(localeTag(locale), {
@@ -406,13 +406,13 @@ export default function CalendarTimeGrid({
               key={day.toISOString()}
               type="button"
               onClick={() => onSelectDay(day)}
-              className="flex items-center justify-center gap-1.5 py-2.5 border-r border-slate-100 last:border-r-0 hover:bg-slate-50/60 transition-colors min-h-[44px]"
+              className="flex items-center justify-center gap-1.5 py-2.5 border-r border-[#E6E3DB]/70 last:border-r-0 hover:bg-[#F0EFEA]/60 transition-colors min-h-[44px]"
             >
-              <span className="text-[12px] font-medium text-slate-500">{weekday}</span>
+              <span className="text-[12px] font-medium text-[#8A857D]">{weekday}</span>
               <span
                 className={[
                   'inline-flex items-center justify-center text-[12px] font-semibold tabular-nums w-7 h-7',
-                  isToday ? 'rounded-md text-white' : 'text-slate-800',
+                  isToday ? 'rounded-md text-white' : 'text-[#2C2621]',
                 ].join(' ')}
                 style={isToday ? { background: DAY_ACCENT } : undefined}
               >
@@ -434,11 +434,11 @@ export default function CalendarTimeGrid({
             height: gridHeight,
           }}
         >
-          <div className="relative border-r border-slate-100">
+          <div className="relative border-r border-[#E6E3DB]/70">
             {HOURS.map((hour) => (
               <div
                 key={hour}
-                className="absolute right-2 text-[11px] font-medium text-slate-400 tabular-nums -translate-y-1/2"
+                className="absolute right-2 text-[11px] font-medium text-[#8A857D] tabular-nums -translate-y-1/2"
                 style={{ top: hour * HOUR_HEIGHT }}
               >
                 {hour === 0 ? '' : formatHourLabel(hour, locale)}
@@ -455,8 +455,8 @@ export default function CalendarTimeGrid({
                   columnRefs.current[dayIndex] = el;
                 }}
                 className={[
-                  'relative border-r border-slate-100 last:border-r-0',
-                  drag?.moved && drag.dayIndex === dayIndex ? 'bg-[#E9D5FF]/12' : '',
+                  'relative border-r border-[#E6E3DB]/70 last:border-r-0',
+                  drag?.moved && drag.dayIndex === dayIndex ? 'bg-[rgba(44,59,46,0.06)]' : '',
                 ].join(' ')}
                 style={{ height: gridHeight }}
               >
@@ -466,13 +466,13 @@ export default function CalendarTimeGrid({
                     className="absolute inset-x-0"
                     style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
                   >
-                    <div className="absolute inset-x-0 top-0 border-t border-slate-200/80" />
-                    <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-slate-100" />
+                    <div className="absolute inset-x-0 top-0 border-t border-[#E6E3DB]" />
+                    <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-[#E6E3DB]/70" />
                     {drag?.moved &&
                       drag.dayIndex === dayIndex &&
                       Math.floor(drag.minutes / 60) === hour && (
                         <div
-                          className="absolute inset-x-1 rounded-md bg-[#9089F0]/18 border border-dashed border-[#9089F0]/45 pointer-events-none z-[5]"
+                          className="absolute inset-x-1 rounded-md bg-[rgba(44,59,46,0.12)] border border-dashed border-[rgba(44,59,46,0.35)] pointer-events-none z-[5]"
                           style={{
                             top: ((drag.minutes % 60) / 60) * HOUR_HEIGHT + 2,
                             height: chipHeight,
@@ -481,7 +481,7 @@ export default function CalendarTimeGrid({
                       )}
                     <button
                       type="button"
-                      className="absolute inset-0 w-full h-full hover:bg-slate-50/40 transition-colors"
+                      className="absolute inset-0 w-full h-full hover:bg-[#F0EFEA]/40 transition-colors"
                       aria-label={`${formatHourLabel(hour, locale)} ${day.getDate()}`}
                       onClick={() => {
                         if (drag?.moved) return;
@@ -550,11 +550,11 @@ export default function CalendarTimeGrid({
   return (
     <div className="flex min-h-0">
       {grid}
-      <aside className="hidden lg:flex w-[260px] flex-shrink-0 flex-col border-l border-slate-200/80 bg-white">
+      <aside className="hidden lg:flex w-[260px] flex-shrink-0 flex-col border-l border-[#E6E3DB] bg-[#FFFFFF]">
         <MiniMonth cursor={cursor} onSelectDay={onSelectDay} />
-        <div className="flex-1 border-t border-slate-100 px-4 py-5">
+        <div className="flex-1 border-t border-[#E6E3DB]/70 px-4 py-5">
           {dayTasks.length === 0 ? (
-            <p className="text-[13px] italic text-slate-400 leading-relaxed">
+            <p className="text-[13px] italic text-[#8A857D] leading-relaxed">
               {t('noContentTasksHappening', locale)}
             </p>
           ) : (
@@ -570,13 +570,13 @@ export default function CalendarTimeGrid({
                       e.dataTransfer.setData('text/planner-post-id', post.id);
                       e.dataTransfer.effectAllowed = 'move';
                     }}
-                    className="w-full text-left rounded-xl border border-slate-100 bg-slate-50/80 hover:bg-slate-50 px-3 py-2.5 min-h-[44px]"
+                    className="w-full text-left rounded-xl border border-[#E6E3DB]/70 bg-[#F9F8F6]/80 hover:bg-[#F0EFEA] px-3 py-2.5 min-h-[44px]"
                   >
-                    <p className="text-[12px] font-semibold text-slate-800 truncate">
+                    <p className="text-[12px] font-semibold text-[#2C2621] truncate">
                       {post.title || post.idea_title || post.caption.split('\n')[0]}
                     </p>
                     {postDate(post) && (
-                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                      <p className="text-[11px] text-[#8A857D] font-medium mt-0.5">
                         {formatNowLabel(postDate(post)!, locale)}
                       </p>
                     )}
