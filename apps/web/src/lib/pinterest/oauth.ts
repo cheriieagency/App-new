@@ -16,8 +16,30 @@ export const PINTEREST_OAUTH_SCOPES = [
   'user_accounts:read',
 ] as const;
 
+function isLocalOrigin(origin: string | null | undefined): boolean {
+  if (!origin) return false;
+  try {
+    const host = new URL(origin).hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Absolute redirect_uri for authorize + token exchange (must be identical).
+ * On localhost, always derive from the live request origin so a production
+ * PINTEREST_REDIRECT_URI in .env.local does not send the code to clikd.app.
+ * Otherwise prefer the explicit env URI when set (must match Pinterest console).
+ */
 export function getPinterestCallbackUrl(requestOrigin?: string | null): string {
-  return `${appBaseUrl(requestOrigin)}/api/auth/callback/pinterest`;
+  const derived = `${appBaseUrl(requestOrigin)}/api/auth/callback/pinterest`;
+  if (isLocalOrigin(requestOrigin) || isLocalOrigin(derived)) {
+    return derived;
+  }
+  const explicit = pinterestEnv.redirectUri()?.replace(/\/$/, '');
+  if (explicit) return explicit;
+  return derived;
 }
 
 export function buildPinterestLoginUrl(
@@ -82,6 +104,35 @@ export async function exchangePinterestCode(
   if (!res.ok || !data.access_token) {
     throw new Error(
       data.message || data.error || `Pinterest token exchange failed (${res.status})`
+    );
+  }
+  return data;
+}
+
+/** Refresh an expired Pinterest access token (Basic Auth + refresh_token grant). */
+export async function refreshPinterestAccessToken(
+  refreshToken: string
+): Promise<PinterestTokenResponse> {
+  const res = await fetch('https://api.pinterest.com/v5/oauth/token', {
+    method: 'POST',
+    headers: {
+      Authorization: basicAuthHeader(),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken.trim(),
+    }),
+  });
+
+  const data = (await res.json()) as PinterestTokenResponse & {
+    message?: string;
+    error?: string;
+  };
+
+  if (!res.ok || !data.access_token) {
+    throw new Error(
+      data.message || data.error || `Pinterest token refresh failed (${res.status})`
     );
   }
   return data;

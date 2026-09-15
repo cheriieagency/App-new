@@ -271,7 +271,7 @@ export default function AdminSidebar() {
               className="flex items-center px-0.5 min-h-[44px] hover:opacity-80 transition-opacity"
               aria-label="Clikd home"
             >
-              <span className="font-playfair text-[2rem] font-medium tracking-tight text-[#2C2621] leading-none">
+              <span className="font-playfair italic text-3xl font-medium tracking-tight text-[#2C2621] leading-none">
                 C.
               </span>
             </Link>

@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * Editorial Clikd mark — Playfair Display italic “C.”
- * Quiet gallery mark. No pink/midnight badge.
+ * Editorial Clikd mark — serif “C.” (Playfair / Georgia stack via font-serif).
+ * Quiet gallery mark. No pink/midnight badge, no image assets.
  */
 export function ClikdMark({
   size = 32,
@@ -11,23 +11,19 @@ export function ClikdMark({
   size?: number;
   className?: string;
 }) {
-  const fontSize = Math.max(18, Math.round(size * 0.9));
+  const fontSize = Math.max(18, Math.round(size * 0.95));
   return (
-    <div
-      className={`flex items-center justify-center shrink-0 font-playfair italic font-medium tracking-tight text-[#2C2621] leading-none ${className}`}
-      style={{
-        width: size,
-        height: size,
-        fontSize,
-      }}
+    <span
+      className={`inline-flex items-center justify-center shrink-0 font-serif italic font-medium tracking-tight text-[#2C2621] leading-none ${className}`}
+      style={{ fontSize, minHeight: size, minWidth: size }}
       aria-hidden
     >
       C.
-    </div>
+    </span>
   );
 }
 
-/** Editorial wordmark — Playfair “Clikd.” with forest colon optional. */
+/** Editorial wordmark — Playfair “Clikd.” with forest period. */
 export function ClikdWordmark({
   className = '',
   markSize = 32,
@@ -43,7 +39,7 @@ export function ClikdWordmark({
     <span className={`inline-flex items-center gap-2 min-h-11 ${className}`}>
       {showMark && <ClikdMark size={markSize} />}
       <span
-        className={`font-playfair font-medium text-[#2C2621] tracking-tight ${textClassName}`}
+        className={`font-serif font-medium text-[#2C2621] tracking-tight ${textClassName}`}
       >
         Clikd<span className="text-[#2C3B2E]">.</span>
       </span>

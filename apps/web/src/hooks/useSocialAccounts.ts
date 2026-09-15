@@ -27,6 +27,8 @@ const SUCCESS_PARAMS = new Set([
   'linkedin_connected',
   'tiktok_connected',
   'tiktok_business_connected',
+  'pinterest_connected',
+  'google_connected',
 ]);
 
 const EMPTY_RESPONSE: SocialAccountsResponse = {

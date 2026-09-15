@@ -6,11 +6,12 @@
 import { NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import { missingEnvKeys, missingEnvResponse, pinterestEnv } from '@/lib/config/env';
+import { missingEnvKeys, pinterestEnv } from '@/lib/config/env';
 import {
   PINTEREST_OAUTH_STATE_COOKIE,
   buildPinterestLoginUrl,
 } from '@/lib/pinterest/oauth';
+import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
@@ -18,13 +19,32 @@ import {
   setActiveWorkspaceCookies,
 } from '@/lib/social/oauth-workspace';
 
+function popupFail(origin: string, reason: string, detail?: string) {
+  const dest = new URL('/admin/settings/socials', origin);
+  dest.searchParams.set('error', reason);
+  return oauthPopupCompleteResponse({
+    success: false,
+    platform: 'pinterest',
+    error: reason,
+    detail,
+    continueHref: `${dest.pathname}${dest.search}`,
+  });
+}
+
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const origin = url.origin;
+
   const missing = missingEnvKeys(...pinterestEnv.requiredKeys);
   if (missing.length) {
-    return missingEnvResponse(missing, 'Pinterest Developer API');
+    // Prefer popup HTML over JSON 503 so the opener can show a real error.
+    return popupFail(
+      origin,
+      'missing_env',
+      `Missing ${missing.join(', ')}. Add them to apps/web/.env.local.`
+    );
   }
 
-  const url = new URL(request.url);
   const jar = await cookies();
   const workspaceId =
     url.searchParams.get('workspaceId')?.trim() ||
@@ -32,28 +52,29 @@ export async function GET(request: Request) {
     jar.get(ACTIVE_WORKSPACE_COOKIE_ALIAS)?.value ||
     null;
 
+  if (!workspaceId) {
+    return popupFail(origin, 'missing_workspace_id');
+  }
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     const signIn = new URL('/account/signin', request.url);
-    const cb = workspaceId
-      ? `/api/auth/pinterest/login?workspaceId=${encodeURIComponent(workspaceId)}`
-      : '/api/auth/pinterest/login';
-    signIn.searchParams.set('callbackUrl', cb);
+    signIn.searchParams.set(
+      'callbackUrl',
+      `/api/auth/pinterest/login?workspaceId=${encodeURIComponent(workspaceId)}`
+    );
     return NextResponse.redirect(signIn);
   }
 
   // CSRF nonce + workspace binding embedded in OAuth state.
   const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
-  const origin = url.origin;
 
   let loginUrl: string;
   try {
     loginUrl = buildPinterestLoginUrl(state, origin);
   } catch (error) {
     console.error('[pinterest/login]', error);
-    const dest = new URL('/admin/settings/socials', request.url);
-    dest.searchParams.set('error', 'pinterest_oauth_failed');
-    return NextResponse.redirect(dest);
+    return popupFail(origin, 'pinterest_oauth_failed');
   }
 
   const res = NextResponse.redirect(loginUrl);
@@ -64,6 +85,6 @@ export async function GET(request: Request) {
     path: '/',
     maxAge: 60 * 10,
   });
-  if (workspaceId) setActiveWorkspaceCookies(res, workspaceId);
+  setActiveWorkspaceCookies(res, workspaceId);
   return res;
 }

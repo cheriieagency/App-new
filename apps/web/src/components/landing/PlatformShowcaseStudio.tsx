@@ -34,7 +34,6 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
-import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { adminCardClass } from '@/components/admin/AdminUi';
 import {
   FacebookIcon,
@@ -93,11 +92,10 @@ function StudioSidebar({ tab }: { tab: ShowcaseTabId }) {
   return (
     <aside className="hidden sm:flex w-64 shrink-0 bg-white border-r border-slate-200/80 flex-col rounded-bl-[28px]">
       <div className="px-4 pt-5 pb-4 space-y-4">
-        <div className="flex items-center gap-2.5 px-0.5 min-h-[44px]">
-          <ClikdMark size={34} className="rounded-[11px] shadow-sm" />
-          <p className="font-clikd-wordmark font-extrabold text-[17px] text-slate-900 tracking-tight leading-none">
-            clikd<span className="text-[#F472B6]">:</span>
-          </p>
+        <div className="flex items-center px-0.5 min-h-[44px]">
+          <span className="font-serif text-3xl font-medium text-[#2C2621] tracking-tight leading-none">
+            C.
+          </span>
         </div>
         <div className="flex items-center gap-2.5 w-full h-11 rounded-2xl border border-slate-200/90 bg-white pl-1.5 pr-3">
           <Avatar letter="C" size="w-7 h-7 text-[11px]" />
@@ -137,7 +135,9 @@ function StudioTopbar({ search }: { search: string }) {
   return (
     <div className="h-14 sm:h-16 shrink-0 px-4 sm:px-8 flex items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
       <div className="flex items-center gap-2.5 sm:hidden shrink-0">
-        <ClikdMark size={28} className="rounded-[9px] shadow-sm" />
+        <span className="font-serif text-2xl font-medium text-[#2C2621] tracking-tight leading-none">
+          C.
+        </span>
       </div>
       <div className="relative w-full max-w-md flex-1 hidden sm:block">
         <Search

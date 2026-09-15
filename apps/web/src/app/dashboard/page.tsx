@@ -50,7 +50,6 @@ import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
 import useUpload from '@/utils/useUpload';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
-import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { signOutAndRedirect } from '@/lib/sign-out-client';
 import AccountMenuButton from '@/components/account/AccountMenuButton';
 import {
@@ -2247,11 +2246,14 @@ function DashboardPageInner() {
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 w-64 flex-col justify-between bg-white border-r border-slate-200/80 h-screen rounded-bl-[28px]">
         <div className="flex flex-col min-h-0 flex-1">
           <div className="px-4 pt-5 pb-4">
-            <Link href="/" className="flex items-center gap-2.5 px-0.5 hover:opacity-90 transition-opacity">
-              <ClikdMark size={34} className="rounded-[11px] shadow-sm" />
-              <p className="font-clikd-wordmark font-extrabold text-[17px] text-slate-900 tracking-tight leading-none">
-                clikd<span className="text-[#F472B6]">:</span>
-              </p>
+            <Link
+              href="/"
+              className="flex items-center px-0.5 min-h-11 hover:opacity-80 transition-opacity"
+              aria-label="Clikd home"
+            >
+              <span className="font-serif text-3xl font-medium text-[#2C2621] tracking-tight leading-none">
+                C.
+              </span>
             </Link>
           </div>
 

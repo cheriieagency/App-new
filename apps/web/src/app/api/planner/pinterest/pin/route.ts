@@ -8,6 +8,7 @@ import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import sql from '@/app/api/utils/sql';
 import { createPinterestPin, listPinterestBoards } from '@/lib/pinterest/pins';
+import { getPinterestAccessTokenForWorkspace } from '@/lib/pinterest/tokens';
 import {
   ACTIVE_WORKSPACE_COOKIE,
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
@@ -62,8 +63,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const rows = await sql`
-      SELECT access_token, platform_user_name, handle
+    const accessToken = await getPinterestAccessTokenForWorkspace({
+      userId: session.user.id,
+      workspaceId,
+    });
+    if (!accessToken) {
+      return Response.json(
+        { error: 'pinterest_not_connected', message: 'Connect Pinterest in Settings → Socials' },
+        { status: 400 }
+      );
+    }
+
+    const metaRows = await sql`
+      SELECT platform_user_name, handle
       FROM social_accounts
       WHERE user_id = ${session.user.id}
         AND workspace_id = ${workspaceId}
@@ -71,14 +83,6 @@ export async function POST(request: Request) {
       ORDER BY updated_at DESC NULLS LAST
       LIMIT 1
     `;
-
-    const accessToken = rows?.[0]?.access_token as string | undefined;
-    if (!accessToken) {
-      return Response.json(
-        { error: 'pinterest_not_connected', message: 'Connect Pinterest in Settings → Socials' },
-        { status: 400 }
-      );
-    }
 
     let boardId = String(body.boardId ?? '').trim();
     if (!boardId) {
@@ -112,7 +116,7 @@ export async function POST(request: Request) {
       pin,
       boardId,
       scheduled: Boolean(scheduledAt),
-      handle: rows?.[0]?.handle ?? rows?.[0]?.platform_user_name ?? null,
+      handle: metaRows?.[0]?.handle ?? metaRows?.[0]?.platform_user_name ?? null,
     });
   } catch (error) {
     console.error('[planner/pinterest/pin]', error);
@@ -146,15 +150,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const rows = await sql`
-      SELECT access_token
-      FROM social_accounts
-      WHERE user_id = ${session.user.id}
-        AND workspace_id = ${workspaceId}
-        AND platform = 'pinterest'
-      LIMIT 1
-    `;
-    const accessToken = rows?.[0]?.access_token as string | undefined;
+    const accessToken = await getPinterestAccessTokenForWorkspace({
+      userId: session.user.id,
+      workspaceId,
+    });
     if (!accessToken) return Response.json({ boards: [], connected: false });
 
     const boards = await listPinterestBoards(accessToken);

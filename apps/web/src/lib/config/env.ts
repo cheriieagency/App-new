@@ -154,6 +154,8 @@ export const googleEnv = {
 export const pinterestEnv = {
   appId: () => readEnv('PINTEREST_APP_ID'),
   appSecret: () => readEnv('PINTEREST_APP_SECRET'),
+  /** Optional absolute callback URL registered in the Pinterest developer console. */
+  redirectUri: () => readEnv('PINTEREST_REDIRECT_URI'),
   requiredKeys: ['PINTEREST_APP_ID', 'PINTEREST_APP_SECRET'] as const,
 };
 

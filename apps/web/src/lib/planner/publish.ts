@@ -10,6 +10,7 @@ import {
 } from '@/lib/meta/graph-api';
 import { publishLinkedInPost } from '@/lib/linkedin/publish';
 import { createPinterestPin, listPinterestBoards } from '@/lib/pinterest/pins';
+import { getPinterestAccessTokenForWorkspace } from '@/lib/pinterest/tokens';
 import { ensurePublicHttpsMediaUrl } from '@/lib/supabase/storage';
 import { ensureFreshTikTokAccessToken } from '@/lib/tiktok/oauth';
 import { getTikTokAccessTokenForWorkspace } from '@/lib/tiktok/inbox-persist';
@@ -355,12 +356,12 @@ export async function publishPlannerPost(
           continue;
         }
 
-        const account = await loadAccount(
-          input.userId,
-          input.workspaceId,
-          'pinterest'
-        );
-        if (!account) {
+        // Prefer refreshed token so expired access_token does not fail publish.
+        const accessToken = await getPinterestAccessTokenForWorkspace({
+          userId: input.userId,
+          workspaceId: input.workspaceId,
+        });
+        if (!accessToken) {
           results.push({
             platform,
             ok: false,
@@ -372,7 +373,7 @@ export async function publishPlannerPost(
 
         let boardId = String(input.pinterestBoardId || '').trim();
         if (!boardId) {
-          const boards = await listPinterestBoards(account.access_token);
+          const boards = await listPinterestBoards(accessToken);
           boardId = boards[0]?.id ?? '';
         }
         if (!boardId) {
@@ -385,7 +386,7 @@ export async function publishPlannerPost(
         }
 
         const pin = await createPinterestPin({
-          accessToken: account.access_token,
+          accessToken,
           boardId,
           title: title || caption.slice(0, 100) || 'Pin',
           description: fullCaption || undefined,

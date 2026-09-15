@@ -6,7 +6,6 @@ import { ChevronDown, Crown, Users } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 import { LoginModal } from '@/components/landing/LoginModal';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { ClikdMark } from '@/components/brand/ClikdLogo';
 import { usePlatformRole } from '@/lib/use-platform-role';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import {
@@ -85,10 +84,13 @@ export function LandingHeader({ isLoggedIn, user = null }: LandingHeaderProps) {
             : 'bg-white/80 backdrop-blur-md border-slate-200/80'
         }`}
       >
-        <Link href="/" className="flex items-center gap-2.5 shrink-0 min-h-11">
-          <ClikdMark size={36} className="rounded-xl" />
-          <span className="font-clikd-wordmark font-extrabold text-xl text-slate-900 tracking-tight">
-            clikd<span className="text-[#F472B6]">:</span>
+        <Link
+          href="/"
+          className="flex items-center shrink-0 min-h-11"
+          aria-label="Clikd home"
+        >
+          <span className="font-serif text-3xl font-medium text-[#2C2621] tracking-tight leading-none">
+            C.
           </span>
         </Link>
 

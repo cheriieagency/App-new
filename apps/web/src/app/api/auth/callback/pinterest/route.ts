@@ -3,7 +3,6 @@
  * Pinterest OAuth callback → social_accounts (workspace-bound) → popup close.
  */
 
-import { NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import {
@@ -15,6 +14,7 @@ import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
 import { resolveOAuthWorkspaceId } from '@/lib/social/oauth-workspace';
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
 import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
+import { NextResponse } from 'next/server';
 
 function clearState(res: NextResponse) {
   res.cookies.set(PINTEREST_OAUTH_STATE_COOKIE, '', {
@@ -33,13 +33,15 @@ export async function GET(request: Request) {
   const oauthError = url.searchParams.get('error');
   const origin = url.origin;
 
-  const fail = (reason: string) => {
+  const fail = (reason: string, detail?: string) => {
     const dest = new URL('/admin/settings/socials', origin);
     dest.searchParams.set('error', reason);
+    if (detail) dest.searchParams.set('detail', detail.slice(0, 180));
     const res = oauthPopupCompleteResponse({
       success: false,
       platform: 'pinterest',
       error: reason,
+      detail,
       continueHref: `${dest.pathname}${dest.search}`,
     });
     clearState(res);
@@ -61,9 +63,11 @@ export async function GET(request: Request) {
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) {
-    const signIn = new URL('/account/signin', origin);
-    signIn.searchParams.set('callbackUrl', '/admin/settings/socials');
-    return NextResponse.redirect(signIn);
+    // Do not redirect away with the one-time code — popup error so user can retry.
+    return fail(
+      'session_expired',
+      'Sign in again, then click Connect Pinterest.'
+    );
   }
 
   const userId = session.user.id;
@@ -78,19 +82,22 @@ export async function GET(request: Request) {
     const tokens = await exchangePinterestCode(code, origin);
     const profile = await fetchPinterestUserAccount(tokens.access_token);
     const username = (profile.username || '').trim();
-    if (!username) return fail('pinterest_missing_username');
+    // Prefer stable id when present; fall back to username.
+    const externalId = String(profile.id || username || '').trim();
+    if (!externalId) return fail('pinterest_missing_account_id');
 
     await upsertOAuthSocialAccount({
       userId,
       platform: 'pinterest',
-      externalId: username,
-      handle: `@${username.replace(/^@/, '')}`,
-      displayName: username,
+      externalId,
+      handle: username ? `@${username.replace(/^@/, '')}` : `@${externalId}`,
+      displayName: username || externalId,
       avatarUrl: profile.profile_image ?? null,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token ?? null,
       expiresIn: tokens.expires_in ?? null,
       workspaceId: ownedWorkspaceId,
+      scope: tokens.scope ?? null,
     });
 
     const dest = new URL('/admin/settings/socials', origin);
@@ -104,6 +111,9 @@ export async function GET(request: Request) {
     return res;
   } catch (error) {
     console.error('[pinterest/callback]', error);
-    return fail('pinterest_oauth_failed');
+    return fail(
+      'pinterest_oauth_failed',
+      error instanceof Error ? error.message : undefined
+    );
   }
 }
