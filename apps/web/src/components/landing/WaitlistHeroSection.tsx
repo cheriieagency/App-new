@@ -85,8 +85,9 @@ export function WaitlistHeroSection() {
       </span>
 
       <h1 className="mt-10 sm:mt-12 font-playfair text-[2.65rem] sm:text-5xl md:text-6xl lg:text-[4.25rem] font-medium leading-[1.08] tracking-[-0.02em] text-[#2C2621]">
-        Be first in the future{' '}
-        <em className="italic font-normal">creators studio.</em>
+        Join the new era of social media planning.
+        <br />
+        <em className="italic font-normal">Clikd studio</em>
       </h1>
 
       <p className="mt-7 sm:mt-8 mx-auto max-w-xl font-inter text-[15px] sm:text-base leading-relaxed text-[#8A857D]">
@@ -128,10 +129,6 @@ export function WaitlistHeroSection() {
               </p>
             )}
           </form>
-
-          <p className="mt-4 text-[12px] font-inter text-[#8A857D]">
-            {queueEstimateText} creators are already in the queue.
-          </p>
         </>
       ) : (
         <div className="mt-12 sm:mt-14 mx-auto max-w-md editorial-card p-8 text-left sm:text-center">

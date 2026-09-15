@@ -92,7 +92,8 @@ export function WaitlistPageClient() {
           </h2>
           <p className="mt-4 font-inter text-[15px] leading-relaxed text-[#8A857D]">
             Publishing, storefront, community, CRM, inbox, ads, and analytics — designed for
-            fashion brands, lifestyle creators, and PR teams who prefer precision over clutter.
+            social media managers, brands, creators, and PR teams who prefer precision over
+            clutter.
           </p>
         </header>
 
