@@ -80,10 +80,25 @@ const GOOGLE_FONTS_HREF =
     'family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600',
     'family=Great+Vibes',
     'family=Inter:wght@400;500;600;700',
+    'family=Roboto:wght@400;500;700',
     'family=Plus+Jakarta+Sans:wght@400;500;600;700;800',
     'family=Space+Grotesk:wght@500;600;700',
     'family=Outfit:wght@500;600;700;800',
     'family=Fira+Code:wght@400;500;600;700',
+    // Post Studio media editor — IG / TikTok-style overlay fonts
+    'family=Courier+Prime:wght@400;700',
+    'family=Special+Elite',
+    'family=Anton',
+    'family=Oswald:wght@500;600;700',
+    'family=Caveat:wght@500;600;700',
+    'family=Pacifico',
+    'family=Comic+Neue:wght@400;700',
+    'family=Poppins:wght@400;500;600;700',
+    'family=Barlow+Condensed:wght@500;600;700',
+    'family=Libre+Baskerville:ital,wght@0,400;0,700;1,400',
+    'family=Dancing+Script:wght@500;600;700',
+    'family=Fredoka:wght@400;500;600;700',
+    'family=Permanent+Marker',
   ].join('&') +
   '&display=swap';
 

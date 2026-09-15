@@ -36,6 +36,13 @@ export type PlannerMediaItem = {
   id: string;
   url: string;
   type: 'image' | 'video';
+  /**
+   * Original media URL before image text was baked.
+   * Used so the editor can re-open a clean canvas.
+   */
+  sourceUrl?: string;
+  /** Text overlays — baked into `url` for images; CSS-only for videos. */
+  overlays?: import('@/lib/planner/media-overlays').MediaTextOverlay[];
 };
 
 export type YoutubePrivacy = 'public' | 'unlisted' | 'private';
@@ -95,6 +102,11 @@ export type PlannerPost = {
   media_items: PlannerMediaItem[];
   /** Clean list of media HTTPS URLs (mirrors media_items.url). */
   media_urls?: string[];
+  /**
+   * Feed frame for photos / carousels.
+   * IG & Facebook: 1:1 | 4:5. TikTok photo/carousel also allows 9:16.
+   */
+  media_aspect?: import('@/lib/planner/media-aspect').MediaAspectRatio | null;
   /** Rella-style publish workflow. */
   publish_mode?: 'auto_publish' | 'notification_reminder' | 'tiktok_draft';
   /** Optional trending sound name / notes for manual push mode. */
@@ -917,6 +929,10 @@ export function upsertPlannerPost(
         input.media_urls !== undefined
           ? input.media_urls
           : media.media_items.map((m) => m.url).filter(Boolean),
+      media_aspect:
+        input.media_aspect !== undefined
+          ? input.media_aspect
+          : existing.media_aspect ?? null,
       publish_mode: input.publish_mode ?? existing.publish_mode ?? 'auto_publish',
       trending_sound_note:
         input.trending_sound_note !== undefined
@@ -998,6 +1014,7 @@ export function upsertPlannerPost(
     media_items: media.media_items,
     media_urls:
       input.media_urls ?? media.media_items.map((m) => m.url).filter(Boolean),
+    media_aspect: input.media_aspect ?? null,
     publish_mode: input.publish_mode ?? 'auto_publish',
     trending_sound_note: input.trending_sound_note ?? null,
     collaborators: input.collaborators ?? [],

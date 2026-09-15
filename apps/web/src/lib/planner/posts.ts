@@ -21,6 +21,10 @@ import {
   type PublishMode,
 } from '@/lib/planner/publish-modes';
 import {
+  isMediaAspectRatio,
+  type MediaAspectRatio,
+} from '@/lib/planner/media-aspect';
+import {
   normalizeCollaborators,
   normalizeOptionalText,
   normalizeOptionalUrl,
@@ -28,7 +32,7 @@ import {
 } from '@/lib/planner/more-options';
 
 let schemaReady: Promise<void> | null = null;
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -153,6 +157,10 @@ export async function ensurePlannerPostsSchema(): Promise<void> {
       ALTER TABLE public.planner_posts
         ADD COLUMN IF NOT EXISTS campaign_tag text
     `);
+    await safeAlter('planner_posts_media_aspect', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS media_aspect text
+    `);
 
     schemaVersionApplied = SCHEMA_VERSION;
   })().catch((error) => {
@@ -198,6 +206,9 @@ function rowToPost(row: Record<string, unknown>): PlannerPost {
         type: m.type === 'video' ? 'video' : 'image',
       } satisfies PlannerMediaItem;
     }),
+    media_aspect: isMediaAspectRatio(row.media_aspect)
+      ? (row.media_aspect as MediaAspectRatio)
+      : null,
     media_urls: (() => {
       const fromCol = asArray(row.media_urls, (u) =>
         typeof u === 'string' && u.trim() ? u.trim() : null
@@ -384,6 +395,7 @@ export type UpsertDurablePlannerPostInput = {
   media_type?: PlannerPost['media_type'];
   media_items?: PlannerMediaItem[];
   media_urls?: string[];
+  media_aspect?: MediaAspectRatio | null;
   publish_mode?: PublishMode;
   trending_sound_note?: string | null;
   collaborators?: string[];
@@ -478,6 +490,10 @@ export async function upsertDurablePlannerPost(
           : existing?.media_items ?? [];
       return items.map((m) => m.url).filter(Boolean);
     })(),
+    media_aspect:
+      input.media_aspect !== undefined
+        ? input.media_aspect
+        : existing?.media_aspect ?? null,
     publish_mode:
       input.publish_mode ??
       existing?.publish_mode ??
@@ -546,7 +562,7 @@ export async function upsertDurablePlannerPost(
     INSERT INTO public.planner_posts (
       id, workspace_id, user_id, title, caption, hashtags, platforms,
       workflow, status, scheduled_at, published_at, media_url, media_type,
-      media_items, media_urls, publish_mode, trending_sound_note,
+      media_items, media_urls, media_aspect, publish_mode, trending_sound_note,
       collaborators, first_comment, location_name, location_id,
       link_in_bio_url, post_tags, campaign_tag,
       youtube, idea_title, project, campaigns, assignees,
@@ -567,6 +583,7 @@ export async function upsertDurablePlannerPost(
       ${post.media_type},
       ${JSON.stringify(post.media_items)},
       ${JSON.stringify(post.media_urls ?? [])},
+      ${post.media_aspect ?? null},
       ${post.publish_mode ?? 'auto_publish'},
       ${post.trending_sound_note ?? null},
       ${JSON.stringify(post.collaborators ?? [])},
@@ -603,6 +620,7 @@ export async function upsertDurablePlannerPost(
       media_type = EXCLUDED.media_type,
       media_items = EXCLUDED.media_items,
       media_urls = EXCLUDED.media_urls,
+      media_aspect = EXCLUDED.media_aspect,
       publish_mode = EXCLUDED.publish_mode,
       trending_sound_note = EXCLUDED.trending_sound_note,
       collaborators = EXCLUDED.collaborators,

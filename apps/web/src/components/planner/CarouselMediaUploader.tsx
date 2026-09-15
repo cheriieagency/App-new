@@ -15,6 +15,7 @@ import {
   ImageIcon,
   Images,
   Loader2,
+  Pencil,
   Plus,
   Trash2,
   Upload,
@@ -36,6 +37,7 @@ import {
 } from '@/lib/mock-media-library';
 import GoogleDriveImportButton from '@/components/admin/GoogleDriveImportButton';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
+import MediaEditorModal from '@/components/planner/MediaEditorModal';
 
 const MAX_ITEMS = 10;
 
@@ -70,6 +72,8 @@ export default function CarouselMediaUploader({
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorIndex, setEditorIndex] = useState(0);
   const [upload, { loading: uploading, progress: uploadProgress }] = useUpload();
 
   const room = Math.max(0, MAX_ITEMS - items.length);
@@ -132,7 +136,9 @@ export default function CarouselMediaUploader({
         next.push({
           id: nextMediaId(),
           url,
+          sourceUrl: url,
           type: isVideo ? 'video' : 'image',
+          overlays: [],
         });
       }
       appendItems(next);
@@ -150,7 +156,9 @@ export default function CarouselMediaUploader({
       picked.slice(0, room).map((a) => ({
         id: nextMediaId(),
         url: a.image,
+        sourceUrl: a.image,
         type: a.kind === 'video' ? 'video' : 'image',
+        overlays: [],
       }))
     );
     setSelectedIds(new Set());
@@ -298,6 +306,7 @@ export default function CarouselMediaUploader({
               {
                 id: nextMediaId(),
                 url: file.fileUrl,
+                sourceUrl: file.fileUrl,
                 type: isVideoAsset({
                   fileType: file.fileType,
                   fileName: file.fileName,
@@ -305,6 +314,7 @@ export default function CarouselMediaUploader({
                 })
                   ? 'video'
                   : 'image',
+                overlays: [],
               },
             ]);
           }}
@@ -313,8 +323,8 @@ export default function CarouselMediaUploader({
 
       {items.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] text-zinc-400 font-medium">
-            Dra miniatyrerna för att ändra ordning
+          <p className="text-[11px] text-[#8A857D] font-medium">
+            Drag to reorder · Edit to add text overlays
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {items.map((item, index) => (
@@ -336,10 +346,10 @@ export default function CarouselMediaUploader({
                   setDragIndex(null);
                   setOverIndex(null);
                 }}
-                className={`relative flex-shrink-0 w-24 h-24 rounded-md overflow-hidden border bg-zinc-100 group ${
+                className={`relative flex-shrink-0 w-24 h-28 rounded-md overflow-hidden border bg-[#EFECE6] group ${
                   overIndex === index && dragIndex !== index
-                    ? 'border-slate-500'
-                    : 'border-slate-200'
+                    ? 'border-[#2C2621]'
+                    : 'border-[#E6E3DB]'
                 }`}
               >
                 {item.type === 'video' ? (
@@ -358,14 +368,29 @@ export default function CarouselMediaUploader({
                       e.stopPropagation();
                       removeAt(index);
                     }}
-                    className="h-11 w-11 min-h-[44px] min-w-[44px] -m-1 rounded-lg bg-black/45 text-white flex items-center justify-center"
-                    aria-label="Ta bort"
+                    className="h-8 w-8 min-h-[32px] min-w-[32px] rounded-lg bg-black/45 text-white flex items-center justify-center"
+                    aria-label="Remove"
                   >
                     <Trash2 size={12} />
                   </button>
                 </div>
-                <span className="absolute bottom-1 left-1 text-[9px] font-extrabold uppercase tracking-wide text-white bg-black/50 px-1.5 py-0.5 rounded">
+                <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditorIndex(index);
+                      setEditorOpen(true);
+                    }}
+                    className="inline-flex w-full items-center justify-center gap-1 min-h-[32px] rounded-md bg-[#F9F8F6]/95 text-[#2C2621] text-[10px] font-semibold hover:bg-white transition-colors"
+                  >
+                    <Pencil size={11} />
+                    Edit
+                  </button>
+                </div>
+                <span className="absolute top-8 left-1 text-[9px] font-extrabold uppercase tracking-wide text-white bg-black/50 px-1.5 py-0.5 rounded">
                   {item.type === 'video' ? 'Video' : index + 1}
+                  {(item.overlays?.length ?? 0) > 0 ? ' · Aa' : ''}
                 </span>
               </div>
             ))}
@@ -373,7 +398,7 @@ export default function CarouselMediaUploader({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="flex-shrink-0 w-24 h-24 rounded-md border border-dashed border-slate-200 text-slate-400 hover:border-slate-400 hover:text-slate-600 flex flex-col items-center justify-center gap-1"
+                className="flex-shrink-0 w-24 h-28 rounded-md border border-dashed border-[#E6E3DB] text-[#8A857D] hover:border-[#2C2621]/40 hover:text-[#2C2621] flex flex-col items-center justify-center gap-1 bg-[#F9F8F6]"
               >
                 <Plus size={18} />
                 <span className="text-[10px] font-medium">Add</span>
@@ -382,6 +407,17 @@ export default function CarouselMediaUploader({
           </div>
         </div>
       )}
+
+      <MediaEditorModal
+        open={editorOpen}
+        items={items}
+        initialIndex={editorIndex}
+        onClose={() => setEditorOpen(false)}
+        onSave={(next) => {
+          onChange(next);
+          setEditorOpen(false);
+        }}
+      />
 
       {/* Media Library picker (Brand assets) */}
       {libraryOpen ? (

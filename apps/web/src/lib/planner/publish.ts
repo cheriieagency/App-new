@@ -319,14 +319,9 @@ export async function publishPlannerPost(
     }
   }
 
-  // TikTok Draft — only upload to TikTok inbox/drafts.
+  // TikTok Draft — upload TikTok to inbox/drafts (other selected platforms still publish normally).
   if (publishMode === 'tiktok_draft') {
-    const draftPlatforms = platforms.includes('tiktok')
-      ? ['tiktok']
-      : platforms;
-    // Reuse the normal loop below with publishMode flag for TikTok asDraft.
-    // Force platforms to tiktok when draft mode is selected.
-    if (!draftPlatforms.includes('tiktok')) {
+    if (!platforms.includes('tiktok')) {
       return {
         ok: false,
         results: [],
@@ -340,8 +335,7 @@ export async function publishPlannerPost(
   }
 
   const results: PlatformPublishResult[] = [];
-  const effectivePlatforms =
-    publishMode === 'tiktok_draft' ? ['tiktok'] : platforms;
+  const effectivePlatforms = platforms;
 
   for (const platform of effectivePlatforms) {
     try {

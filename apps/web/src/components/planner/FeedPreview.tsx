@@ -17,8 +17,58 @@ import type {
   SocialPlatform,
   YoutubeMeta,
 } from '@/lib/mock-content-planner';
+import {
+  clamp01,
+  overlayBackgroundFill,
+  overlayFontClass,
+  type MediaTextOverlay,
+} from '@/lib/planner/media-overlays';
+import {
+  aspectForPlatform,
+  mediaAspectTailwind,
+  type MediaAspectRatio,
+} from '@/lib/planner/media-aspect';
 
 type PreviewTab = 'instagram' | 'facebook' | 'tiktok' | 'linkedin' | 'youtube';
+
+/** CSS text overlays — used for videos (images are canvas-baked into `url`). */
+function MediaOverlayLayer({ overlays }: { overlays?: MediaTextOverlay[] }) {
+  if (!overlays?.length) return null;
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 z-[5] overflow-hidden"
+      style={{ containerType: 'size' }}
+      aria-hidden
+    >
+      {overlays.map((ov) => (
+        <div
+          key={ov.id}
+          className="absolute max-w-[86%] -translate-x-1/2 -translate-y-1/2 select-none"
+          style={{
+            left: `${clamp01(ov.x) * 100}%`,
+            top: `${clamp01(ov.y) * 100}%`,
+            fontSize: `${Math.max(3.5, ov.fontSizePct)}cqh`,
+          }}
+        >
+          <span
+            className={`inline-block px-[0.55em] py-[0.28em] leading-tight text-center break-words ${overlayFontClass(ov.font)} ${
+              ov.background ? 'rounded-full' : ''
+            }`}
+            style={{
+              color: ov.color,
+              backgroundColor: overlayBackgroundFill(ov),
+              textShadow: ov.background
+                ? undefined
+                : '0 1px 3px rgba(0,0,0,0.45)',
+            }}
+          >
+            {ov.text || 'Text'}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function MediaSlide({
   item,
@@ -36,12 +86,35 @@ function MediaSlide({
       </div>
     );
   }
+
+  // Videos keep overlays as CSS; images already have text baked into `url`.
+  const showCssOverlays = item.type === 'video' && (item.overlays?.length ?? 0) > 0;
+
   if (item.type === 'video') {
     return (
-      <video src={item.url} className={`object-cover ${className}`} muted playsInline loop />
+      <div className={`relative overflow-hidden ${className}`}>
+        <video
+          src={item.url}
+          className="absolute inset-0 h-full w-full object-cover"
+          muted
+          playsInline
+          loop
+        />
+        {showCssOverlays ? <MediaOverlayLayer overlays={item.overlays} /> : null}
+      </div>
     );
   }
-  return <img src={item.url} alt="" className={`object-cover ${className}`} />;
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={item.url}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    </div>
+  );
 }
 
 /** Meta feed: posts/carousels = 4:5, video/Reels = 9:16. */
@@ -58,18 +131,22 @@ function InstagramPreview({
   items,
   brandAvatar,
   brandColor,
+  aspectRatio = '4:5',
 }: {
   username: string;
   caption: string;
   items: PlannerMediaItem[];
   brandAvatar?: string | null;
   brandColor?: string;
+  aspectRatio?: MediaAspectRatio;
 }) {
   const [slide, setSlide] = useState(0);
   const current = items[slide] ?? items[0];
   const isCarousel = items.length > 1;
   const format = metaMediaAspect(items);
   const isVideoFormat = format === 'video';
+  const feedAspect = aspectForPlatform('instagram', aspectRatio);
+  const feedAspectClass = mediaAspectTailwind(feedAspect);
 
   const avatar = (
     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-[2px]">
@@ -125,7 +202,7 @@ function InstagramPreview({
         <MoreHorizontal size={16} className="text-[#262626]" />
       </div>
 
-      <div className="relative aspect-[4/5] bg-zinc-100">
+      <div className={`relative ${feedAspectClass} bg-zinc-100`}>
         <MediaSlide item={current} className="absolute inset-0 w-full h-full" />
         {isCarousel && (
           <>
@@ -171,12 +248,14 @@ function FacebookPreview({
   items,
   brandAvatar,
   brandColor,
+  aspectRatio = '4:5',
 }: {
   username: string;
   caption: string;
   items: PlannerMediaItem[];
   brandAvatar?: string | null;
   brandColor?: string;
+  aspectRatio?: MediaAspectRatio;
 }) {
   const [slide, setSlide] = useState(0);
   const current = items[slide] ?? items[0];
@@ -184,6 +263,8 @@ function FacebookPreview({
   const format = metaMediaAspect(items);
   const isVideoFormat = format === 'video';
   const pageName = username.replace(/^@/, '') || 'Page';
+  const feedAspect = aspectForPlatform('facebook', aspectRatio);
+  const feedAspectClass = mediaAspectTailwind(feedAspect);
 
   const avatar = brandAvatar ? (
     <img
@@ -241,7 +322,7 @@ function FacebookPreview({
         {caption.split('\n').slice(0, 3).join(' ')}
       </p>
 
-      <div className="relative aspect-[4/5] bg-zinc-100 border-y border-zinc-100">
+      <div className={`relative ${feedAspectClass} bg-zinc-100 border-y border-zinc-100`}>
         <MediaSlide item={current} className="absolute inset-0 w-full h-full" />
         {isCarousel && (
           <>
@@ -287,17 +368,79 @@ function TikTokPreview({
   username,
   caption,
   items,
+  aspectRatio = '9:16',
 }: {
   username: string;
   caption: string;
   items: PlannerMediaItem[];
+  aspectRatio?: MediaAspectRatio;
 }) {
-  const item = items.find((m) => m.type === 'video') ?? items[0];
+  const [slide, setSlide] = useState(0);
+  const isCarousel = items.length > 1;
+  const isPhotoPost =
+    items.length > 0 && items.every((m) => m.type === 'image');
+  const current =
+    (isPhotoPost || isCarousel
+      ? items[slide] ?? items[0]
+      : items.find((m) => m.type === 'video') ?? items[0]) ?? null;
   const handle = `@${username.replace(/^@/, '')}`;
+  const mediaAspectClass = mediaAspectTailwind(aspectRatio);
+
+  // Photo / carousel — framed post with chosen aspect inside the phone
+  if (isPhotoPost || isCarousel) {
+    return (
+      <div className="relative mx-auto w-[200px] aspect-[9/19.5] rounded-[2rem] overflow-hidden bg-black border-[3px] border-zinc-800 shadow-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 px-1.5 pt-10 pb-16">
+          <div
+            className={`relative w-full max-h-full overflow-hidden rounded-md bg-zinc-900 ${mediaAspectClass}`}
+          >
+            <MediaSlide
+              item={current}
+              className="absolute inset-0 w-full h-full"
+            />
+            {isCarousel ? (
+              <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1 z-10">
+                {items.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSlide(i)}
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      i === slide ? 'bg-white' : 'bg-white/40'
+                    }`}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/80 via-transparent to-black/10" />
+        <div className="absolute top-0 inset-x-0 h-8 flex items-center justify-center pointer-events-none">
+          <div className="w-20 h-5 rounded-b-xl bg-black" />
+        </div>
+        <div className="absolute top-9 inset-x-0 flex items-center justify-center gap-3 pointer-events-none">
+          <span className="text-[10px] font-semibold text-white/50">
+            Following
+          </span>
+          <span className="text-[10px] font-extrabold text-white border-b-2 border-white pb-0.5">
+            For You
+          </span>
+        </div>
+        <div className="absolute left-2.5 right-12 bottom-3 text-white pointer-events-none">
+          <p className="text-[11px] font-extrabold mb-0.5 drop-shadow-sm">
+            {handle}
+          </p>
+          <p className="text-[10px] font-medium leading-snug line-clamp-2 drop-shadow-sm">
+            {caption}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative mx-auto w-[200px] aspect-[9/19.5] rounded-[2rem] overflow-hidden bg-black border-[3px] border-zinc-800 shadow-lg">
-      <MediaSlide item={item} className="absolute inset-0 w-full h-full" />
+      <MediaSlide item={current} className="absolute inset-0 w-full h-full" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10" />
 
       {/* Status bar — notch area */}
@@ -574,6 +717,7 @@ export default function FeedPreview({
   brandAvatar = null,
   brandColor,
   platformHandles,
+  mediaAspect = '4:5',
 }: {
   caption: string;
   mediaItems: PlannerMediaItem[];
@@ -585,6 +729,8 @@ export default function FeedPreview({
   brandColor?: string;
   /** Per-platform handles from connected social accounts. Falls back to `username`. */
   platformHandles?: PlatformHandles;
+  /** Feed frame for photos / carousels (videos stay 9:16 Reels). */
+  mediaAspect?: MediaAspectRatio;
 }) {
   const tabs = useMemo(() => {
     const all: { key: PreviewTab; label: string }[] = [
@@ -633,6 +779,7 @@ export default function FeedPreview({
             items={mediaItems}
             brandAvatar={brandAvatar}
             brandColor={brandColor}
+            aspectRatio={mediaAspect}
           />
         )}
         {active === 'facebook' && (
@@ -642,10 +789,16 @@ export default function FeedPreview({
             items={mediaItems}
             brandAvatar={brandAvatar}
             brandColor={brandColor}
+            aspectRatio={mediaAspect}
           />
         )}
         {active === 'tiktok' && (
-          <TikTokPreview username={platformHandles?.tiktok || username} caption={caption} items={mediaItems} />
+          <TikTokPreview
+            username={platformHandles?.tiktok || username}
+            caption={caption}
+            items={mediaItems}
+            aspectRatio={mediaAspect}
+          />
         )}
         {active === 'linkedin' && (
           <LinkedInPreview

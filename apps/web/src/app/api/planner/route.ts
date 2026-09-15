@@ -303,6 +303,14 @@ export async function POST(request: Request) {
               : undefined,
       media_items,
       media_urls: media_items?.map((m) => m.url).filter(Boolean),
+      media_aspect:
+        body.media_aspect === '1:1' ||
+        body.media_aspect === '4:5' ||
+        body.media_aspect === '9:16'
+          ? body.media_aspect
+          : body.media_aspect === null
+            ? null
+            : undefined,
       publish_mode: parsePublishMode(body.publish_mode ?? body.publishMode),
       trending_sound_note:
         typeof body.trending_sound_note === 'string'

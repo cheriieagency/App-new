@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  Bookmark,
   CalendarClock,
   Check,
   ChevronDown,
@@ -36,7 +37,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
+import InfoTooltip from '@/components/ui/InfoTooltip';
 import {
   Accordion,
   AccordionContent,
@@ -53,6 +54,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import CarouselMediaUploader from '@/components/planner/CarouselMediaUploader';
 import FeedPreview, { type PlatformHandles } from '@/components/planner/FeedPreview';
+import MediaAspectPicker from '@/components/planner/MediaAspectPicker';
+import {
+  defaultMediaAspect,
+  isMediaAspectRatio,
+  mediaAspectChoices,
+  type MediaAspectRatio,
+} from '@/lib/planner/media-aspect';
 import {
   FacebookIcon,
   InstagramIcon,
@@ -92,7 +100,6 @@ import {
   type FavoriteHashtagSet,
 } from '@/lib/planner/favorite-hashtags';
 import {
-  PUBLISH_MODE_OPTIONS,
   parsePublishMode,
   type PublishMode,
 } from '@/lib/planner/publish-modes';
@@ -145,9 +152,23 @@ const PROJECT_COLORS = [
 ];
 
 /** Soft section label — sentence case, not ALL CAPS. */
-function FieldLabel({ children }: { children: ReactNode }) {
+function FieldLabel({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <p className="text-xs font-medium text-slate-500 mb-1.5">{children}</p>
+    <p
+      className={
+        className
+          ? `text-xs font-medium text-slate-500 ${className}`
+          : 'text-xs font-medium text-slate-500 mb-1.5'
+      }
+    >
+      {children}
+    </p>
   );
 }
 
@@ -246,13 +267,20 @@ export default function PostStudioModal({
   const [workflow, setWorkflow] = useState<WorkflowStatus>('IDEA');
   const [project, setProject] = useState(projectName);
   const [scheduledAt, setScheduledAt] = useState('');
-  const [autoPost, setAutoPost] = useState(false);
   const [assignees, setAssignees] = useState<PlannerAssignee[]>([]);
   const [campaignIds, setCampaignIds] = useState<string[]>([]);
   const [subtasks, setSubtasks] = useState<PlannerSubtask[]>([]);
   const [mediaItems, setMediaItems] = useState<PlannerMediaItem[]>([]);
-  const [publishMode, setPublishMode] = useState<PublishMode>('auto_publish');
+  const [mediaAspect, setMediaAspect] = useState<MediaAspectRatio>('4:5');
+  /** TikTok-only: upload to TikTok drafts so you can add a trending sound in the app. */
+  const [tiktokTrendingSound, setTiktokTrendingSound] = useState(false);
   const [trendingSoundNote, setTrendingSoundNote] = useState('');
+  const tiktokSelected = platforms.includes('tiktok');
+  const publishMode: PublishMode =
+    tiktokSelected && tiktokTrendingSound ? 'tiktok_draft' : 'auto_publish';
+  const hasTikTokVideo = mediaItems.some(
+    (m) => Boolean(m.url) && m.type === 'video'
+  );
   const [moreOptions, setMoreOptions] =
     useState<MoreOptionsValue>(EMPTY_MORE_OPTIONS);
   const [newTask, setNewTask] = useState('');
@@ -348,13 +376,22 @@ export default function PostStudioModal({
       setWorkflow(post.workflow);
       setProject(post.project);
       setScheduledAt(toLocalInputValue(post.scheduled_at));
-      setAutoPost(post.auto_post);
       setAssignees(post.assignees);
       setCampaignIds(post.campaigns ?? []);
       setSubtasks(post.subtasks);
       setMediaItems(post.media_items ?? []);
-      setPublishMode(parsePublishMode(post.publish_mode));
-      setTrendingSoundNote(post.trending_sound_note || '');
+      setMediaAspect(
+        isMediaAspectRatio(post.media_aspect)
+          ? post.media_aspect
+          : defaultMediaAspect(post.platforms)
+      );
+      {
+        const mode = parsePublishMode(post.publish_mode);
+        setTiktokTrendingSound(
+          mode === 'tiktok_draft' || mode === 'notification_reminder'
+        );
+        setTrendingSoundNote(post.trending_sound_note || '');
+      }
       setMoreOptions({
         collaborators: post.collaborators ?? [],
         firstComment: post.first_comment || '',
@@ -383,12 +420,12 @@ export default function PostStudioModal({
       setWorkflow(defaultScheduledAt ? 'SCHEDULED' : 'IDEA');
       setProject(projectName);
       setScheduledAt(defaultScheduledAt ? toLocalInputValue(defaultScheduledAt) : '');
-      setAutoPost(Boolean(defaultScheduledAt));
       setAssignees([PLANNER_TEAM[0]]);
       setCampaignIds(defaultCampaignIds?.length ? [...defaultCampaignIds] : []);
       setSubtasks([]);
       setMediaItems([]);
-      setPublishMode('auto_publish');
+      setMediaAspect('4:5');
+      setTiktokTrendingSound(false);
       setTrendingSoundNote('');
       setMoreOptions(EMPTY_MORE_OPTIONS);
       setLocalComments([]);
@@ -403,6 +440,14 @@ export default function PostStudioModal({
     setComment('');
     setCommentImage(null);
   }, [open, post, projectName, defaultScheduledAt, defaultCampaignIds]);
+
+  // Keep frame size valid when platforms / media change
+  useEffect(() => {
+    const choices = mediaAspectChoices(platforms, mediaItems);
+    if (!choices.includes(mediaAspect) && choices[0]) {
+      setMediaAspect(choices[0]);
+    }
+  }, [platforms, mediaItems, mediaAspect]);
 
   const togglePlatform = (p: SocialPlatform) => {
     setPlatforms((prev) =>
@@ -487,9 +532,27 @@ export default function PostStudioModal({
 
     const tiktokSelected = platforms.includes('tiktok');
     const hasMedia = mediaItems.some((m) => Boolean(m.url));
+    const hasTikTokVideo = mediaItems.some(
+      (m) => Boolean(m.url) && m.type === 'video'
+    );
     if (tiktokSelected && (mode === 'post' || mode === 'schedule') && !hasMedia) {
       toast.error(t('toastTikTokNeedsMedia', locale));
       return;
+    }
+    if (
+      publishMode === 'tiktok_draft' &&
+      (mode === 'post' || mode === 'schedule')
+    ) {
+      if (!connectedPlatforms.has('tiktok')) {
+        toast.error('Connect TikTok under Settings → Socials to save a draft.');
+        return;
+      }
+      if (!hasTikTokVideo) {
+        toast.error(
+          'TikTok drafts need a video. Add a video to finish with a trending sound in the app.'
+        );
+        return;
+      }
     }
 
     if (mode === 'schedule' && !scheduledAt) {
@@ -498,15 +561,10 @@ export default function PostStudioModal({
     }
 
     if (mode === 'post') {
-      // Reminder mode does not need live OAuth tokens — skip the gate.
-      if (publishMode !== 'notification_reminder') {
-        const liveTargets = platforms.filter((p) =>
-          connectedPlatforms.has(p)
-        );
-        if (liveTargets.length === 0) {
-          toast.error(t('toastConnectSocialSettings', locale));
-          return;
-        }
+      const liveTargets = platforms.filter((p) => connectedPlatforms.has(p));
+      if (liveTargets.length === 0) {
+        toast.error(t('toastConnectSocialSettings', locale));
+        return;
       }
     }
 
@@ -527,7 +585,7 @@ export default function PostStudioModal({
       }
     }
 
-    if (mode === 'post' && publishMode !== 'notification_reminder' && !workspaceId) {
+    if (mode === 'post' && !workspaceId) {
       toast.error('Select a workspace before publishing.');
       return;
     }
@@ -565,9 +623,10 @@ export default function PostStudioModal({
           media_url: mediaItems.find((m) => m.url)?.url || null,
           media_type: mediaItems.find((m) => m.url)?.type || null,
           media_urls: mediaItems.map((m) => m.url).filter(Boolean),
+          media_aspect: mediaAspect,
           publish_mode: publishMode,
           trending_sound_note:
-            publishMode === 'notification_reminder'
+            publishMode === 'tiktok_draft'
               ? trendingSoundNote.trim() || null
               : null,
           collaborators: moreOptions.collaborators,
@@ -577,7 +636,7 @@ export default function PostStudioModal({
           link_in_bio_url: moreOptions.linkInBioUrl.trim() || null,
           post_tags: moreOptions.postTags,
           campaign_tag: moreOptions.campaignTag.trim() || null,
-          auto_post: mode === 'schedule' ? true : autoPost,
+          auto_post: mode === 'schedule',
           scheduled_at:
             mode === 'schedule' && scheduledAt
               ? new Date(scheduledAt).toISOString()
@@ -633,7 +692,7 @@ export default function PostStudioModal({
             extraImageUrls,
             publishMode,
             trendingSoundNote:
-              publishMode === 'notification_reminder'
+              publishMode === 'tiktok_draft'
                 ? trendingSoundNote.trim() || undefined
                 : undefined,
             collaborators: moreOptions.collaborators,
@@ -685,20 +744,13 @@ export default function PostStudioModal({
             publishJson.message ||
               'Published to some platforms — check failed accounts in Settings → Socials.'
           );
-        } else if (publishMode === 'notification_reminder') {
-          const captionToCopy =
-            publishJson.reminder?.caption ||
-            [caption, hashtags].filter(Boolean).join('\n\n');
-          if (captionToCopy.trim() && typeof navigator !== 'undefined') {
-            void navigator.clipboard.writeText(captionToCopy).catch(() => {});
-          }
+        } else if (publishMode === 'tiktok_draft') {
+          const note = trendingSoundNote.trim();
           toast.success(
             publishJson.message ||
-              'Reminder saved — caption copied. Open Instagram/TikTok to post with your trending sound.'
-          );
-        } else if (publishMode === 'tiktok_draft') {
-          toast.success(
-            publishJson.message || 'Uploaded to TikTok drafts / inbox.'
+              (note
+                ? `Saved to TikTok drafts. Open TikTok and add “${note}” before posting.`
+                : 'Saved to TikTok drafts / inbox. Open the TikTok app to add your trending sound and post.')
           );
         } else {
           toast.success(publishJson.message || t('toastPostedSuccess', locale));
@@ -913,10 +965,10 @@ export default function PostStudioModal({
         <button
           type="button"
           className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-          title="Favourite hashtags"
-          aria-label="Favourite hashtags"
+          title="Saved hashtag sets"
+          aria-label="Saved hashtag sets"
         >
-          <Hash size={15} />
+          <Bookmark size={14} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -929,7 +981,7 @@ export default function PostStudioModal({
         <DropdownMenuSeparator className="m-0" />
         {favoriteHashtags.length === 0 ? (
           <div className="px-3 py-4 text-[11px] text-slate-400 font-medium leading-snug">
-            No favourites yet. Add hashtags, then save a favourite.
+            No favourites yet. Add hashtags, then tap the star to save.
           </div>
         ) : (
           <div className="max-h-56 overflow-y-auto py-1">
@@ -1028,13 +1080,32 @@ export default function PostStudioModal({
             className="min-h-[120px] border-0 rounded-none resize-none text-sm shadow-none focus-visible:ring-0 px-3 pt-3 pb-2"
           />
           {(showHashtagField || hashtags.trim()) && (
-            <div className="px-3 pb-2">
+            <div className="px-3 pb-2 flex items-center gap-1.5">
               <Input
                 value={hashtags}
                 onChange={(e) => setHashtags(e.target.value)}
                 placeholder="#tips #creator #nordic"
-                className="h-9 rounded-md border-slate-200 bg-white font-mono text-xs"
+                className="h-9 flex-1 rounded-md border-slate-200 bg-white font-mono text-xs"
               />
+              {hashtagFavouritesMenu}
+              <button
+                type="button"
+                disabled={!normalizeHashtagString(hashtags)}
+                onClick={() => {
+                  const saved = saveFavoriteHashtags(workspaceId, hashtags);
+                  if (!saved) {
+                    toast.message(t('toastAddHashtagsFirst', locale));
+                    return;
+                  }
+                  setFavoriteHashtags(listFavoriteHashtags(workspaceId));
+                  toast.success(t('toastSavedToFavourites', locale));
+                }}
+                className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+                title="Save favourite hashtags"
+                aria-label="Save favourite"
+              >
+                <Star size={14} />
+              </button>
             </div>
           )}
           <div className="flex items-center gap-0.5 px-1.5 py-1 border-t border-slate-100">
@@ -1052,7 +1123,6 @@ export default function PostStudioModal({
               )}
               AI
             </button>
-            {hashtagFavouritesMenu}
             <button
               type="button"
               onClick={() => setShowHashtagField((v) => !v)}
@@ -1065,24 +1135,6 @@ export default function PostStudioModal({
               aria-label="Hashtags"
             >
               <Hash size={14} />
-            </button>
-            <button
-              type="button"
-              disabled={!normalizeHashtagString(hashtags)}
-              onClick={() => {
-                const saved = saveFavoriteHashtags(workspaceId, hashtags);
-                if (!saved) {
-                  toast.message(t('toastAddHashtagsFirst', locale));
-                  return;
-                }
-                setFavoriteHashtags(listFavoriteHashtags(workspaceId));
-                toast.success(t('toastSavedToFavourites', locale));
-              }}
-              className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 transition-colors"
-              title="Save favourite hashtags"
-              aria-label="Save favourite"
-            >
-              <Star size={14} />
             </button>
             <span className="ml-auto pr-2 text-[10px] font-medium text-slate-400 tabular-nums">
               {caption.length}
@@ -1104,57 +1156,84 @@ export default function PostStudioModal({
           onChange={setMediaItems}
           compact
         />
+        <div className="mt-3">
+          <MediaAspectPicker
+            value={
+              mediaAspectChoices(platforms, mediaItems).includes(mediaAspect)
+                ? mediaAspect
+                : mediaAspectChoices(platforms, mediaItems)[0] ?? mediaAspect
+            }
+            options={mediaAspectChoices(platforms, mediaItems)}
+            onChange={setMediaAspect}
+          />
+        </div>
       </div>
 
-      {/* Publishing mode */}
-      <div>
-        <FieldLabel>Publishing mode</FieldLabel>
-        <div className="space-y-1">
-          {PUBLISH_MODE_OPTIONS.map((opt) => {
-            const selected = publishMode === opt.id;
-            return (
-              <label
-                key={opt.id}
-                className={`flex items-start gap-2.5 rounded-md border px-3 py-2.5 min-h-[44px] cursor-pointer transition-colors ${
-                  selected
-                    ? 'border-slate-400 bg-slate-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="publish-mode"
-                  className="mt-1 accent-slate-800"
-                  checked={selected}
-                  onChange={() => setPublishMode(opt.id)}
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-slate-900">
-                    {opt.title}
-                  </span>
-                  <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">
-                    {opt.description}
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-        {publishMode === 'notification_reminder' ? (
-          <label className="block mt-2">
-            <span className="block text-[11px] font-medium text-slate-500 mb-1">
-              Trending sound / notes
-            </span>
-            <input
-              type="text"
-              value={trendingSoundNote}
-              onChange={(e) => setTrendingSoundNote(e.target.value)}
-              placeholder="Song title or audio reference"
-              className="w-full h-10 min-h-[40px] px-3 rounded-md border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400"
+      {/* TikTok music → uploads to TikTok drafts via Content Posting API */}
+      {tiktokSelected ? (
+        <div>
+          <div className="flex items-center gap-1 mb-1">
+            <FieldLabel className="mb-0">TikTok music</FieldLabel>
+            <InfoTooltip
+              side="top"
+              ariaLabel="How TikTok music drafts work"
+              content={
+                <>
+                  When this is on, Publish uploads your video to{' '}
+                  <strong>TikTok drafts / inbox</strong> (not a live post). Open
+                  the TikTok app later, add your trending sound, then post from
+                  drafts. Requires a connected TikTok account and a video file.
+                </>
+              }
             />
+          </div>
+          <p className="mb-2 text-[11px] text-slate-500 leading-snug">
+            Optional. Your video is sent to TikTok drafts so you can add a
+            trending sound in the app before posting.
+          </p>
+          <label className="flex items-center gap-2.5 min-h-[44px] rounded-md border border-slate-200 bg-white px-3 cursor-pointer">
+            <Checkbox
+              checked={tiktokTrendingSound}
+              onCheckedChange={(v) => setTiktokTrendingSound(v === true)}
+              aria-label="Save to TikTok drafts for trending sound"
+            />
+            <span className="text-sm font-medium text-slate-800">
+              Save to TikTok drafts (add sound in app)
+            </span>
           </label>
-        ) : null}
-      </div>
+          {tiktokTrendingSound ? (
+            <div className="mt-2 space-y-2">
+              <label className="block">
+                <span className="block text-[11px] font-medium text-slate-500 mb-1">
+                  Sound name (reminder)
+                </span>
+                <input
+                  type="text"
+                  value={trendingSoundNote}
+                  onChange={(e) => setTrendingSoundNote(e.target.value)}
+                  placeholder="e.g. original sound — Artist"
+                  className="w-full h-10 min-h-[40px] px-3 rounded-md border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400"
+                />
+              </label>
+              {!hasTikTokVideo ? (
+                <p className="text-[11px] font-medium text-amber-700 leading-snug">
+                  Add a video — TikTok drafts require a video file (photos cannot
+                  be saved as drafts via the API).
+                </p>
+              ) : !connectedPlatforms.has('tiktok') ? (
+                <p className="text-[11px] font-medium text-amber-700 leading-snug">
+                  Connect TikTok under Settings → Socials before publishing.
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  On Publish, the video goes to your TikTok inbox/drafts. Open
+                  TikTok to attach the sound and post.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <MoreOptionsSection
         value={moreOptions}
@@ -1172,10 +1251,6 @@ export default function PostStudioModal({
             onChange={(e) => setScheduledAt(e.target.value)}
             className="flex-1 min-w-[180px] h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800"
           />
-          <label className="inline-flex items-center justify-between gap-3 h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 sm:min-w-[140px]">
-            <span className="text-xs font-medium text-slate-600">Auto-Post</span>
-            <Switch checked={autoPost} onCheckedChange={setAutoPost} />
-          </label>
           <select
             value={workflow}
             onChange={(e) => setWorkflow(e.target.value as WorkflowStatus)}
@@ -1664,6 +1739,7 @@ export default function PostStudioModal({
               }
               mediaItems={mediaItems}
               platforms={platforms}
+              mediaAspect={mediaAspect}
               username={activeBrand?.handle || '@brand'}
               displayName={activeBrand?.name || project}
               brandAvatar={activeBrand?.avatar_url}
@@ -1863,6 +1939,7 @@ export default function PostStudioModal({
                   }
                   mediaItems={mediaItems}
                   platforms={platforms}
+                  mediaAspect={mediaAspect}
                   username={activeBrand?.handle || '@brand'}
                   displayName={activeBrand?.name || project}
                   brandAvatar={activeBrand?.avatar_url}
