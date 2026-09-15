@@ -82,6 +82,7 @@ export async function exchangePinterestCode(
   code: string,
   requestOrigin?: string | null
 ): Promise<PinterestTokenResponse> {
+  const redirectUri = getPinterestCallbackUrl(requestOrigin);
   const res = await fetch('https://api.pinterest.com/v5/oauth/token', {
     method: 'POST',
     headers: {
@@ -91,7 +92,7 @@ export async function exchangePinterestCode(
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      redirect_uri: getPinterestCallbackUrl(requestOrigin),
+      redirect_uri: redirectUri,
     }),
   });
 
@@ -102,9 +103,15 @@ export async function exchangePinterestCode(
   };
 
   if (!res.ok || !data.access_token) {
-    throw new Error(
-      data.message || data.error || `Pinterest token exchange failed (${res.status})`
-    );
+    const base =
+      data.message || data.error || `Pinterest token exchange failed (${res.status})`;
+    // Pinterest returns this when App ID/Secret or redirect_uri do not match the console.
+    if (/authentication failed/i.test(base)) {
+      throw new Error(
+        `Authentication failed. Register this exact Redirect URI in the Pinterest app: ${redirectUri}`
+      );
+    }
+    throw new Error(base);
   }
   return data;
 }
