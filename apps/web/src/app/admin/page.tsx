@@ -2698,8 +2698,8 @@ export default function AdminPage() {
           >
             <FeatureGate
               feature="directMessages"
-              title="Social Inbox & DMs"
-              description="Reply to Instagram DMs and run Comment-to-DM automations on Creator and Pro/Agency."
+              title={t('inboxFeatureGateTitle', locale)}
+              description={t('inboxFeatureGateDesc', locale)}
             >
               <SocialInboxPanel />
             </FeatureGate>

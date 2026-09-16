@@ -118,6 +118,12 @@ function profileUrl(thread: DmThread): string {
 /** Resolve the Graph comment id for a bubble (root uses thread id). */
 function resolveCommentId(thread: DmThread, msg: DmMessage): string | null {
   if (msg.id.startsWith('local-')) return null;
+  // Synthetic ids from sync when Graph omitted a reply id — can't call Graph.
+  if (/-(m|r)\d+$/.test(msg.id) && msg.id !== `${thread.id}-m1`) {
+    // `-m1` maps to root; other `-rN` without a real Graph id can't be edited.
+    if (msg.id.endsWith('-m1') || msg.id === `${thread.id}-m1`) return thread.id;
+    return null;
+  }
   if (msg.id === `${thread.id}-m1` || msg.id.endsWith('-m1')) return thread.id;
   return msg.id;
 }
@@ -178,6 +184,9 @@ export default function SocialInboxPanel() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [commentBusyId, setCommentBusyId] = useState<string | null>(null);
+  /** Inline edit — window.prompt is unreliable inside Radix dropdown menus. */
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const didMountSync = useRef(false);
@@ -388,7 +397,7 @@ export default function SocialInboxPanel() {
   const inboxStatus = metaSync?.snapshot?.inbox_status;
   const syncError =
     metaSync?.error ||
-    (isError ? (error instanceof Error ? error.message : 'Sync failed') : null);
+    (isError ? (error instanceof Error ? error.message : t('inboxToastSyncFailed', locale)) : null);
   const dmPermissionIssue = Boolean(inboxStatus?.needs_reconnect_for_dms);
   const reconnectHref =
     '/api/auth/meta/login?target=both&workspaceId=' +
@@ -415,7 +424,7 @@ export default function SocialInboxPanel() {
       if (hasInstagram) {
         const res = results[0] as Awaited<ReturnType<typeof refreshMetaSync>>;
         if (res && 'synced' in res && !res.synced) {
-          toast.error(res.error || 'Could not refresh Instagram inbox');
+          toast.error(res.error || t('inboxToastRefreshFailed', locale));
         } else if (res && 'snapshot' in res) {
           const list = res.snapshot?.inbox_threads ?? [];
           const dms = list.filter((t) => t.channel === 'dm').length;
@@ -424,21 +433,23 @@ export default function SocialInboxPanel() {
           if (status?.needs_reconnect_for_dms) {
             toast.error(
               status.dm_error ||
-                'DMs need messaging permissions — reconnect Instagram'
+                t('inboxToastDmNeedPerms', locale)
             );
           } else {
             toast.success(
-              `Synced IG ${dms} DM${dms === 1 ? '' : 's'} · ${comments} comment${comments === 1 ? '' : 's'}${
-                hasTikTokInbox ? ' · TikTok refreshed' : ''
-              }`
+              tf('inboxToastSyncedSummary', locale, {
+                dms,
+                comments,
+                tiktok: hasTikTokInbox ? ' · TikTok' : '',
+              })
             );
           }
         }
       } else if (hasTikTokInbox) {
-        toast.success(tiktokMock ? 'Demo TikTok inbox refreshed' : 'TikTok inbox refreshed');
+        toast.success(tiktokMock ? t('inboxToastTtDemoRefreshed', locale) : t('inboxToastTtRefreshed', locale));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Refresh failed');
+      toast.error(err instanceof Error ? err.message : t('inboxToastRefreshGenericFailed', locale));
     } finally {
       setRefreshing(false);
     }
@@ -469,14 +480,14 @@ export default function SocialInboxPanel() {
         error?: string;
       };
       if (!r.ok) {
-        throw new Error(json.message || json.error || 'AI reply failed');
+        throw new Error(json.message || json.error || t('inboxToastAiFailed', locale));
       }
       const suggestion = (json.caption || '').trim();
-      if (!suggestion) throw new Error('Empty AI suggestion');
+      if (!suggestion) throw new Error(t('inboxToastAiEmpty', locale));
       setDraft(suggestion);
-      toast.success('AI reply drafted');
+      toast.success(t('inboxToastAiDrafted', locale));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'AI reply failed');
+      toast.error(err instanceof Error ? err.message : t('inboxToastAiFailed', locale));
     } finally {
       setAiLoading(false);
     }
@@ -486,12 +497,12 @@ export default function SocialInboxPanel() {
     action: 'delete' | 'like' | 'unlike' | 'edit';
     msg: DmMessage;
     message?: string;
-  }) => {
-    if (!active || isTikTokThread(active)) return;
+  }): Promise<boolean> => {
+    if (!active || isTikTokThread(active)) return false;
 
     const isDm = active.channel === 'dm';
     const isComment = active.channel === 'comment';
-    if (!isDm && !isComment) return;
+    if (!isDm && !isComment) return false;
 
     // Instagram Graph cannot edit other people's comments — only our replies.
     if (
@@ -502,7 +513,7 @@ export default function SocialInboxPanel() {
       toast.message(
         "Instagram doesn't allow editing fans' comments. Reply or delete instead."
       );
-      return;
+      return false;
     }
 
     // DMs: only moderate your own bubbles for edit/delete; like works on either side.
@@ -513,20 +524,20 @@ export default function SocialInboxPanel() {
     ) {
       toast.message(
         input.action === 'edit'
-          ? "You can only edit your own DMs."
-          : "You can only remove your own DMs from Inbox."
+          ? t('inboxEditOwnDmsOnly', locale)
+          : t('inboxToastRemovedFromInbox', locale)
       );
-      return;
+      return false;
     }
 
     const commentId = isComment ? resolveCommentId(active, input.msg) : null;
     if (isComment && !commentId) {
-      toast.message('Wait for the comment to sync before moderating.');
-      return;
+      toast.message(t('inboxToastWaitCommentSync', locale));
+      return false;
     }
     if (isDm && input.msg.id.startsWith('local-')) {
-      toast.message('Wait for the message to send before moderating.');
-      return;
+      toast.message(t('inboxToastWaitMessageSend', locale));
+      return false;
     }
 
     setCommentBusyId(input.msg.id);
@@ -551,6 +562,7 @@ export default function SocialInboxPanel() {
                 commentId,
                 threadId: active.id,
                 message: input.message,
+                mediaId: active.media_id,
               }
         ),
       });
@@ -673,16 +685,18 @@ export default function SocialInboxPanel() {
       if (json.notice) {
         toast.message(json.notice);
       } else if (input.action === 'delete') {
-        toast.success(isDm ? 'Removed from Inbox' : 'Comment deleted');
+        toast.success(isDm ? t('inboxToastRemovedFromInbox', locale) : t('inboxToastCommentDeleted', locale));
       } else if (input.action === 'like') {
-        toast.success(isDm ? 'Reaction sent' : 'Comment liked');
+        toast.success(isDm ? t('inboxToastReactionSent', locale) : t('inboxToastCommentLiked', locale));
       } else if (input.action === 'unlike') {
-        toast.success(isDm ? 'Reaction removed' : 'Like removed');
+        toast.success(isDm ? t('inboxToastReactionRemoved', locale) : t('inboxToastLikeRemoved', locale));
       } else if (input.action === 'edit') {
-        toast.success(isDm ? 'Updated message sent' : 'Reply updated');
+        toast.success(isDm ? t('inboxToastUpdatedMessageSent', locale) : t('inboxToastReplyUpdated', locale));
       }
+      return true;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Action failed');
+      toast.error(err instanceof Error ? err.message : t('inboxToastActionFailed', locale));
+      return false;
     } finally {
       setCommentBusyId(null);
     }
@@ -693,21 +707,43 @@ export default function SocialInboxPanel() {
     if (msg.from !== 'you') {
       toast.message(
         active.channel === 'dm'
-          ? 'You can only edit your own DMs.'
-          : "Instagram doesn't allow editing fans' comments. Reply or delete instead."
+          ? t('inboxEditOwnDmsOnly', locale)
+          : t('inboxEditFansCommentsBlocked', locale)
       );
       return;
     }
-    const next = window.prompt(
-      active.channel === 'dm'
-        ? 'Edit message (sends as a new DM — Instagram can’t edit in place)'
-        : 'Edit your reply',
-      msg.text
-    );
-    if (next == null) return;
-    const trimmed = next.trim();
-    if (!trimmed || trimmed === msg.text) return;
-    void runCommentAction({ action: 'edit', msg, message: trimmed });
+    // Open inline editor (prompt is blocked / cancelled by Radix menu focus).
+    setEditingMsgId(msg.id);
+    setEditDraft(msg.text);
+  };
+
+  const cancelInlineEdit = () => {
+    setEditingMsgId(null);
+    setEditDraft('');
+  };
+
+  const saveInlineEdit = async () => {
+    if (!active || !editingMsgId) return;
+    const msg = active.messages.find((m) => m.id === editingMsgId);
+    if (!msg) {
+      cancelInlineEdit();
+      return;
+    }
+    const trimmed = editDraft.trim();
+    if (!trimmed) {
+      toast.message(t('inboxEditReplyPrompt', locale));
+      return;
+    }
+    if (trimmed === msg.text) {
+      cancelInlineEdit();
+      return;
+    }
+    const ok = await runCommentAction({
+      action: 'edit',
+      msg,
+      message: trimmed,
+    });
+    if (ok) cancelInlineEdit();
   };
 
   const onSend = async (e: FormEvent) => {
@@ -759,7 +795,7 @@ export default function SocialInboxPanel() {
         };
         if (!r.ok) {
           throw new Error(
-            json.message || json.error || 'TikTok DM failed — reconnect TikTok'
+            json.message || json.error || t('inboxToastTtDmFailed', locale)
           );
         }
         if (json.message_id) {
@@ -782,7 +818,7 @@ export default function SocialInboxPanel() {
         void queryClient.invalidateQueries({
           queryKey: ['tiktok-inbox', activeWorkspace.id],
         });
-        toast.success('TikTok DM sent');
+        toast.success(t('inboxToastTtDmSent', locale));
         return;
       }
 
@@ -803,7 +839,7 @@ export default function SocialInboxPanel() {
         throw new Error(
           json.message ||
             json.error ||
-            'Reply failed — reconnect Instagram with comment + messaging permissions'
+            t('inboxToastReplyFailed', locale)
         );
       }
       const replyId = String(json.reply_id || optimisticId);
@@ -826,7 +862,7 @@ export default function SocialInboxPanel() {
           snapshot: json.snapshot,
         });
       }
-      toast.success(active.channel === 'dm' ? 'DM sent' : 'Comment reply sent');
+      toast.success(active.channel === 'dm' ? t('inboxToastDmSent', locale) : t('inboxToastCommentReplySent', locale));
     } catch (err) {
       setLocalThreads((prev) => {
         const base = prev ?? syncedThreads;
@@ -840,7 +876,7 @@ export default function SocialInboxPanel() {
         );
       });
       setDraft(text);
-      toast.error(err instanceof Error ? err.message : 'Could not send reply');
+      toast.error(err instanceof Error ? err.message : t('inboxToastSendFailed', locale));
     } finally {
       setSending(false);
     }
@@ -851,11 +887,11 @@ export default function SocialInboxPanel() {
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="font-playfair font-medium text-[28px] sm:text-[32px] text-[#2C2621] tracking-tight">
-            Inbox
+            {t('socialInboxTitle', locale)}
           </h1>
         </div>
         <p className="text-sm text-[#8A857D] font-medium -mt-4">
-          Connect Instagram or TikTok to manage DMs here.
+          {t('inboxConnectHint', locale)}
         </p>
         <ConnectSocialsEmpty />
       </div>
@@ -1243,6 +1279,67 @@ export default function SocialInboxPanel() {
                                   : 'bg-[#F0EFEA] text-[#2C2621] rounded-xl rounded-tl-md'
                               }`}
                             >
+                              {editingMsgId === msg.id ? (
+                                <div className="space-y-2 min-w-[200px]">
+                                  <textarea
+                                    value={editDraft}
+                                    onChange={(e) => setEditDraft(e.target.value)}
+                                    rows={3}
+                                    autoFocus
+                                    className={`w-full resize-none rounded-lg border px-2.5 py-2 text-[13.5px] leading-relaxed outline-none ${
+                                      outgoing
+                                        ? 'border-white/20 bg-white/10 text-[#F9F8F6] placeholder:text-[#F9F8F6]/50'
+                                        : 'border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621]'
+                                    }`}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        cancelInlineEdit();
+                                      }
+                                      if (
+                                        (e.metaKey || e.ctrlKey) &&
+                                        e.key === 'Enter'
+                                      ) {
+                                        e.preventDefault();
+                                        void saveInlineEdit();
+                                      }
+                                    }}
+                                  />
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={cancelInlineEdit}
+                                      className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium ${
+                                        outgoing
+                                          ? 'text-[#F9F8F6]/80 hover:bg-white/10'
+                                          : 'text-[#8A857D] hover:bg-[#FFFFFF]'
+                                      }`}
+                                    >
+                                      {t('cancel', locale)}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={busy || !editDraft.trim()}
+                                      onClick={() => void saveInlineEdit()}
+                                      className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium disabled:opacity-50 ${
+                                        outgoing
+                                          ? 'bg-[#F9F8F6] text-[#243228] hover:opacity-90'
+                                          : 'bg-[#2C3B2E] text-[#F9F8F6] hover:opacity-90'
+                                      }`}
+                                    >
+                                      {busy ? (
+                                        <Loader2
+                                          size={14}
+                                          className="animate-spin"
+                                        />
+                                      ) : (
+                                        t('save', locale)
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
                               <p>{msg.text}</p>
                               <div className="mt-1.5 flex items-center justify-between gap-2">
                                 <p
@@ -1272,8 +1369,8 @@ export default function SocialInboxPanel() {
                                         } ${busy ? 'opacity-50' : 'opacity-100'}`}
                                         aria-label={
                                           active.channel === 'dm'
-                                            ? 'Message actions'
-                                            : 'Comment actions'
+                                            ? t('inboxMessageActions', locale)
+                                            : t('inboxCommentActions', locale)
                                         }
                                       >
                                         {busy ? (
@@ -1292,7 +1389,7 @@ export default function SocialInboxPanel() {
                                     >
                                       <DropdownMenuItem
                                         className="gap-2 min-h-[40px] cursor-pointer"
-                                        onClick={() =>
+                                        onSelect={() =>
                                           void runCommentAction({
                                             action: msg.liked
                                               ? 'unlike'
@@ -1312,15 +1409,22 @@ export default function SocialInboxPanel() {
                                             msg.liked ? 'currentColor' : 'none'
                                           }
                                         />
-                                        {msg.liked ? 'Unlike' : 'Like'}
+                                        {msg.liked ? t('inboxUnlike', locale) : t('like', locale)}
                                       </DropdownMenuItem>
                                       {outgoing ? (
                                         <DropdownMenuItem
                                           className="gap-2 min-h-[40px] cursor-pointer"
-                                          onClick={() => onEditComment(msg)}
+                                          onSelect={(e) => {
+                                            // Keep menu from fighting focus; open inline editor next tick.
+                                            e.preventDefault();
+                                            window.setTimeout(
+                                              () => onEditComment(msg),
+                                              0
+                                            );
+                                          }}
                                         >
                                           <Pencil size={14} />
-                                          Edit
+                                          {t('edit', locale)}
                                         </DropdownMenuItem>
                                       ) : null}
                                       {outgoing ||
@@ -1330,14 +1434,14 @@ export default function SocialInboxPanel() {
                                           <DropdownMenuItem
                                             variant="destructive"
                                             className="gap-2 min-h-[40px] cursor-pointer"
-                                            onClick={() => {
+                                            onSelect={() => {
                                               if (
                                                 !window.confirm(
                                                   active.channel === 'dm'
-                                                    ? 'Remove this message from Inbox? (Instagram can’t unsend DMs from apps.)'
+                                                    ? t('inboxConfirmRemoveDm', locale)
                                                     : outgoing
-                                                      ? 'Delete this reply on Instagram?'
-                                                      : 'Delete this comment on Instagram?'
+                                                      ? t('inboxConfirmDeleteReply', locale)
+                                                      : t('inboxConfirmDeleteComment', locale)
                                                 )
                                               ) {
                                                 return;
@@ -1349,7 +1453,7 @@ export default function SocialInboxPanel() {
                                             }}
                                           >
                                             <Trash2 size={14} />
-                                            Delete
+                                            {t('delete', locale)}
                                           </DropdownMenuItem>
                                         </>
                                       ) : null}
@@ -1357,6 +1461,8 @@ export default function SocialInboxPanel() {
                                   </DropdownMenu>
                                 ) : null}
                               </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         );

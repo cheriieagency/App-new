@@ -269,7 +269,7 @@ export default function AdminSidebar() {
             <Link
               href="/"
               className="flex items-center px-0.5 min-h-[44px] hover:opacity-80 transition-opacity"
-              aria-label="Clikd home"
+              aria-label={t('sidebarClikdHome')}
             >
               <span className="font-playfair italic text-3xl font-medium tracking-tight text-[#2C2621] leading-none">
                 C.
@@ -368,7 +368,7 @@ export default function AdminSidebar() {
                                   if (e.key === 'Escape') setRenamingFolderId(null);
                                 }}
                                 className="flex-1 min-w-0 h-10 min-h-[40px] rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                                aria-label="Rename folder"
+                                aria-label={t('sidebarRenameFolder')}
                               />
                             </form>
                           ) : (
@@ -416,8 +416,8 @@ export default function AdminSidebar() {
                                   setRenamingFolderId(MEDIA_LIBRARY_ROOT_ID);
                                 }}
                                 className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700"
-                                aria-label="Rename folder"
-                                title="Rename"
+                                aria-label={t('sidebarRenameFolder')}
+                                title={t('sidebarRename')}
                               >
                                 <Pencil size={12} />
                               </button>
@@ -455,7 +455,7 @@ export default function AdminSidebar() {
                                         if (e.key === 'Escape') setRenamingFolderId(null);
                                       }}
                                       className="flex-1 min-w-0 h-10 min-h-[40px] rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                                      aria-label="Rename folder"
+                                      aria-label={t('sidebarRenameFolder')}
                                     />
                                   </form>
                                 );
@@ -511,7 +511,7 @@ export default function AdminSidebar() {
                                   <span
                                     className="flex-shrink-0 h-10 w-6 min-h-[40px] inline-flex items-center justify-center text-slate-300 cursor-grab active:cursor-grabbing"
                                     aria-hidden
-                                    title="Drag to reorder"
+                                      title={t('sidebarDragReorder')}
                                   >
                                     <GripVertical size={12} />
                                   </span>
@@ -543,8 +543,8 @@ export default function AdminSidebar() {
                                       setRenamingFolderId(f.id);
                                     }}
                                     className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700"
-                                    aria-label="Rename folder"
-                                    title="Rename"
+                                    aria-label={t('sidebarRenameFolder')}
+                                    title={t('sidebarRename')}
                                   >
                                     <Pencil size={12} />
                                   </button>
@@ -685,7 +685,7 @@ export default function AdminSidebar() {
                                 <span
                                   className="flex-shrink-0 h-10 w-6 min-h-[40px] inline-flex items-center justify-center text-slate-300 cursor-grab active:cursor-grabbing"
                                   aria-hidden
-                                  title="Drag to reorder"
+                                      title={t('sidebarDragReorder')}
                                 >
                                   <GripVertical size={12} />
                                 </span>
@@ -784,7 +784,7 @@ export default function AdminSidebar() {
                     <Lock
                       size={12}
                       className={`flex-shrink-0 ${active ? 'opacity-80' : 'opacity-45'}`}
-                      aria-label="Requires Creator"
+                      aria-label={t('sidebarRequiresCreator')}
                     />
                   ) : null}
                 </Link>

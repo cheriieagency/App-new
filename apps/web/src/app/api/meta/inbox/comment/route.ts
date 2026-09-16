@@ -14,6 +14,7 @@ import { auth } from '@/lib/auth';
 import {
   deleteInstagramComment,
   likeInstagramComment,
+  postInstagramMediaComment,
   replyToInstagramComment,
   unlikeInstagramComment,
 } from '@/lib/meta/graph-api';
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
     commentId?: string;
     threadId?: string;
     message?: string;
+    mediaId?: string;
   };
   try {
     body = await request.json();
@@ -49,8 +51,9 @@ export async function POST(request: Request) {
 
   const action = String(body.action || '').trim() as CommentAction;
   const commentId = String(body.commentId || '').trim().replace(/^comment:/, '');
-  const threadId = String(body.threadId || commentId).trim();
+  const threadId = String(body.threadId || commentId).trim().replace(/^comment:/, '');
   const message = String(body.message || '').trim();
+  const mediaId = String(body.mediaId || '').trim();
 
   if (!commentId || !['delete', 'like', 'unlike', 'edit'].includes(action)) {
     return Response.json(
@@ -97,18 +100,35 @@ export async function POST(request: Request) {
       });
     } else if (action === 'edit') {
       // Instagram Graph has no comment edit endpoint — replace own reply:
-      // delete the old comment/reply, then post a new reply on the parent thread.
-      const parentId =
-        threadId && threadId !== commentId
-          ? threadId.replace(/^comment:/, '')
-          : commentId;
-      await deleteInstagramComment(commentId, ig.access_token);
-      const created = await replyToInstagramComment(
-        parentId,
-        message,
-        ig.access_token
-      );
-      replyId = created.id;
+      // delete the old comment/reply, then post a new reply on the parent.
+      const isRoot = commentId === threadId;
+      const parentId = isRoot ? threadId : threadId;
+
+      try {
+        await deleteInstagramComment(commentId, ig.access_token);
+      } catch (deleteErr) {
+        // Continue — comment may already be gone; still try to post the update.
+        console.warn('[api/meta/inbox/comment] delete before edit', deleteErr);
+      }
+
+      if (isRoot && mediaId) {
+        // Root comment was deleted — re-post as a top-level media comment.
+        const created = await postInstagramMediaComment(
+          mediaId,
+          message,
+          ig.access_token
+        );
+        replyId = created.id;
+      } else {
+        // Prefer replying to the thread root (fan comment).
+        const replyTarget = isRoot ? parentId : threadId;
+        const created = await replyToInstagramComment(
+          replyTarget,
+          message,
+          ig.access_token
+        );
+        replyId = created.id;
+      }
     }
 
     const snapshot = getMetaSyncSnapshot(session.user.id);

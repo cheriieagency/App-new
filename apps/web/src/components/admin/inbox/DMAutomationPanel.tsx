@@ -205,8 +205,8 @@ export default function DMAutomationPanel() {
   const [recentComments, setRecentComments] = useState<RecentIgComment[]>([]);
   const [selectedCommentText, setSelectedCommentText] = useState('');
   const [devToolsOpen, setDevToolsOpen] = useState(false);
-  const [autoWatchLabel, setAutoWatchLabel] = useState(
-    'Live 24/7 — webhooks + server cron (panel watch is backup)…'
+  const [autoWatchLabel, setAutoWatchLabel] = useState(() =>
+    t('dmLiveStatusDefault', locale)
   );
   /** True when Meta counts comments but API returns none (app not Live / no Advanced Access). */
   const [metaCommentsBlocked, setMetaCommentsBlocked] = useState(false);
@@ -214,6 +214,11 @@ export default function DMAutomationPanel() {
     'https://developers.facebook.com/apps/1891008578454284/settings/basic/';
   const metaAppRolesUrl =
     'https://developers.facebook.com/apps/1891008578454284/roles/roles/';
+
+  // Refresh default status copy when LanguageSwitcher changes locale.
+  useEffect(() => {
+    setAutoWatchLabel(t('dmLiveStatusDefault', locale));
+  }, [locale]);
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -269,15 +274,13 @@ export default function DMAutomationPanel() {
       if (result.httpOk === false) {
         setAutoWatchLabel(
           result.error
-            ? `Auto-watch paused: ${result.error}`
-            : 'Auto-watch paused (retrying…)'
+            ? tf('dmLiveStatusPaused', locale, { error: result.error })
+            : t('dmLiveStatusPausedRetry', locale)
         );
         return;
       }
       if (result.throttled) {
-        setAutoWatchLabel(
-          'Live 24/7 — webhooks + server cron (panel watch is backup)…'
-        );
+        setAutoWatchLabel(t('dmLiveStatusDefault', locale));
         return;
       }
       const sent = Number(result.sent) || 0;
@@ -292,20 +295,21 @@ export default function DMAutomationPanel() {
         setMetaCommentsBlocked(blocked);
         setAutoWatchLabel(
           blocked
-            ? 'Blocked by Meta app mode — see fix below'
-            : first.length > 120
-              ? `Backup watch issue: ${first.slice(0, 117)}…`
-              : `Backup watch issue: ${first}`
+            ? t('dmLiveStatusBlocked', locale)
+            : tf('dmLiveStatusBackupIssue', locale, {
+                error:
+                  first.length > 120 ? `${first.slice(0, 117)}…` : first,
+              })
         );
         return;
       }
       setMetaCommentsBlocked(false);
       setAutoWatchLabel(
         sent > 0
-          ? `Just sent ${sent} DM${sent === 1 ? '' : 's'} — still live 24/7…`
+          ? tf('dmLiveStatusJustSent', locale, { count: sent })
           : fetched > 0
-            ? `Saw ${fetched} recent comment${fetched === 1 ? '' : 's'} — live 24/7 via webhooks + cron…`
-            : 'Live 24/7 — webhooks + server cron (panel watch is backup)…'
+            ? tf('dmLiveStatusSawComments', locale, { count: fetched })
+            : t('dmLiveStatusDefault', locale)
       );
       if (sent > 0) {
         toast.success(
