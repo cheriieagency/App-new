@@ -3,11 +3,15 @@ import {
   extractCommentEventsFromWebhook,
   processCommentAutomationEvent,
 } from '@/lib/dm-automations/engine';
+import { processDmFlowEvent } from '@/lib/dm-flows/engine';
+import { extractMessagingEventsFromWebhook } from '@/lib/dm-flows/parse-webhook';
 
 /**
  * Meta / Instagram Graph webhook.
- * GET — hub challenge verification
- * POST — comment events → Comment-to-DM engine (+ future messaging)
+ * GET  — hub challenge verification
+ * POST — comments → Comment-to-DM · messages/postbacks → DM chat flows
+ *
+ * Always respond 200 so Meta never disables the subscription.
  */
 export async function GET(request: Request) {
   const missing = missingEnvKeys(...metaEnv.requiredKeys);
@@ -20,8 +24,19 @@ export async function GET(request: Request) {
   const token = url.searchParams.get('hub.verify_token');
   const challenge = url.searchParams.get('hub.challenge');
 
-  if (mode === 'subscribe' && token && token === metaEnv.webhookVerifyToken()) {
-    return new Response(challenge ?? '', {
+  const expected = metaEnv.webhookVerifyToken();
+  const received = String(token ?? '')
+    .trim()
+    .replace(/^['"]+|['"]+$/g, '')
+    .trim();
+
+  if (
+    mode === 'subscribe' &&
+    expected &&
+    received === expected &&
+    challenge != null
+  ) {
+    return new Response(challenge, {
       status: 200,
       headers: { 'Content-Type': 'text/plain' },
     });
@@ -31,7 +46,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  // Always 200 for Meta — missing env / processing errors must not disable the hook.
   try {
     let payload: unknown = {};
     try {
@@ -44,15 +58,31 @@ export async function POST(request: Request) {
       return Response.json({ ok: true, received: true, ignored: 'no_database' });
     }
 
-    // Forward Instagram / Page comment changes into the Comment-to-DM engine.
-    const events = extractCommentEventsFromWebhook(payload);
-    const results = [];
-    for (const event of events) {
+    // ── Comment-to-DM (existing) ───────────────────────────────────────────
+    const commentEvents = extractCommentEventsFromWebhook(payload);
+    const commentResults = [];
+    for (const event of commentEvents) {
       try {
-        results.push(await processCommentAutomationEvent(event));
+        commentResults.push(await processCommentAutomationEvent(event));
       } catch (error) {
         console.warn('[webhooks/meta] comment automation', error);
-        results.push({
+        commentResults.push({
+          matched: false,
+          sent: false,
+          error: error instanceof Error ? error.message : 'failed',
+        });
+      }
+    }
+
+    // ── DM chat flows (keyword → Quick Reply → condition → link) ─────────
+    const dmEvents = extractMessagingEventsFromWebhook(payload);
+    const dmResults = [];
+    for (const event of dmEvents) {
+      try {
+        dmResults.push(await processDmFlowEvent(event));
+      } catch (error) {
+        console.warn('[webhooks/meta] dm flow', error);
+        dmResults.push({
           matched: false,
           sent: false,
           error: error instanceof Error ? error.message : 'failed',
@@ -63,8 +93,10 @@ export async function POST(request: Request) {
     return Response.json({
       ok: true,
       received: true,
-      commentEvents: events.length,
-      results,
+      commentEvents: commentEvents.length,
+      commentResults,
+      dmEvents: dmEvents.length,
+      dmResults,
     });
   } catch (error) {
     console.error('[webhooks/meta] unhandled', error);

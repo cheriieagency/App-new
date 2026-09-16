@@ -1737,15 +1737,50 @@ export async function sendInstagramDm(input: {
   recipientId: string;
   message: string;
 }): Promise<{ id: string }> {
+  return sendInstagramDmWithQuickReplies({
+    pageId: input.pageId,
+    pageAccessToken: input.pageAccessToken,
+    recipientId: input.recipientId,
+    text: input.message,
+    quickReplies: [],
+  });
+}
+
+/**
+ * Send Instagram DM text + optional Quick Reply buttons (Messenger API for IG).
+ * Button payloads come back on messaging_postbacks / message.quick_reply.
+ */
+export async function sendInstagramDmWithQuickReplies(input: {
+  pageId: string;
+  pageAccessToken: string;
+  recipientId: string;
+  text: string;
+  quickReplies?: Array<{ title: string; payload: string }>;
+}): Promise<{ id: string; messageId: string }> {
   const url = new URL(
-    `${GRAPH_BASE}/${encodeURIComponent(input.pageId)}/messages`
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(input.pageId)}/messages`
   );
+
+  const message: Record<string, unknown> = {
+    text: input.text,
+  };
+  const replies = (input.quickReplies || [])
+    .map((r) => ({
+      content_type: 'text',
+      title: String(r.title || '').trim().slice(0, 20),
+      payload: String(r.payload || '').trim(),
+    }))
+    .filter((r) => r.title && r.payload);
+  if (replies.length > 0) {
+    message.quick_replies = replies.slice(0, 13);
+  }
+
   const res = await fetch(url.toString(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       recipient: { id: input.recipientId },
-      message: { text: input.message },
+      message,
       messaging_product: 'instagram',
       access_token: input.pageAccessToken,
     }),
@@ -1761,7 +1796,47 @@ export async function sendInstagramDm(input: {
         'Failed to send Instagram DM — reconnect with messaging permissions'
     );
   }
-  return { id: String(json.message_id || json.id) };
+  const id = String(json.message_id || json.id);
+  return { id, messageId: id };
+}
+
+/**
+ * Best-effort "does this Instagram user follow the business?" check.
+ * Uses Messaging API user profile field when Advanced Access allows it.
+ * Returns false (deny branch) when Graph cannot confirm.
+ */
+export async function checkInstagramUserFollowsBusiness(input: {
+  pageId: string;
+  pageAccessToken: string;
+  igUserId: string;
+  senderId: string;
+}): Promise<boolean> {
+  try {
+    const url = new URL(
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(input.senderId)}`
+    );
+    url.searchParams.set(
+      'fields',
+      'is_user_follow_business,follower_count,username'
+    );
+    url.searchParams.set('access_token', input.pageAccessToken);
+    const res = await fetch(url.toString());
+    const json = (await res.json()) as {
+      is_user_follow_business?: boolean;
+      error?: { message?: string };
+    };
+    if (!res.ok) {
+      console.warn(
+        '[graph] is_user_follow_business unavailable',
+        json.error?.message
+      );
+      return false;
+    }
+    return Boolean(json.is_user_follow_business);
+  } catch (error) {
+    console.warn('[graph] follower check failed', error);
+    return false;
+  }
 }
 
 /**

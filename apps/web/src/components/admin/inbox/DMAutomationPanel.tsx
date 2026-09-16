@@ -9,6 +9,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Loader2,
+  MessageCircle,
+  MessageSquare,
   MessageSquarePlus,
   MousePointerClick,
   Percent,
@@ -24,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
+import DmChatFlowSection from '@/components/admin/inbox/DmChatFlowSection';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useLanguage } from '@/lib/locale-context';
 import { localeTag, t, tf, type Locale, type TranslationKey } from '@/lib/i18n';
@@ -205,6 +208,8 @@ export default function DMAutomationPanel() {
   const [recentComments, setRecentComments] = useState<RecentIgComment[]>([]);
   const [selectedCommentText, setSelectedCommentText] = useState('');
   const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const [createChooserOpen, setCreateChooserOpen] = useState(false);
+  const [dmFlowOpenSignal, setDmFlowOpenSignal] = useState(0);
   const [autoWatchLabel, setAutoWatchLabel] = useState(() =>
     t('dmLiveStatusDefault', locale)
   );
@@ -858,6 +863,11 @@ export default function DMAutomationPanel() {
   });
 
   const openCreate = () => {
+    setCreateChooserOpen(true);
+  };
+
+  const openCreateCommentRule = () => {
+    setCreateChooserOpen(false);
     setForm({
       ...EMPTY_FORM,
       dmMessageText: t('dmDefaultMessage', locale),
@@ -866,6 +876,11 @@ export default function DMAutomationPanel() {
       ctaButtonUrl: storefrontDefault,
     });
     setModalOpen(true);
+  };
+
+  const openCreateDmFlow = () => {
+    setCreateChooserOpen(false);
+    setDmFlowOpenSignal((n) => n + 1);
   };
 
   const openEdit = (rule: AutomationRule) => {
@@ -1432,6 +1447,66 @@ export default function DMAutomationPanel() {
           </ul>
         )}
       </div>
+
+      <DmChatFlowSection
+        storefrontDefault={storefrontDefault}
+        openSignal={dmFlowOpenSignal}
+      />
+
+      {createChooserOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            aria-label={t('dmClose', locale)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setCreateChooserOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative z-10 w-full sm:max-w-md bg-[#FFFFFF] rounded-t-3xl sm:rounded-xl shadow-2xl p-5 sm:p-6 space-y-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="font-playfair font-medium text-xl text-[#2C2621]">
+                {t('dmCreateChooserTitle', locale)}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCreateChooserOpen(false)}
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] inline-flex items-center justify-center"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={openCreateCommentRule}
+              className="w-full text-left rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] hover:bg-[#F0EFEA] p-4 min-h-[44px] transition-colors"
+            >
+              <p className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
+                <MessageSquare size={16} />
+                {t('dmCreateChooserComment', locale)}
+              </p>
+              <p className="text-xs text-[#8A857D] mt-1 leading-relaxed">
+                {t('dmCreateChooserCommentDesc', locale)}
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={openCreateDmFlow}
+              className="w-full text-left rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] hover:bg-[#F0EFEA] p-4 min-h-[44px] transition-colors"
+            >
+              <p className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
+                <MessageCircle size={16} />
+                {t('dmCreateChooserDm', locale)}
+              </p>
+              <p className="text-xs text-[#8A857D] mt-1 leading-relaxed">
+                {t('dmCreateChooserDmDesc', locale)}
+              </p>
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">

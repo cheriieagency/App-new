@@ -1456,6 +1456,38 @@ export type ExtraKey =
   | 'inboxUnlike'
   | 'inboxConnectHint'
   | 'inboxToastSyncedSummary'
+  | 'dmFlowTitle'
+  | 'dmFlowSub'
+  | 'dmFlowCreate'
+  | 'dmFlowCreateTitle'
+  | 'dmFlowEditTitle'
+  | 'dmFlowModalEyebrow'
+  | 'dmFlowWizardHint'
+  | 'dmFlowKeyword'
+  | 'dmFlowWelcome'
+  | 'dmFlowQuickReply'
+  | 'dmFlowCheckFollower'
+  | 'dmFlowFinalMessage'
+  | 'dmFlowLinkUrl'
+  | 'dmFlowNotFollowerMessage'
+  | 'dmFlowCreateBtn'
+  | 'dmFlowSaved'
+  | 'dmFlowSaveFailed'
+  | 'dmFlowDeleted'
+  | 'dmFlowDeleteConfirm'
+  | 'dmFlowEmptyHeadline'
+  | 'dmFlowEmptyDesc'
+  | 'dmFlowFollowerGate'
+  | 'dmFlowDefaultTitle'
+  | 'dmFlowDefaultWelcome'
+  | 'dmFlowDefaultButton'
+  | 'dmFlowDefaultFollowerMsg'
+  | 'dmFlowDefaultNotFollowerMsg'
+  | 'dmCreateChooserTitle'
+  | 'dmCreateChooserComment'
+  | 'dmCreateChooserCommentDesc'
+  | 'dmCreateChooserDm'
+  | 'dmCreateChooserDmDesc'
 
 export type ExtraDict = Record<ExtraKey, string>;
 
@@ -2974,6 +3006,45 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   inboxConnectHint: 'Connect Instagram or TikTok to manage DMs here.',
   inboxToastSyncedSummary:
     'Synced IG {dms} DM(s) · {comments} comment(s){tiktok}',
+  dmFlowTitle: 'DM Chat Flows',
+  dmFlowSub:
+    'When someone DMs a keyword, Clikd replies with Quick Replies, optional follower check, and your link.',
+  dmFlowCreate: 'Create DM flow',
+  dmFlowCreateTitle: 'Create DM chat flow',
+  dmFlowEditTitle: 'Edit DM chat flow',
+  dmFlowModalEyebrow: 'Instagram DM',
+  dmFlowWizardHint:
+    '1) Keyword in DM → 2) Welcome + button → 3) Optional “must follow” check → 4) Final message + link.',
+  dmFlowKeyword: 'Trigger keyword in DM',
+  dmFlowWelcome: 'Welcome message',
+  dmFlowQuickReply: 'Quick Reply button label',
+  dmFlowCheckFollower: 'Only send the link if they follow you',
+  dmFlowFinalMessage: 'Final message (with link)',
+  dmFlowLinkUrl: 'Web link / storefront URL',
+  dmFlowNotFollowerMessage: 'Message if they don’t follow yet',
+  dmFlowCreateBtn: 'Create DM flow',
+  dmFlowSaved: 'DM chat flow saved',
+  dmFlowSaveFailed: 'Could not save DM flow',
+  dmFlowDeleted: 'DM chat flow deleted',
+  dmFlowDeleteConfirm: 'Delete this DM chat flow?',
+  dmFlowEmptyHeadline: 'No DM chat flows yet',
+  dmFlowEmptyDesc:
+    'Build a ManyChat-style path: keyword → Quick Reply → follower check → link.',
+  dmFlowFollowerGate: 'follow check',
+  dmFlowDefaultTitle: 'Hey Eve! welcome flow',
+  dmFlowDefaultWelcome: 'Hey! Want the free link? Tap below 👇',
+  dmFlowDefaultButton: 'Yes, send link',
+  dmFlowDefaultFollowerMsg:
+    'Here is the link you have been waiting for! {link}',
+  dmFlowDefaultNotFollowerMsg:
+    'Please follow this account first, then tap again 💛',
+  dmCreateChooserTitle: 'What do you want to automate?',
+  dmCreateChooserComment: 'Comment keyword → DM',
+  dmCreateChooserCommentDesc:
+    'When someone comments a keyword on your post, send a Private Reply DM.',
+  dmCreateChooserDm: 'DM keyword → chat flow',
+  dmCreateChooserDmDesc:
+    'When someone DMs a keyword, send Quick Replies and a link (ManyChat-style).',
 };
 
 export const EXTRA_SV: ExtraDict = {
