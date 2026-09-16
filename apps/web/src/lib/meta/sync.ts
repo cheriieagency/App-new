@@ -37,6 +37,8 @@ export type MetaInboxThread = {
     from: 'them' | 'you';
     text: string;
     time: string;
+    /** True when the connected IG account liked this comment. */
+    liked?: boolean;
   }>;
 };
 

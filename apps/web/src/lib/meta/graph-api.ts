@@ -1492,6 +1492,94 @@ export async function replyToInstagramComment(
   return { id: json.id };
 }
 
+/** Delete an Instagram comment on the creator's media. */
+export async function deleteInstagramComment(
+  commentId: string,
+  accessToken: string
+): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}`
+  );
+  url.searchParams.set('access_token', accessToken);
+  const res = await fetch(url.toString(), { method: 'DELETE' });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error?.message || 'Failed to delete Instagram comment');
+  }
+}
+
+/** Hide or unhide an Instagram comment on the creator's media. */
+export async function hideInstagramComment(
+  commentId: string,
+  hide: boolean,
+  accessToken: string
+): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}`
+  );
+  url.searchParams.set('hide', hide ? 'true' : 'false');
+  url.searchParams.set('access_token', accessToken);
+  const res = await fetch(url.toString(), { method: 'POST' });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!res.ok || json.success === false) {
+    throw new Error(
+      json.error?.message ||
+        `Failed to ${hide ? 'hide' : 'unhide'} Instagram comment`
+    );
+  }
+}
+
+/**
+ * Like an Instagram comment as the connected IG professional account.
+ * Requires `instagram_manage_engagement`.
+ */
+export async function likeInstagramComment(input: {
+  igUserId: string;
+  commentId: string;
+  accessToken: string;
+}): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(input.igUserId)}/likes`
+  );
+  url.searchParams.set('comment_id', input.commentId);
+  url.searchParams.set('access_token', input.accessToken);
+  const res = await fetch(url.toString(), { method: 'POST' });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error?.message || 'Failed to like Instagram comment');
+  }
+}
+
+/** Unlike an Instagram comment previously liked by the IG professional account. */
+export async function unlikeInstagramComment(input: {
+  igUserId: string;
+  commentId: string;
+  accessToken: string;
+}): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(input.igUserId)}/likes`
+  );
+  url.searchParams.set('comment_id', input.commentId);
+  url.searchParams.set('access_token', input.accessToken);
+  const res = await fetch(url.toString(), { method: 'DELETE' });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error?.message || 'Failed to unlike Instagram comment');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Instagram Messaging (DMs via Page conversations API)
 // ---------------------------------------------------------------------------
@@ -1630,6 +1718,51 @@ export async function sendInstagramDm(input: {
     );
   }
   return { id: String(json.message_id || json.id) };
+}
+
+/**
+ * React (❤️) or unreact to an Instagram DM message.
+ * Meta Messaging API does not support editing/deleting DM text in place.
+ */
+export async function reactToInstagramDm(input: {
+  pageId: string;
+  pageAccessToken: string;
+  recipientId: string;
+  messageId: string;
+  reaction?: string | null;
+}): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(input.pageId)}/messages`
+  );
+  const reacting = Boolean(input.reaction);
+  const body: Record<string, unknown> = {
+    recipient: { id: input.recipientId },
+    sender_action: reacting ? 'react' : 'unreact',
+    payload: { message_id: input.messageId },
+    messaging_product: 'instagram',
+    access_token: input.pageAccessToken,
+  };
+  if (reacting) {
+    body.payload = {
+      message_id: input.messageId,
+      reaction: input.reaction || '❤️',
+    };
+  }
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: { message?: string };
+  };
+  if (!res.ok) {
+    throw new Error(
+      json.error?.message ||
+        `Failed to ${reacting ? 'like' : 'unlike'} Instagram DM`
+    );
+  }
 }
 
 /**

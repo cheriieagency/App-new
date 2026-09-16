@@ -9,13 +9,17 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ExternalLink,
+  Heart,
   Inbox,
   Loader2,
+  MoreHorizontal,
   Paperclip,
+  Pencil,
   RefreshCw,
   Search,
   Send,
   Sparkles,
+  Trash2,
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,6 +30,13 @@ import {
   InstagramIcon,
   TikTokIcon,
 } from '@/components/icons/SocialBrandIcons';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useLocale } from '@/lib/locale-context';
 import { t, tf } from '@/lib/i18n';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
@@ -44,6 +55,7 @@ type DmMessage = {
   text: string;
   time: string;
   media_url?: string | null;
+  liked?: boolean;
 };
 
 type DmThread = {
@@ -58,6 +70,7 @@ type DmThread = {
   recipient_id?: string;
   page_id?: string;
   conversation_id?: string;
+  media_id?: string;
   avatar_url?: string | null;
   messages: DmMessage[];
 };
@@ -89,6 +102,13 @@ function profileUrl(thread: DmThread): string {
     return `https://www.tiktok.com/@${encodeURIComponent(handle)}`;
   }
   return `https://www.instagram.com/${encodeURIComponent(handle)}/`;
+}
+
+/** Resolve the Graph comment id for a bubble (root uses thread id). */
+function resolveCommentId(thread: DmThread, msg: DmMessage): string | null {
+  if (msg.id.startsWith('local-')) return null;
+  if (msg.id === `${thread.id}-m1` || msg.id.endsWith('-m1')) return thread.id;
+  return msg.id;
 }
 
 function Avatar({
@@ -144,6 +164,7 @@ export default function SocialInboxPanel() {
   const [channelFilter, setChannelFilter] = useState<InboxChannel>('all');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [commentBusyId, setCommentBusyId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -188,6 +209,7 @@ export default function SocialInboxPanel() {
         unread: thread.unread,
         recipient_id: thread.recipient_id,
         page_id: thread.page_id,
+        media_id: thread.media_id,
         messages: thread.messages,
       })),
     [metaSync?.snapshot?.inbox_threads]
@@ -389,6 +411,234 @@ export default function SocialInboxPanel() {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const runCommentAction = async (input: {
+    action: 'delete' | 'like' | 'unlike' | 'edit';
+    msg: DmMessage;
+    message?: string;
+  }) => {
+    if (!active || isTikTokThread(active)) return;
+
+    const isDm = active.channel === 'dm';
+    const isComment = active.channel === 'comment';
+    if (!isDm && !isComment) return;
+
+    // Instagram Graph cannot edit other people's comments — only our replies.
+    if (
+      isComment &&
+      input.action === 'edit' &&
+      input.msg.from !== 'you'
+    ) {
+      toast.message(
+        "Instagram doesn't allow editing fans' comments. Reply or delete instead."
+      );
+      return;
+    }
+
+    // DMs: only moderate your own bubbles for edit/delete; like works on either side.
+    if (
+      isDm &&
+      (input.action === 'edit' || input.action === 'delete') &&
+      input.msg.from !== 'you'
+    ) {
+      toast.message(
+        input.action === 'edit'
+          ? "You can only edit your own DMs."
+          : "You can only remove your own DMs from Inbox."
+      );
+      return;
+    }
+
+    const commentId = isComment ? resolveCommentId(active, input.msg) : null;
+    if (isComment && !commentId) {
+      toast.message('Wait for the comment to sync before moderating.');
+      return;
+    }
+    if (isDm && input.msg.id.startsWith('local-')) {
+      toast.message('Wait for the message to send before moderating.');
+      return;
+    }
+
+    setCommentBusyId(input.msg.id);
+    try {
+      const endpoint = isDm ? '/api/meta/inbox/dm' : '/api/meta/inbox/comment';
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(
+          isDm
+            ? {
+                action: input.action,
+                threadId: active.id,
+                messageId: input.msg.id,
+                message: input.message,
+                recipientId: active.recipient_id,
+                pageId: active.page_id,
+              }
+            : {
+                action: input.action,
+                commentId,
+                threadId: active.id,
+                message: input.message,
+              }
+        ),
+      });
+      const json = (await r.json().catch(() => ({}))) as {
+        message?: string;
+        error?: string;
+        notice?: string | null;
+        snapshot?: { inbox_threads?: DmThread[] };
+        reply_id?: string;
+        replacement_id?: string;
+      };
+      if (!r.ok) {
+        throw new Error(json.message || json.error || `${input.action} failed`);
+      }
+
+      if (json.snapshot?.inbox_threads) {
+        queryClient.setQueryData(['meta-sync'], (prev: unknown) => {
+          const base =
+            prev && typeof prev === 'object'
+              ? (prev as Record<string, unknown>)
+              : {};
+          const snap =
+            base.snapshot && typeof base.snapshot === 'object'
+              ? (base.snapshot as Record<string, unknown>)
+              : {};
+          return {
+            ...base,
+            snapshot: {
+              ...snap,
+              inbox_threads: json.snapshot!.inbox_threads,
+            },
+          };
+        });
+        setLocalThreads(null);
+        if (
+          isComment &&
+          input.action === 'delete' &&
+          commentId === active.id &&
+          activeId === active.id
+        ) {
+          setActiveId(null);
+        }
+      } else {
+        const deletingRoot =
+          isComment &&
+          input.action === 'delete' &&
+          commentId === active.id;
+        if (deletingRoot && activeId === active.id) setActiveId(null);
+        setLocalThreads((prev) => {
+          const base = prev ?? syncedThreads;
+          if (input.action === 'delete') {
+            if (deletingRoot) {
+              return base.filter((t) => t.id !== active.id);
+            }
+            return base.map((t) =>
+              t.id === active.id
+                ? {
+                    ...t,
+                    messages: t.messages.filter((m) => m.id !== input.msg.id),
+                  }
+                : t
+            );
+          }
+          if (input.action === 'like' || input.action === 'unlike') {
+            return base.map((t) =>
+              t.id === active.id
+                ? {
+                    ...t,
+                    messages: t.messages.map((m) =>
+                      m.id === input.msg.id
+                        ? { ...m, liked: input.action === 'like' }
+                        : m
+                    ),
+                  }
+                : t
+            );
+          }
+          if (input.action === 'edit' && input.message) {
+            const nextId =
+              json.replacement_id || json.reply_id || input.msg.id;
+            return base.map((t) => {
+              if (t.id !== active.id) return t;
+              if (isDm) {
+                const messages = t.messages
+                  .filter((m) => m.id !== input.msg.id)
+                  .concat([
+                    {
+                      id: nextId,
+                      from: 'you' as const,
+                      text: input.message!,
+                      time: 'now',
+                    },
+                  ]);
+                return {
+                  ...t,
+                  preview: input.message!.slice(0, 120),
+                  messages,
+                };
+              }
+              return {
+                ...t,
+                preview: input.message!.slice(0, 120),
+                messages: t.messages.map((m) =>
+                  m.id === input.msg.id
+                    ? {
+                        ...m,
+                        id: nextId,
+                        text: input.message!,
+                        time: 'now',
+                      }
+                    : m
+                ),
+              };
+            });
+          }
+          return base;
+        });
+      }
+
+      if (json.notice) {
+        toast.message(json.notice);
+      } else if (input.action === 'delete') {
+        toast.success(isDm ? 'Removed from Inbox' : 'Comment deleted');
+      } else if (input.action === 'like') {
+        toast.success(isDm ? 'Reaction sent' : 'Comment liked');
+      } else if (input.action === 'unlike') {
+        toast.success(isDm ? 'Reaction removed' : 'Like removed');
+      } else if (input.action === 'edit') {
+        toast.success(isDm ? 'Updated message sent' : 'Reply updated');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Action failed');
+    } finally {
+      setCommentBusyId(null);
+    }
+  };
+
+  const onEditComment = (msg: DmMessage) => {
+    if (!active) return;
+    if (msg.from !== 'you') {
+      toast.message(
+        active.channel === 'dm'
+          ? 'You can only edit your own DMs.'
+          : "Instagram doesn't allow editing fans' comments. Reply or delete instead."
+      );
+      return;
+    }
+    const next = window.prompt(
+      active.channel === 'dm'
+        ? 'Edit message (sends as a new DM — Instagram can’t edit in place)'
+        : 'Edit your reply',
+      msg.text
+    );
+    if (next == null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === msg.text) return;
+    void runCommentAction({ action: 'edit', msg, message: trimmed });
   };
 
   const onSend = async (e: FormEvent) => {
@@ -906,26 +1156,138 @@ export default function SocialInboxPanel() {
                     ) : (
                       active.messages.map((msg) => {
                         const outgoing = msg.from === 'you';
+                        const canModerate =
+                          !isTikTokThread(active) &&
+                          !msg.id.startsWith('local-') &&
+                          (active.channel === 'comment' ||
+                            active.channel === 'dm');
+                        const busy = commentBusyId === msg.id;
                         return (
                           <div
                             key={msg.id}
                             className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
-                              className={`max-w-[78%] px-3.5 py-2.5 text-[13.5px] leading-relaxed shadow-none ${
+                              className={`group relative min-w-[96px] max-w-[78%] px-3.5 py-2.5 text-[13.5px] leading-relaxed shadow-none ${
                                 outgoing
                                   ? 'bg-[#243228] text-[#F9F8F6] rounded-xl rounded-br-md'
                                   : 'bg-[#F0EFEA] text-[#2C2621] rounded-xl rounded-tl-md'
                               }`}
                             >
                               <p>{msg.text}</p>
-                              <p
-                                className={`text-[10px] mt-1.5 tabular-nums ${
-                                  outgoing ? 'text-[#F9F8F6]/50' : 'text-[#8A857D]'
-                                }`}
-                              >
-                                {msg.time}
-                              </p>
+                              <div className="mt-1.5 flex items-center justify-between gap-2">
+                                <p
+                                  className={`text-[10px] tabular-nums ${
+                                    outgoing
+                                      ? 'text-[#F9F8F6]/50'
+                                      : 'text-[#8A857D]'
+                                  }`}
+                                >
+                                  {msg.time}
+                                  {msg.liked ? (
+                                    <span className="ml-1.5 inline-flex items-center gap-0.5 text-[#E11D48]">
+                                      <Heart size={10} fill="currentColor" />
+                                    </span>
+                                  ) : null}
+                                </p>
+                                {canModerate ? (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        className={`inline-flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg transition-opacity ${
+                                          outgoing
+                                            ? 'text-[#F9F8F6]/80 hover:bg-white/10 hover:text-[#F9F8F6]'
+                                            : 'text-[#8A857D] hover:bg-[#FFFFFF] hover:text-[#2C2621]'
+                                        } ${busy ? 'opacity-50' : 'opacity-100'}`}
+                                        aria-label={
+                                          active.channel === 'dm'
+                                            ? 'Message actions'
+                                            : 'Comment actions'
+                                        }
+                                      >
+                                        {busy ? (
+                                          <Loader2
+                                            size={14}
+                                            className="animate-spin"
+                                          />
+                                        ) : (
+                                          <MoreHorizontal size={14} />
+                                        )}
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align={outgoing ? 'end' : 'start'}
+                                      className="w-48 z-[80]"
+                                    >
+                                      <DropdownMenuItem
+                                        className="gap-2 min-h-[40px] cursor-pointer"
+                                        onClick={() =>
+                                          void runCommentAction({
+                                            action: msg.liked
+                                              ? 'unlike'
+                                              : 'like',
+                                            msg,
+                                          })
+                                        }
+                                      >
+                                        <Heart
+                                          size={14}
+                                          className={
+                                            msg.liked
+                                              ? 'text-[#E11D48]'
+                                              : undefined
+                                          }
+                                          fill={
+                                            msg.liked ? 'currentColor' : 'none'
+                                          }
+                                        />
+                                        {msg.liked ? 'Unlike' : 'Like'}
+                                      </DropdownMenuItem>
+                                      {outgoing ? (
+                                        <DropdownMenuItem
+                                          className="gap-2 min-h-[40px] cursor-pointer"
+                                          onClick={() => onEditComment(msg)}
+                                        >
+                                          <Pencil size={14} />
+                                          Edit
+                                        </DropdownMenuItem>
+                                      ) : null}
+                                      {outgoing ||
+                                      active.channel === 'comment' ? (
+                                        <>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem
+                                            variant="destructive"
+                                            className="gap-2 min-h-[40px] cursor-pointer"
+                                            onClick={() => {
+                                              if (
+                                                !window.confirm(
+                                                  active.channel === 'dm'
+                                                    ? 'Remove this message from Inbox? (Instagram can’t unsend DMs from apps.)'
+                                                    : outgoing
+                                                      ? 'Delete this reply on Instagram?'
+                                                      : 'Delete this comment on Instagram?'
+                                                )
+                                              ) {
+                                                return;
+                                              }
+                                              void runCommentAction({
+                                                action: 'delete',
+                                                msg,
+                                              });
+                                            }}
+                                          >
+                                            <Trash2 size={14} />
+                                            Delete
+                                          </DropdownMenuItem>
+                                        </>
+                                      ) : null}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
                         );
