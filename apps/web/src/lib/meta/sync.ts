@@ -105,35 +105,68 @@ function relativeTime(iso?: string): string {
 
 function commentsToThreads(
   media: InstagramMediaItem[],
-  commentsByMedia: Map<string, InstagramComment[]>
+  commentsByMedia: Map<string, InstagramComment[]>,
+  ownerUsernames: string[] = []
 ): MetaInboxThread[] {
+  const ownerSet = new Set(
+    ownerUsernames
+      .map((u) => u.trim().replace(/^@/, '').toLowerCase())
+      .filter(Boolean)
+  );
+
+  const isOwnerComment = (c: InstagramComment) => {
+    const username = (c.username || c.from?.username || '')
+      .replace(/^@/, '')
+      .toLowerCase();
+    return Boolean(username) && ownerSet.has(username);
+  };
+
+  const toMessage = (
+    c: InstagramComment,
+    fallbackId: string
+  ): MetaInboxThread['messages'][number] | null => {
+    if (!c.text?.trim()) return null;
+    return {
+      id: c.id || fallbackId,
+      from: isOwnerComment(c) ? 'you' : 'them',
+      text: c.text,
+      time: relativeTime(c.timestamp),
+    };
+  };
+
   const threads: MetaInboxThread[] = [];
   for (const item of media) {
     const comments = commentsByMedia.get(item.id) ?? [];
     for (const c of comments) {
       if (!c.text?.trim()) continue;
       const handle = c.username ? `@${c.username.replace(/^@/, '')}` : '@user';
+      const root = toMessage(c, `${c.id}-m1`);
+      if (!root) continue;
+
+      // Graph returns replies newest-first — show oldest → newest in the pane.
+      const replyMsgs = [...(c.replies?.data ?? [])]
+        .slice()
+        .reverse()
+        .map((r, i) => toMessage(r, `${c.id}-r${i}`))
+        .filter((m): m is NonNullable<typeof m> => Boolean(m));
+
+      const messages = [root, ...replyMsgs];
+      const last = messages[messages.length - 1] ?? root;
+
       threads.push({
         id: c.id,
         channel: 'comment',
         name: c.username || 'Instagram user',
         handle,
-        preview: c.text.slice(0, 120),
-        time: relativeTime(c.timestamp),
+        preview: last.text.slice(0, 120),
+        time: last.time,
         unread: true,
         media_id: item.id,
-        messages: [
-          {
-            id: `${c.id}-m1`,
-            from: 'them',
-            text: c.text,
-            time: relativeTime(c.timestamp),
-          },
-        ],
+        messages,
       });
     }
   }
-  return threads.slice(0, 40);
+  return threads.slice(0, 100);
 }
 
 function dmConversationsToThreads(
@@ -141,7 +174,8 @@ function dmConversationsToThreads(
   igUserId: string,
   conversations: Awaited<ReturnType<typeof fetchInstagramDmConversations>>
 ): MetaInboxThread[] {
-  return conversations.slice(0, 30).map((conv) => {
+  return conversations.slice(0, 40).map((conv) => {
+    // Graph returns newest-first; reverse for chronological chat order.
     const msgs = [...(conv.messages?.data ?? [])].reverse();
     const last = msgs[msgs.length - 1] || conv.messages?.data?.[0];
     const handle = conv.recipient_username
@@ -311,9 +345,14 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
   }
 
   const commentsByMedia = new Map<string, InstagramComment[]>();
+  // Pull comments across recent media (not just the first few posts).
   await Promise.all(
-    media.slice(0, 8).map(async (item) => {
-      const comments = await fetchInstagramMediaComments(item.id, ig.access_token, 15);
+    media.slice(0, 25).map(async (item) => {
+      const comments = await fetchInstagramMediaComments(
+        item.id,
+        ig.access_token,
+        50
+      );
       commentsByMedia.set(item.id, comments);
     })
   );
@@ -362,7 +401,7 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
       const conversations = await fetchInstagramDmConversations(
         pageId,
         pageToken,
-        20,
+        40,
         ig.external_id
       );
       dmThreads = dmConversationsToThreads(
@@ -392,9 +431,19 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
     }
   }
 
-  const commentThreads = commentsToThreads(media, commentsByMedia);
+  const ownerUsernames = [
+    profile?.username,
+    ig.handle,
+    ig.display_name,
+  ].filter((v): v is string => Boolean(v && String(v).trim()));
+
+  const commentThreads = commentsToThreads(
+    media,
+    commentsByMedia,
+    ownerUsernames
+  );
   // DMs first, then comments (newest activity still reflected by relative times).
-  const inbox_threads = [...dmThreads, ...commentThreads].slice(0, 60);
+  const inbox_threads = [...dmThreads, ...commentThreads].slice(0, 120);
 
   const likes = media.reduce((n, m) => n + (m.like_count ?? 0), 0);
   const comments = media.reduce((n, m) => n + (m.comments_count ?? 0), 0);

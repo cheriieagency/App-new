@@ -40,7 +40,7 @@ import {
 import { useLocale } from '@/lib/locale-context';
 import { t, tf } from '@/lib/i18n';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
-import { refreshMetaSync, useMetaSync } from '@/hooks/useMetaSync';
+import { refreshMetaSync, useLiveMetaInboxSync } from '@/hooks/useMetaSync';
 import { useTikTokInbox } from '@/hooks/useTikTokInbox';
 import DMAutomationPanel from '@/components/admin/inbox/DMAutomationPanel';
 
@@ -74,6 +74,17 @@ type DmThread = {
   avatar_url?: string | null;
   messages: DmMessage[];
 };
+
+/** Keep Analytics + live Inbox caches aligned after mutations / sync. */
+function setMetaSyncCaches(
+  queryClient: {
+    setQueryData: (key: unknown[], data: unknown) => void;
+  },
+  data: unknown
+) {
+  queryClient.setQueryData(['meta-sync'], data);
+  queryClient.setQueryData(['meta-sync', 'live-inbox'], data);
+}
 
 /** Normalize a handle so the UI always shows a single leading @. */
 function formatHandle(raw: string | null | undefined): string | null {
@@ -143,12 +154,14 @@ export default function SocialInboxPanel() {
   const queryClient = useQueryClient();
   const { activeWorkspace } = useWorkspace();
   const { hasInstagram, hasTikTok, accounts, isLoading } = useConnectedSocials();
-  const { data: metaSync, isFetching, isError, error } = useMetaSync(hasInstagram);
+  const { data: metaSync, isFetching, isError, error } = useLiveMetaInboxSync(
+    hasInstagram
+  );
   const {
     data: tiktokInbox,
     isFetching: tiktokFetching,
     refetch: refetchTikTok,
-  } = useTikTokInbox(true);
+  } = useTikTokInbox(true, { live: true });
   const tiktokMock = Boolean(tiktokInbox?.mock || tiktokInbox?.demo);
   const hasTikTokInbox =
     hasTikTok || tiktokMock || (tiktokInbox?.threads?.length ?? 0) > 0;
@@ -167,12 +180,32 @@ export default function SocialInboxPanel() {
   const [commentBusyId, setCommentBusyId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const didMountSync = useRef(false);
 
   const [mainTab, setMainTab] = useState<InboxMainTab>(() => {
     if (typeof window === 'undefined') return 'inbox';
     const sub = new URLSearchParams(window.location.search).get('sub');
     return sub === 'automations' ? 'automations' : 'inbox';
   });
+
+  // Entering Social Inbox → force a fresh Graph pull so threads aren't stale.
+  useEffect(() => {
+    if (didMountSync.current) return;
+    if (!hasInstagram && !hasTikTokInbox) return;
+    didMountSync.current = true;
+    void (async () => {
+      try {
+        if (hasInstagram) {
+          const res = await refreshMetaSync();
+          setMetaSyncCaches(queryClient, res);
+        }
+        if (hasTikTokInbox) await refetchTikTok();
+        setLocalThreads(null);
+      } catch (err) {
+        console.warn('[SocialInboxPanel] mount sync failed', err);
+      }
+    })();
+  }, [hasInstagram, hasTikTokInbox, queryClient, refetchTikTok]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -332,7 +365,7 @@ export default function SocialInboxPanel() {
       if (hasInstagram) {
         jobs.push(
           refreshMetaSync().then((res) => {
-            queryClient.setQueryData(['meta-sync'], res);
+            setMetaSyncCaches(queryClient, res);
             return res;
           })
         );
@@ -498,22 +531,22 @@ export default function SocialInboxPanel() {
       }
 
       if (json.snapshot?.inbox_threads) {
-        queryClient.setQueryData(['meta-sync'], (prev: unknown) => {
-          const base =
-            prev && typeof prev === 'object'
-              ? (prev as Record<string, unknown>)
-              : {};
-          const snap =
-            base.snapshot && typeof base.snapshot === 'object'
-              ? (base.snapshot as Record<string, unknown>)
-              : {};
-          return {
-            ...base,
-            snapshot: {
-              ...snap,
-              inbox_threads: json.snapshot!.inbox_threads,
-            },
-          };
+        const prev = queryClient.getQueryData(['meta-sync', 'live-inbox'])
+          ?? queryClient.getQueryData(['meta-sync']);
+        const base =
+          prev && typeof prev === 'object'
+            ? (prev as Record<string, unknown>)
+            : {};
+        const snap =
+          base.snapshot && typeof base.snapshot === 'object'
+            ? (base.snapshot as Record<string, unknown>)
+            : {};
+        setMetaSyncCaches(queryClient, {
+          ...base,
+          snapshot: {
+            ...snap,
+            inbox_threads: json.snapshot.inbox_threads,
+          },
         });
         setLocalThreads(null);
         if (
@@ -752,7 +785,7 @@ export default function SocialInboxPanel() {
         );
       });
       if (json.snapshot) {
-        queryClient.setQueryData(['meta-sync'], {
+        setMetaSyncCaches(queryClient, {
           synced: true,
           snapshot: json.snapshot,
         });

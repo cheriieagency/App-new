@@ -186,6 +186,17 @@ export async function ensureDmAutomationsSchema(): Promise<void> {
   } catch {
     /* ignore */
   }
+  // One non-failed row per comment — claim before Graph send (webhook + cron safe).
+  try {
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS dm_logs_comment_id_processed_uidx
+        ON public.dm_logs (comment_id)
+        WHERE comment_id IS NOT NULL
+          AND status <> 'failed'
+    `;
+  } catch {
+    /* ignore — duplicates may exist until migration runs */
+  }
 }
 
 /** Which CTA text columns exist on public.dm_automations. */

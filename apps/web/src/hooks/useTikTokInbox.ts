@@ -28,9 +28,10 @@ export type TikTokInboxThreadDto = {
   }>;
 };
 
-export function useTikTokInbox(enabled: boolean) {
+export function useTikTokInbox(enabled: boolean, options?: { live?: boolean }) {
   const workspace = useWorkspaceOptional();
   const workspaceId = workspace?.activeWorkspaceId || '';
+  const live = Boolean(options?.live);
 
   return useQuery({
     queryKey: ['tiktok-inbox', workspaceId],
@@ -61,7 +62,10 @@ export function useTikTokInbox(enabled: boolean) {
         message: json.message || null,
       };
     },
-    staleTime: 15_000,
+    staleTime: live ? 0 : 15_000,
     refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: live ? 20_000 : false,
+    refetchIntervalInBackground: false,
   });
 }

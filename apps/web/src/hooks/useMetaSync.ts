@@ -27,6 +27,36 @@ export function useMetaSync(enabled = true) {
   });
 }
 
+/**
+ * Live Inbox: re-pull Graph while Social Inbox is open.
+ * Uses ?force=1 so GET is not stuck on a stale in-memory snapshot.
+ */
+export function useLiveMetaInboxSync(enabled = true) {
+  const queryClient = useQueryClient();
+  return useQuery<MetaSyncResponse>({
+    queryKey: ['meta-sync', 'live-inbox'],
+    enabled,
+    staleTime: 0,
+    gcTime: 60_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 20_000,
+    refetchIntervalInBackground: false,
+    queryFn: async () => {
+      const r = await fetch(`/api/meta/sync?force=1&_=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      if (!r.ok) throw new Error('Failed to live-sync Meta inbox');
+      const json = (await r.json()) as MetaSyncResponse;
+      // Keep the shared Analytics cache in sync with the live pull.
+      queryClient.setQueryData(['meta-sync'], json);
+      return json;
+    },
+  });
+}
+
 export async function refreshMetaSync(): Promise<MetaSyncResponse> {
   const r = await fetch('/api/meta/sync', {
     method: 'POST',

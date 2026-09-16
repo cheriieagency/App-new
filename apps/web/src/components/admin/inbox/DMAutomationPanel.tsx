@@ -206,7 +206,7 @@ export default function DMAutomationPanel() {
   const [selectedCommentText, setSelectedCommentText] = useState('');
   const [devToolsOpen, setDevToolsOpen] = useState(false);
   const [autoWatchLabel, setAutoWatchLabel] = useState(
-    'Auto-watching Instagram every 20s…'
+    'Live 24/7 — webhooks + server cron (panel watch is backup)…'
   );
   /** True when Meta counts comments but API returns none (app not Live / no Advanced Access). */
   const [metaCommentsBlocked, setMetaCommentsBlocked] = useState(false);
@@ -275,7 +275,9 @@ export default function DMAutomationPanel() {
         return;
       }
       if (result.throttled) {
-        setAutoWatchLabel('Auto-watching Instagram every 20s…');
+        setAutoWatchLabel(
+          'Live 24/7 — webhooks + server cron (panel watch is backup)…'
+        );
         return;
       }
       const sent = Number(result.sent) || 0;
@@ -292,18 +294,18 @@ export default function DMAutomationPanel() {
           blocked
             ? 'Blocked by Meta app mode — see fix below'
             : first.length > 120
-              ? `Auto-watch issue: ${first.slice(0, 117)}…`
-              : `Auto-watch issue: ${first}`
+              ? `Backup watch issue: ${first.slice(0, 117)}…`
+              : `Backup watch issue: ${first}`
         );
         return;
       }
       setMetaCommentsBlocked(false);
       setAutoWatchLabel(
         sent > 0
-          ? `Auto-sent ${sent} DM${sent === 1 ? '' : 's'} — watching every 20s…`
+          ? `Just sent ${sent} DM${sent === 1 ? '' : 's'} — still live 24/7…`
           : fetched > 0
-            ? `Saw ${fetched} recent comment${fetched === 1 ? '' : 's'} — watching every 20s…`
-            : 'Auto-watching Instagram every 20s…'
+            ? `Saw ${fetched} recent comment${fetched === 1 ? '' : 's'} — live 24/7 via webhooks + cron…`
+            : 'Live 24/7 — webhooks + server cron (panel watch is backup)…'
       );
       if (sent > 0) {
         toast.success(
@@ -956,7 +958,7 @@ export default function DMAutomationPanel() {
                 className={`inline-block h-1.5 w-1.5 rounded-full ${
                   metaCommentsBlocked
                     ? 'bg-amber-500'
-                    : 'bg-[rgba(44,59,46,0.08)]0 animate-pulse'
+                    : 'bg-emerald-500 animate-pulse'
                 }`}
                 aria-hidden
               />
@@ -1393,7 +1395,7 @@ export default function DMAutomationPanel() {
                     }
                     onClick={() => toggleMutation.mutate(rule)}
                     className={`relative h-11 min-h-[44px] w-[52px] rounded-full transition-colors disabled:opacity-60 ${
-                      rule.isActive ? 'bg-[rgba(44,59,46,0.08)]0' : 'bg-slate-200'
+                      rule.isActive ? 'bg-[#2C3B2E]' : 'bg-slate-200'
                     }`}
                   >
                     <span

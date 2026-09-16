@@ -31,38 +31,43 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const missing = missingEnvKeys(...metaEnv.requiredKeys);
-  if (missing.length) {
-    return missingEnvResponse(missing, 'Meta / Instagram Graph API');
-  }
-
-  let payload: unknown = {};
+  // Always 200 for Meta — missing env / processing errors must not disable the hook.
   try {
-    payload = await request.json();
-  } catch {
-    payload = {};
-  }
-
-  // Forward Instagram comment changes into the Comment-to-DM engine.
-  const events = extractCommentEventsFromWebhook(payload);
-  const results = [];
-  for (const event of events) {
+    let payload: unknown = {};
     try {
-      results.push(await processCommentAutomationEvent(event));
-    } catch (error) {
-      console.warn('[webhooks/meta] comment automation', error);
-      results.push({
-        matched: false,
-        sent: false,
-        error: error instanceof Error ? error.message : 'failed',
-      });
+      payload = await request.json();
+    } catch {
+      payload = {};
     }
-  }
 
-  return Response.json({
-    ok: true,
-    received: true,
-    commentEvents: events.length,
-    results,
-  });
+    if (!process.env.DATABASE_URL?.trim()) {
+      return Response.json({ ok: true, received: true, ignored: 'no_database' });
+    }
+
+    // Forward Instagram / Page comment changes into the Comment-to-DM engine.
+    const events = extractCommentEventsFromWebhook(payload);
+    const results = [];
+    for (const event of events) {
+      try {
+        results.push(await processCommentAutomationEvent(event));
+      } catch (error) {
+        console.warn('[webhooks/meta] comment automation', error);
+        results.push({
+          matched: false,
+          sent: false,
+          error: error instanceof Error ? error.message : 'failed',
+        });
+      }
+    }
+
+    return Response.json({
+      ok: true,
+      received: true,
+      commentEvents: events.length,
+      results,
+    });
+  } catch (error) {
+    console.error('[webhooks/meta] unhandled', error);
+    return Response.json({ ok: true, received: true, error: 'unhandled' });
+  }
 }

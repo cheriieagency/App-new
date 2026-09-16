@@ -1446,16 +1446,30 @@ export type InstagramComment = {
   username?: string;
   timestamp?: string;
   like_count?: number;
+  from?: { id?: string; username?: string };
+  replies?: { data?: InstagramComment[] };
 };
 
 /** Comments on a media item — used to seed Social Inbox after connect. */
 export async function fetchInstagramMediaComments(
   mediaId: string,
   accessToken: string,
-  limit = 20
+  limit = 50
 ): Promise<InstagramComment[]> {
   const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(mediaId)}/comments`);
-  url.searchParams.set('fields', 'id,text,username,timestamp,like_count');
+  // Include nested replies so Inbox threads show the full conversation.
+  url.searchParams.set(
+    'fields',
+    [
+      'id',
+      'text',
+      'username',
+      'timestamp',
+      'like_count',
+      'from{id,username}',
+      'replies.limit(50){id,text,username,timestamp,like_count,from{id,username}}',
+    ].join(',')
+  );
   url.searchParams.set('limit', String(limit));
   url.searchParams.set('access_token', accessToken);
   try {
@@ -1625,7 +1639,8 @@ export async function fetchInstagramDmConversations(
       'id',
       'updated_time',
       'participants{id,username,name}',
-      'messages.limit(12){id,message,from,created_time}',
+      // Pull a deeper history so Inbox threads aren't stuck on the latest ~12.
+      'messages.limit(50){id,message,from,created_time}',
     ].join(',')
   );
   url.searchParams.set('limit', String(limit));

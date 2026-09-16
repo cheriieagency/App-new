@@ -228,12 +228,25 @@ export async function processCommentAutomationEvent(
 
   await ensureDmAutomationsSchema();
 
-  // Idempotent — skip comments already delivered / skipped (webhook + poll).
+  // Idempotent — skip comments already claimed / delivered (webhook + poll).
+  // Stale "processing" (>2m) is released so a crash mid-send can retry.
+  try {
+    await sql`
+      UPDATE public.dm_logs
+      SET status = 'failed', error_message = COALESCE(error_message, 'stale_processing')
+      WHERE comment_id = ${event.commentId}
+        AND status = 'processing'
+        AND COALESCE(created_at, sent_at, now() - interval '1 hour')
+          < now() - interval '2 minutes'
+    `;
+  } catch {
+    /* created_at may be missing on older rows */
+  }
   try {
     const prior = await sql`
-      SELECT id FROM public.dm_logs
+      SELECT id, status FROM public.dm_logs
       WHERE comment_id = ${event.commentId}
-        AND status IN ('sent', 'delivered', 'skipped')
+        AND status IN ('sent', 'delivered', 'skipped', 'processing')
       LIMIT 1
     `;
     if (Array.isArray(prior) && prior.length > 0) {
@@ -270,24 +283,31 @@ export async function processCommentAutomationEvent(
       commenterId: event.commenterId,
     })
   ) {
-    await sql`
-      INSERT INTO public.dm_logs (
-        workspace_id, automation_id, comment_id, media_id,
-        commenter_id, commenter_username, comment_text,
-        matched_keyword, status, error_message
-      ) VALUES (
-        ${account.workspaceId},
-        ${matchedRule.id},
-        ${event.commentId},
-        ${event.mediaId},
-        ${event.commenterId},
-        ${event.commenterUsername},
-        ${event.text},
-        ${matchedKeyword},
-        'skipped',
-        ${'rate_limited_10m'}
-      )
-    `;
+    try {
+      await sql`
+        INSERT INTO public.dm_logs (
+          workspace_id, automation_id, comment_id, media_id,
+          commenter_id, commenter_username, comment_text,
+          matched_keyword, status, error_message
+        ) VALUES (
+          ${account.workspaceId},
+          ${matchedRule.id},
+          ${event.commentId},
+          ${event.mediaId},
+          ${event.commenterId},
+          ${event.commenterUsername},
+          ${event.text},
+          ${matchedKeyword},
+          'skipped',
+          ${'rate_limited_10m'}
+        )
+      `;
+    } catch (claimErr) {
+      if (isUniqueViolation(claimErr)) {
+        return { matched: false, sent: false, error: 'already_processed' };
+      }
+      throw claimErr;
+    }
     return {
       matched: true,
       sent: false,
@@ -304,6 +324,40 @@ export async function processCommentAutomationEvent(
       automationId: matchedRule.id,
       error: 'empty_dm_message',
     };
+  }
+
+  // Claim before Graph send so webhook + cron cannot double-DM the same comment.
+  let claimId: number | null = null;
+  try {
+    const claimRows = await sql`
+      INSERT INTO public.dm_logs (
+        workspace_id, automation_id, comment_id, media_id,
+        commenter_id, commenter_username, comment_text,
+        matched_keyword, status, error_message
+      ) VALUES (
+        ${account.workspaceId},
+        ${matchedRule.id},
+        ${event.commentId},
+        ${event.mediaId},
+        ${event.commenterId},
+        ${event.commenterUsername},
+        ${event.text},
+        ${matchedKeyword},
+        'processing',
+        ${null}
+      )
+      RETURNING id
+    `;
+    claimId =
+      Array.isArray(claimRows) && claimRows[0]?.id != null
+        ? Number(claimRows[0].id)
+        : null;
+  } catch (claimErr) {
+    if (isUniqueViolation(claimErr)) {
+      return { matched: false, sent: false, error: 'already_processed' };
+    }
+    // No unique index yet — fall through without claim id (best-effort).
+    console.warn('[dm-automations] claim insert', claimErr);
   }
 
   const token = account.pageAccessToken || account.accessToken;
@@ -373,24 +427,45 @@ export async function processCommentAutomationEvent(
       }
     }
 
-    await sql`
-      INSERT INTO public.dm_logs (
-        workspace_id, automation_id, comment_id, media_id,
-        commenter_id, commenter_username, comment_text,
-        dm_message_id, matched_keyword, status
-      ) VALUES (
-        ${account.workspaceId},
-        ${matchedRule.id},
-        ${event.commentId},
-        ${event.mediaId},
-        ${event.commenterId},
-        ${event.commenterUsername},
-        ${event.text},
-        ${dmMessageId},
-        ${matchedKeyword},
-        'sent'
-      )
-    `;
+    if (claimId != null) {
+      await sql`
+        UPDATE public.dm_logs
+        SET status = 'sent', dm_message_id = ${dmMessageId}, error_message = NULL
+        WHERE id = ${claimId}
+      `;
+    } else {
+      try {
+        await sql`
+          INSERT INTO public.dm_logs (
+            workspace_id, automation_id, comment_id, media_id,
+            commenter_id, commenter_username, comment_text,
+            dm_message_id, matched_keyword, status
+          ) VALUES (
+            ${account.workspaceId},
+            ${matchedRule.id},
+            ${event.commentId},
+            ${event.mediaId},
+            ${event.commenterId},
+            ${event.commenterUsername},
+            ${event.text},
+            ${dmMessageId},
+            ${matchedKeyword},
+            'sent'
+          )
+        `;
+      } catch (insertErr) {
+        if (isUniqueViolation(insertErr)) {
+          return {
+            matched: true,
+            sent: true,
+            automationId: matchedRule.id,
+            error: 'already_processed',
+          };
+        }
+        throw insertErr;
+      }
+    }
+
     try {
       await sql`
         UPDATE public.dm_automations
@@ -415,24 +490,41 @@ export async function processCommentAutomationEvent(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'dm_send_failed';
-    await sql`
-      INSERT INTO public.dm_logs (
-        workspace_id, automation_id, comment_id, media_id,
-        commenter_id, commenter_username, comment_text,
-        matched_keyword, status, error_message
-      ) VALUES (
-        ${account.workspaceId},
-        ${matchedRule.id},
-        ${event.commentId},
-        ${event.mediaId},
-        ${event.commenterId},
-        ${event.commenterUsername},
-        ${event.text},
-        ${matchedKeyword},
-        'failed',
-        ${message}
-      )
-    `;
+    // Release claim so a later cron retry can try again.
+    if (claimId != null) {
+      try {
+        await sql`
+          UPDATE public.dm_logs
+          SET status = 'failed', error_message = ${message}
+          WHERE id = ${claimId}
+        `;
+      } catch {
+        /* ignore */
+      }
+    } else {
+      try {
+        await sql`
+          INSERT INTO public.dm_logs (
+            workspace_id, automation_id, comment_id, media_id,
+            commenter_id, commenter_username, comment_text,
+            matched_keyword, status, error_message
+          ) VALUES (
+            ${account.workspaceId},
+            ${matchedRule.id},
+            ${event.commentId},
+            ${event.mediaId},
+            ${event.commenterId},
+            ${event.commenterUsername},
+            ${event.text},
+            ${matchedKeyword},
+            'failed',
+            ${message}
+          )
+        `;
+      } catch {
+        /* ignore */
+      }
+    }
     return {
       matched: true,
       sent: false,
@@ -440,6 +532,16 @@ export async function processCommentAutomationEvent(
       error: message,
     };
   }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return /unique|duplicate|dm_logs_comment_id/i.test(String(error));
+  }
+  const e = error as { code?: string; message?: string; constraint?: string };
+  if (e.code === '23505') return true;
+  const msg = `${e.message || ''} ${e.constraint || ''}`;
+  return /unique|duplicate|dm_logs_comment_id/i.test(msg);
 }
 
 /** Parse Meta webhook POST body into comment events (instagram + page). */
@@ -466,19 +568,15 @@ export function extractCommentEventsFromWebhook(
       const value = change.value || {};
 
       // Instagram: field=comments|live_comments · Page: field=feed with item=comment
+      // Do NOT treat every instagram object change as a comment (messages etc.).
       const isIgComment =
-        field === 'comments' ||
-        field === 'live_comments' ||
-        objectType === 'instagram';
+        field === 'comments' || field === 'live_comments';
       const isPageComment =
         field === 'feed' &&
         (String(value.item || '').toLowerCase() === 'comment' ||
           Boolean(value.comment_id));
 
-      if (!isIgComment && !isPageComment) {
-        // Still allow bare comments field without object type.
-        if (field && field !== 'comments' && field !== 'live_comments') continue;
-      }
+      if (!isIgComment && !isPageComment) continue;
 
       // Skip removals / edits that aren't new comments.
       const verb = String(value.verb || 'add').toLowerCase();
