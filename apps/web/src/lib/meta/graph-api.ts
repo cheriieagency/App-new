@@ -1446,16 +1446,30 @@ export type InstagramComment = {
   username?: string;
   timestamp?: string;
   like_count?: number;
+  from?: { id?: string; username?: string };
+  replies?: { data?: InstagramComment[] };
 };
 
 /** Comments on a media item — used to seed Social Inbox after connect. */
 export async function fetchInstagramMediaComments(
   mediaId: string,
   accessToken: string,
-  limit = 20
+  limit = 50
 ): Promise<InstagramComment[]> {
   const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(mediaId)}/comments`);
-  url.searchParams.set('fields', 'id,text,username,timestamp,like_count');
+  // Include nested replies so Inbox threads show the full conversation.
+  url.searchParams.set(
+    'fields',
+    [
+      'id',
+      'text',
+      'username',
+      'timestamp',
+      'like_count',
+      'from{id,username}',
+      'replies.limit(50){id,text,username,timestamp,like_count,from{id,username}}',
+    ].join(',')
+  );
   url.searchParams.set('limit', String(limit));
   url.searchParams.set('access_token', accessToken);
   try {
@@ -1492,6 +1506,94 @@ export async function replyToInstagramComment(
   return { id: json.id };
 }
 
+/** Delete an Instagram comment on the creator's media. */
+export async function deleteInstagramComment(
+  commentId: string,
+  accessToken: string
+): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}`
+  );
+  url.searchParams.set('access_token', accessToken);
+  const res = await fetch(url.toString(), { method: 'DELETE' });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error?.message || 'Failed to delete Instagram comment');
+  }
+}
+
+/** Hide or unhide an Instagram comment on the creator's media. */
+export async function hideInstagramComment(
+  commentId: string,
+  hide: boolean,
+  accessToken: string
+): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(commentId)}`
+  );
+  url.searchParams.set('hide', hide ? 'true' : 'false');
+  url.searchParams.set('access_token', accessToken);
+  const res = await fetch(url.toString(), { method: 'POST' });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!res.ok || json.success === false) {
+    throw new Error(
+      json.error?.message ||
+        `Failed to ${hide ? 'hide' : 'unhide'} Instagram comment`
+    );
+  }
+}
+
+/**
+ * Like an Instagram comment as the connected IG professional account.
+ * Requires `instagram_manage_engagement`.
+ */
+export async function likeInstagramComment(input: {
+  igUserId: string;
+  commentId: string;
+  accessToken: string;
+}): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(input.igUserId)}/likes`
+  );
+  url.searchParams.set('comment_id', input.commentId);
+  url.searchParams.set('access_token', input.accessToken);
+  const res = await fetch(url.toString(), { method: 'POST' });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error?.message || 'Failed to like Instagram comment');
+  }
+}
+
+/** Unlike an Instagram comment previously liked by the IG professional account. */
+export async function unlikeInstagramComment(input: {
+  igUserId: string;
+  commentId: string;
+  accessToken: string;
+}): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(input.igUserId)}/likes`
+  );
+  url.searchParams.set('comment_id', input.commentId);
+  url.searchParams.set('access_token', input.accessToken);
+  const res = await fetch(url.toString(), { method: 'DELETE' });
+  const json = (await res.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: { message?: string };
+  };
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error?.message || 'Failed to unlike Instagram comment');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Instagram Messaging (DMs via Page conversations API)
 // ---------------------------------------------------------------------------
@@ -1501,6 +1603,9 @@ export type InstagramDmMessage = {
   message?: string;
   created_time?: string;
   from?: { id?: string; username?: string; name?: string; email?: string };
+  to?: {
+    data?: Array<{ id?: string; username?: string; name?: string }>;
+  };
 };
 
 export type InstagramDmConversation = {
@@ -1537,7 +1642,8 @@ export async function fetchInstagramDmConversations(
       'id',
       'updated_time',
       'participants{id,username,name}',
-      'messages.limit(12){id,message,from,created_time}',
+      // from{id,username} so outbound vs fan is detectable (bare `from` often omits username).
+      'messages.limit(50){id,message,from{id,username,name},created_time}',
     ].join(',')
   );
   url.searchParams.set('limit', String(limit));
@@ -1547,21 +1653,47 @@ export async function fetchInstagramDmConversations(
     const data = await graphJson<{ data?: InstagramDmConversation[] }>(
       url.toString()
     );
-    const selfIds = new Set(
+    const knownSelfIds = new Set(
       [pageId, igUserId].filter(Boolean).map((id) => String(id))
     );
     return (data.data ?? []).map((conv) => {
       const participants = conv.participants?.data ?? [];
-      // Prefer the participant that isn't the Page / IG business account.
-      const other =
-        participants.find((p) => p.id && !selfIds.has(p.id)) ||
-        participants[0];
+      // Build self set from known ids + any participant that matches Page/IG.
+      // Messaging often uses a third IGSID — treat every non-fan participant as self.
+      const fanCandidate =
+        participants.find((p) => p.id && !knownSelfIds.has(String(p.id))) ||
+        null;
+
+      // If 2 participants and one is known self, the other is the fan.
+      // If known self missing (IGSID-only), prefer participant WITH a username
+      // that isn't the business — Graph usually puts the customer second.
+      let other = fanCandidate;
+      if (participants.length === 2 && knownSelfIds.size > 0) {
+        const matchedSelf = participants.find(
+          (p) => p.id && knownSelfIds.has(String(p.id))
+        );
+        if (matchedSelf) {
+          other =
+            participants.find((p) => p.id && p.id !== matchedSelf.id) || other;
+        }
+      }
+      if (!other) {
+        other = participants[participants.length - 1] || participants[0];
+      }
+
+      // Expand self ids with every participant that isn't the chosen fan.
+      const selfFromParticipants = participants
+        .map((p) => p.id)
+        .filter((id): id is string => Boolean(id && id !== other?.id));
+
       return {
         ...conv,
         recipient_id: other?.id,
         recipient_name: other?.name || other?.username || 'Instagram user',
         recipient_username: other?.username,
-      };
+        // Stashed for direction mapping in sync (not part of Graph type — cast ok via spread).
+        _self_ids: [...knownSelfIds, ...selfFromParticipants],
+      } as InstagramDmConversation & { _self_ids?: string[] };
     });
   } catch (error) {
     console.warn('[graph] Instagram DM conversations failed', error);
@@ -1605,15 +1737,50 @@ export async function sendInstagramDm(input: {
   recipientId: string;
   message: string;
 }): Promise<{ id: string }> {
+  return sendInstagramDmWithQuickReplies({
+    pageId: input.pageId,
+    pageAccessToken: input.pageAccessToken,
+    recipientId: input.recipientId,
+    text: input.message,
+    quickReplies: [],
+  });
+}
+
+/**
+ * Send Instagram DM text + optional Quick Reply buttons (Messenger API for IG).
+ * Button payloads come back on messaging_postbacks / message.quick_reply.
+ */
+export async function sendInstagramDmWithQuickReplies(input: {
+  pageId: string;
+  pageAccessToken: string;
+  recipientId: string;
+  text: string;
+  quickReplies?: Array<{ title: string; payload: string }>;
+}): Promise<{ id: string; messageId: string }> {
   const url = new URL(
-    `${GRAPH_BASE}/${encodeURIComponent(input.pageId)}/messages`
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(input.pageId)}/messages`
   );
+
+  const message: Record<string, unknown> = {
+    text: input.text,
+  };
+  const replies = (input.quickReplies || [])
+    .map((r) => ({
+      content_type: 'text',
+      title: String(r.title || '').trim().slice(0, 20),
+      payload: String(r.payload || '').trim(),
+    }))
+    .filter((r) => r.title && r.payload);
+  if (replies.length > 0) {
+    message.quick_replies = replies.slice(0, 13);
+  }
+
   const res = await fetch(url.toString(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       recipient: { id: input.recipientId },
-      message: { text: input.message },
+      message,
       messaging_product: 'instagram',
       access_token: input.pageAccessToken,
     }),
@@ -1629,7 +1796,92 @@ export async function sendInstagramDm(input: {
         'Failed to send Instagram DM — reconnect with messaging permissions'
     );
   }
-  return { id: String(json.message_id || json.id) };
+  const id = String(json.message_id || json.id);
+  return { id, messageId: id };
+}
+
+/**
+ * Best-effort "does this Instagram user follow the business?" check.
+ * Uses Messaging API user profile field when Advanced Access allows it.
+ * Returns false (deny branch) when Graph cannot confirm.
+ */
+export async function checkInstagramUserFollowsBusiness(input: {
+  pageId: string;
+  pageAccessToken: string;
+  igUserId: string;
+  senderId: string;
+}): Promise<boolean> {
+  try {
+    const url = new URL(
+      `https://graph.facebook.com/v21.0/${encodeURIComponent(input.senderId)}`
+    );
+    url.searchParams.set(
+      'fields',
+      'is_user_follow_business,follower_count,username'
+    );
+    url.searchParams.set('access_token', input.pageAccessToken);
+    const res = await fetch(url.toString());
+    const json = (await res.json()) as {
+      is_user_follow_business?: boolean;
+      error?: { message?: string };
+    };
+    if (!res.ok) {
+      console.warn(
+        '[graph] is_user_follow_business unavailable',
+        json.error?.message
+      );
+      return false;
+    }
+    return Boolean(json.is_user_follow_business);
+  } catch (error) {
+    console.warn('[graph] follower check failed', error);
+    return false;
+  }
+}
+
+/**
+ * React (❤️) or unreact to an Instagram DM message.
+ * Meta Messaging API does not support editing/deleting DM text in place.
+ */
+export async function reactToInstagramDm(input: {
+  pageId: string;
+  pageAccessToken: string;
+  recipientId: string;
+  messageId: string;
+  reaction?: string | null;
+}): Promise<void> {
+  const url = new URL(
+    `https://graph.facebook.com/v21.0/${encodeURIComponent(input.pageId)}/messages`
+  );
+  const reacting = Boolean(input.reaction);
+  const body: Record<string, unknown> = {
+    recipient: { id: input.recipientId },
+    sender_action: reacting ? 'react' : 'unreact',
+    payload: { message_id: input.messageId },
+    messaging_product: 'instagram',
+    access_token: input.pageAccessToken,
+  };
+  if (reacting) {
+    body.payload = {
+      message_id: input.messageId,
+      reaction: input.reaction || '❤️',
+    };
+  }
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    error?: { message?: string };
+  };
+  if (!res.ok) {
+    throw new Error(
+      json.error?.message ||
+        `Failed to ${reacting ? 'like' : 'unlike'} Instagram DM`
+    );
+  }
 }
 
 /**

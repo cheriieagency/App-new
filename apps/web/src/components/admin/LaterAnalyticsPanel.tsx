@@ -21,6 +21,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useAdminNav } from '@/components/admin/AdminNavContext';
 import { AdminPageHeader, adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
 import {
@@ -319,6 +320,8 @@ function PerformanceChart({
 export default function LaterAnalyticsPanel() {
   const { locale } = useLanguage();
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
+  const { section } = useAdminNav();
+  const analyticsActive = section === 'analytics';
   const {
     hasConnectedSocials,
     hasInstagram,
@@ -334,8 +337,9 @@ export default function LaterAnalyticsPanel() {
         canAccessPlatform(account.platform)
       ),
     [connectedAccountsRaw, canAccessPlatform]
-  );  const { data: metaSync, refetch: refetchMetaSync } = useMetaSync(
-    hasInstagram || hasConnectedSocials
+  );
+  const { data: metaSync, refetch: refetchMetaSync } = useMetaSync(
+    analyticsActive && (hasInstagram || hasConnectedSocials)
   );
   const [sub, setSub] = useState<AnalyticsSubTab>(() => {
     if (typeof window === 'undefined') return 'analytics';
@@ -351,10 +355,13 @@ export default function LaterAnalyticsPanel() {
     refetch: refetchAnalytics,
     dataUpdatedAt: analyticsUpdatedAt,
     isPending: analyticsPending,
-  } = useAnalytics(hasConnectedSocials || socialsLoading === false, {
-    from: dateRange.from,
-    to: dateRange.to,
-  });
+  } = useAnalytics(
+    analyticsActive && (hasConnectedSocials || socialsLoading === false),
+    {
+      from: dateRange.from,
+      to: dateRange.to,
+    }
+  );
   const [rangeOpen, setRangeOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(dateRange.from);
   const [draftTo, setDraftTo] = useState(dateRange.to);
@@ -376,7 +383,8 @@ export default function LaterAnalyticsPanel() {
     isLoading: postsLoading,
     refetch: refetchPosts,
   } = useAnalyticsPosts(
-    hasConnectedSocials &&
+    analyticsActive &&
+      hasConnectedSocials &&
       (sub === 'posts' ||
         sub === 'reels' ||
         sub === 'hashtags' ||
@@ -389,7 +397,9 @@ export default function LaterAnalyticsPanel() {
     isLoading: storiesLoading,
     refetch: refetchStories,
   } = useAnalyticsStories(
-    hasConnectedSocials && (sub === 'stories' || sub === 'analytics')
+    analyticsActive &&
+      hasConnectedSocials &&
+      (sub === 'stories' || sub === 'analytics')
   );
 
   // Hard refresh when switching analytics sub-tabs / workspace / date range.
@@ -449,6 +459,7 @@ export default function LaterAnalyticsPanel() {
 
   // Poll bio/checkout stats while Revenue or Link-in-bio tabs are open.
   useEffect(() => {
+    if (!analyticsActive) return;
     if (sub !== 'revenue' && sub !== 'linkinbio' && sub !== 'monthly') return;
     if (!activeWorkspace.id) return;
     const tick = () => {
@@ -459,9 +470,10 @@ export default function LaterAnalyticsPanel() {
       refreshWorkspaces();
       setBioTick((n) => n + 1);
     };
-    const id = window.setInterval(tick, 30_000);
+    const id = window.setInterval(tick, 90_000);
     return () => window.clearInterval(id);
   }, [
+    analyticsActive,
     sub,
     activeWorkspace.id,
     dateRange.from,

@@ -1389,6 +1389,105 @@ export type ExtraKey =
   | 'adsObjLeadsBlurb'
   | 'adsObjTrafficBlurb'
   | 'adsObjEngagementBlurb'
+  // Platform chrome — LanguageSwitcher coverage (inbox, gates, sidebar)
+  | 'inboxToastSyncFailed'
+  | 'inboxToastRefreshFailed'
+  | 'inboxToastDmNeedPerms'
+  | 'inboxToastIgRefreshed'
+  | 'inboxToastTtDemoRefreshed'
+  | 'inboxToastTtRefreshed'
+  | 'inboxToastRefreshGenericFailed'
+  | 'inboxToastAiFailed'
+  | 'inboxToastAiEmpty'
+  | 'inboxToastAiDrafted'
+  | 'inboxToastWaitCommentSync'
+  | 'inboxToastWaitMessageSend'
+  | 'inboxToastRemovedFromInbox'
+  | 'inboxToastCommentDeleted'
+  | 'inboxToastReactionSent'
+  | 'inboxToastCommentLiked'
+  | 'inboxToastReactionRemoved'
+  | 'inboxToastLikeRemoved'
+  | 'inboxToastUpdatedMessageSent'
+  | 'inboxToastReplyUpdated'
+  | 'inboxToastActionFailed'
+  | 'inboxEditOwnDmsOnly'
+  | 'inboxEditFansCommentsBlocked'
+  | 'inboxEditDmPrompt'
+  | 'inboxEditReplyPrompt'
+  | 'inboxToastTtDmFailed'
+  | 'inboxToastTtDmSent'
+  | 'inboxToastReplyFailed'
+  | 'inboxToastDmSent'
+  | 'inboxToastCommentReplySent'
+  | 'inboxToastSendFailed'
+  | 'inboxMessageActions'
+  | 'inboxCommentActions'
+  | 'inboxConfirmRemoveDm'
+  | 'inboxConfirmDeleteReply'
+  | 'inboxConfirmDeleteComment'
+  | 'inboxFeatureGateTitle'
+  | 'inboxFeatureGateDesc'
+  | 'connectSocialsTitle'
+  | 'connectSocialsDesc'
+  | 'connectSocialsCta'
+  | 'connectSocialsLoading'
+  | 'subGateTitle'
+  | 'subGateBody'
+  | 'subGateUpgrade'
+  | 'subGateTestMode'
+  | 'igBusinessRequiredTitle'
+  | 'igBusinessRequiredBody'
+  | 'igBusinessOpenSettings'
+  | 'sidebarClikdHome'
+  | 'sidebarRenameFolder'
+  | 'sidebarRename'
+  | 'sidebarDragReorder'
+  | 'sidebarRequiresCreator'
+  | 'dmLiveStatusDefault'
+  | 'dmLiveStatusBlocked'
+  | 'dmLiveStatusBackupIssue'
+  | 'dmLiveStatusJustSent'
+  | 'dmLiveStatusSawComments'
+  | 'dmLiveStatusPaused'
+  | 'dmLiveStatusPausedRetry'
+  | 'commonUpgrade'
+  | 'commonLoading'
+  | 'inboxUnlike'
+  | 'inboxConnectHint'
+  | 'inboxToastSyncedSummary'
+  | 'dmFlowTitle'
+  | 'dmFlowSub'
+  | 'dmFlowCreate'
+  | 'dmFlowCreateTitle'
+  | 'dmFlowEditTitle'
+  | 'dmFlowModalEyebrow'
+  | 'dmFlowWizardHint'
+  | 'dmFlowKeyword'
+  | 'dmFlowWelcome'
+  | 'dmFlowQuickReply'
+  | 'dmFlowCheckFollower'
+  | 'dmFlowFinalMessage'
+  | 'dmFlowLinkUrl'
+  | 'dmFlowNotFollowerMessage'
+  | 'dmFlowCreateBtn'
+  | 'dmFlowSaved'
+  | 'dmFlowSaveFailed'
+  | 'dmFlowDeleted'
+  | 'dmFlowDeleteConfirm'
+  | 'dmFlowEmptyHeadline'
+  | 'dmFlowEmptyDesc'
+  | 'dmFlowFollowerGate'
+  | 'dmFlowDefaultTitle'
+  | 'dmFlowDefaultWelcome'
+  | 'dmFlowDefaultButton'
+  | 'dmFlowDefaultFollowerMsg'
+  | 'dmFlowDefaultNotFollowerMsg'
+  | 'dmCreateChooserTitle'
+  | 'dmCreateChooserComment'
+  | 'dmCreateChooserCommentDesc'
+  | 'dmCreateChooserDm'
+  | 'dmCreateChooserDmDesc'
 
 export type ExtraDict = Record<ExtraKey, string>;
 
@@ -2829,6 +2928,123 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   adsObjLeadsBlurb: 'Collect emails, waitlists & form fills.',
   adsObjTrafficBlurb: 'Send people to your store or bio link.',
   adsObjEngagementBlurb: 'Boost post & Reel interactions.',
+  inboxToastSyncFailed: 'Sync failed',
+  inboxToastRefreshFailed: 'Could not refresh Instagram inbox',
+  inboxToastDmNeedPerms:
+    'DMs need messaging permissions — reconnect Instagram',
+  inboxToastIgRefreshed: 'Instagram inbox refreshed',
+  inboxToastTtDemoRefreshed: 'Demo TikTok inbox refreshed',
+  inboxToastTtRefreshed: 'TikTok inbox refreshed',
+  inboxToastRefreshGenericFailed: 'Refresh failed',
+  inboxToastAiFailed: 'AI reply failed',
+  inboxToastAiEmpty: 'Empty AI suggestion',
+  inboxToastAiDrafted: 'AI reply drafted',
+  inboxToastWaitCommentSync: 'Wait for the comment to sync before moderating.',
+  inboxToastWaitMessageSend: 'Wait for the message to send before moderating.',
+  inboxToastRemovedFromInbox: 'Removed from Inbox',
+  inboxToastCommentDeleted: 'Comment deleted',
+  inboxToastReactionSent: 'Reaction sent',
+  inboxToastCommentLiked: 'Comment liked',
+  inboxToastReactionRemoved: 'Reaction removed',
+  inboxToastLikeRemoved: 'Like removed',
+  inboxToastUpdatedMessageSent: 'Updated message sent',
+  inboxToastReplyUpdated: 'Reply updated',
+  inboxToastActionFailed: 'Action failed',
+  inboxEditOwnDmsOnly: 'You can only edit your own DMs.',
+  inboxEditFansCommentsBlocked:
+    "Instagram doesn't allow editing fans' comments. Reply or delete instead.",
+  inboxEditDmPrompt:
+    "Edit message (sends as a new DM — Instagram can't edit in place)",
+  inboxEditReplyPrompt: 'Edit your reply',
+  inboxToastTtDmFailed: 'TikTok DM failed — reconnect TikTok',
+  inboxToastTtDmSent: 'TikTok DM sent',
+  inboxToastReplyFailed:
+    'Reply failed — reconnect Instagram with comment + messaging permissions',
+  inboxToastDmSent: 'DM sent',
+  inboxToastCommentReplySent: 'Comment reply sent',
+  inboxToastSendFailed: 'Could not send reply',
+  inboxMessageActions: 'Message actions',
+  inboxCommentActions: 'Comment actions',
+  inboxConfirmRemoveDm:
+    "Remove this message from Inbox? (Instagram can't unsend DMs from apps.)",
+  inboxConfirmDeleteReply: 'Delete this reply on Instagram?',
+  inboxConfirmDeleteComment: 'Delete this comment on Instagram?',
+  inboxFeatureGateTitle: 'Social Inbox & DMs',
+  inboxFeatureGateDesc:
+    'Reply to Instagram DMs and run Comment-to-DM automations on Creator and Pro/Agency.',
+  connectSocialsTitle: 'Connect your social media',
+  connectSocialsDesc:
+    'This section stays empty until you connect a social media account. Analytics, inbox, community, email, bio, and media fill in automatically after OAuth.',
+  connectSocialsCta: 'Connect now',
+  connectSocialsLoading: 'Loading…',
+  subGateTitle: 'Workspace locked · {plan} plan',
+  subGateBody:
+    'Subscription status is "{status}". Upgrade or activate test mode to unlock Analytics, Planner, and Pro features.',
+  subGateUpgrade: 'Upgrade',
+  subGateTestMode: 'Activate Test Mode',
+  igBusinessRequiredTitle: 'Instagram Business account required',
+  igBusinessRequiredBody:
+    'Please convert your Instagram account to a Creator/Business account and link it to a Facebook Page to fetch analytics.',
+  igBusinessOpenSettings: 'Open connected accounts →',
+  sidebarClikdHome: 'Clikd home',
+  sidebarRenameFolder: 'Rename folder',
+  sidebarRename: 'Rename',
+  sidebarDragReorder: 'Drag to reorder',
+  sidebarRequiresCreator: 'Requires Creator',
+  dmLiveStatusDefault:
+    'Live 24/7 — webhooks + server cron (panel watch is backup)…',
+  dmLiveStatusBlocked: 'Blocked by Meta app mode — see fix below',
+  dmLiveStatusBackupIssue: 'Backup watch issue: {error}',
+  dmLiveStatusJustSent: 'Just sent {count} DM(s) — still live 24/7…',
+  dmLiveStatusSawComments:
+    'Saw {count} recent comment(s) — live 24/7 via webhooks + cron…',
+  dmLiveStatusPaused: 'Auto-watch paused: {error}',
+  dmLiveStatusPausedRetry: 'Auto-watch paused (retrying…)',
+  commonUpgrade: 'Upgrade',
+  commonLoading: 'Loading…',
+  inboxUnlike: 'Unlike',
+  inboxConnectHint: 'Connect Instagram or TikTok to manage DMs here.',
+  inboxToastSyncedSummary:
+    'Synced IG {dms} DM(s) · {comments} comment(s){tiktok}',
+  dmFlowTitle: 'DM Chat Flows',
+  dmFlowSub:
+    'When someone DMs a keyword, Clikd replies with Quick Replies, optional follower check, and your link.',
+  dmFlowCreate: 'Create DM flow',
+  dmFlowCreateTitle: 'Create DM chat flow',
+  dmFlowEditTitle: 'Edit DM chat flow',
+  dmFlowModalEyebrow: 'Instagram DM',
+  dmFlowWizardHint:
+    '1) Keyword in DM → 2) Welcome + button → 3) Optional “must follow” check → 4) Final message + link.',
+  dmFlowKeyword: 'Trigger keyword in DM',
+  dmFlowWelcome: 'Welcome message',
+  dmFlowQuickReply: 'Quick Reply button label',
+  dmFlowCheckFollower: 'Only send the link if they follow you',
+  dmFlowFinalMessage: 'Final message (with link)',
+  dmFlowLinkUrl: 'Web link / storefront URL',
+  dmFlowNotFollowerMessage: 'Message if they don’t follow yet',
+  dmFlowCreateBtn: 'Create DM flow',
+  dmFlowSaved: 'DM chat flow saved',
+  dmFlowSaveFailed: 'Could not save DM flow',
+  dmFlowDeleted: 'DM chat flow deleted',
+  dmFlowDeleteConfirm: 'Delete this DM chat flow?',
+  dmFlowEmptyHeadline: 'No DM chat flows yet',
+  dmFlowEmptyDesc:
+    'Build a ManyChat-style path: keyword → Quick Reply → follower check → link.',
+  dmFlowFollowerGate: 'follow check',
+  dmFlowDefaultTitle: 'Hey Eve! welcome flow',
+  dmFlowDefaultWelcome: 'Hey! Want the free link? Tap below 👇',
+  dmFlowDefaultButton: 'Yes, send link',
+  dmFlowDefaultFollowerMsg:
+    'Here is the link you have been waiting for! {link}',
+  dmFlowDefaultNotFollowerMsg:
+    'Please follow this account first, then tap again 💛',
+  dmCreateChooserTitle: 'What do you want to automate?',
+  dmCreateChooserComment: 'Comment keyword → DM',
+  dmCreateChooserCommentDesc:
+    'When someone comments a keyword on your post, send a Private Reply DM.',
+  dmCreateChooserDm: 'DM keyword → chat flow',
+  dmCreateChooserDmDesc:
+    'When someone DMs a keyword, send Quick Replies and a link (ManyChat-style).',
 };
 
 export const EXTRA_SV: ExtraDict = {
@@ -4270,6 +4486,86 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   adsObjLeadsBlurb: 'Samla e-post, väntelistor och formulär.',
   adsObjTrafficBlurb: 'Skicka trafik till din store eller bio-länk.',
   adsObjEngagementBlurb: 'Boosta inlägg och Reels-interaktioner.',
+  inboxToastSyncFailed: 'Synkning misslyckades',
+  inboxToastRefreshFailed: 'Kunde inte uppdatera Instagram-inkorgen',
+  inboxToastDmNeedPerms:
+    'DM kräver meddelandebehörighet — återanslut Instagram',
+  inboxToastIgRefreshed: 'Instagram-inkorgen uppdaterad',
+  inboxToastTtDemoRefreshed: 'Demo TikTok-inkorg uppdaterad',
+  inboxToastTtRefreshed: 'TikTok-inkorgen uppdaterad',
+  inboxToastRefreshGenericFailed: 'Uppdatering misslyckades',
+  inboxToastAiFailed: 'AI-svar misslyckades',
+  inboxToastAiEmpty: 'Tomt AI-förslag',
+  inboxToastAiDrafted: 'AI-svar utkastat',
+  inboxToastWaitCommentSync:
+    'Vänta tills kommentaren synkats innan du modererar.',
+  inboxToastWaitMessageSend:
+    'Vänta tills meddelandet skickats innan du modererar.',
+  inboxToastRemovedFromInbox: 'Borttagen från inkorg',
+  inboxToastCommentDeleted: 'Kommentar raderad',
+  inboxToastReactionSent: 'Reaktion skickad',
+  inboxToastCommentLiked: 'Kommentar gillad',
+  inboxToastReactionRemoved: 'Reaktion borttagen',
+  inboxToastLikeRemoved: 'Gilla borttaget',
+  inboxToastUpdatedMessageSent: 'Uppdaterat meddelande skickat',
+  inboxToastReplyUpdated: 'Svar uppdaterat',
+  inboxToastActionFailed: 'Åtgärden misslyckades',
+  inboxEditOwnDmsOnly: 'Du kan bara redigera dina egna DM:ar.',
+  inboxEditFansCommentsBlocked:
+    'Instagram tillåter inte att redigera fans kommentarer. Svara eller radera i stället.',
+  inboxEditDmPrompt:
+    'Redigera meddelande (skickas som nytt DM — Instagram kan inte redigera på plats)',
+  inboxEditReplyPrompt: 'Redigera ditt svar',
+  inboxToastTtDmFailed: 'TikTok-DM misslyckades — återanslut TikTok',
+  inboxToastTtDmSent: 'TikTok-DM skickat',
+  inboxToastReplyFailed:
+    'Svar misslyckades — återanslut Instagram med kommentar- och meddelandebehörighet',
+  inboxToastDmSent: 'DM skickat',
+  inboxToastCommentReplySent: 'Kommentarsvar skickat',
+  inboxToastSendFailed: 'Kunde inte skicka svar',
+  inboxMessageActions: 'Meddelandeåtgärder',
+  inboxCommentActions: 'Kommentarsåtgärder',
+  inboxConfirmRemoveDm:
+    'Ta bort meddelandet från inkorgen? (Instagram kan inte ångra DM från appar.)',
+  inboxConfirmDeleteReply: 'Radera detta svar på Instagram?',
+  inboxConfirmDeleteComment: 'Radera denna kommentar på Instagram?',
+  inboxFeatureGateTitle: 'Social Inbox & DM:ar',
+  inboxFeatureGateDesc:
+    'Svara på Instagram-DM:ar och kör Kommentar-till-DM-automationer på Creator och Pro/Agency.',
+  connectSocialsTitle: 'Anslut dina sociala medier',
+  connectSocialsDesc:
+    'Den här sektionen är tom tills du ansluter ett socialt konto. Analys, inkorg, community, e-post, bio och media fylls i automatiskt efter OAuth.',
+  connectSocialsCta: 'Anslut nu',
+  connectSocialsLoading: 'Laddar…',
+  subGateTitle: 'Workspace låst · {plan}-plan',
+  subGateBody:
+    'Prenumerationsstatus är "{status}". Uppgradera eller aktivera testläge för att låsa upp Analytics, Planner och Pro-funktioner.',
+  subGateUpgrade: 'Uppgradera',
+  subGateTestMode: 'Aktivera testläge',
+  igBusinessRequiredTitle: 'Instagram Business-konto krävs',
+  igBusinessRequiredBody:
+    'Konvertera ditt Instagram-konto till Creator/Business och koppla det till en Facebook-sida för att hämta analys.',
+  igBusinessOpenSettings: 'Öppna anslutna konton →',
+  sidebarClikdHome: 'Clikd hem',
+  sidebarRenameFolder: 'Byt namn på mapp',
+  sidebarRename: 'Byt namn',
+  sidebarDragReorder: 'Dra för att ändra ordning',
+  sidebarRequiresCreator: 'Kräver Creator',
+  dmLiveStatusDefault:
+    'Live dygnet runt — webhooks + servercron (panelövervakning är backup)…',
+  dmLiveStatusBlocked: 'Blockerad av Meta-appläge — se fix nedan',
+  dmLiveStatusBackupIssue: 'Backup-övervakning: {error}',
+  dmLiveStatusJustSent: 'Skickade precis {count} DM — fortfarande live dygnet runt…',
+  dmLiveStatusSawComments:
+    'Såg {count} nya kommentarer — live dygnet runt via webhooks + cron…',
+  dmLiveStatusPaused: 'Auto-övervakning pausad: {error}',
+  dmLiveStatusPausedRetry: 'Auto-övervakning pausad (försöker igen…)',
+  commonUpgrade: 'Uppgradera',
+  commonLoading: 'Laddar…',
+  inboxUnlike: 'Sluta gilla',
+  inboxConnectHint: 'Anslut Instagram eller TikTok för att hantera DM:ar här.',
+  inboxToastSyncedSummary:
+    'Synkade IG {dms} DM · {comments} kommentar(er){tiktok}',
 };
 
 /** Norwegian — full extras (planner + landing), based on SV with NO spelling. */
@@ -4441,9 +4737,87 @@ export const EXTRA_NO: ExtraDict = {
   postsStatLabel: 'innlegg',
   shareProfileBtn: 'Del profil',
   teamMembersAria: 'Teammedlemmer',
+  inboxToastSyncFailed: 'Synkronisering mislyktes',
+  inboxToastRefreshFailed: 'Kunne ikke oppdatere Instagram-inboksen',
+  inboxToastDmNeedPerms:
+    'DM krever meldingsrettigheter — koble til Instagram på nytt',
+  inboxToastIgRefreshed: 'Instagram-inboks oppdatert',
+  inboxToastTtDemoRefreshed: 'Demo TikTok-inboks oppdatert',
+  inboxToastTtRefreshed: 'TikTok-inboks oppdatert',
+  inboxToastRefreshGenericFailed: 'Oppdatering mislyktes',
+  inboxToastAiFailed: 'AI-svar mislyktes',
+  inboxToastAiEmpty: 'Tomt AI-forslag',
+  inboxToastAiDrafted: 'AI-svar utarbeidet',
+  inboxToastWaitCommentSync:
+    'Vent til kommentaren er synket før du modererer.',
+  inboxToastWaitMessageSend:
+    'Vent til meldingen er sendt før du modererer.',
+  inboxToastRemovedFromInbox: 'Fjernet fra innboks',
+  inboxToastCommentDeleted: 'Kommentar slettet',
+  inboxToastReactionSent: 'Reaksjon sendt',
+  inboxToastCommentLiked: 'Kommentar likt',
+  inboxToastReactionRemoved: 'Reaksjon fjernet',
+  inboxToastLikeRemoved: 'Like fjernet',
+  inboxToastUpdatedMessageSent: 'Oppdatert melding sendt',
+  inboxToastReplyUpdated: 'Svar oppdatert',
+  inboxToastActionFailed: 'Handlingen mislyktes',
+  inboxEditOwnDmsOnly: 'Du kan bare redigere dine egne DM-er.',
+  inboxEditFansCommentsBlocked:
+    'Instagram tillater ikke redigering av fans kommentarer. Svar eller slett i stedet.',
+  inboxEditDmPrompt:
+    'Rediger melding (sendes som ny DM — Instagram kan ikke redigere på stedet)',
+  inboxEditReplyPrompt: 'Rediger svaret ditt',
+  inboxToastTtDmFailed: 'TikTok-DM mislyktes — koble til TikTok på nytt',
+  inboxToastTtDmSent: 'TikTok-DM sendt',
+  inboxToastReplyFailed:
+    'Svar mislyktes — koble til Instagram med kommentar- og meldingsrettigheter',
+  inboxToastDmSent: 'DM sendt',
+  inboxToastCommentReplySent: 'Kommentarsvar sendt',
+  inboxToastSendFailed: 'Kunne ikke sende svar',
+  inboxMessageActions: 'Meldingshandlinger',
+  inboxCommentActions: 'Kommentarhandlinger',
+  inboxConfirmRemoveDm:
+    'Fjerne denne meldingen fra innboksen? (Instagram kan ikke angre DM fra apper.)',
+  inboxConfirmDeleteReply: 'Slette dette svaret på Instagram?',
+  inboxConfirmDeleteComment: 'Slette denne kommentaren på Instagram?',
+  inboxFeatureGateTitle: 'Sosial innboks & DM-er',
+  inboxFeatureGateDesc:
+    'Svar på Instagram-DM-er og kjør Kommentar-til-DM-automatiseringer på Creator og Pro/Agency.',
+  connectSocialsTitle: 'Koble til sosiale medier',
+  connectSocialsDesc:
+    'Denne delen er tom til du kobler til en sosial konto. Analyse, innboks, community, e-post, bio og media fylles automatisk etter OAuth.',
+  connectSocialsCta: 'Koble til nå',
+  connectSocialsLoading: 'Laster…',
+  subGateTitle: 'Workspace låst · {plan}-plan',
+  subGateBody:
+    'Abonnementsstatus er "{status}". Oppgrader eller aktiver testmodus for å låse opp Analytics, Planner og Pro-funksjoner.',
+  subGateUpgrade: 'Oppgrader',
+  subGateTestMode: 'Aktiver testmodus',
+  igBusinessRequiredTitle: 'Instagram Business-konto kreves',
+  igBusinessRequiredBody:
+    'Konverter Instagram-kontoen til Creator/Business og koble den til en Facebook-side for å hente analyse.',
+  igBusinessOpenSettings: 'Åpne tilkoblede kontoer →',
+  sidebarClikdHome: 'Clikd hjem',
+  sidebarRenameFolder: 'Gi mappen nytt navn',
+  sidebarRename: 'Gi nytt navn',
+  sidebarDragReorder: 'Dra for å endre rekkefølge',
+  sidebarRequiresCreator: 'Krever Creator',
+  dmLiveStatusDefault:
+    'Live døgnet rundt — webhooks + servercron (panelovervåking er backup)…',
+  dmLiveStatusBlocked: 'Blokkert av Meta-appmodus — se fix nedenfor',
+  dmLiveStatusBackupIssue: 'Backup-overvåking: {error}',
+  dmLiveStatusJustSent: 'Sendte nettopp {count} DM — fortsatt live døgnet rundt…',
+  dmLiveStatusSawComments:
+    'Så {count} nye kommentarer — live døgnet rundt via webhooks + cron…',
+  dmLiveStatusPaused: 'Auto-overvåking pauset: {error}',
+  dmLiveStatusPausedRetry: 'Auto-overvåking pauset (prøver igjen…)',
+  commonUpgrade: 'Oppgrader',
+  commonLoading: 'Laster…',
+  inboxUnlike: 'Fjern like',
+  inboxConnectHint: 'Koble til Instagram eller TikTok for å håndtere DM-er her.',
+  inboxToastSyncedSummary:
+    'Synket IG {dms} DM · {comments} kommentar(er){tiktok}',
 };
-
-/** Danish — full extras. */
 export const EXTRA_DA: ExtraDict = {
   ...EXTRA_SV,
   signIn: 'Log ind',
@@ -4604,6 +4978,86 @@ export const EXTRA_DA: ExtraDict = {
   postsStatLabel: 'opslag',
   shareProfileBtn: 'Del profil',
   teamMembersAria: 'Teammedlemmer',
+  inboxToastSyncFailed: 'Synkronisering mislykkedes',
+  inboxToastRefreshFailed: 'Kunne ikke opdatere Instagram-indbakken',
+  inboxToastDmNeedPerms:
+    'DM kræver beskedtilladelser — genopret Instagram',
+  inboxToastIgRefreshed: 'Instagram-indbakke opdateret',
+  inboxToastTtDemoRefreshed: 'Demo TikTok-indbakke opdateret',
+  inboxToastTtRefreshed: 'TikTok-indbakke opdateret',
+  inboxToastRefreshGenericFailed: 'Opdatering mislykkedes',
+  inboxToastAiFailed: 'AI-svar mislykkedes',
+  inboxToastAiEmpty: 'Tomt AI-forslag',
+  inboxToastAiDrafted: 'AI-svar udarbejdet',
+  inboxToastWaitCommentSync:
+    'Vent til kommentaren er synkroniseret, før du modererer.',
+  inboxToastWaitMessageSend:
+    'Vent til beskeden er sendt, før du modererer.',
+  inboxToastRemovedFromInbox: 'Fjernet fra indbakke',
+  inboxToastCommentDeleted: 'Kommentar slettet',
+  inboxToastReactionSent: 'Reaktion sendt',
+  inboxToastCommentLiked: 'Kommentar liket',
+  inboxToastReactionRemoved: 'Reaktion fjernet',
+  inboxToastLikeRemoved: 'Like fjernet',
+  inboxToastUpdatedMessageSent: 'Opdateret besked sendt',
+  inboxToastReplyUpdated: 'Svar opdateret',
+  inboxToastActionFailed: 'Handlingen mislykkedes',
+  inboxEditOwnDmsOnly: 'Du kan kun redigere dine egne DM’er.',
+  inboxEditFansCommentsBlocked:
+    'Instagram tillader ikke redigering af fans kommentarer. Svar eller slet i stedet.',
+  inboxEditDmPrompt:
+    'Rediger besked (sendes som ny DM — Instagram kan ikke redigere på stedet)',
+  inboxEditReplyPrompt: 'Rediger dit svar',
+  inboxToastTtDmFailed: 'TikTok-DM mislykkedes — genopret TikTok',
+  inboxToastTtDmSent: 'TikTok-DM sendt',
+  inboxToastReplyFailed:
+    'Svar mislykkedes — genopret Instagram med kommentar- og beskedtilladelser',
+  inboxToastDmSent: 'DM sendt',
+  inboxToastCommentReplySent: 'Kommentarsvar sendt',
+  inboxToastSendFailed: 'Kunne ikke sende svar',
+  inboxMessageActions: 'Beskedhandlinger',
+  inboxCommentActions: 'Kommentarhandlinger',
+  inboxConfirmRemoveDm:
+    'Fjern denne besked fra indbakken? (Instagram kan ikke fortryde DM fra apps.)',
+  inboxConfirmDeleteReply: 'Slet dette svar på Instagram?',
+  inboxConfirmDeleteComment: 'Slet denne kommentar på Instagram?',
+  inboxFeatureGateTitle: 'Social indbakke & DM’er',
+  inboxFeatureGateDesc:
+    'Svar på Instagram-DM’er og kør Kommentar-til-DM-automationer på Creator og Pro/Agency.',
+  connectSocialsTitle: 'Forbind dine sociale medier',
+  connectSocialsDesc:
+    'Denne sektion er tom, indtil du forbinder en social konto. Analyse, indbakke, community, e-mail, bio og media udfyldes automatisk efter OAuth.',
+  connectSocialsCta: 'Forbind nu',
+  connectSocialsLoading: 'Indlæser…',
+  subGateTitle: 'Workspace låst · {plan}-plan',
+  subGateBody:
+    'Abonnementsstatus er "{status}". Opgrader eller aktiver testtilstand for at låse Analytics, Planner og Pro-funktioner op.',
+  subGateUpgrade: 'Opgrader',
+  subGateTestMode: 'Aktiver testtilstand',
+  igBusinessRequiredTitle: 'Instagram Business-konto påkrævet',
+  igBusinessRequiredBody:
+    'Konverter din Instagram-konto til Creator/Business og link den til en Facebook-side for at hente analyse.',
+  igBusinessOpenSettings: 'Åbn forbundne konti →',
+  sidebarClikdHome: 'Clikd hjem',
+  sidebarRenameFolder: 'Omdøb mappe',
+  sidebarRename: 'Omdøb',
+  sidebarDragReorder: 'Træk for at ændre rækkefølge',
+  sidebarRequiresCreator: 'Kræver Creator',
+  dmLiveStatusDefault:
+    'Live døgnet rundt — webhooks + servercron (panelovervågning er backup)…',
+  dmLiveStatusBlocked: 'Blokeret af Meta-apptilstand — se fix nedenfor',
+  dmLiveStatusBackupIssue: 'Backup-overvågning: {error}',
+  dmLiveStatusJustSent: 'Sendte lige {count} DM — stadig live døgnet rundt…',
+  dmLiveStatusSawComments:
+    'Så {count} nye kommentarer — live døgnet rundt via webhooks + cron…',
+  dmLiveStatusPaused: 'Auto-overvågning pauset: {error}',
+  dmLiveStatusPausedRetry: 'Auto-overvågning pauset (prøver igen…)',
+  commonUpgrade: 'Opgrader',
+  commonLoading: 'Indlæser…',
+  inboxUnlike: 'Fjern synes godt om',
+  inboxConnectHint: 'Forbind Instagram eller TikTok for at administrere DM’er her.',
+  inboxToastSyncedSummary:
+    'Synkroniserede IG {dms} DM · {comments} kommentar(er){tiktok}',
 };
 
 /** Finnish — full extras. */
@@ -5613,6 +6067,86 @@ navFeatures: 'Ominaisuudet',
   adsObjLeadsBlurb: 'Kerää sähköposteja, jonolistoja ja lomakkeita.',
   adsObjTrafficBlurb: 'Ohjaa liikennettä kauppaan tai bio-linkkiin.',
   adsObjEngagementBlurb: 'Kasvata julkaisujen ja Reelsien vuorovaikutusta.',
+  inboxToastSyncFailed: 'Synkronointi epäonnistui',
+  inboxToastRefreshFailed: 'Instagram-postilaatikkoa ei voitu päivittää',
+  inboxToastDmNeedPerms:
+    'DM:t tarvitsevat viestintäoikeudet — yhdistä Instagram uudelleen',
+  inboxToastIgRefreshed: 'Instagram-postilaatikko päivitetty',
+  inboxToastTtDemoRefreshed: 'Demo TikTok-postilaatikko päivitetty',
+  inboxToastTtRefreshed: 'TikTok-postilaatikko päivitetty',
+  inboxToastRefreshGenericFailed: 'Päivitys epäonnistui',
+  inboxToastAiFailed: 'AI-vastaus epäonnistui',
+  inboxToastAiEmpty: 'Tyhjä AI-ehdotus',
+  inboxToastAiDrafted: 'AI-vastaus luotu',
+  inboxToastWaitCommentSync:
+    'Odota, että kommentti synkronoituu ennen moderointia.',
+  inboxToastWaitMessageSend:
+    'Odota, että viesti lähetetään ennen moderointia.',
+  inboxToastRemovedFromInbox: 'Poistettu postilaatikosta',
+  inboxToastCommentDeleted: 'Kommentti poistettu',
+  inboxToastReactionSent: 'Reaktio lähetetty',
+  inboxToastCommentLiked: 'Kommentti tykätty',
+  inboxToastReactionRemoved: 'Reaktio poistettu',
+  inboxToastLikeRemoved: 'Tykkäys poistettu',
+  inboxToastUpdatedMessageSent: 'Päivitetty viesti lähetetty',
+  inboxToastReplyUpdated: 'Vastaus päivitetty',
+  inboxToastActionFailed: 'Toiminto epäonnistui',
+  inboxEditOwnDmsOnly: 'Voit muokata vain omia DM-viestejäsi.',
+  inboxEditFansCommentsBlocked:
+    'Instagram ei salli fanien kommenttien muokkaamista. Vastaa tai poista sen sijaan.',
+  inboxEditDmPrompt:
+    'Muokkaa viestiä (lähetetään uutena DM:nä — Instagram ei voi muokata paikan päällä)',
+  inboxEditReplyPrompt: 'Muokkaa vastaustasi',
+  inboxToastTtDmFailed: 'TikTok-DM epäonnistui — yhdistä TikTok uudelleen',
+  inboxToastTtDmSent: 'TikTok-DM lähetetty',
+  inboxToastReplyFailed:
+    'Vastaus epäonnistui — yhdistä Instagram kommentti- ja viestintäoikeuksilla',
+  inboxToastDmSent: 'DM lähetetty',
+  inboxToastCommentReplySent: 'Kommenttivastaus lähetetty',
+  inboxToastSendFailed: 'Vastausta ei voitu lähettää',
+  inboxMessageActions: 'Viestitoiminnot',
+  inboxCommentActions: 'Kommenttitoiminnot',
+  inboxConfirmRemoveDm:
+    'Poistetaanko tämä viesti postilaatikosta? (Instagram ei voi perua DM:iä sovelluksista.)',
+  inboxConfirmDeleteReply: 'Poistetaanko tämä vastaus Instagramista?',
+  inboxConfirmDeleteComment: 'Poistetaanko tämä kommentti Instagramista?',
+  inboxFeatureGateTitle: 'Some-postilaatikko & DM:t',
+  inboxFeatureGateDesc:
+    'Vastaa Instagram-DM:iin ja aja Kommentti-DM-automaatioita Creator- sekä Pro/Agency-suunnitelmilla.',
+  connectSocialsTitle: 'Yhdistä some-tilisi',
+  connectSocialsDesc:
+    'Tämä osio pysyy tyhjänä, kunnes yhdistät some-tilin. Analytiikka, postilaatikko, yhteisö, sähköposti, bio ja media täyttyvät automaattisesti OAuthin jälkeen.',
+  connectSocialsCta: 'Yhdistä nyt',
+  connectSocialsLoading: 'Ladataan…',
+  subGateTitle: 'Työtila lukittu · {plan}-suunnitelma',
+  subGateBody:
+    'Tilauksen tila on "{status}". Päivitä tai aktivoi testitila avataksesi Analyticsin, Plannerin ja Pro-ominaisuudet.',
+  subGateUpgrade: 'Päivitä',
+  subGateTestMode: 'Aktivoi testitila',
+  igBusinessRequiredTitle: 'Instagram Business -tili vaaditaan',
+  igBusinessRequiredBody:
+    'Muuta Instagram-tilisi Creator/Business-tiliksi ja linkitä se Facebook-sivuun hakeaksesi analytiikkaa.',
+  igBusinessOpenSettings: 'Avaa yhdistetyt tilit →',
+  sidebarClikdHome: 'Clikd-koti',
+  sidebarRenameFolder: 'Nimeä kansio uudelleen',
+  sidebarRename: 'Nimeä uudelleen',
+  sidebarDragReorder: 'Vedä järjestääksesi',
+  sidebarRequiresCreator: 'Vaatii Creatorin',
+  dmLiveStatusDefault:
+    'Live 24/7 — webhookit + palvelincron (paneelin seuranta on varmistus)…',
+  dmLiveStatusBlocked: 'Estetty Meta-sovellustilalla — katso korjaus alla',
+  dmLiveStatusBackupIssue: 'Varmistusseurannan ongelma: {error}',
+  dmLiveStatusJustSent: 'Juuri lähetetty {count} DM — edelleen live 24/7…',
+  dmLiveStatusSawComments:
+    'Nähtiin {count} uutta kommenttia — live 24/7 webhookien + cronin kautta…',
+  dmLiveStatusPaused: 'Automaattiseuranta tauolla: {error}',
+  dmLiveStatusPausedRetry: 'Automaattiseuranta tauolla (yritetään uudelleen…)',
+  commonUpgrade: 'Päivitä',
+  commonLoading: 'Ladataan…',
+  inboxUnlike: 'Poista tykkäys',
+  inboxConnectHint: 'Yhdistä Instagram tai TikTok hallitaksesi DM-viestejä täällä.',
+  inboxToastSyncedSummary:
+    'Synkattu IG {dms} DM · {comments} kommentti(a){tiktok}',
 };
 
 export const EXTRA_BY_LOCALE: Record<ExtraLocale, ExtraDict> = {

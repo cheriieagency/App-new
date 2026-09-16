@@ -15,7 +15,7 @@ import { resolveStrictUserWorkspace } from '@/lib/social/resolve-user-workspace'
 import { requireFeature } from '@/lib/plan-guard';
 
 /** Min gap between polls per user (server-side abuse / Meta rate protection). */
-const MIN_POLL_GAP_MS = 15_000;
+const MIN_POLL_GAP_MS = 45_000;
 const lastPollByUser = new Map<string, number>();
 
 async function resolveWorkspaceId(

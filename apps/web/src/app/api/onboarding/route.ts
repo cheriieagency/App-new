@@ -265,6 +265,20 @@ export async function POST(request: Request) {
       }
     }
 
+    // Safety net: every account belongs to Clikd Insiders (also runs on signup hook).
+    try {
+      const { enrollUserInClikdInsiders } = await import(
+        '@/lib/communities/insiders'
+      );
+      await enrollUserInClikdInsiders({
+        userId,
+        email: session.user.email,
+        name: payload.full_name || session.user.name,
+      });
+    } catch (insidersError) {
+      console.warn('[onboarding] Clikd Insiders enroll skipped', insidersError);
+    }
+
     return Response.json({
       ok: true,
       demo: false,

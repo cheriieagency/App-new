@@ -9,27 +9,39 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ExternalLink,
+  Heart,
   Inbox,
   Loader2,
+  MoreHorizontal,
   Paperclip,
+  Pencil,
   RefreshCw,
   Search,
   Send,
   Sparkles,
+  Trash2,
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useAdminNav } from '@/components/admin/AdminNavContext';
 import { adminCardClass } from '@/components/admin/AdminUi';
 import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
 import {
   InstagramIcon,
   TikTokIcon,
 } from '@/components/icons/SocialBrandIcons';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useLocale } from '@/lib/locale-context';
 import { t, tf } from '@/lib/i18n';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
-import { refreshMetaSync, useMetaSync } from '@/hooks/useMetaSync';
+import { refreshMetaSync, useLiveMetaInboxSync } from '@/hooks/useMetaSync';
 import { useTikTokInbox } from '@/hooks/useTikTokInbox';
 import DMAutomationPanel from '@/components/admin/inbox/DMAutomationPanel';
 
@@ -44,6 +56,7 @@ type DmMessage = {
   text: string;
   time: string;
   media_url?: string | null;
+  liked?: boolean;
 };
 
 type DmThread = {
@@ -58,9 +71,21 @@ type DmThread = {
   recipient_id?: string;
   page_id?: string;
   conversation_id?: string;
+  media_id?: string;
   avatar_url?: string | null;
   messages: DmMessage[];
 };
+
+/** Keep Analytics + live Inbox caches aligned after mutations / sync. */
+function setMetaSyncCaches(
+  queryClient: {
+    setQueryData: (key: unknown[], data: unknown) => void;
+  },
+  data: unknown
+) {
+  queryClient.setQueryData(['meta-sync'], data);
+  queryClient.setQueryData(['meta-sync', 'live-inbox'], data);
+}
 
 /** Normalize a handle so the UI always shows a single leading @. */
 function formatHandle(raw: string | null | undefined): string | null {
@@ -89,6 +114,19 @@ function profileUrl(thread: DmThread): string {
     return `https://www.tiktok.com/@${encodeURIComponent(handle)}`;
   }
   return `https://www.instagram.com/${encodeURIComponent(handle)}/`;
+}
+
+/** Resolve the Graph comment id for a bubble (root uses thread id). */
+function resolveCommentId(thread: DmThread, msg: DmMessage): string | null {
+  if (msg.id.startsWith('local-')) return null;
+  // Synthetic ids from sync when Graph omitted a reply id — can't call Graph.
+  if (/-(m|r)\d+$/.test(msg.id) && msg.id !== `${thread.id}-m1`) {
+    // `-m1` maps to root; other `-rN` without a real Graph id can't be edited.
+    if (msg.id.endsWith('-m1') || msg.id === `${thread.id}-m1`) return thread.id;
+    return null;
+  }
+  if (msg.id === `${thread.id}-m1` || msg.id.endsWith('-m1')) return thread.id;
+  return msg.id;
 }
 
 function Avatar({
@@ -122,13 +160,18 @@ export default function SocialInboxPanel() {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const { activeWorkspace } = useWorkspace();
+  const { section } = useAdminNav();
+  // Keep-alive admin shell leaves this mounted when hidden — pause live Graph work.
+  const inboxActive = section === 'inbox';
   const { hasInstagram, hasTikTok, accounts, isLoading } = useConnectedSocials();
-  const { data: metaSync, isFetching, isError, error } = useMetaSync(hasInstagram);
+  const { data: metaSync, isFetching, isError, error } = useLiveMetaInboxSync(
+    hasInstagram && inboxActive
+  );
   const {
     data: tiktokInbox,
     isFetching: tiktokFetching,
     refetch: refetchTikTok,
-  } = useTikTokInbox(true);
+  } = useTikTokInbox(inboxActive, { live: inboxActive });
   const tiktokMock = Boolean(tiktokInbox?.mock || tiktokInbox?.demo);
   const hasTikTokInbox =
     hasTikTok || tiktokMock || (tiktokInbox?.threads?.length ?? 0) > 0;
@@ -144,14 +187,41 @@ export default function SocialInboxPanel() {
   const [channelFilter, setChannelFilter] = useState<InboxChannel>('all');
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [commentBusyId, setCommentBusyId] = useState<string | null>(null);
+  /** Inline edit — window.prompt is unreliable inside Radix dropdown menus. */
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const didMountSync = useRef(false);
 
   const [mainTab, setMainTab] = useState<InboxMainTab>(() => {
     if (typeof window === 'undefined') return 'inbox';
     const sub = new URLSearchParams(window.location.search).get('sub');
     return sub === 'automations' ? 'automations' : 'inbox';
   });
+
+  // Entering Social Inbox → one fresh Graph pull (live query also runs; avoid double POST).
+  useEffect(() => {
+    if (!inboxActive) return;
+    if (didMountSync.current) return;
+    if (!hasInstagram && !hasTikTokInbox) return;
+    didMountSync.current = true;
+    void (async () => {
+      try {
+        // Live Meta query already forces on first enabled tick — only refresh TikTok here.
+        if (hasTikTokInbox) await refetchTikTok();
+        setLocalThreads(null);
+      } catch (err) {
+        console.warn('[SocialInboxPanel] mount sync failed', err);
+      }
+    })();
+  }, [inboxActive, hasInstagram, hasTikTokInbox, refetchTikTok]);
+
+  // Reset so the next time you open Inbox we soft-refresh TikTok again.
+  useEffect(() => {
+    if (!inboxActive) didMountSync.current = false;
+  }, [inboxActive]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -188,6 +258,7 @@ export default function SocialInboxPanel() {
         unread: thread.unread,
         recipient_id: thread.recipient_id,
         page_id: thread.page_id,
+        media_id: thread.media_id,
         messages: thread.messages,
       })),
     [metaSync?.snapshot?.inbox_threads]
@@ -242,8 +313,44 @@ export default function SocialInboxPanel() {
   const showPlatformSwitcher = hasInstagram && hasTikTokInbox;
 
   useEffect(() => {
-    setLocalThreads(null);
-  }, [metaSync?.snapshot?.synced_at, tiktokInbox?.threads]);
+    // Live sync refreshes every ~20s — merge instead of wiping so just-sent
+    // optimistic DMs don't vanish before Graph returns them.
+    setLocalThreads((prev) => {
+      if (!prev?.length) return null;
+      const syncedById = new Map(syncedThreads.map((t) => [t.id, t]));
+      let keepOverlay = false;
+      const merged = prev.map((local) => {
+        const synced = syncedById.get(local.id);
+        if (!synced) {
+          keepOverlay = true;
+          return local;
+        }
+        const syncedIds = new Set(synced.messages.map((m) => m.id));
+        const syncedYouTexts = new Set(
+          synced.messages
+            .filter((m) => m.from === 'you')
+            .map((m) => m.text.trim().toLowerCase())
+        );
+        const pending = local.messages.filter((m) => {
+          if (syncedIds.has(m.id)) return false;
+          if (String(m.id).startsWith('local-') || m.time === 'now') {
+            return !syncedYouTexts.has(m.text.trim().toLowerCase());
+          }
+          return m.from === 'you' && !syncedYouTexts.has(m.text.trim().toLowerCase());
+        });
+        if (pending.length === 0) return synced;
+        keepOverlay = true;
+        return {
+          ...synced,
+          unread: false,
+          messages: [...synced.messages, ...pending],
+          preview: pending[pending.length - 1]?.text?.slice(0, 120) || synced.preview,
+          time: pending[pending.length - 1]?.time || synced.time,
+        };
+      });
+      return keepOverlay ? merged : null;
+    });
+  }, [metaSync?.snapshot?.synced_at, tiktokInbox?.threads, syncedThreads]);
 
   useEffect(() => {
     if (threads.length === 0) {
@@ -297,7 +404,7 @@ export default function SocialInboxPanel() {
   const inboxStatus = metaSync?.snapshot?.inbox_status;
   const syncError =
     metaSync?.error ||
-    (isError ? (error instanceof Error ? error.message : 'Sync failed') : null);
+    (isError ? (error instanceof Error ? error.message : t('inboxToastSyncFailed', locale)) : null);
   const dmPermissionIssue = Boolean(inboxStatus?.needs_reconnect_for_dms);
   const reconnectHref =
     '/api/auth/meta/login?target=both&workspaceId=' +
@@ -310,7 +417,7 @@ export default function SocialInboxPanel() {
       if (hasInstagram) {
         jobs.push(
           refreshMetaSync().then((res) => {
-            queryClient.setQueryData(['meta-sync'], res);
+            setMetaSyncCaches(queryClient, res);
             return res;
           })
         );
@@ -324,7 +431,7 @@ export default function SocialInboxPanel() {
       if (hasInstagram) {
         const res = results[0] as Awaited<ReturnType<typeof refreshMetaSync>>;
         if (res && 'synced' in res && !res.synced) {
-          toast.error(res.error || 'Could not refresh Instagram inbox');
+          toast.error(res.error || t('inboxToastRefreshFailed', locale));
         } else if (res && 'snapshot' in res) {
           const list = res.snapshot?.inbox_threads ?? [];
           const dms = list.filter((t) => t.channel === 'dm').length;
@@ -333,21 +440,23 @@ export default function SocialInboxPanel() {
           if (status?.needs_reconnect_for_dms) {
             toast.error(
               status.dm_error ||
-                'DMs need messaging permissions — reconnect Instagram'
+                t('inboxToastDmNeedPerms', locale)
             );
           } else {
             toast.success(
-              `Synced IG ${dms} DM${dms === 1 ? '' : 's'} · ${comments} comment${comments === 1 ? '' : 's'}${
-                hasTikTokInbox ? ' · TikTok refreshed' : ''
-              }`
+              tf('inboxToastSyncedSummary', locale, {
+                dms,
+                comments,
+                tiktok: hasTikTokInbox ? ' · TikTok' : '',
+              })
             );
           }
         }
       } else if (hasTikTokInbox) {
-        toast.success(tiktokMock ? 'Demo TikTok inbox refreshed' : 'TikTok inbox refreshed');
+        toast.success(tiktokMock ? t('inboxToastTtDemoRefreshed', locale) : t('inboxToastTtRefreshed', locale));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Refresh failed');
+      toast.error(err instanceof Error ? err.message : t('inboxToastRefreshGenericFailed', locale));
     } finally {
       setRefreshing(false);
     }
@@ -378,17 +487,270 @@ export default function SocialInboxPanel() {
         error?: string;
       };
       if (!r.ok) {
-        throw new Error(json.message || json.error || 'AI reply failed');
+        throw new Error(json.message || json.error || t('inboxToastAiFailed', locale));
       }
       const suggestion = (json.caption || '').trim();
-      if (!suggestion) throw new Error('Empty AI suggestion');
+      if (!suggestion) throw new Error(t('inboxToastAiEmpty', locale));
       setDraft(suggestion);
-      toast.success('AI reply drafted');
+      toast.success(t('inboxToastAiDrafted', locale));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'AI reply failed');
+      toast.error(err instanceof Error ? err.message : t('inboxToastAiFailed', locale));
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const runCommentAction = async (input: {
+    action: 'delete' | 'like' | 'unlike' | 'edit';
+    msg: DmMessage;
+    message?: string;
+  }): Promise<boolean> => {
+    if (!active || isTikTokThread(active)) return false;
+
+    const isDm = active.channel === 'dm';
+    const isComment = active.channel === 'comment';
+    if (!isDm && !isComment) return false;
+
+    // Instagram Graph cannot edit other people's comments — only our replies.
+    if (
+      isComment &&
+      input.action === 'edit' &&
+      input.msg.from !== 'you'
+    ) {
+      toast.message(
+        "Instagram doesn't allow editing fans' comments. Reply or delete instead."
+      );
+      return false;
+    }
+
+    // DMs: only moderate your own bubbles for edit/delete; like works on either side.
+    if (
+      isDm &&
+      (input.action === 'edit' || input.action === 'delete') &&
+      input.msg.from !== 'you'
+    ) {
+      toast.message(
+        input.action === 'edit'
+          ? t('inboxEditOwnDmsOnly', locale)
+          : t('inboxToastRemovedFromInbox', locale)
+      );
+      return false;
+    }
+
+    const commentId = isComment ? resolveCommentId(active, input.msg) : null;
+    if (isComment && !commentId) {
+      toast.message(t('inboxToastWaitCommentSync', locale));
+      return false;
+    }
+    if (isDm && input.msg.id.startsWith('local-')) {
+      toast.message(t('inboxToastWaitMessageSend', locale));
+      return false;
+    }
+
+    setCommentBusyId(input.msg.id);
+    try {
+      const endpoint = isDm ? '/api/meta/inbox/dm' : '/api/meta/inbox/comment';
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(
+          isDm
+            ? {
+                action: input.action,
+                threadId: active.id,
+                messageId: input.msg.id,
+                message: input.message,
+                recipientId: active.recipient_id,
+                pageId: active.page_id,
+              }
+            : {
+                action: input.action,
+                commentId,
+                threadId: active.id,
+                message: input.message,
+                mediaId: active.media_id,
+              }
+        ),
+      });
+      const json = (await r.json().catch(() => ({}))) as {
+        message?: string;
+        error?: string;
+        notice?: string | null;
+        snapshot?: { inbox_threads?: DmThread[] };
+        reply_id?: string;
+        replacement_id?: string;
+      };
+      if (!r.ok) {
+        throw new Error(json.message || json.error || `${input.action} failed`);
+      }
+
+      if (json.snapshot?.inbox_threads) {
+        const prev = queryClient.getQueryData(['meta-sync', 'live-inbox'])
+          ?? queryClient.getQueryData(['meta-sync']);
+        const base =
+          prev && typeof prev === 'object'
+            ? (prev as Record<string, unknown>)
+            : {};
+        const snap =
+          base.snapshot && typeof base.snapshot === 'object'
+            ? (base.snapshot as Record<string, unknown>)
+            : {};
+        setMetaSyncCaches(queryClient, {
+          ...base,
+          snapshot: {
+            ...snap,
+            inbox_threads: json.snapshot.inbox_threads,
+          },
+        });
+        setLocalThreads(null);
+        if (
+          isComment &&
+          input.action === 'delete' &&
+          commentId === active.id &&
+          activeId === active.id
+        ) {
+          setActiveId(null);
+        }
+      } else {
+        const deletingRoot =
+          isComment &&
+          input.action === 'delete' &&
+          commentId === active.id;
+        if (deletingRoot && activeId === active.id) setActiveId(null);
+        setLocalThreads((prev) => {
+          const base = prev ?? syncedThreads;
+          if (input.action === 'delete') {
+            if (deletingRoot) {
+              return base.filter((t) => t.id !== active.id);
+            }
+            return base.map((t) =>
+              t.id === active.id
+                ? {
+                    ...t,
+                    messages: t.messages.filter((m) => m.id !== input.msg.id),
+                  }
+                : t
+            );
+          }
+          if (input.action === 'like' || input.action === 'unlike') {
+            return base.map((t) =>
+              t.id === active.id
+                ? {
+                    ...t,
+                    messages: t.messages.map((m) =>
+                      m.id === input.msg.id
+                        ? { ...m, liked: input.action === 'like' }
+                        : m
+                    ),
+                  }
+                : t
+            );
+          }
+          if (input.action === 'edit' && input.message) {
+            const nextId =
+              json.replacement_id || json.reply_id || input.msg.id;
+            return base.map((t) => {
+              if (t.id !== active.id) return t;
+              if (isDm) {
+                const messages = t.messages
+                  .filter((m) => m.id !== input.msg.id)
+                  .concat([
+                    {
+                      id: nextId,
+                      from: 'you' as const,
+                      text: input.message!,
+                      time: 'now',
+                    },
+                  ]);
+                return {
+                  ...t,
+                  preview: input.message!.slice(0, 120),
+                  messages,
+                };
+              }
+              return {
+                ...t,
+                preview: input.message!.slice(0, 120),
+                messages: t.messages.map((m) =>
+                  m.id === input.msg.id
+                    ? {
+                        ...m,
+                        id: nextId,
+                        text: input.message!,
+                        time: 'now',
+                      }
+                    : m
+                ),
+              };
+            });
+          }
+          return base;
+        });
+      }
+
+      if (json.notice) {
+        toast.message(json.notice);
+      } else if (input.action === 'delete') {
+        toast.success(isDm ? t('inboxToastRemovedFromInbox', locale) : t('inboxToastCommentDeleted', locale));
+      } else if (input.action === 'like') {
+        toast.success(isDm ? t('inboxToastReactionSent', locale) : t('inboxToastCommentLiked', locale));
+      } else if (input.action === 'unlike') {
+        toast.success(isDm ? t('inboxToastReactionRemoved', locale) : t('inboxToastLikeRemoved', locale));
+      } else if (input.action === 'edit') {
+        toast.success(isDm ? t('inboxToastUpdatedMessageSent', locale) : t('inboxToastReplyUpdated', locale));
+      }
+      return true;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('inboxToastActionFailed', locale));
+      return false;
+    } finally {
+      setCommentBusyId(null);
+    }
+  };
+
+  const onEditComment = (msg: DmMessage) => {
+    if (!active) return;
+    if (msg.from !== 'you') {
+      toast.message(
+        active.channel === 'dm'
+          ? t('inboxEditOwnDmsOnly', locale)
+          : t('inboxEditFansCommentsBlocked', locale)
+      );
+      return;
+    }
+    // Open inline editor (prompt is blocked / cancelled by Radix menu focus).
+    setEditingMsgId(msg.id);
+    setEditDraft(msg.text);
+  };
+
+  const cancelInlineEdit = () => {
+    setEditingMsgId(null);
+    setEditDraft('');
+  };
+
+  const saveInlineEdit = async () => {
+    if (!active || !editingMsgId) return;
+    const msg = active.messages.find((m) => m.id === editingMsgId);
+    if (!msg) {
+      cancelInlineEdit();
+      return;
+    }
+    const trimmed = editDraft.trim();
+    if (!trimmed) {
+      toast.message(t('inboxEditReplyPrompt', locale));
+      return;
+    }
+    if (trimmed === msg.text) {
+      cancelInlineEdit();
+      return;
+    }
+    const ok = await runCommentAction({
+      action: 'edit',
+      msg,
+      message: trimmed,
+    });
+    if (ok) cancelInlineEdit();
   };
 
   const onSend = async (e: FormEvent) => {
@@ -440,7 +802,7 @@ export default function SocialInboxPanel() {
         };
         if (!r.ok) {
           throw new Error(
-            json.message || json.error || 'TikTok DM failed — reconnect TikTok'
+            json.message || json.error || t('inboxToastTtDmFailed', locale)
           );
         }
         if (json.message_id) {
@@ -463,7 +825,7 @@ export default function SocialInboxPanel() {
         void queryClient.invalidateQueries({
           queryKey: ['tiktok-inbox', activeWorkspace.id],
         });
-        toast.success('TikTok DM sent');
+        toast.success(t('inboxToastTtDmSent', locale));
         return;
       }
 
@@ -484,7 +846,7 @@ export default function SocialInboxPanel() {
         throw new Error(
           json.message ||
             json.error ||
-            'Reply failed — reconnect Instagram with comment + messaging permissions'
+            t('inboxToastReplyFailed', locale)
         );
       }
       const replyId = String(json.reply_id || optimisticId);
@@ -502,12 +864,12 @@ export default function SocialInboxPanel() {
         );
       });
       if (json.snapshot) {
-        queryClient.setQueryData(['meta-sync'], {
+        setMetaSyncCaches(queryClient, {
           synced: true,
           snapshot: json.snapshot,
         });
       }
-      toast.success(active.channel === 'dm' ? 'DM sent' : 'Comment reply sent');
+      toast.success(active.channel === 'dm' ? t('inboxToastDmSent', locale) : t('inboxToastCommentReplySent', locale));
     } catch (err) {
       setLocalThreads((prev) => {
         const base = prev ?? syncedThreads;
@@ -521,7 +883,7 @@ export default function SocialInboxPanel() {
         );
       });
       setDraft(text);
-      toast.error(err instanceof Error ? err.message : 'Could not send reply');
+      toast.error(err instanceof Error ? err.message : t('inboxToastSendFailed', locale));
     } finally {
       setSending(false);
     }
@@ -532,11 +894,11 @@ export default function SocialInboxPanel() {
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="font-playfair font-medium text-[28px] sm:text-[32px] text-[#2C2621] tracking-tight">
-            Inbox
+            {t('socialInboxTitle', locale)}
           </h1>
         </div>
         <p className="text-sm text-[#8A857D] font-medium -mt-4">
-          Connect Instagram or TikTok to manage DMs here.
+          {t('inboxConnectHint', locale)}
         </p>
         <ConnectSocialsEmpty />
       </div>
@@ -906,26 +1268,208 @@ export default function SocialInboxPanel() {
                     ) : (
                       active.messages.map((msg) => {
                         const outgoing = msg.from === 'you';
+                        const canModerate =
+                          !isTikTokThread(active) &&
+                          !msg.id.startsWith('local-') &&
+                          (active.channel === 'comment' ||
+                            active.channel === 'dm');
+                        const busy = commentBusyId === msg.id;
                         return (
                           <div
                             key={msg.id}
                             className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
-                              className={`max-w-[78%] px-3.5 py-2.5 text-[13.5px] leading-relaxed shadow-none ${
+                              className={`group relative min-w-[96px] max-w-[78%] px-3.5 py-2.5 text-[13.5px] leading-relaxed shadow-none ${
                                 outgoing
                                   ? 'bg-[#243228] text-[#F9F8F6] rounded-xl rounded-br-md'
                                   : 'bg-[#F0EFEA] text-[#2C2621] rounded-xl rounded-tl-md'
                               }`}
                             >
+                              {editingMsgId === msg.id ? (
+                                <div className="space-y-2 min-w-[200px]">
+                                  <textarea
+                                    value={editDraft}
+                                    onChange={(e) => setEditDraft(e.target.value)}
+                                    rows={3}
+                                    autoFocus
+                                    className={`w-full resize-none rounded-lg border px-2.5 py-2 text-[13.5px] leading-relaxed outline-none ${
+                                      outgoing
+                                        ? 'border-white/20 bg-white/10 text-[#F9F8F6] placeholder:text-[#F9F8F6]/50'
+                                        : 'border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621]'
+                                    }`}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        cancelInlineEdit();
+                                      }
+                                      if (
+                                        (e.metaKey || e.ctrlKey) &&
+                                        e.key === 'Enter'
+                                      ) {
+                                        e.preventDefault();
+                                        void saveInlineEdit();
+                                      }
+                                    }}
+                                  />
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={cancelInlineEdit}
+                                      className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium ${
+                                        outgoing
+                                          ? 'text-[#F9F8F6]/80 hover:bg-white/10'
+                                          : 'text-[#8A857D] hover:bg-[#FFFFFF]'
+                                      }`}
+                                    >
+                                      {t('cancel', locale)}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={busy || !editDraft.trim()}
+                                      onClick={() => void saveInlineEdit()}
+                                      className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium disabled:opacity-50 ${
+                                        outgoing
+                                          ? 'bg-[#F9F8F6] text-[#243228] hover:opacity-90'
+                                          : 'bg-[#2C3B2E] text-[#F9F8F6] hover:opacity-90'
+                                      }`}
+                                    >
+                                      {busy ? (
+                                        <Loader2
+                                          size={14}
+                                          className="animate-spin"
+                                        />
+                                      ) : (
+                                        t('save', locale)
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
                               <p>{msg.text}</p>
-                              <p
-                                className={`text-[10px] mt-1.5 tabular-nums ${
-                                  outgoing ? 'text-[#F9F8F6]/50' : 'text-[#8A857D]'
-                                }`}
-                              >
-                                {msg.time}
-                              </p>
+                              <div className="mt-1.5 flex items-center justify-between gap-2">
+                                <p
+                                  className={`text-[10px] tabular-nums ${
+                                    outgoing
+                                      ? 'text-[#F9F8F6]/50'
+                                      : 'text-[#8A857D]'
+                                  }`}
+                                >
+                                  {msg.time}
+                                  {msg.liked ? (
+                                    <span className="ml-1.5 inline-flex items-center gap-0.5 text-[#E11D48]">
+                                      <Heart size={10} fill="currentColor" />
+                                    </span>
+                                  ) : null}
+                                </p>
+                                {canModerate ? (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        className={`inline-flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg transition-opacity ${
+                                          outgoing
+                                            ? 'text-[#F9F8F6]/80 hover:bg-white/10 hover:text-[#F9F8F6]'
+                                            : 'text-[#8A857D] hover:bg-[#FFFFFF] hover:text-[#2C2621]'
+                                        } ${busy ? 'opacity-50' : 'opacity-100'}`}
+                                        aria-label={
+                                          active.channel === 'dm'
+                                            ? t('inboxMessageActions', locale)
+                                            : t('inboxCommentActions', locale)
+                                        }
+                                      >
+                                        {busy ? (
+                                          <Loader2
+                                            size={14}
+                                            className="animate-spin"
+                                          />
+                                        ) : (
+                                          <MoreHorizontal size={14} />
+                                        )}
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align={outgoing ? 'end' : 'start'}
+                                      className="w-48 z-[80]"
+                                    >
+                                      <DropdownMenuItem
+                                        className="gap-2 min-h-[40px] cursor-pointer"
+                                        onSelect={() =>
+                                          void runCommentAction({
+                                            action: msg.liked
+                                              ? 'unlike'
+                                              : 'like',
+                                            msg,
+                                          })
+                                        }
+                                      >
+                                        <Heart
+                                          size={14}
+                                          className={
+                                            msg.liked
+                                              ? 'text-[#E11D48]'
+                                              : undefined
+                                          }
+                                          fill={
+                                            msg.liked ? 'currentColor' : 'none'
+                                          }
+                                        />
+                                        {msg.liked ? t('inboxUnlike', locale) : t('like', locale)}
+                                      </DropdownMenuItem>
+                                      {outgoing ? (
+                                        <DropdownMenuItem
+                                          className="gap-2 min-h-[40px] cursor-pointer"
+                                          onSelect={(e) => {
+                                            // Keep menu from fighting focus; open inline editor next tick.
+                                            e.preventDefault();
+                                            window.setTimeout(
+                                              () => onEditComment(msg),
+                                              0
+                                            );
+                                          }}
+                                        >
+                                          <Pencil size={14} />
+                                          {t('edit', locale)}
+                                        </DropdownMenuItem>
+                                      ) : null}
+                                      {outgoing ||
+                                      active.channel === 'comment' ? (
+                                        <>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem
+                                            variant="destructive"
+                                            className="gap-2 min-h-[40px] cursor-pointer"
+                                            onSelect={() => {
+                                              if (
+                                                !window.confirm(
+                                                  active.channel === 'dm'
+                                                    ? t('inboxConfirmRemoveDm', locale)
+                                                    : outgoing
+                                                      ? t('inboxConfirmDeleteReply', locale)
+                                                      : t('inboxConfirmDeleteComment', locale)
+                                                )
+                                              ) {
+                                                return;
+                                              }
+                                              void runCommentAction({
+                                                action: 'delete',
+                                                msg,
+                                              });
+                                            }}
+                                          >
+                                            <Trash2 size={14} />
+                                            {t('delete', locale)}
+                                          </DropdownMenuItem>
+                                        </>
+                                      ) : null}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                ) : null}
+                              </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         );

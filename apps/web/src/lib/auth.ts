@@ -208,6 +208,27 @@ export const auth = betterAuth({
       body.name = derived && derived.length > 0 ? derived : 'User';
     }),
   },
+  // Every new account (email + social) auto-joins Clikd Insiders.
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          try {
+            const { enrollUserInClikdInsiders } = await import(
+              '@/lib/communities/insiders'
+            );
+            await enrollUserInClikdInsiders({
+              userId: String(user.id),
+              email: typeof user.email === 'string' ? user.email : null,
+              name: typeof user.name === 'string' ? user.name : null,
+            });
+          } catch (error) {
+            console.warn('[auth] Clikd Insiders auto-join failed', error);
+          }
+        },
+      },
+    },
+  },
   advanced: {
     cookiePrefix: 'better-auth',
     defaultCookieAttributes: {

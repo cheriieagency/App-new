@@ -17,6 +17,10 @@ import {
 import { cookies } from 'next/headers';
 import { extractCommunityPrice } from '@/lib/communities/pricing';
 import { publishCommunityToPublicCatalog } from '@/lib/public-communities-store';
+import {
+  ensureClikdInsidersCommunity,
+  enrollUserInClikdInsiders,
+} from '@/lib/communities/insiders';
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
@@ -27,6 +31,22 @@ export async function GET() {
   try {
     if (!process.env.DATABASE_URL?.trim()) {
       return Response.json(getMockCommunitiesForUser({ email, name }));
+    }
+
+    // Keep Clikd Insiders published + owned by hello@clikd.app.
+    await ensureClikdInsidersCommunity().catch((err) =>
+      console.warn('[GET /api/communities] insiders ensure skipped', err)
+    );
+
+    // Backfill: signed-in users who predate the auto-join hook still get enrolled.
+    if (userId) {
+      await enrollUserInClikdInsiders({
+        userId,
+        email,
+        name,
+      }).catch((err) =>
+        console.warn('[GET /api/communities] insiders enroll skipped', err)
+      );
     }
 
     let communities;

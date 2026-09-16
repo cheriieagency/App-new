@@ -30,6 +30,8 @@ export const META_OAUTH_SCOPES = [
   'instagram_content_publish',
   'instagram_manage_insights',
   'instagram_manage_comments',
+  // Like/unlike comments & media from the IG professional account (Inbox actions).
+  'instagram_manage_engagement',
   'instagram_manage_messages',
   'business_management',
   // Meta Ads Management (/me/adaccounts + campaign status/budget).

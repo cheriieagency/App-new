@@ -7,23 +7,30 @@ import {
 
 /**
  * GET /api/meta/sync — return last synced Meta snapshot (or sync if missing).
+ * GET /api/meta/sync?force=1 — always refresh from Graph (live Inbox).
  * POST /api/meta/sync — force refresh from Graph API.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let snapshot = getMetaSyncSnapshot(session.user.id);
+  const force =
+    new URL(request.url).searchParams.get('force') === '1' ||
+    new URL(request.url).searchParams.get('force') === 'true';
+
+  let snapshot = force ? null : getMetaSyncSnapshot(session.user.id);
   if (!snapshot) {
     try {
       snapshot = await syncMetaDataForUser(session.user.id);
     } catch (error) {
       console.error('[api/meta/sync] GET sync failed', error);
+      // On force refresh, fall back to the last good snapshot if Graph fails.
+      const cached = getMetaSyncSnapshot(session.user.id);
       return Response.json({
-        synced: false,
-        snapshot: null,
+        synced: Boolean(cached),
+        snapshot: cached,
         error: error instanceof Error ? error.message : 'Sync failed',
       });
     }
