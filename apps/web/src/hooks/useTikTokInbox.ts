@@ -62,10 +62,10 @@ export function useTikTokInbox(enabled: boolean, options?: { live?: boolean }) {
         message: json.message || null,
       };
     },
-    staleTime: live ? 0 : 15_000,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    refetchInterval: live ? 20_000 : false,
+    staleTime: live ? 45_000 : 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchInterval: live ? 60_000 : false,
     refetchIntervalInBackground: false,
   });
 }

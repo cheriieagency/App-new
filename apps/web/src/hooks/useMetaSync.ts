@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MetaSyncSnapshot } from '@/lib/meta/sync';
 import { LIVE_ANALYTICS_QUERY } from '@/lib/analytics/live-query';
@@ -28,29 +29,36 @@ export function useMetaSync(enabled = true) {
 }
 
 /**
- * Live Inbox: re-pull Graph while Social Inbox is open.
- * Uses ?force=1 so GET is not stuck on a stale in-memory snapshot.
+ * Live Inbox: refresh while Social Inbox is the active section.
+ * Soft pulls by default (cached snapshot); force Graph every other cycle
+ * so we stay fresh without a full Meta fan-out every 20s.
  */
 export function useLiveMetaInboxSync(enabled = true) {
   const queryClient = useQueryClient();
+  const forceTick = useRef(0);
   return useQuery<MetaSyncResponse>({
     queryKey: ['meta-sync', 'live-inbox'],
     enabled,
-    staleTime: 0,
-    gcTime: 60_000,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    staleTime: 45_000,
+    gcTime: 5 * 60_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
-    refetchInterval: 20_000,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
     queryFn: async () => {
-      const r = await fetch(`/api/meta/sync?force=1&_=${Date.now()}`, {
+      forceTick.current += 1;
+      // Force Graph on first load + every 2nd poll (~2 min).
+      const force = forceTick.current === 1 || forceTick.current % 2 === 0;
+      const url = force
+        ? `/api/meta/sync?force=1&_=${Date.now()}`
+        : `/api/meta/sync?_=${Date.now()}`;
+      const r = await fetch(url, {
         credentials: 'include',
         cache: 'no-store',
       });
       if (!r.ok) throw new Error('Failed to live-sync Meta inbox');
       const json = (await r.json()) as MetaSyncResponse;
-      // Keep the shared Analytics cache in sync with the live pull.
       queryClient.setQueryData(['meta-sync'], json);
       return json;
     },

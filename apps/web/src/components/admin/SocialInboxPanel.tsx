@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useAdminNav } from '@/components/admin/AdminNavContext';
 import { adminCardClass } from '@/components/admin/AdminUi';
 import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
 import {
@@ -159,15 +160,18 @@ export default function SocialInboxPanel() {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const { activeWorkspace } = useWorkspace();
+  const { section } = useAdminNav();
+  // Keep-alive admin shell leaves this mounted when hidden — pause live Graph work.
+  const inboxActive = section === 'inbox';
   const { hasInstagram, hasTikTok, accounts, isLoading } = useConnectedSocials();
   const { data: metaSync, isFetching, isError, error } = useLiveMetaInboxSync(
-    hasInstagram
+    hasInstagram && inboxActive
   );
   const {
     data: tiktokInbox,
     isFetching: tiktokFetching,
     refetch: refetchTikTok,
-  } = useTikTokInbox(true, { live: true });
+  } = useTikTokInbox(inboxActive, { live: inboxActive });
   const tiktokMock = Boolean(tiktokInbox?.mock || tiktokInbox?.demo);
   const hasTikTokInbox =
     hasTikTok || tiktokMock || (tiktokInbox?.threads?.length ?? 0) > 0;
@@ -197,24 +201,27 @@ export default function SocialInboxPanel() {
     return sub === 'automations' ? 'automations' : 'inbox';
   });
 
-  // Entering Social Inbox → force a fresh Graph pull so threads aren't stale.
+  // Entering Social Inbox → one fresh Graph pull (live query also runs; avoid double POST).
   useEffect(() => {
+    if (!inboxActive) return;
     if (didMountSync.current) return;
     if (!hasInstagram && !hasTikTokInbox) return;
     didMountSync.current = true;
     void (async () => {
       try {
-        if (hasInstagram) {
-          const res = await refreshMetaSync();
-          setMetaSyncCaches(queryClient, res);
-        }
+        // Live Meta query already forces on first enabled tick — only refresh TikTok here.
         if (hasTikTokInbox) await refetchTikTok();
         setLocalThreads(null);
       } catch (err) {
         console.warn('[SocialInboxPanel] mount sync failed', err);
       }
     })();
-  }, [hasInstagram, hasTikTokInbox, queryClient, refetchTikTok]);
+  }, [inboxActive, hasInstagram, hasTikTokInbox, refetchTikTok]);
+
+  // Reset so the next time you open Inbox we soft-refresh TikTok again.
+  useEffect(() => {
+    if (!inboxActive) didMountSync.current = false;
+  }, [inboxActive]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

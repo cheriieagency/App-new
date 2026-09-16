@@ -81,6 +81,9 @@ export type MetaSyncSnapshot = {
 
 const snapshots = new Map<string, MetaSyncSnapshot>();
 
+/** Prevent overlapping Graph fan-outs for the same user (live poll storms). */
+const syncInFlight = new Map<string, Promise<MetaSyncSnapshot>>();
+
 export function getMetaSyncSnapshot(userId: string): MetaSyncSnapshot | null {
   return snapshots.get(userId) ?? null;
 }
@@ -375,8 +378,20 @@ function importMediaToPlanner(media: InstagramMediaItem[], projectName: string):
 /**
  * Pull profile, insights, media, and comments for the user’s connected IG account
  * and seed Analytics / Inbox / Planner surfaces.
+ * Single-flight: concurrent callers share one Graph sync per user.
  */
 export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnapshot> {
+  const existing = syncInFlight.get(userId);
+  if (existing) return existing;
+
+  const run = runSyncMetaDataForUser(userId).finally(() => {
+    syncInFlight.delete(userId);
+  });
+  syncInFlight.set(userId, run);
+  return run;
+}
+
+async function runSyncMetaDataForUser(userId: string): Promise<MetaSyncSnapshot> {
   const accounts = await listStoredMetaAccounts(userId);
   const ig = accounts.find((a) => a.platform === 'instagram');
   const fbPages = accounts
@@ -454,19 +469,20 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
   }
 
   try {
-    media = await fetchInstagramMedia(ig.external_id, ig.access_token, 25);
+    // 12 recent posts is enough for Inbox + Analytics without a 25× Graph fan-out.
+    media = await fetchInstagramMedia(ig.external_id, ig.access_token, 12);
   } catch (error) {
     console.warn('[meta/sync] media failed', error);
   }
 
   const commentsByMedia = new Map<string, InstagramComment[]>();
-  // Pull comments across recent media (not just the first few posts).
+  // Cap parallel comment fetches — biggest live-sync cost.
   await Promise.all(
-    media.slice(0, 25).map(async (item) => {
+    media.slice(0, 12).map(async (item) => {
       const comments = await fetchInstagramMediaComments(
         item.id,
         ig.access_token,
-        50
+        30
       );
       commentsByMedia.set(item.id, comments);
     })

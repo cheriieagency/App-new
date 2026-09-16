@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <AdminSidebar />
           <div className="lg:pl-64 pb-16 lg:pb-0 bg-[#F9F8F6] min-h-screen">
             <SubscriptionGateBanner />
-            {/* Always-on Comment-to-DM poll (20s) while creator is in admin. */}
+            {/* Comment-to-DM backup poll (60s). Server cron handles offline delivery. */}
             <CommentToDmAutoPoller />
             {children}
           </div>
