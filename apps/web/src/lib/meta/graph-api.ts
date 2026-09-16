@@ -1603,6 +1603,9 @@ export type InstagramDmMessage = {
   message?: string;
   created_time?: string;
   from?: { id?: string; username?: string; name?: string; email?: string };
+  to?: {
+    data?: Array<{ id?: string; username?: string; name?: string }>;
+  };
 };
 
 export type InstagramDmConversation = {
@@ -1639,8 +1642,8 @@ export async function fetchInstagramDmConversations(
       'id',
       'updated_time',
       'participants{id,username,name}',
-      // Pull a deeper history so Inbox threads aren't stuck on the latest ~12.
-      'messages.limit(50){id,message,from,created_time}',
+      // from{id,username} so outbound vs fan is detectable (bare `from` often omits username).
+      'messages.limit(50){id,message,from{id,username,name},created_time}',
     ].join(',')
   );
   url.searchParams.set('limit', String(limit));
@@ -1650,21 +1653,47 @@ export async function fetchInstagramDmConversations(
     const data = await graphJson<{ data?: InstagramDmConversation[] }>(
       url.toString()
     );
-    const selfIds = new Set(
+    const knownSelfIds = new Set(
       [pageId, igUserId].filter(Boolean).map((id) => String(id))
     );
     return (data.data ?? []).map((conv) => {
       const participants = conv.participants?.data ?? [];
-      // Prefer the participant that isn't the Page / IG business account.
-      const other =
-        participants.find((p) => p.id && !selfIds.has(p.id)) ||
-        participants[0];
+      // Build self set from known ids + any participant that matches Page/IG.
+      // Messaging often uses a third IGSID — treat every non-fan participant as self.
+      const fanCandidate =
+        participants.find((p) => p.id && !knownSelfIds.has(String(p.id))) ||
+        null;
+
+      // If 2 participants and one is known self, the other is the fan.
+      // If known self missing (IGSID-only), prefer participant WITH a username
+      // that isn't the business — Graph usually puts the customer second.
+      let other = fanCandidate;
+      if (participants.length === 2 && knownSelfIds.size > 0) {
+        const matchedSelf = participants.find(
+          (p) => p.id && knownSelfIds.has(String(p.id))
+        );
+        if (matchedSelf) {
+          other =
+            participants.find((p) => p.id && p.id !== matchedSelf.id) || other;
+        }
+      }
+      if (!other) {
+        other = participants[participants.length - 1] || participants[0];
+      }
+
+      // Expand self ids with every participant that isn't the chosen fan.
+      const selfFromParticipants = participants
+        .map((p) => p.id)
+        .filter((id): id is string => Boolean(id && id !== other?.id));
+
       return {
         ...conv,
         recipient_id: other?.id,
         recipient_name: other?.name || other?.username || 'Instagram user',
         recipient_username: other?.username,
-      };
+        // Stashed for direction mapping in sync (not part of Graph type — cast ok via spread).
+        _self_ids: [...knownSelfIds, ...selfFromParticipants],
+      } as InstagramDmConversation & { _self_ids?: string[] };
     });
   } catch (error) {
     console.warn('[graph] Instagram DM conversations failed', error);

@@ -297,8 +297,44 @@ export default function SocialInboxPanel() {
   const showPlatformSwitcher = hasInstagram && hasTikTokInbox;
 
   useEffect(() => {
-    setLocalThreads(null);
-  }, [metaSync?.snapshot?.synced_at, tiktokInbox?.threads]);
+    // Live sync refreshes every ~20s — merge instead of wiping so just-sent
+    // optimistic DMs don't vanish before Graph returns them.
+    setLocalThreads((prev) => {
+      if (!prev?.length) return null;
+      const syncedById = new Map(syncedThreads.map((t) => [t.id, t]));
+      let keepOverlay = false;
+      const merged = prev.map((local) => {
+        const synced = syncedById.get(local.id);
+        if (!synced) {
+          keepOverlay = true;
+          return local;
+        }
+        const syncedIds = new Set(synced.messages.map((m) => m.id));
+        const syncedYouTexts = new Set(
+          synced.messages
+            .filter((m) => m.from === 'you')
+            .map((m) => m.text.trim().toLowerCase())
+        );
+        const pending = local.messages.filter((m) => {
+          if (syncedIds.has(m.id)) return false;
+          if (String(m.id).startsWith('local-') || m.time === 'now') {
+            return !syncedYouTexts.has(m.text.trim().toLowerCase());
+          }
+          return m.from === 'you' && !syncedYouTexts.has(m.text.trim().toLowerCase());
+        });
+        if (pending.length === 0) return synced;
+        keepOverlay = true;
+        return {
+          ...synced,
+          unread: false,
+          messages: [...synced.messages, ...pending],
+          preview: pending[pending.length - 1]?.text?.slice(0, 120) || synced.preview,
+          time: pending[pending.length - 1]?.time || synced.time,
+        };
+      });
+      return keepOverlay ? merged : null;
+    });
+  }, [metaSync?.snapshot?.synced_at, tiktokInbox?.threads, syncedThreads]);
 
   useEffect(() => {
     if (threads.length === 0) {

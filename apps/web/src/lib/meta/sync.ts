@@ -172,40 +172,155 @@ function commentsToThreads(
 function dmConversationsToThreads(
   pageId: string,
   igUserId: string,
-  conversations: Awaited<ReturnType<typeof fetchInstagramDmConversations>>
+  conversations: Awaited<ReturnType<typeof fetchInstagramDmConversations>>,
+  ownerUsernames: string[] = []
 ): MetaInboxThread[] {
+  const ownerSet = new Set(
+    ownerUsernames
+      .map((u) => u.trim().replace(/^@/, '').toLowerCase())
+      .filter(Boolean)
+  );
+
   return conversations.slice(0, 40).map((conv) => {
-    // Graph returns newest-first; reverse for chronological chat order.
-    const msgs = [...(conv.messages?.data ?? [])].reverse();
+    const enriched = conv as typeof conv & { _self_ids?: string[] };
+    const recipientId = conv.recipient_id ? String(conv.recipient_id) : '';
+    const recipientUsername = (conv.recipient_username || '')
+      .replace(/^@/, '')
+      .toLowerCase();
+
+    // Self = Page + IG business + messaging IGSID(s) from participants.
+    const selfIds = new Set(
+      [pageId, igUserId, ...(enriched._self_ids || [])]
+        .filter(Boolean)
+        .map((id) => String(id))
+    );
+    // Anyone in participants who isn't the fan is also self.
+    for (const p of conv.participants?.data ?? []) {
+      if (p.id && String(p.id) !== recipientId) selfIds.add(String(p.id));
+    }
+
+    // Sort by created_time — Graph order alone is unreliable after field changes.
+    const msgs = [...(conv.messages?.data ?? [])].sort((a, b) => {
+      const ta = Date.parse(a.created_time || '') || 0;
+      const tb = Date.parse(b.created_time || '') || 0;
+      return ta - tb;
+    });
     const last = msgs[msgs.length - 1] || conv.messages?.data?.[0];
     const handle = conv.recipient_username
       ? `@${conv.recipient_username.replace(/^@/, '')}`
       : '@user';
+
+    const mapped = msgs
+      .map((m) => {
+        const text = String(m.message || '').trim();
+        // Keep unsupported/media rows as a stub so threads don't look one-sided.
+        const displayText = text || '(attachment)';
+        if (!m.id) return null;
+
+        const fromId = m.from?.id ? String(m.from.id) : '';
+        const fromUsername = (m.from?.username || '')
+          .replace(/^@/, '')
+          .toLowerCase();
+
+        let from: 'them' | 'you';
+        if (recipientId && fromId && fromId === recipientId) {
+          from = 'them';
+        } else if (fromId && selfIds.has(fromId)) {
+          from = 'you';
+        } else if (
+          recipientUsername &&
+          fromUsername &&
+          fromUsername === recipientUsername
+        ) {
+          from = 'them';
+        } else if (fromUsername && ownerSet.has(fromUsername)) {
+          from = 'you';
+        } else if (fromId && recipientId && fromId !== recipientId) {
+          // Not the fan → treat as business (covers unknown messaging IGSID).
+          from = 'you';
+        } else if (
+          fromId &&
+          fromId !== pageId &&
+          fromId !== igUserId &&
+          !selfIds.has(fromId)
+        ) {
+          from = 'them';
+        } else {
+          from = 'you';
+        }
+
+        return {
+          id: m.id,
+          from,
+          text: displayText,
+          time: relativeTime(m.created_time),
+        };
+      })
+      .filter((m): m is NonNullable<typeof m> => Boolean(m));
+
+    // Prefer last text preview that isn't a stub when possible.
+    const previewSrc =
+      [...mapped].reverse().find((m) => m.text && m.text !== '(attachment)') ||
+      mapped[mapped.length - 1];
+
     return {
       id: `dm:${conv.id}`,
       channel: 'dm' as const,
       name: conv.recipient_name || conv.recipient_username || 'Instagram user',
       handle,
-      preview: (last?.message || 'Direct message').slice(0, 120),
+      preview: (previewSrc?.text || last?.message || 'Direct message').slice(
+        0,
+        120
+      ),
       time: relativeTime(last?.created_time || conv.updated_time),
       unread: true,
       recipient_id: conv.recipient_id,
       page_id: pageId,
-      messages: msgs
-        .filter((m) => m.message?.trim())
-        .map((m) => {
-          const fromId = m.from?.id;
-          const fromThem =
-            Boolean(fromId) &&
-            fromId !== pageId &&
-            fromId !== igUserId;
-          return {
-            id: m.id,
-            from: (fromThem ? 'them' : 'you') as 'them' | 'you',
-            text: m.message || '',
-            time: relativeTime(m.created_time),
-          };
-        }),
+      messages: mapped,
+    };
+  });
+}
+
+/** Keep recently-sent outbound DMs that Graph hasn't returned yet after a force sync. */
+function mergeInboxThreadsPreservingOutbound(
+  previous: MetaInboxThread[] | undefined,
+  next: MetaInboxThread[]
+): MetaInboxThread[] {
+  if (!previous?.length) return next;
+  const prevById = new Map(previous.map((t) => [t.id, t]));
+  return next.map((thread) => {
+    if (thread.channel !== 'dm') return thread;
+    const prev = prevById.get(thread.id);
+    if (!prev?.messages?.length) return thread;
+
+    const nextIds = new Set(thread.messages.map((m) => m.id));
+    const missingOutbound = prev.messages.filter((m) => {
+      if (m.from !== 'you' || nextIds.has(m.id)) return false;
+      if (String(m.id).startsWith('local-') || m.time === 'now') return true;
+      // Preserve Graph-lagged sends for ~15 minutes of relative age.
+      const mins = /^(\d+)m$/.exec(m.time || '');
+      if (mins && Number(mins[1]) <= 15) return true;
+      return false;
+    });
+    // Avoid dupes when Graph assigned a new mid for the same body.
+    const nextYouTexts = new Set(
+      thread.messages
+        .filter((m) => m.from === 'you')
+        .map((m) => m.text.trim().toLowerCase())
+    );
+    const toAdd = missingOutbound.filter(
+      (m) => !nextYouTexts.has(m.text.trim().toLowerCase())
+    );
+    if (toAdd.length === 0) return thread;
+
+    const messages = [...thread.messages, ...toAdd];
+    const last = messages[messages.length - 1];
+    return {
+      ...thread,
+      messages,
+      preview: last?.text?.slice(0, 120) || thread.preview,
+      time: last?.time || thread.time,
+      unread: false,
     };
   });
 }
@@ -404,10 +519,16 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
         40,
         ig.external_id
       );
+      const dmOwnerNames = [
+        profile?.username,
+        ig.handle,
+        ig.display_name,
+      ].filter((v): v is string => Boolean(v && String(v).trim()));
       dmThreads = dmConversationsToThreads(
         pageId,
         ig.external_id,
-        conversations
+        conversations,
+        dmOwnerNames
       );
       if (dmThreads.length > 0) {
         dmError = null;
@@ -442,8 +563,12 @@ export async function syncMetaDataForUser(userId: string): Promise<MetaSyncSnaps
     commentsByMedia,
     ownerUsernames
   );
-  // DMs first, then comments (newest activity still reflected by relative times).
-  const inbox_threads = [...dmThreads, ...commentThreads].slice(0, 120);
+  // DMs first, then comments — preserve just-sent outbound that Graph lags on.
+  const previous = snapshots.get(userId);
+  const inbox_threads = mergeInboxThreadsPreservingOutbound(
+    previous?.inbox_threads,
+    [...dmThreads, ...commentThreads]
+  ).slice(0, 120);
 
   const likes = media.reduce((n, m) => n + (m.like_count ?? 0), 0);
   const comments = media.reduce((n, m) => n + (m.comments_count ?? 0), 0);
