@@ -913,6 +913,7 @@ export type ExtraKey =
   | 'notifSampleAutomation'
   | 'notifSampleLive'
   | 'notifEmpty'
+  | 'notifMarkAllRead'
   | 'notifPrefsSaved'
   | 'settingsIntegrationsSub'
   | 'settingsIntegrationsOverview'
@@ -2160,12 +2161,13 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   notifWeeklyDigestHint:
     'Once a week we send a summary of approved notification types to your account email.',
   notifInAppHint:
-    'Checked items appear in the bell menu in the admin header. Uncheck to mute that category.',
+    'Checked categories show real activity in the admin bell (members, purchases, broadcasts, live). Uncheck to mute.',
   notifSampleNewMembers: '3 new members joined Creator Lab',
   notifSamplePurchase: 'E-book purchase: Creator Starter Pack',
   notifSampleAutomation: 'Broadcast open rate hit 62%',
   notifSampleLive: 'Live reminder: session starts in 1 hour',
-  notifEmpty: 'No notifications right now — turn categories on in Settings.',
+  notifEmpty: "You're all caught up — new activity will show up here.",
+  notifMarkAllRead: 'Mark all read',
   notifPrefsSaved: 'Notification preferences saved',
   settingsIntegrationsSub:
     'Overview of social spaces and accounts authorized via API. Manage each connection here.',
@@ -3718,12 +3720,13 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   notifWeeklyDigestHint:
     'En gång i veckan skickar vi en sammanfattning av godkända aviseringstyper till din kontomejl.',
   notifInAppHint:
-    'Markerade alternativ syns i klockikonen i admin-headern. Avmarkera för att tysta kategorin.',
+    'Markerade kategorier visar riktig aktivitet i admin-klockan (medlemmar, köp, utskick, live). Avmarkera för att tysta.',
   notifSampleNewMembers: '3 nya medlemmar gick med i Creator Lab',
   notifSamplePurchase: 'E-boksköp: Creator Starter Pack',
   notifSampleAutomation: 'Broadcast öppningsfrekvens 62%',
   notifSampleLive: 'Live-påminnelse: sessionen börjar om 1 timme',
-  notifEmpty: 'Inga aviseringar just nu — aktivera kategorier under Inställningar.',
+  notifEmpty: 'Inget nytt just nu — ny aktivitet visas här.',
+  notifMarkAllRead: 'Markera alla som lästa',
   notifPrefsSaved: 'Aviseringsinställningar sparade',
   settingsIntegrationsSub:
     'Översikt över sociala ytor och konton auktoriserade via API. Hantera varje koppling här.',

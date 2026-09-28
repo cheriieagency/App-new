@@ -21,12 +21,12 @@ export function AdminPageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-2">
-      <div className="min-w-0">
+    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6 mb-2 min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="font-inter text-[10px] font-medium uppercase tracking-[0.16em] text-[#8A857D]">
           {eyebrow}
         </p>
-        <h1 className="font-playfair font-medium text-[28px] sm:text-[34px] leading-tight text-[#2C2621] tracking-[-0.02em] mt-2">
+        <h1 className="font-playfair font-medium text-[28px] sm:text-[34px] leading-tight text-[#2C2621] tracking-[-0.02em] mt-2 break-words">
           {title}
         </h1>
         {description ? (
@@ -36,7 +36,9 @@ export function AdminPageHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex flex-wrap items-center gap-2 flex-shrink-0">{actions}</div>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:max-w-[50%] sm:justify-end sm:flex-shrink-0 min-w-0">
+          {actions}
+        </div>
       ) : null}
     </div>
   );

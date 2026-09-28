@@ -1,6 +1,7 @@
 /**
  * Creator notification preferences — in-app bell + weekly email digest.
- * Persisted in localStorage so demo / local sessions keep choices.
+ * Source of truth is user_settings (via /api/settings); localStorage caches
+ * toggles for instant UI + cross-tab sync of the admin bell.
  */
 
 export type NotifPrefKey =
@@ -52,40 +53,4 @@ export function saveNotificationPrefs(
   } catch {
     /* ignore quota */
   }
-}
-
-/** Sample in-app notifications tied to preference categories. */
-export type InAppNotification = {
-  id: string;
-  prefKey: Exclude<NotifPrefKey, 'weeklyEmailDigest'>;
-  messageKey: string;
-};
-
-export const SAMPLE_IN_APP_NOTIFICATIONS: InAppNotification[] = [
-  {
-    id: 'n1',
-    prefKey: 'notifNewMembers',
-    messageKey: 'notifSampleNewMembers',
-  },
-  {
-    id: 'n2',
-    prefKey: 'notifPurchases',
-    messageKey: 'notifSamplePurchase',
-  },
-  {
-    id: 'n3',
-    prefKey: 'notifAutomations',
-    messageKey: 'notifSampleAutomation',
-  },
-  {
-    id: 'n4',
-    prefKey: 'notifLiveReminders',
-    messageKey: 'notifSampleLive',
-  },
-];
-
-export function filterInAppNotifications(
-  prefs: NotificationPrefs
-): InAppNotification[] {
-  return SAMPLE_IN_APP_NOTIFICATIONS.filter((n) => prefs[n.prefKey]);
 }

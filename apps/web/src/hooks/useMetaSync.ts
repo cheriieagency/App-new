@@ -18,9 +18,8 @@ export function useMetaSync(enabled = true) {
     enabled,
     ...LIVE_ANALYTICS_QUERY,
     queryFn: async () => {
-      const r = await fetch(`/api/meta/sync?_=${Date.now()}`, {
+      const r = await fetch('/api/meta/sync', {
         credentials: 'include',
-        cache: 'no-store',
       });
       if (!r.ok) throw new Error('Failed to load Meta sync');
       return r.json();

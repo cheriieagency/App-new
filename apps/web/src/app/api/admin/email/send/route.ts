@@ -340,6 +340,25 @@ export async function POST(request: Request) {
             .map((r) => ({ email: r.email, resendId: String(r.id) })),
         });
       }
+
+      void import('@/lib/notifications/persist')
+        .then(({ createUserNotification }) =>
+          createUserNotification({
+            userId: session.user.id,
+            prefKey: 'notifAutomations',
+            title: `Broadcast sent: ${subject}`,
+            body: `${sentCount} delivered${failedCount ? ` · ${failedCount} failed` : ''}`,
+            href: '/admin?section=email',
+            meta: {
+              broadcast_id: broadcastId || null,
+              sent: sentCount,
+              failed: failedCount,
+            },
+          })
+        )
+        .catch((err) =>
+          console.warn('[email/send] notification failed', err)
+        );
     } catch (e) {
       console.error('[email/send] broadcast persist failed', e);
     }

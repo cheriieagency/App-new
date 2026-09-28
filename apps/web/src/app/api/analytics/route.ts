@@ -11,10 +11,7 @@ import {
   ACTIVE_WORKSPACE_COOKIE_ALIAS,
   listLiveSocialAccountsForUser,
 } from '@/lib/social/persist';
-import {
-  getMetaSyncSnapshot,
-  syncMetaDataForUser,
-} from '@/lib/meta/sync';
+import { getMetaSyncSnapshot } from '@/lib/meta/sync';
 import { fetchMultiPlatformDemographics } from '@/lib/analytics/demographics';
 import {
   aggregateMediaMetrics,
@@ -23,6 +20,11 @@ import {
 } from '@/lib/analytics/media';
 import { isIsoInRange, parseAnalyticsRange } from '@/lib/analytics/period';
 import { fetchWorkspacePeriodInsights } from '@/lib/analytics/period-insights';
+import {
+  analyticsCacheKey,
+  getAnalyticsCached,
+  setAnalyticsCached,
+} from '@/lib/analytics/response-cache';
 
 const PLATFORMS = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok'] as const;
 
@@ -153,20 +155,28 @@ export async function GET(request: Request) {
       url.searchParams.get('from'),
       url.searchParams.get('to')
     );
+    // Demographics are heavy Graph calls — only for Audience tab.
+    const includeDemographics =
+      url.searchParams.get('includeDemographics') === '1' ||
+      url.searchParams.get('demographics') === '1';
 
-    let snapshot = getMetaSyncSnapshot(session.user.id);
-    const hasIg = connected.some((a) => a.platform === 'instagram');
-
-    if (hasIg && !snapshot) {
-      try {
-        snapshot = await syncMetaDataForUser(session.user.id);
-      } catch (error) {
-        console.warn(
-          '[Analytics API] Meta sync failed — returning account shells without Graph metrics.',
-          error
-        );
-      }
+    const cacheKey = analyticsCacheKey([
+      'analytics',
+      session.user.id,
+      workspaceId,
+      range.from,
+      range.to,
+      includeDemographics ? 'demo' : 'lite',
+    ]);
+    const cached = getAnalyticsCached<Record<string, unknown>>(cacheKey);
+    if (cached) {
+      return Response.json({ ...cached, cached: true });
     }
+
+    // Prefer an existing in-memory Meta snapshot if Inbox/Planner already
+    // warmed it — never kick a full Graph sync from Analytics (too slow).
+    const snapshot = getMetaSyncSnapshot(session.user.id);
+    const hasIg = connected.some((a) => a.platform === 'instagram');
 
     const followersFromAccounts = connected.reduce(
       (sum, a) => sum + (Number(a.follower_count) || 0),
@@ -268,36 +278,45 @@ export async function GET(request: Request) {
     let usedLivePeriodInsights = false;
 
     if (workspaceId) {
-      const [mediaResult, demoResult, periodResult] = await Promise.all([
-        fetchMultiPlatformMedia({
-          userId: session.user.id,
-          workspaceId,
-          instagramMedia: snapshot?.media ?? null,
-        }).catch((error) => {
-          console.warn('[Analytics API] multi-platform media failed', error);
-          return null;
-        }),
-        fetchMultiPlatformDemographics({
-          userId: session.user.id,
-          workspaceId,
-        }).catch((error) => {
-          console.warn('[Analytics API] multi-platform demographics failed', error);
-          return null;
-        }),
-        fetchWorkspacePeriodInsights({
-          userId: session.user.id,
-          workspaceId,
-          from: range.from,
-          to: range.to,
-        }).catch((error) => {
-          console.warn('[Analytics API] period insights failed', error);
-          return null;
-        }),
+      const mediaJob = fetchMultiPlatformMedia({
+        userId: session.user.id,
+        workspaceId,
+        instagramMedia: snapshot?.media ?? null,
+      }).catch((error) => {
+        console.warn('[Analytics API] multi-platform media failed', error);
+        return null;
+      });
+      const periodJob = fetchWorkspacePeriodInsights({
+        userId: session.user.id,
+        workspaceId,
+        from: range.from,
+        to: range.to,
+      }).catch((error) => {
+        console.warn('[Analytics API] period insights failed', error);
+        return null;
+      });
+      const demoJob = includeDemographics
+        ? fetchMultiPlatformDemographics({
+            userId: session.user.id,
+            workspaceId,
+          }).catch((error) => {
+            console.warn(
+              '[Analytics API] multi-platform demographics failed',
+              error
+            );
+            return null;
+          })
+        : Promise.resolve(
+            (snapshot?.demographics as typeof demographics) ?? null
+          );
+
+      const [mediaResult, periodResult, demoResult] = await Promise.all([
+        mediaJob,
+        periodJob,
+        demoJob,
       ]);
       if (mediaResult) media = mediaResult;
-      demographics =
-        demoResult ??
-        ((snapshot?.demographics as typeof demographics) ?? null);
+      demographics = demoResult;
       if (periodResult) {
         usedLivePeriodInsights = true;
         insights = {
@@ -406,7 +425,7 @@ export async function GET(request: Request) {
       accounts: connected.length,
     };
 
-    return Response.json({
+    const payload = {
       ok: true,
       source: snapshot ? 'workspace_meta_sync' : 'workspace_social_accounts',
       connected: true,
@@ -443,15 +462,13 @@ export async function GET(request: Request) {
       message: media.length
         ? null
         : hasIg
-          ? 'Accounts connected. Instagram Graph insights pending — reconnect or open Social settings to sync.'
+          ? 'Accounts connected. Open Posts or reconnect under Settings → Socials if Graph is quiet.'
           : 'Accounts connected. Posts pull from Instagram, Facebook Page, and TikTok when those APIs return media.',
-      cta: snapshot
-        ? null
-        : {
-            label: 'Open Social settings',
-            href: '/admin/settings/socials',
-          },
-    });
+      cta: null as { label: string; href: string } | null,
+    };
+
+    setAnalyticsCached(cacheKey, payload, 60_000);
+    return Response.json(payload);
   } catch (error) {
     console.warn(
       '[Analytics API] Error — returning onboarding fallback.',

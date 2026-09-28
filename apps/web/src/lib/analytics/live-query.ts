@@ -4,14 +4,15 @@
  */
 
 export const LIVE_ANALYTICS_QUERY = {
-  /** Reuse a fresh pull for a minute — avoids sync storms on remount/tab switch. */
-  staleTime: 60_000,
+  /** Reuse a fresh pull — avoids Meta Graph storms on remount/tab switch. */
+  staleTime: 90_000,
   /** Keep last response while refetching to avoid UI flicker. */
-  gcTime: 5 * 60_000,
-  refetchOnMount: true as const,
+  gcTime: 10 * 60_000,
+  /** Prefer cache on remount; invalidate only when filters change. */
+  refetchOnMount: false as const,
   refetchOnWindowFocus: false,
   refetchOnReconnect: true,
-  /** Soft live refresh while Analytics UI is open (was 30s). */
-  refetchInterval: 90_000,
+  /** Soft live refresh while Analytics UI is open. */
+  refetchInterval: 120_000,
   refetchIntervalInBackground: false,
 };

@@ -45,10 +45,8 @@ export function useAnalyticsPosts(enabled = true) {
       const url = new URL('/api/analytics/posts', window.location.origin);
       url.searchParams.set('workspaceId', workspaceId);
       url.searchParams.set('sort', 'engagementRate');
-      url.searchParams.set('_', String(Date.now()));
       const res = await fetch(url.toString(), {
         credentials: 'include',
-        cache: 'no-store',
         headers: {
           'x-workspace-id': workspaceId,
           'x-active-workspace-id': workspaceId,

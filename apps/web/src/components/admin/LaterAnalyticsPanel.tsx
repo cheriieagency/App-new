@@ -33,7 +33,6 @@ import { useLanguage } from '@/lib/locale-context';
 import { t, tf, localeTag, type Locale } from '@/lib/i18n';
 import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
-import { useMetaSync } from '@/hooks/useMetaSync';
 import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import {
   useAnalytics,
@@ -338,9 +337,6 @@ export default function LaterAnalyticsPanel() {
       ),
     [connectedAccountsRaw, canAccessPlatform]
   );
-  const { data: metaSync, refetch: refetchMetaSync } = useMetaSync(
-    analyticsActive && (hasInstagram || hasConnectedSocials)
-  );
   const [sub, setSub] = useState<AnalyticsSubTab>(() => {
     if (typeof window === 'undefined') return 'analytics';
     return (
@@ -350,6 +346,7 @@ export default function LaterAnalyticsPanel() {
   });
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
   // Workspace-scoped analytics — aggregates every connected API for this brand.
+  // Demographics only when Audience is open (heavy Graph fan-out).
   const {
     data: analyticsApi,
     refetch: refetchAnalytics,
@@ -360,7 +357,8 @@ export default function LaterAnalyticsPanel() {
     {
       from: dateRange.from,
       to: dateRange.to,
-    }
+    },
+    { includeDemographics: sub === 'audience' }
   );
   const [rangeOpen, setRangeOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(dateRange.from);
@@ -377,34 +375,25 @@ export default function LaterAnalyticsPanel() {
     if (fromUrl) setSub(fromUrl);
   }, []);
 
-  // Prefetch live posts for Posts / Reels / Hashtags / overview fallbacks.
+  // Lazy: only hit Posts/Stories Graph routes when that tab is open.
+  // Overview already receives media from /api/analytics.
   const {
     data: postsApi,
     isLoading: postsLoading,
-    refetch: refetchPosts,
   } = useAnalyticsPosts(
     analyticsActive &&
       hasConnectedSocials &&
-      (sub === 'posts' ||
-        sub === 'reels' ||
-        sub === 'hashtags' ||
-        sub === 'analytics' ||
-        sub === 'monthly' ||
-        sub === 'audience')
+      (sub === 'posts' || sub === 'reels' || sub === 'hashtags' || sub === 'monthly')
   );
   const {
     data: storiesApi,
     isLoading: storiesLoading,
-    refetch: refetchStories,
   } = useAnalyticsStories(
-    analyticsActive &&
-      hasConnectedSocials &&
-      (sub === 'stories' || sub === 'analytics')
+    analyticsActive && hasConnectedSocials && sub === 'stories'
   );
 
-  // Hard refresh when switching analytics sub-tabs / workspace / date range.
-  // Skip the initial mount — React Query already loads with staleTime; remounts
-  // are avoided by admin keep-alive so this only runs on intentional filter changes.
+  // Hard refresh only when workspace / date range changes — not on every sub-tab click.
+  // Tab-specific hooks enable themselves via `enabled` when the user opens Posts/Stories.
   const analyticsHardRefreshSkip = useRef(true);
   useEffect(() => {
     if (!hasConnectedSocials) return;
@@ -413,30 +402,12 @@ export default function LaterAnalyticsPanel() {
       return;
     }
     void refetchAnalytics();
-    void refetchMetaSync();
-    if (
-      sub === 'posts' ||
-      sub === 'reels' ||
-      sub === 'hashtags' ||
-      sub === 'analytics' ||
-      sub === 'monthly' ||
-      sub === 'audience'
-    ) {
-      void refetchPosts();
-    }
-    if (sub === 'stories' || sub === 'analytics') {
-      void refetchStories();
-    }
   }, [
-    sub,
     hasConnectedSocials,
     activeWorkspace.id,
     dateRange.from,
     dateRange.to,
     refetchAnalytics,
-    refetchMetaSync,
-    refetchPosts,
-    refetchStories,
   ]);
 
   // Keep Revenue / Link-in-bio in sync with Bio Builder products + checkout sales.
@@ -604,25 +575,7 @@ export default function LaterAnalyticsPanel() {
 
   const chart = activeWorkspace.analytics.revenue_chart;
 
-  const liveMedia = useMemo(() => {
-    const fromApi = analyticsApi?.media;
-    if (fromApi && fromApi.length > 0) return fromApi;
-    // Normalize IG snapshot rows so shares/views/platform always exist.
-    return (metaSync?.snapshot?.media ?? []).map((item) => ({
-      id: item.id,
-      platform: 'instagram' as const,
-      caption: item.caption ?? null,
-      media_type: item.media_type ?? null,
-      media_url: item.media_url ?? null,
-      thumbnail_url: item.thumbnail_url ?? item.media_url ?? null,
-      permalink: item.permalink ?? null,
-      like_count: item.like_count ?? 0,
-      comments_count: item.comments_count ?? 0,
-      shares_count: 0,
-      view_count: null as number | null,
-      timestamp: item.timestamp ?? null,
-    }));
-  }, [analyticsApi?.media, metaSync?.snapshot?.media]);
+  const liveMedia = useMemo(() => analyticsApi?.media ?? [], [analyticsApi?.media]);
 
   /** Only content published inside the selected date range. */
   const rangedMedia = useMemo(
@@ -656,10 +609,18 @@ export default function LaterAnalyticsPanel() {
   }, [analyticsApi?.totals?.followers, analyticsApi?.metrics?.followers, platformSlices]);
 
   const igProfile = useMemo(() => {
-    const snap = metaSync?.snapshot?.instagram;
+    const snap = analyticsApi?.instagram as
+      | {
+          username?: string | null;
+          name?: string | null;
+          profile_picture_url?: string | null;
+          followers_count?: number | null;
+        }
+      | null
+      | undefined;
     const slice = platformSlices.instagram;
     const handle =
-      (snap?.username ? `@${snap.username.replace(/^@/, '')}` : null) ||
+      (snap?.username ? `@${String(snap.username).replace(/^@/, '')}` : null) ||
       slice?.handle ||
       instagramAccount?.handle ||
       null;
@@ -680,7 +641,7 @@ export default function LaterAnalyticsPanel() {
       handle ||
       'Instagram';
     return { handle, avatar, followers, displayName };
-  }, [metaSync?.snapshot?.instagram, instagramAccount, platformSlices.instagram]);
+  }, [analyticsApi?.instagram, instagramAccount, platformSlices.instagram]);
 
   const engagement = useMemo(() => {
     if (!connectedAccounts.length && rangedMedia.length === 0 && !analyticsApi?.metrics) {
@@ -1000,10 +961,7 @@ export default function LaterAnalyticsPanel() {
     {
       label: t('kpiPlannedPosts', locale),
       value: String(
-        analyticsApi?.planner_imported ??
-          metaSync?.snapshot?.planner_imported ??
-          liveMedia.length ??
-          0
+        analyticsApi?.planner_imported ?? liveMedia.length ?? 0
       ),
       delta: '—',
       deltaTone: 'neutral',

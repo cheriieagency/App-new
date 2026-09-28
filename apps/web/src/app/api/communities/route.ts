@@ -188,6 +188,28 @@ export async function POST(request: Request) {
           }).catch((err) =>
             console.warn('[communities/join] automation failed', err)
           );
+          // In-app bell for the community owner (respects notification prefs).
+          if (creatorId !== session.user.id) {
+            const memberLabel =
+              session.user.name?.trim() || session.user.email || 'Someone';
+            void import('@/lib/notifications/persist')
+              .then(({ createUserNotification }) =>
+                createUserNotification({
+                  userId: String(creatorId),
+                  prefKey: 'notifNewMembers',
+                  title: `${memberLabel} joined ${communityName}`,
+                  body: 'New community member',
+                  href: '/admin?section=community',
+                  meta: {
+                    community_id: Number(community_id),
+                    member_user_id: session.user.id,
+                  },
+                })
+              )
+              .catch((err) =>
+                console.warn('[communities/join] notification failed', err)
+              );
+          }
         } else {
           syncSubscriber({
             email: session.user.email,
