@@ -136,6 +136,22 @@ export async function GET(request: Request) {
 
   await ensureCommunitiesSchema();
 
+  // Keep Clikd Insiders owned by hello@clikd.app whenever that account loads Community.
+  try {
+    const { ensureClikdInsidersCommunity, enrollUserInClikdInsiders } =
+      await import('@/lib/communities/insiders');
+    await ensureClikdInsidersCommunity();
+    if (session.user.email) {
+      await enrollUserInClikdInsiders({
+        userId,
+        email: session.user.email,
+        name: session.user.name,
+      });
+    }
+  } catch (err) {
+    console.warn('[GET /api/admin/communities] insiders ensure skipped', err);
+  }
+
   if (!process.env.DATABASE_URL?.trim()) {
     const all = listManagedCommunities();
     const scoped = all.filter(
@@ -152,25 +168,40 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Workspace-scoped list: owned workspace, creator/user id, or owner membership.
+    // Communities for this brand workspace, plus any community this user owns
+    // (so Clikd Insiders always appears for hello@clikd.app even if workspace_id drifted).
     const rows = await sql`
       SELECT *
       FROM communities
-      WHERE workspace_id = ${workspaceId}
-        AND (
-          workspace_id IN (
-            SELECT id FROM public.workspaces WHERE user_id::text = ${userId}
-          )
-          OR creator_id::text = ${userId}
-          OR user_id::text = ${userId}
-          OR EXISTS (
-            SELECT 1 FROM community_memberships cm
-            WHERE cm.community_id = communities.id
-              AND cm.user_id::text = ${userId}
-              AND cm.role = 'owner'
+      WHERE
+        (
+          workspace_id = ${workspaceId}
+          AND (
+            workspace_id IN (
+              SELECT id FROM public.workspaces WHERE user_id::text = ${userId}
+            )
+            OR creator_id::text = ${userId}
+            OR user_id::text = ${userId}
+            OR EXISTS (
+              SELECT 1 FROM community_memberships cm
+              WHERE cm.community_id = communities.id
+                AND cm.user_id::text = ${userId}
+                AND cm.role IN ('owner', 'admin')
+            )
           )
         )
-      ORDER BY created_at DESC NULLS LAST, name ASC
+        OR creator_id::text = ${userId}
+        OR user_id::text = ${userId}
+        OR EXISTS (
+          SELECT 1 FROM community_memberships cm
+          WHERE cm.community_id = communities.id
+            AND cm.user_id::text = ${userId}
+            AND cm.role IN ('owner', 'admin')
+        )
+      ORDER BY
+        CASE WHEN slug = 'clikd-insiders' THEN 0 ELSE 1 END,
+        created_at DESC NULLS LAST,
+        name ASC
     `;
 
     const list = (Array.isArray(rows) ? rows : []).map((r) =>

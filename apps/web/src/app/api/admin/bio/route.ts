@@ -1,15 +1,23 @@
 /**
  * Admin bio builder — durable publish to bio_blocks + workspace profile_data.
+ * Public /bio/{handle} reads workspaces.profile_data first.
  */
 
 import { bioBlockSlug } from '@/lib/bio-utm';
-import {
-  registerBioBlocksAsDestinations,
-} from '@/lib/bio-clicks/persist';
+import { registerBioBlocksAsDestinations } from '@/lib/bio-clicks/persist';
 import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { DEFAULT_BIO_THEME, normalizeBioTheme } from '@/lib/bio-theme';
+import {
+  blankWorkspaceProfile,
+  type WorkspaceBioBlock,
+  type WorkspaceProfile,
+} from '@/lib/mock-workspace-profiles';
+import {
+  listDurableWorkspaceProfiles,
+  upsertDurableWorkspaceProfile,
+} from '@/lib/workspaces/persist';
 
 /** Empty bio until the creator adds real blocks — no seeded demo products. */
 const DEFAULT_BLOCKS: Array<Record<string, unknown>> = [];
@@ -106,23 +114,84 @@ export async function GET() {
   }
 }
 
+/** Persist published bio onto the active brand workspace (public /bio/{handle}). */
+async function persistWorkspaceBio(input: {
+  userId: string;
+  workspaceId: string;
+  cleanHandle: string;
+  displayName: string | null;
+  bioText: string | null;
+  avatarUrl: string | null;
+  socialLinks: unknown;
+  theme: ReturnType<typeof normalizeBioTheme>;
+  themeLabel: string;
+  blocks: Array<Record<string, unknown>>;
+}): Promise<WorkspaceProfile | null> {
+  if (!process.env.DATABASE_URL?.trim()) return null;
+  const list = await listDurableWorkspaceProfiles(input.userId);
+  const current =
+    list.find((w) => w.id === input.workspaceId) || list[0] || null;
+  if (!current && !input.workspaceId) return null;
+
+  const base = current || {
+    ...blankWorkspaceProfile(),
+    id: input.workspaceId || `ws-${input.userId.slice(0, 12)}`,
+    name: input.displayName || 'My Workspace',
+  };
+
+  const next: WorkspaceProfile = {
+    ...base,
+    handle: `@${input.cleanHandle}`,
+    avatar_url: input.avatarUrl ?? base.avatar_url,
+    bio: {
+      ...base.bio,
+      profile_photo: input.avatarUrl,
+      display_name: input.displayName || base.bio.display_name || base.name,
+      handle: input.cleanHandle,
+      bio_text: input.bioText ?? '',
+      theme: input.theme,
+      theme_label: input.themeLabel || base.bio.theme_label || 'Custom',
+      blocks: input.blocks as WorkspaceBioBlock[],
+      social_links: Array.isArray(input.socialLinks)
+        ? (input.socialLinks as { platform: string; url: string }[])
+        : base.bio.social_links ?? [],
+    },
+  };
+
+  return upsertDurableWorkspaceProfile({
+    userId: input.userId,
+    profile: next,
+  });
+}
+
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const body = await request.json();
-    const { blocks, handle, display_name, bio_text, avatar_url, social_links, theme } =
-      body as Record<string, unknown>;
+    const {
+      blocks,
+      handle,
+      display_name,
+      bio_text,
+      avatar_url,
+      social_links,
+      theme,
+      theme_label,
+    } = body as Record<string, unknown>;
     const normalizedTheme = normalizeBioTheme(
       theme as Parameters<typeof normalizeBioTheme>[0]
     );
+    const themeLabel =
+      (typeof theme_label === 'string' && theme_label.trim()) ||
+      'Custom';
     const workspaceId = String(
       body.workspaceId ||
         body.workspace_id ||
         request.headers.get('x-workspace-id') ||
         request.headers.get('x-active-workspace-id') ||
-        `user:${session.user.id}`
+        ''
     ).trim();
     const blockList = Array.isArray(blocks)
       ? (blocks as Array<Record<string, unknown>>)
@@ -144,7 +213,7 @@ export async function POST(request: Request) {
           ),
         }));
         await registerBioBlocksAsDestinations({
-          workspaceId,
+          workspaceId: workspaceId || `user:${session.user.id}`,
           userId: session.user.id,
           handle: cleanHandle,
           blocks: withSlugs,
@@ -172,7 +241,7 @@ export async function POST(request: Request) {
       if (existing.length > 0) {
         await sql`
           UPDATE bio_blocks
-          SET blocks = ${JSON.stringify(blocks ?? [])},
+          SET blocks = ${JSON.stringify(blockList)},
               handle = ${cleanHandle},
               display_name = ${display_name ?? null},
               bio_text = ${bio_text ?? null},
@@ -182,36 +251,59 @@ export async function POST(request: Request) {
               updated_at = NOW()
           WHERE user_id = ${session.user.id}
         `;
-        await ensureDestinations();
-        return Response.json({
-          success: true,
-          first_publish: false,
-          handle: cleanHandle,
-          theme: normalizedTheme,
-        });
+      } else {
+        await sql`
+          INSERT INTO bio_blocks (
+            user_id, blocks, handle, display_name, bio_text, avatar_url, social_links, theme
+          )
+          VALUES (
+            ${session.user.id},
+            ${JSON.stringify(blockList)},
+            ${cleanHandle},
+            ${display_name ?? null},
+            ${bio_text ?? null},
+            ${avatar_url ?? null},
+            ${JSON.stringify(social_links ?? [])},
+            ${JSON.stringify(normalizedTheme)}
+          )
+        `;
       }
 
-      await sql`
-        INSERT INTO bio_blocks (
-          user_id, blocks, handle, display_name, bio_text, avatar_url, social_links, theme
-        )
-        VALUES (
-          ${session.user.id},
-          ${JSON.stringify(blocks ?? [])},
-          ${cleanHandle},
-          ${display_name ?? null},
-          ${bio_text ?? null},
-          ${avatar_url ?? null},
-          ${JSON.stringify(social_links ?? [])},
-          ${JSON.stringify(normalizedTheme)}
-        )
-      `;
+      // Public page source of truth — always write the active workspace profile.
+      let workspaceProfile: WorkspaceProfile | null = null;
+      try {
+        workspaceProfile = await persistWorkspaceBio({
+          userId: session.user.id,
+          workspaceId,
+          cleanHandle,
+          displayName:
+            typeof display_name === 'string' ? display_name : null,
+          bioText: typeof bio_text === 'string' ? bio_text : null,
+          avatarUrl: typeof avatar_url === 'string' ? avatar_url : null,
+          socialLinks: social_links,
+          theme: normalizedTheme,
+          themeLabel,
+          blocks: blockList,
+        });
+      } catch (wsErr) {
+        console.error('[admin/bio] workspace profile_data persist failed', wsErr);
+        return Response.json(
+          {
+            error: 'Failed to publish bio to workspace',
+            message:
+              wsErr instanceof Error ? wsErr.message : 'Workspace save failed',
+          },
+          { status: 500 }
+        );
+      }
+
       await ensureDestinations();
       return Response.json({
         success: true,
-        first_publish: true,
+        first_publish: existing.length === 0,
         handle: cleanHandle,
         theme: normalizedTheme,
+        workspace_id: workspaceProfile?.id ?? (workspaceId || null),
       });
     } catch (dbError) {
       console.error('[admin/bio] persist failed', dbError);

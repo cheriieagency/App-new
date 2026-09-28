@@ -2194,25 +2194,25 @@ export default function AdminPage() {
         );
       }
 
+      const themeLabel =
+        BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)?.label ||
+        activeWorkspace.bio.theme_label;
       const bioPatch = {
         profile_photo: bioAvatarUrl || null,
         display_name: bioDisplayName,
         handle: cleanHandle,
         bio_text: bioBioText,
         theme: bioTheme,
-        theme_label:
-          BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)?.label ||
-          activeWorkspace.bio.theme_label,
-        blocks: blocks as WorkspaceBioBlock[],
-        social_links: socialLinks,
+        theme_label: themeLabel,
+        // Full block payloads (icons, prices, UTM, coaching flags, …).
+        blocks: blocks.map((b) => ({ ...b })) as WorkspaceBioBlock[],
+        social_links: socialLinks.map((l) => ({ ...l })),
       };
 
-      // Durable source of truth for public /bio/{handle} is workspaces.profile_data.
-      const workspaceOk = await updateActiveBio(bioPatch);
-      if (!workspaceOk) {
-        throw new Error(t('toastBioSaveFailed', locale));
-      }
+      // Optimistic local mirror so Preview / sidebar stay in sync immediately.
+      await updateActiveBio(bioPatch, { durable: false });
 
+      // Single durable publish: bio_blocks + workspaces.profile_data (public page).
       const r = await fetch('/api/admin/bio', {
         method: 'POST',
         headers: {
@@ -2224,9 +2224,12 @@ export default function AdminPage() {
               }
             : {}),
         },
+        credentials: 'include',
+        cache: 'no-store',
         body: JSON.stringify({
           ...bioPatch,
-          avatar_url: bioAvatarUrl,
+          avatar_url: bioAvatarUrl || null,
+          theme_label: themeLabel,
           workspaceId: activeWorkspaceId,
           workspace_id: activeWorkspaceId,
         }),
@@ -2234,9 +2237,13 @@ export default function AdminPage() {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         throw new Error(
-          (data as { error?: string }).error || t('toastPublishFailed', locale)
+          (data as { error?: string; message?: string }).message ||
+            (data as { error?: string }).error ||
+            t('toastPublishFailed', locale)
         );
       }
+      // Keep client workspace store aligned with what just published.
+      await updateActiveBio(bioPatch, { durable: false });
       return {
         ...(data as Record<string, unknown>),
         handle: cleanHandle,

@@ -1161,7 +1161,7 @@ export default function LaterAnalyticsPanel() {
       ) : null}
 
       {connectedAccounts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
           {connectedAccounts.map((account) => {
             const Icon = PLATFORM_ICON[account.platform] || InstagramIcon;
             const slice = platformSlices[account.platform];
@@ -1172,35 +1172,35 @@ export default function LaterAnalyticsPanel() {
             return (
               <div
                 key={`${account.platform}-${account.handle || account.external_id || 'row'}`}
-                className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3.5 py-3 flex items-center gap-3 shadow-none"
+                className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-2.5 py-2 flex items-center gap-2 shadow-none min-w-0 overflow-hidden"
               >
                 {avatar ? (
                   <OptimizedImage
                     src={avatar}
                     alt=""
-                    width={44}
-                    height={44}
-                    sizes="44px"
-                    className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full object-cover border-2 border-[#E6E3DB]"
+                    width={32}
+                    height={32}
+                    sizes="32px"
+                    className="w-8 h-8 min-h-[32px] min-w-[32px] rounded-full object-cover border border-[#E6E3DB] flex-shrink-0"
                   />
                 ) : (
-                  <span className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-[#F0EFEA] inline-flex items-center justify-center text-[#2C2621]">
-                    <Icon size={18} />
+                  <span className="w-8 h-8 min-h-[32px] min-w-[32px] rounded-full bg-[#F0EFEA] inline-flex items-center justify-center text-[#2C2621] flex-shrink-0">
+                    <Icon size={14} />
                   </span>
                 )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <p className="text-[9px] font-inter font-medium uppercase tracking-[0.12em] text-[#8A857D] truncate leading-tight">
                     {PLATFORM_LABEL[account.platform] || account.platform}
                   </p>
-                  <p className="text-sm font-medium text-[#2C2621] truncate">
+                  <p className="text-xs font-medium text-[#2C2621] truncate leading-tight mt-0.5">
                     {handle || PLATFORM_LABEL[account.platform] || account.platform}
                   </p>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
+                <div className="text-right flex-shrink-0 pl-1 min-w-[2.75rem]">
+                  <p className="text-[9px] font-inter font-medium uppercase tracking-[0.1em] text-[#8A857D] leading-tight">
                     {t('kpiFollowers', locale)}
                   </p>
-                  <p className="text-base font-medium tabular-nums text-[#2C2621]">
+                  <p className="text-sm font-medium tabular-nums text-[#2C2621] leading-tight mt-0.5">
                     {formatCompact(followers, locale)}
                   </p>
                 </div>
