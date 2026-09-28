@@ -6,16 +6,20 @@
 import sql from '@/app/api/utils/sql';
 import {
   AUTOMATION_TRIGGER_OPTIONS,
+  AUDIENCE_OPTIONS,
   applyMergeTags,
+  createBroadcast,
   deleteEmailAutomation as deleteMockAutomation,
   listCommunityAutomationEmails,
   listEmailAutomations,
   logCommunityAutomationEmail,
   setEmailAutomationStatus as setMockAutomationStatus,
   syncSubscriber,
+  upsertDraftBroadcast,
   upsertEmailAutomation as upsertMockAutomation,
   type EmailAutomation,
   type EmailAutomationTrigger,
+  type EmailBroadcast,
   type SubscriberSource,
   type UpsertAutomationInput,
 } from '@/lib/mock-email-crm';
@@ -27,7 +31,7 @@ import * as React from 'react';
 
 let schemaReady: Promise<void> | null = null;
 /** Bump when new CRM tables/columns are added so hot servers re-heal. */
-const EMAIL_CRM_SCHEMA_VERSION = 3;
+const EMAIL_CRM_SCHEMA_VERSION = 4;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -153,9 +157,16 @@ export async function ensureEmailCrmSchema(): Promise<void> {
     await safeAlter('email_broadcasts.sent_at', () =>
       sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS sent_at timestamptz DEFAULT now()`
     );
+    await safeAlter('email_broadcasts.workspace_id', () =>
+      sql`ALTER TABLE email_broadcasts ADD COLUMN IF NOT EXISTS workspace_id text`
+    );
     await safeAlter('email_broadcasts_creator_idx', () => sql`
       CREATE INDEX IF NOT EXISTS email_broadcasts_creator_idx
         ON email_broadcasts (creator_id, sent_at DESC)
+    `);
+    await safeAlter('email_broadcasts_workspace_idx', () => sql`
+      CREATE INDEX IF NOT EXISTS email_broadcasts_workspace_idx
+        ON email_broadcasts (creator_id, workspace_id, sent_at DESC)
     `);
 
     await sql`
@@ -265,7 +276,10 @@ export async function listPersistedAutomations(input: {
   communityId?: number;
 }): Promise<EmailAutomation[]> {
   if (!process.env.DATABASE_URL?.trim()) {
-    return listEmailAutomations({ community_id: input.communityId });
+    return listEmailAutomations({
+      creatorId: input.creatorId,
+      community_id: input.communityId,
+    });
   }
   try {
     await ensureEmailCrmSchema();
@@ -311,7 +325,7 @@ export async function upsertPersistedAutomation(
   input: UpsertAutomationInput
 ): Promise<EmailAutomation> {
   if (!process.env.DATABASE_URL?.trim()) {
-    return upsertMockAutomation(input);
+    return upsertMockAutomation({ ...input, creatorId });
   }
   await ensureEmailCrmSchema();
   const trigger = input.trigger;
@@ -374,7 +388,7 @@ export async function setPersistedAutomationStatus(
   status: 'active' | 'paused'
 ): Promise<EmailAutomation | null> {
   if (!process.env.DATABASE_URL?.trim()) {
-    return setMockAutomationStatus(id, status);
+    return setMockAutomationStatus(creatorId, id, status);
   }
   await ensureEmailCrmSchema();
   const rows = await sql`
@@ -393,7 +407,7 @@ export async function deletePersistedAutomation(
   id: string
 ): Promise<boolean> {
   if (!process.env.DATABASE_URL?.trim()) {
-    return deleteMockAutomation(id);
+    return deleteMockAutomation(creatorId, id);
   }
   await ensureEmailCrmSchema();
   const rows = await sql`
@@ -409,7 +423,10 @@ export async function listPersistedCommunityEmails(input: {
   communityId?: number;
 }) {
   if (!process.env.DATABASE_URL?.trim()) {
-    return listCommunityAutomationEmails({ community_id: input.communityId });
+    return listCommunityAutomationEmails({
+      creatorId: input.creatorId,
+      community_id: input.communityId,
+    });
   }
   try {
     await ensureEmailCrmSchema();
@@ -463,6 +480,7 @@ export async function persistSubscriber(input: {
 
   if (!process.env.DATABASE_URL?.trim()) {
     syncSubscriber({
+      creatorId: input.creatorId,
       email,
       name: input.name,
       user_id: input.userId,
@@ -548,9 +566,10 @@ export async function fireEmailAutomations(
       automations = [];
     }
   } else {
-    automations = listEmailAutomations({ community_id: input.communityId }).filter(
-      (a) => a.status === 'active' && a.trigger === input.trigger
-    );
+    automations = listEmailAutomations({
+      creatorId: input.creatorId,
+      community_id: input.communityId,
+    }).filter((a) => a.status === 'active' && a.trigger === input.trigger);
   }
 
   if (automations.length === 0) return { sent: 0, skipped: 1 };
@@ -607,6 +626,7 @@ export async function fireEmailAutomations(
         : 'member_auto';
 
     logCommunityAutomationEmail({
+      creatorId: input.creatorId,
       community_id: input.communityId,
       community_name: input.communityName,
       kind,
@@ -660,6 +680,7 @@ export async function recordPersistedCommunityEmailSend(input: {
 
   if (!process.env.DATABASE_URL?.trim()) {
     logCommunityAutomationEmail({
+      creatorId: input.creatorId,
       community_id: input.communityId,
       community_name: input.communityName,
       kind: input.kind,
@@ -690,6 +711,185 @@ export async function recordPersistedCommunityEmailSend(input: {
   } catch (error) {
     console.warn('[email/crm] recordPersistedCommunityEmailSend failed', error);
     return false;
+  }
+}
+
+function audienceLabelFor(audience: string): string {
+  return (
+    AUDIENCE_OPTIONS.find((a) => a.value === audience)?.label ?? 'All subscribers'
+  );
+}
+
+/**
+ * Persist a sent / test / draft broadcast under the logged-in creator.
+ * Always scoped by creator_id so CRM history never leaks across logins.
+ */
+export async function persistEmailBroadcast(input: {
+  creatorId: string;
+  workspaceId?: string | null;
+  subject: string;
+  body: string;
+  audience: string;
+  recipientCount: number;
+  status: 'sent' | 'test' | 'draft';
+  imageUrl?: string | null;
+}): Promise<{ id: string | number; broadcast: EmailBroadcast; demo: boolean } | null> {
+  const audienceLabel = audienceLabelFor(input.audience);
+
+  if (!process.env.DATABASE_URL?.trim()) {
+    const broadcast = createBroadcast({
+      creatorId: input.creatorId,
+      subject: input.subject,
+      body: input.body,
+      audience: input.audience,
+      image_url: input.imageUrl,
+      status: input.status,
+      recipient_count: input.recipientCount,
+    });
+    broadcast.audience_label = audienceLabel;
+    return { id: broadcast.id, broadcast, demo: true };
+  }
+
+  try {
+    await ensureEmailCrmSchema();
+    const rows = await sql`
+      INSERT INTO email_broadcasts (
+        creator_id, workspace_id, subject, body, audience, audience_label,
+        recipient_count, open_rate, click_rate, status, image_url
+      )
+      VALUES (
+        ${input.creatorId},
+        ${input.workspaceId ?? null},
+        ${input.subject},
+        ${input.body},
+        ${input.audience},
+        ${audienceLabel},
+        ${input.recipientCount},
+        ${0},
+        ${0},
+        ${input.status},
+        ${input.imageUrl ?? null}
+      )
+      RETURNING *
+    `;
+    const row = rows?.[0] as Record<string, unknown> | undefined;
+    if (!row) return null;
+    const broadcast: EmailBroadcast = {
+      id: String(row.id),
+      subject: String(row.subject ?? input.subject),
+      body: String(row.body ?? input.body),
+      image_url: (row.image_url as string) ?? input.imageUrl ?? null,
+      audience: String(row.audience ?? input.audience),
+      audience_label: String(row.audience_label ?? audienceLabel),
+      recipient_count: Number(row.recipient_count) || input.recipientCount,
+      open_rate: Number(row.open_rate) || 0,
+      click_rate: Number(row.click_rate) || 0,
+      status: (row.status as EmailBroadcast['status']) || input.status,
+      sent_at: String(row.sent_at ?? new Date().toISOString()),
+    };
+    return { id: Number(row.id) || broadcast.id, broadcast, demo: false };
+  } catch (error) {
+    console.error('[email/crm] persistEmailBroadcast failed', error);
+    return null;
+  }
+}
+
+/** Upsert the creator's in-progress composer draft so reloads restore content. */
+export async function upsertPersistedDraftBroadcast(input: {
+  creatorId: string;
+  workspaceId?: string | null;
+  subject: string;
+  body: string;
+  audience: string;
+  imageUrl?: string | null;
+}): Promise<{ id: string | number; broadcast: EmailBroadcast; demo: boolean } | null> {
+  const audienceLabel = audienceLabelFor(input.audience);
+
+  if (!process.env.DATABASE_URL?.trim()) {
+    const broadcast = upsertDraftBroadcast({
+      creatorId: input.creatorId,
+      subject: input.subject,
+      body: input.body,
+      audience: input.audience,
+      image_url: input.imageUrl,
+    });
+    return { id: broadcast.id, broadcast, demo: true };
+  }
+
+  try {
+    await ensureEmailCrmSchema();
+    const existing = input.workspaceId
+      ? await sql`
+          SELECT id FROM email_broadcasts
+          WHERE creator_id = ${input.creatorId}
+            AND status = 'draft'
+            AND (workspace_id = ${input.workspaceId} OR workspace_id IS NULL)
+          ORDER BY sent_at DESC
+          LIMIT 1
+        `
+      : await sql`
+          SELECT id FROM email_broadcasts
+          WHERE creator_id = ${input.creatorId}
+            AND status = 'draft'
+          ORDER BY sent_at DESC
+          LIMIT 1
+        `;
+    const existingId = existing?.[0]?.id as number | undefined;
+
+    const rows = existingId
+      ? await sql`
+          UPDATE email_broadcasts
+          SET
+            workspace_id = COALESCE(${input.workspaceId ?? null}, workspace_id),
+            subject = ${input.subject},
+            body = ${input.body},
+            audience = ${input.audience},
+            audience_label = ${audienceLabel},
+            image_url = ${input.imageUrl ?? null},
+            sent_at = now()
+          WHERE id = ${existingId} AND creator_id = ${input.creatorId}
+          RETURNING *
+        `
+      : await sql`
+          INSERT INTO email_broadcasts (
+            creator_id, workspace_id, subject, body, audience, audience_label,
+            recipient_count, open_rate, click_rate, status, image_url
+          )
+          VALUES (
+            ${input.creatorId},
+            ${input.workspaceId ?? null},
+            ${input.subject},
+            ${input.body},
+            ${input.audience},
+            ${audienceLabel},
+            ${0},
+            ${0},
+            ${0},
+            'draft',
+            ${input.imageUrl ?? null}
+          )
+          RETURNING *
+        `;
+
+    const row = rows?.[0] as Record<string, unknown> | undefined;
+    if (!row) return null;
+    const broadcast: EmailBroadcast = {
+      id: String(row.id),
+      subject: String(row.subject ?? input.subject),
+      body: String(row.body ?? input.body),
+      image_url: (row.image_url as string) ?? input.imageUrl ?? null,
+      audience: String(row.audience ?? input.audience),
+      audience_label: String(row.audience_label ?? audienceLabel),
+      recipient_count: 0,
+      open_rate: 0,
+      click_rate: 0,
+      status: 'draft',
+      sent_at: String(row.sent_at ?? new Date().toISOString()),
+    };
+    return { id: Number(row.id) || broadcast.id, broadcast, demo: false };
+  } catch (error) {
+    console.error('[email/crm] upsertPersistedDraftBroadcast failed', error);
+    return null;
   }
 }
 

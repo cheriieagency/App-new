@@ -1,18 +1,10 @@
 import * as React from 'react';
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Img,
-  Link,
-  Preview,
-  Section,
-  Text,
-} from '@react-email/components';
+import { Heading, Img, Link, Section, Text } from '@react-email/components';
 import { splitBodyAroundImage } from '@/lib/email/image-token';
+import {
+  ClikdEmailLayout,
+  emailStyles,
+} from '@/lib/email/templates/ClikdEmailLayout';
 
 export type BroadcastImagePlacement = 'top' | 'middle' | 'bottom' | 'inline';
 
@@ -60,109 +52,53 @@ export function BroadcastEmail({
     imageUrl && marker.hasMarker ? (
       <>
         {marker.before.trim() ? (
-          <Text style={paragraph}>{marker.before}</Text>
+          <Text style={emailStyles.paragraph}>{marker.before}</Text>
         ) : null}
         {imageBlock}
         {marker.after.trim() ? (
-          <Text style={paragraph}>{marker.after}</Text>
+          <Text style={emailStyles.paragraph}>{marker.after}</Text>
         ) : null}
       </>
     ) : imagePlacement === 'middle' || imagePlacement === 'inline' ? (
       <>
-        {beforeMiddle ? <Text style={paragraph}>{beforeMiddle}</Text> : null}
+        {beforeMiddle ? (
+          <Text style={emailStyles.paragraph}>{beforeMiddle}</Text>
+        ) : null}
         {imageBlock}
-        {afterMiddle ? <Text style={paragraph}>{afterMiddle}</Text> : null}
+        {afterMiddle ? (
+          <Text style={emailStyles.paragraph}>{afterMiddle}</Text>
+        ) : null}
       </>
     ) : (
       <>
         {imagePlacement === 'top' && imageBlock}
-        <Text style={paragraph}>{bodyContent}</Text>
+        <Text style={emailStyles.paragraph}>{bodyContent}</Text>
         {imagePlacement === 'bottom' && imageBlock}
       </>
     );
 
   return (
-    <Html>
-      <Head />
-      <Preview>{previewText || subject}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Text style={brand}>
-            clikd<span style={{ color: '#F472B6' }}>:</span>
-          </Text>
-          <Heading style={h1}>{subject}</Heading>
-          {bodyBlocks}
-          <Hr style={hr} />
-          <Text style={footer}>
-            You received this email because you subscribe to {workspaceName} on clikd:.
-            <br />
-            <Link href={unsubscribeUrl} style={link}>
-              Unsubscribe
-            </Link>
-            {' · '}
-            <Link href="https://clikd.app/legal/integritet" style={link}>
-              Privacy
-            </Link>
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+    <ClikdEmailLayout
+      previewText={previewText || subject}
+      footer={
+        <>
+          You received this email because you subscribe to {workspaceName} on
+          clikd:.
+          <br />
+          <Link href={unsubscribeUrl} style={emailStyles.link}>
+            Unsubscribe
+          </Link>
+          {' · '}
+          <Link href="https://clikd.app/legal/integritet" style={emailStyles.link}>
+            Privacy
+          </Link>
+        </>
+      }
+    >
+      <Heading style={emailStyles.h1}>{subject}</Heading>
+      {bodyBlocks}
+    </ClikdEmailLayout>
   );
 }
-
-const main = {
-  backgroundColor: '#FAFAFA',
-  fontFamily:
-    '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-};
-
-const container = {
-  margin: '0 auto',
-  padding: '32px 24px',
-  maxWidth: '560px',
-  backgroundColor: '#ffffff',
-  borderRadius: '16px',
-  border: '1px solid #e2e8f0',
-};
-
-const brand = {
-  fontSize: '18px',
-  fontWeight: 800 as const,
-  color: '#0F172A',
-  margin: '0 0 16px',
-};
-
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 800 as const,
-  color: '#2B2568',
-  margin: '0 0 20px',
-  lineHeight: '1.3',
-};
-
-const paragraph = {
-  fontSize: '15px',
-  lineHeight: '1.65',
-  color: '#334155',
-  whiteSpace: 'pre-wrap' as const,
-  margin: '0 0 8px',
-};
-
-const hr = {
-  borderColor: '#e2e8f0',
-  margin: '28px 0 16px',
-};
-
-const footer = {
-  fontSize: '12px',
-  lineHeight: '1.5',
-  color: '#94a3b8',
-  margin: 0,
-};
-
-const link = {
-  color: '#F472B6',
-  textDecoration: 'underline',
-};
 
 export default BroadcastEmail;

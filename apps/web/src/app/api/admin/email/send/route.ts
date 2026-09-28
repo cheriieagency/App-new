@@ -4,15 +4,18 @@ import { auth } from '@/lib/auth';
 import sql from '@/app/api/utils/sql';
 import {
   applyMergeTags,
-  createBroadcast,
-  getMockEmailCrmPayload,
+  AUDIENCE_OPTIONS,
   listEmailSubscribers,
   type EmailSubscriber,
   type SubscriberSource,
 } from '@/lib/mock-email-crm';
 import { resendEnv } from '@/lib/config/env';
 import { buildCommunityAccessUrl } from '@/lib/community-access-email';
-import { ensureEmailCrmSchema, trackBroadcastMessages } from '@/lib/email/crm-persist';
+import {
+  ensureEmailCrmSchema,
+  persistEmailBroadcast,
+  trackBroadcastMessages,
+} from '@/lib/email/crm-persist';
 import { stripEmailImageToken } from '@/lib/email/image-token';
 import { resendMissingResponse, sendEmail } from '@/lib/email/send';
 import { buildUnsubscribeUrl } from '@/lib/email/unsubscribe';
@@ -65,7 +68,7 @@ async function loadWorkspaceSubscribers(
 ): Promise<EmailSubscriber[]> {
   if (!process.env.DATABASE_URL?.trim()) {
     return filterSubscribers(
-      listEmailSubscribers({ community_id: communityId }),
+      listEmailSubscribers({ creatorId, community_id: communityId }),
       recipientFilter
     );
   }
@@ -301,46 +304,31 @@ export async function POST(request: Request) {
   const failedCount = results.length - sentCount;
   const firstError = results.find((r) => !r.ok)?.error;
 
-  const broadcast = createBroadcast({
+  // Persist every send/test under the logged-in creator (including partial failures).
+  const persisted = await persistEmailBroadcast({
+    creatorId: session.user.id,
+    workspaceId,
     subject,
     body: bodyContent,
     audience: recipientFilter,
-    image_url: imageUrl,
+    recipientCount: sentCount,
     status: isTest ? 'test' : 'sent',
+    imageUrl,
   });
 
-  if (process.env.DATABASE_URL?.trim() && !isTest && sentCount > 0) {
-    try {
-      const inserted = await sql`
-        INSERT INTO email_broadcasts (
-          creator_id, subject, body, audience, audience_label,
-          recipient_count, open_rate, click_rate, status, image_url
-        )
-        VALUES (
-          ${session.user.id},
-          ${broadcast.subject},
-          ${broadcast.body},
-          ${broadcast.audience},
-          ${broadcast.audience_label},
-          ${sentCount},
-          ${0},
-          ${0},
-          'sent',
-          ${imageUrl}
-        )
-        RETURNING id
-      `;
-      const broadcastId = Number(inserted?.[0]?.id);
-      if (Number.isFinite(broadcastId) && broadcastId > 0) {
-        await trackBroadcastMessages({
-          creatorId: session.user.id,
-          broadcastId,
-          messages: results
-            .filter((r) => r.ok && r.id)
-            .map((r) => ({ email: r.email, resendId: String(r.id) })),
-        });
-      }
+  if (persisted && !persisted.demo && sentCount > 0) {
+    const broadcastId = Number(persisted.id);
+    if (Number.isFinite(broadcastId) && broadcastId > 0) {
+      await trackBroadcastMessages({
+        creatorId: session.user.id,
+        broadcastId,
+        messages: results
+          .filter((r) => r.ok && r.id)
+          .map((r) => ({ email: r.email, resendId: String(r.id) })),
+      });
+    }
 
+    if (!isTest) {
       void import('@/lib/notifications/persist')
         .then(({ createUserNotification }) =>
           createUserNotification({
@@ -350,7 +338,7 @@ export async function POST(request: Request) {
             body: `${sentCount} delivered${failedCount ? ` · ${failedCount} failed` : ''}`,
             href: '/admin?section=email',
             meta: {
-              broadcast_id: broadcastId || null,
+              broadcast_id: Number.isFinite(broadcastId) ? broadcastId : null,
               sent: sentCount,
               failed: failedCount,
             },
@@ -359,8 +347,6 @@ export async function POST(request: Request) {
         .catch((err) =>
           console.warn('[email/send] notification failed', err)
         );
-    } catch (e) {
-      console.error('[email/send] broadcast persist failed', e);
     }
   }
 
@@ -374,6 +360,7 @@ export async function POST(request: Request) {
         sent: 0,
         failed: failedCount,
         results,
+        broadcast: persisted?.broadcast ?? null,
         error: firstError || 'send_failed',
         message: firstError || 'Email delivery failed. Check RESEND_API_KEY and RESEND_FROM_EMAIL.',
       },
@@ -389,8 +376,8 @@ export async function POST(request: Request) {
     sent: sentCount,
     failed: failedCount,
     results: isTest ? results : results.slice(0, 20),
-    broadcast,
-    demo: !process.env.DATABASE_URL?.trim(),
-    audiences: getMockEmailCrmPayload().audiences.length,
+    broadcast: persisted?.broadcast ?? null,
+    demo: persisted?.demo ?? !process.env.DATABASE_URL?.trim(),
+    audiences: AUDIENCE_OPTIONS.length,
   });
 }

@@ -13,38 +13,30 @@ export const META_OAUTH_STATE_COOKIE = 'clikd_meta_oauth_state';
 export const META_OAUTH_TARGET_COOKIE = 'clikd_meta_oauth_target';
 
 /**
- * Canonical Meta OAuth scopes — must include Pages + Instagram permissions
- * so /me/accounts returns pages with linked IG Business accounts.
+ * Canonical Meta OAuth scopes — Advanced Access–safe set only.
+ * Do NOT add ads_*, business_management, pages_messaging, pages_manage_metadata,
+ * or instagram_manage_engagement — Meta blocks external login when those are
+ * requested without approved Advanced Access.
  */
 export const META_OAUTH_SCOPES = [
   'public_profile',
   'email',
-  'pages_show_list',
-  'pages_manage_posts',
-  'pages_read_engagement',
-  // Required so /{page-id}/subscribed_apps succeeds with a Page Access Token.
-  'pages_manage_metadata',
-  // Page + IG Messaging (Inbox DMs / private replies).
-  'pages_messaging',
   'instagram_basic',
   'instagram_content_publish',
-  'instagram_manage_insights',
   'instagram_manage_comments',
-  // Like/unlike comments & media from the IG professional account (Inbox actions).
-  'instagram_manage_engagement',
   'instagram_manage_messages',
-  'business_management',
-  // Meta Ads Management (/me/adaccounts + campaign status/budget).
-  'ads_read',
-  'ads_management',
+  'pages_read_engagement',
+  'pages_show_list',
+  'instagram_manage_insights',
+  'pages_manage_posts',
 ] as const;
 
-/** Scopes required for Social Inbox DMs (Page conversations + send). */
+/** Inbox-relevant subset of the approved Meta scopes (for missing-scope checks). */
 export const META_INBOX_DM_SCOPES = [
   'instagram_manage_messages',
-  'pages_messaging',
-  'pages_manage_metadata',
   'instagram_basic',
+  'pages_show_list',
+  'pages_read_engagement',
 ] as const;
 
 export function parseMetaOAuthTarget(raw: string | null | undefined): MetaOAuthTarget {

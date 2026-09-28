@@ -8,7 +8,6 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { getMockCommunitiesForUser } from '@/lib/mock-communities';
 import { fireEmailAutomations, persistSubscriber } from '@/lib/email/crm-persist';
-import { syncSubscriber } from '@/lib/mock-email-crm';
 import { getSiteUrl } from '@/lib/site';
 import {
   REFERRAL_COOKIE,
@@ -210,27 +209,10 @@ export async function POST(request: Request) {
                 console.warn('[communities/join] notification failed', err)
               );
           }
-        } else {
-          syncSubscriber({
-            email: session.user.email,
-            name: session.user.name || 'Medlem',
-            user_id: session.user.id,
-            image: session.user.image ?? null,
-            source: 'community_member',
-            community_id: Number(community_id),
-            extra_tags: ['Community Member'],
-          });
         }
+        // Without a community owner id we skip mock CRM sync — never write to a shared bucket.
       } catch {
-        syncSubscriber({
-          email: session.user.email,
-          name: session.user.name || 'Medlem',
-          user_id: session.user.id,
-          image: session.user.image ?? null,
-          source: 'community_member',
-          community_id: Number(community_id),
-          extra_tags: ['Community Member'],
-        });
+        // Owner lookup failed; skip unscoped CRM writes.
       }
     } else if (action === 'leave') {
       const deleted = await sql`
@@ -250,17 +232,7 @@ export async function POST(request: Request) {
     console.error(error);
     // Demo mode without DB: pretend join succeeded so UI can continue.
     if (!process.env.DATABASE_URL?.trim()) {
-      if (action === 'join') {
-        syncSubscriber({
-          email: session.user.email,
-          name: session.user.name || 'Medlem',
-          user_id: session.user.id,
-          image: session.user.image ?? null,
-          source: 'community_member',
-          community_id: Number(community_id) || null,
-          extra_tags: ['Community Member'],
-        });
-      }
+      // Demo join without DB has no durable community owner — skip CRM write.
       return Response.json({ success: true, mode: 'demo-mock' });
     }
     return Response.json({ error: 'Failed to update membership' }, { status: 500 });

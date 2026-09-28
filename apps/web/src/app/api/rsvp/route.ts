@@ -2,7 +2,6 @@ import sql from '@/app/api/utils/sql';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { fireEmailAutomations, persistSubscriber } from '@/lib/email/crm-persist';
-import { syncSubscriber } from '@/lib/mock-email-crm';
 import { getSiteUrl } from '@/lib/site';
 
 export async function POST(request: Request) {
@@ -60,42 +59,17 @@ export async function POST(request: Request) {
             recipientEmail: session.user.email,
             recipientName: session.user.name || 'Medlem',
           }).catch((err) => console.warn('[rsvp] automation failed', err));
-        } else {
-          syncSubscriber({
-            email: session.user.email,
-            name: session.user.name || 'Medlem',
-            user_id: session.user.id,
-            image: session.user.image ?? null,
-            source: 'webinar_attendee',
-            extra_tags: ['Webinar Attendee'],
-          });
         }
       } catch (e) {
         console.error('[rsvp] email CRM sync failed', e);
       }
-    } else {
-      syncSubscriber({
-        email: session.user.email,
-        name: session.user.name || 'Medlem',
-        user_id: session.user.id,
-        image: session.user.image ?? null,
-        source: 'webinar_attendee',
-        extra_tags: ['Webinar Attendee'],
-      });
     }
 
     return Response.json({ rsvpd: true });
   } catch (error) {
     console.error(error);
     if (!process.env.DATABASE_URL?.trim()) {
-      syncSubscriber({
-        email: session.user.email,
-        name: session.user.name || 'Medlem',
-        user_id: session.user.id,
-        image: session.user.image ?? null,
-        source: 'webinar_attendee',
-        extra_tags: ['Webinar Attendee'],
-      });
+      // Demo RSVP without event owner id — skip unscoped CRM writes.
       return Response.json({ rsvpd: true, demo: true });
     }
     return Response.json({ error: 'Failed to toggle RSVP' }, { status: 500 });

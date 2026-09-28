@@ -97,7 +97,7 @@ export async function GET(request: Request) {
   let loginUrl: string;
   try {
     loginUrl = buildMetaLoginUrl(state, origin, target);
-    // Re-assert scopes + rerequest so Meta prompts for pages_manage_metadata etc.
+    // Re-assert the approved Advanced Access–safe scope set + force re-consent.
     const parsed = new URL(loginUrl);
     parsed.searchParams.set('scope', META_OAUTH_SCOPES.join(','));
     parsed.searchParams.set('auth_type', 'rerequest');

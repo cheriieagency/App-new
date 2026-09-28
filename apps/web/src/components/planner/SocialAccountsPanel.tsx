@@ -63,11 +63,16 @@ const PLATFORM_TITLES: Record<SocialPlatform, string> = {
 
 const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
   instagram: [
+    'public_profile',
+    'email',
     'instagram_basic',
     'instagram_content_publish',
-    'pages_show_list',
+    'instagram_manage_comments',
+    'instagram_manage_messages',
     'pages_read_engagement',
-    'business_management',
+    'pages_show_list',
+    'instagram_manage_insights',
+    'pages_manage_posts',
   ],
   tiktok: [
     'user.info.basic',
@@ -88,11 +93,16 @@ const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
     'r_organization_social',
   ],
   facebook: [
-    'pages_show_list',
-    'pages_manage_posts',
+    'public_profile',
+    'email',
+    'instagram_basic',
+    'instagram_content_publish',
+    'instagram_manage_comments',
+    'instagram_manage_messages',
     'pages_read_engagement',
-    'pages_manage_metadata',
-    'business_management',
+    'pages_show_list',
+    'instagram_manage_insights',
+    'pages_manage_posts',
   ],
   pinterest: [
     'boards:read',
