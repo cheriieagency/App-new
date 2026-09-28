@@ -71,8 +71,6 @@ const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
     'instagram_manage_messages',
     'pages_read_engagement',
     'pages_show_list',
-    'instagram_manage_insights',
-    'pages_manage_posts',
   ],
   tiktok: [
     'user.info.basic',
@@ -101,8 +99,6 @@ const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
     'instagram_manage_messages',
     'pages_read_engagement',
     'pages_show_list',
-    'instagram_manage_insights',
-    'pages_manage_posts',
   ],
   pinterest: [
     'boards:read',
