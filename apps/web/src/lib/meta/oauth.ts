@@ -251,12 +251,100 @@ export type ResolvedMetaGraphAccounts = {
   source: 'me_accounts' | 'business_portfolio' | 'mixed';
 };
 
+/** Nested IG fields used on /me/accounts and per-page token fallback. */
+const IG_BUSINESS_ACCOUNT_FIELDS =
+  'instagram_business_account{id,username,name,profile_picture_url}';
+
 const PAGE_ACCOUNT_FIELDS =
-  'id,name,access_token,category,tasks,instagram_business_account{id,username,profile_picture_url,name,followers_count,media_count}';
+  `id,name,access_token,category,tasks,${IG_BUSINESS_ACCOUNT_FIELDS}`;
+
+/**
+ * Step 2 — When /me/accounts omits instagram_business_account, retry with the
+ * Page Access Token (often required for linked IG Business accounts).
+ */
+async function fetchInstagramBusinessAccountWithPageToken(
+  pageId: string,
+  pageAccessToken: string
+): Promise<MetaIgBusinessAccount | null> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(pageId)}`);
+  url.searchParams.set('fields', IG_BUSINESS_ACCOUNT_FIELDS);
+  url.searchParams.set('access_token', pageAccessToken);
+
+  const res = await fetch(url.toString());
+  const data = (await res.json()) as {
+    instagram_business_account?: MetaIgBusinessAccount;
+    error?: { message?: string };
+  };
+  if (!res.ok) {
+    throw new Error(
+      data.error?.message ||
+        `Failed to fetch instagram_business_account for page ${pageId}`
+    );
+  }
+  return data.instagram_business_account?.id
+    ? data.instagram_business_account
+    : null;
+}
+
+/**
+ * For each page missing IG on the first response, re-fetch with that page's
+ * own access_token and attach instagram_business_account when found.
+ */
+export async function enrichPagesWithPageTokenIgFallback(
+  pages: MetaPageAccount[]
+): Promise<MetaPageAccount[]> {
+  const enriched = await Promise.all(
+    pages.map(async (page) => {
+      const label = `${page.name || 'Untitled'} (${page.id})`;
+
+      if (page.instagram_business_account?.id) {
+        console.log(
+          `[meta/oauth] page "${label}": Instagram found in step 1` +
+            ` (@${page.instagram_business_account.username || page.instagram_business_account.id})`
+        );
+        return page;
+      }
+
+      if (!page.access_token?.trim()) {
+        console.log(
+          `[meta/oauth] page "${label}": no Instagram in step 1; skipped step 2 (missing page access_token)`
+        );
+        return page;
+      }
+
+      try {
+        const ig = await fetchInstagramBusinessAccountWithPageToken(
+          page.id,
+          page.access_token
+        );
+        if (ig?.id) {
+          console.log(
+            `[meta/oauth] page "${label}": Instagram found in step 2` +
+              ` (@${ig.username || ig.id})`
+          );
+          return { ...page, instagram_business_account: ig };
+        }
+        console.log(
+          `[meta/oauth] page "${label}": no Instagram in step 1 or step 2`
+        );
+      } catch (error) {
+        console.warn(
+          `[meta/oauth] page "${label}": step 2 Instagram lookup failed`,
+          error
+        );
+      }
+      return page;
+    })
+  );
+
+  return enriched;
+}
 
 /**
  * Step B — Fetch Facebook Pages + linked Instagram Business accounts.
- * Graph v19: /me/accounts?fields=id,name,access_token,category,tasks,instagram_business_account{…}
+ * 1) GET /me/accounts?fields=…instagram_business_account{…}
+ * 2) Per page missing IG: GET /{page-id}?fields=instagram_business_account{…}
+ *    using that page's own access_token.
  */
 export async function fetchMetaPagesWithInstagram(
   userAccessToken: string
@@ -274,7 +362,30 @@ export async function fetchMetaPagesWithInstagram(
   }
 
   const pages = data.data ?? [];
-  return [...pages].sort((a, b) => {
+  console.log(
+    `[meta/oauth] step 1 /me/accounts: found ${pages.length} page(s)`,
+    pages.map((p) => ({
+      id: p.id,
+      name: p.name,
+      has_page_token: Boolean(p.access_token),
+      ig_in_step1: Boolean(p.instagram_business_account?.id),
+      ig_username: p.instagram_business_account?.username ?? null,
+    }))
+  );
+
+  const enriched = await enrichPagesWithPageTokenIgFallback(pages);
+
+  console.log(
+    `[meta/oauth] pages after step 1+2:`,
+    enriched.map((p) => ({
+      id: p.id,
+      name: p.name,
+      ig_id: p.instagram_business_account?.id ?? null,
+      ig_username: p.instagram_business_account?.username ?? null,
+    }))
+  );
+
+  return [...enriched].sort((a, b) => {
     const aIg = a.instagram_business_account?.id ? 1 : 0;
     const bIg = b.instagram_business_account?.id ? 1 : 0;
     return bIg - aIg;
@@ -354,7 +465,8 @@ export async function resolveMetaPagesAndInstagram(
             p.instagram_business_account || existing?.instagram_business_account,
         });
       }
-      pages = [...byId.values()].sort((a, b) => {
+      pages = await enrichPagesWithPageTokenIgFallback([...byId.values()]);
+      pages = [...pages].sort((a, b) => {
         const aIg = a.instagram_business_account?.id ? 1 : 0;
         const bIg = b.instagram_business_account?.id ? 1 : 0;
         return bIg - aIg;
