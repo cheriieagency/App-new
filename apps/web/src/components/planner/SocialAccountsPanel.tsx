@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/dialog';
 import { localeTag, useLanguage } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
-import { looksLikeOpaquePinterestId } from '@/lib/pinterest/heal-identity';
+import { looksLikeOpaquePinterestId } from '@/lib/pinterest/identity-label';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import WorkspaceOAuthGuideBanner from '@/components/admin/WorkspaceOAuthGuideBanner';

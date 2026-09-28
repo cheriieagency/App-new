@@ -78,16 +78,56 @@ export function decodeMetaOAuthState(state: string | null | undefined): {
   return { nonce, target };
 }
 
+function isLocalHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1'
+  );
+}
+
+/**
+ * Absolute redirect_uri for authorize + token exchange (must match exactly).
+ * Prefer the live request host so localhost Connect never bounces to
+ * production when NEXT_PUBLIC_APP_URL still points at clikd.app, and so
+ * www vs apex matches the browser host (state cookie + Meta redirect).
+ */
 export function getMetaCallbackUrl(requestOrigin?: string | null): string {
-  const base =
+  const fromRequest = requestOrigin?.trim();
+  if (fromRequest) {
+    try {
+      return `${new URL(fromRequest).origin}/api/auth/callback/meta`;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const fromEnv =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    requestOrigin?.trim() ||
+    process.env.BETTER_AUTH_URL?.trim() ||
     getSiteUrl();
   try {
-    return `${new URL(base).origin}/api/auth/callback/meta`;
+    return `${new URL(fromEnv).origin}/api/auth/callback/meta`;
   } catch {
     return `${getSiteUrl()}/api/auth/callback/meta`;
   }
+}
+
+/** Cookie Domain so www + apex share OAuth state on production. */
+export function metaOAuthCookieDomain(
+  requestOrigin?: string | null
+): string | undefined {
+  if (!requestOrigin) return undefined;
+  try {
+    const host = new URL(requestOrigin).hostname;
+    if (isLocalHost(host)) return undefined;
+    if (host === 'clikd.app' || host.endsWith('.clikd.app')) {
+      return '.clikd.app';
+    }
+  } catch {
+    /* ignore */
+  }
+  return undefined;
 }
 
 export function buildMetaLoginUrl(
@@ -129,18 +169,26 @@ export async function exchangeCodeForShortLivedToken(
   const appSecret = metaEnv.appSecret();
   if (!appId || !appSecret) throw new Error('Meta app credentials missing');
 
+  const redirectUri = getMetaCallbackUrl(requestOrigin);
   const url = new URL(`${GRAPH_BASE}/oauth/access_token`);
   url.searchParams.set('client_id', appId);
   url.searchParams.set('client_secret', appSecret);
-  url.searchParams.set('redirect_uri', getMetaCallbackUrl(requestOrigin));
+  url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('code', code);
 
   const res = await fetch(url.toString());
   const data = (await res.json()) as MetaTokenResponse & {
-    error?: { message?: string };
+    error?: { message?: string; type?: string; code?: number };
   };
   if (!res.ok || !data.access_token) {
-    throw new Error(data.error?.message || 'Failed to exchange OAuth code');
+    const base = data.error?.message || 'Failed to exchange OAuth code';
+    // Common when Valid OAuth Redirect URIs in Meta console don't match.
+    if (/redirect_uri|redirect uri|OAuthException/i.test(base)) {
+      throw new Error(
+        `${base} — register this exact Redirect URI in the Meta app: ${redirectUri}`
+      );
+    }
+    throw new Error(base);
   }
   return data;
 }
