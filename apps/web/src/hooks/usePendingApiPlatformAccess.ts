@@ -22,7 +22,7 @@ export function usePendingApiPlatformAccess() {
     const canAccessIntegrations = canAccessPendingApiIntegrations(email);
     return {
       email,
-      /** True when YouTube / Pinterest / Google UI may be shown. */
+      /** True when remaining gated platforms (YouTube / Google) UI may be shown. */
       canAccessIntegrations,
       canAccessPlatform: (platform: string | null | undefined) =>
         canAccessPendingApiPlatform(email, platform),

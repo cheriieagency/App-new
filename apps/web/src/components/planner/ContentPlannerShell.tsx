@@ -113,6 +113,7 @@ export default function ContentPlannerShell({
     'tiktok',
     'linkedin',
     'youtube',
+    'pinterest',
   ] as const);
 
   const project = activeWorkspace?.name ?? 'Ebba Creator Lab';
