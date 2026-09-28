@@ -13,36 +13,31 @@ export const META_OAUTH_STATE_COOKIE = 'clikd_meta_oauth_state';
 export const META_OAUTH_TARGET_COOKIE = 'clikd_meta_oauth_target';
 
 /**
- * Canonical Meta OAuth scopes — must include Pages + Instagram permissions
- * so /me/accounts returns pages with linked IG Business accounts.
+ * Canonical Meta OAuth scopes — Advanced Access–safe set only.
+ * Do NOT add ads_*, business_management, pages_messaging, pages_manage_metadata,
+ * or instagram_manage_engagement — Meta blocks external login when those are
+ * requested without approved Advanced Access.
  */
 export const META_OAUTH_SCOPES = [
   'public_profile',
   'email',
-  'pages_show_list',
-  'pages_manage_posts',
-  'pages_read_engagement',
-  // Required so /{page-id}/subscribed_apps succeeds with a Page Access Token.
-  'pages_manage_metadata',
-  // Page + IG Messaging (Inbox DMs / private replies).
-  'pages_messaging',
   'instagram_basic',
   'instagram_content_publish',
-  'instagram_manage_insights',
   'instagram_manage_comments',
   'instagram_manage_messages',
-  'business_management',
-  // Meta Ads Management (/me/adaccounts + campaign status/budget).
-  'ads_read',
-  'ads_management',
+  'pages_read_engagement',
+  'pages_show_list',
+  // Temporarily omitted until Advanced Access is approved:
+  // 'instagram_manage_insights',
+  // 'pages_manage_posts',
 ] as const;
 
-/** Scopes required for Social Inbox DMs (Page conversations + send). */
+/** Inbox-relevant subset of the approved Meta scopes (for missing-scope checks). */
 export const META_INBOX_DM_SCOPES = [
   'instagram_manage_messages',
-  'pages_messaging',
-  'pages_manage_metadata',
   'instagram_basic',
+  'pages_show_list',
+  'pages_read_engagement',
 ] as const;
 
 export function parseMetaOAuthTarget(raw: string | null | undefined): MetaOAuthTarget {
@@ -76,16 +71,56 @@ export function decodeMetaOAuthState(state: string | null | undefined): {
   return { nonce, target };
 }
 
+function isLocalHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1'
+  );
+}
+
+/**
+ * Absolute redirect_uri for authorize + token exchange (must match exactly).
+ * Prefer the live request host so localhost Connect never bounces to
+ * production when NEXT_PUBLIC_APP_URL still points at clikd.app, and so
+ * www vs apex matches the browser host (state cookie + Meta redirect).
+ */
 export function getMetaCallbackUrl(requestOrigin?: string | null): string {
-  const base =
+  const fromRequest = requestOrigin?.trim();
+  if (fromRequest) {
+    try {
+      return `${new URL(fromRequest).origin}/api/auth/callback/meta`;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const fromEnv =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    requestOrigin?.trim() ||
+    process.env.BETTER_AUTH_URL?.trim() ||
     getSiteUrl();
   try {
-    return `${new URL(base).origin}/api/auth/callback/meta`;
+    return `${new URL(fromEnv).origin}/api/auth/callback/meta`;
   } catch {
     return `${getSiteUrl()}/api/auth/callback/meta`;
   }
+}
+
+/** Cookie Domain so www + apex share OAuth state on production. */
+export function metaOAuthCookieDomain(
+  requestOrigin?: string | null
+): string | undefined {
+  if (!requestOrigin) return undefined;
+  try {
+    const host = new URL(requestOrigin).hostname;
+    if (isLocalHost(host)) return undefined;
+    if (host === 'clikd.app' || host.endsWith('.clikd.app')) {
+      return '.clikd.app';
+    }
+  } catch {
+    /* ignore */
+  }
+  return undefined;
 }
 
 export function buildMetaLoginUrl(
@@ -127,18 +162,26 @@ export async function exchangeCodeForShortLivedToken(
   const appSecret = metaEnv.appSecret();
   if (!appId || !appSecret) throw new Error('Meta app credentials missing');
 
+  const redirectUri = getMetaCallbackUrl(requestOrigin);
   const url = new URL(`${GRAPH_BASE}/oauth/access_token`);
   url.searchParams.set('client_id', appId);
   url.searchParams.set('client_secret', appSecret);
-  url.searchParams.set('redirect_uri', getMetaCallbackUrl(requestOrigin));
+  url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('code', code);
 
   const res = await fetch(url.toString());
   const data = (await res.json()) as MetaTokenResponse & {
-    error?: { message?: string };
+    error?: { message?: string; type?: string; code?: number };
   };
   if (!res.ok || !data.access_token) {
-    throw new Error(data.error?.message || 'Failed to exchange OAuth code');
+    const base = data.error?.message || 'Failed to exchange OAuth code';
+    // Common when Valid OAuth Redirect URIs in Meta console don't match.
+    if (/redirect_uri|redirect uri|OAuthException/i.test(base)) {
+      throw new Error(
+        `${base} — register this exact Redirect URI in the Meta app: ${redirectUri}`
+      );
+    }
+    throw new Error(base);
   }
   return data;
 }
@@ -208,12 +251,100 @@ export type ResolvedMetaGraphAccounts = {
   source: 'me_accounts' | 'business_portfolio' | 'mixed';
 };
 
+/** Nested IG fields used on /me/accounts and per-page token fallback. */
+const IG_BUSINESS_ACCOUNT_FIELDS =
+  'instagram_business_account{id,username,name,profile_picture_url}';
+
 const PAGE_ACCOUNT_FIELDS =
-  'id,name,access_token,category,tasks,instagram_business_account{id,username,profile_picture_url,name,followers_count,media_count}';
+  `id,name,access_token,category,tasks,${IG_BUSINESS_ACCOUNT_FIELDS}`;
+
+/**
+ * Step 2 — When /me/accounts omits instagram_business_account, retry with the
+ * Page Access Token (often required for linked IG Business accounts).
+ */
+async function fetchInstagramBusinessAccountWithPageToken(
+  pageId: string,
+  pageAccessToken: string
+): Promise<MetaIgBusinessAccount | null> {
+  const url = new URL(`${GRAPH_BASE}/${encodeURIComponent(pageId)}`);
+  url.searchParams.set('fields', IG_BUSINESS_ACCOUNT_FIELDS);
+  url.searchParams.set('access_token', pageAccessToken);
+
+  const res = await fetch(url.toString());
+  const data = (await res.json()) as {
+    instagram_business_account?: MetaIgBusinessAccount;
+    error?: { message?: string };
+  };
+  if (!res.ok) {
+    throw new Error(
+      data.error?.message ||
+        `Failed to fetch instagram_business_account for page ${pageId}`
+    );
+  }
+  return data.instagram_business_account?.id
+    ? data.instagram_business_account
+    : null;
+}
+
+/**
+ * For each page missing IG on the first response, re-fetch with that page's
+ * own access_token and attach instagram_business_account when found.
+ */
+export async function enrichPagesWithPageTokenIgFallback(
+  pages: MetaPageAccount[]
+): Promise<MetaPageAccount[]> {
+  const enriched = await Promise.all(
+    pages.map(async (page) => {
+      const label = `${page.name || 'Untitled'} (${page.id})`;
+
+      if (page.instagram_business_account?.id) {
+        console.log(
+          `[meta/oauth] page "${label}": Instagram found in step 1` +
+            ` (@${page.instagram_business_account.username || page.instagram_business_account.id})`
+        );
+        return page;
+      }
+
+      if (!page.access_token?.trim()) {
+        console.log(
+          `[meta/oauth] page "${label}": no Instagram in step 1; skipped step 2 (missing page access_token)`
+        );
+        return page;
+      }
+
+      try {
+        const ig = await fetchInstagramBusinessAccountWithPageToken(
+          page.id,
+          page.access_token
+        );
+        if (ig?.id) {
+          console.log(
+            `[meta/oauth] page "${label}": Instagram found in step 2` +
+              ` (@${ig.username || ig.id})`
+          );
+          return { ...page, instagram_business_account: ig };
+        }
+        console.log(
+          `[meta/oauth] page "${label}": no Instagram in step 1 or step 2`
+        );
+      } catch (error) {
+        console.warn(
+          `[meta/oauth] page "${label}": step 2 Instagram lookup failed`,
+          error
+        );
+      }
+      return page;
+    })
+  );
+
+  return enriched;
+}
 
 /**
  * Step B — Fetch Facebook Pages + linked Instagram Business accounts.
- * Graph v19: /me/accounts?fields=id,name,access_token,category,tasks,instagram_business_account{…}
+ * 1) GET /me/accounts?fields=…instagram_business_account{…}
+ * 2) Per page missing IG: GET /{page-id}?fields=instagram_business_account{…}
+ *    using that page's own access_token.
  */
 export async function fetchMetaPagesWithInstagram(
   userAccessToken: string
@@ -231,7 +362,30 @@ export async function fetchMetaPagesWithInstagram(
   }
 
   const pages = data.data ?? [];
-  return [...pages].sort((a, b) => {
+  console.log(
+    `[meta/oauth] step 1 /me/accounts: found ${pages.length} page(s)`,
+    pages.map((p) => ({
+      id: p.id,
+      name: p.name,
+      has_page_token: Boolean(p.access_token),
+      ig_in_step1: Boolean(p.instagram_business_account?.id),
+      ig_username: p.instagram_business_account?.username ?? null,
+    }))
+  );
+
+  const enriched = await enrichPagesWithPageTokenIgFallback(pages);
+
+  console.log(
+    `[meta/oauth] pages after step 1+2:`,
+    enriched.map((p) => ({
+      id: p.id,
+      name: p.name,
+      ig_id: p.instagram_business_account?.id ?? null,
+      ig_username: p.instagram_business_account?.username ?? null,
+    }))
+  );
+
+  return [...enriched].sort((a, b) => {
     const aIg = a.instagram_business_account?.id ? 1 : 0;
     const bIg = b.instagram_business_account?.id ? 1 : 0;
     return bIg - aIg;
@@ -311,7 +465,8 @@ export async function resolveMetaPagesAndInstagram(
             p.instagram_business_account || existing?.instagram_business_account,
         });
       }
-      pages = [...byId.values()].sort((a, b) => {
+      pages = await enrichPagesWithPageTokenIgFallback([...byId.values()]);
+      pages = [...pages].sort((a, b) => {
         const aIg = a.instagram_business_account?.id ? 1 : 0;
         const bIg = b.instagram_business_account?.id ? 1 : 0;
         return bIg - aIg;

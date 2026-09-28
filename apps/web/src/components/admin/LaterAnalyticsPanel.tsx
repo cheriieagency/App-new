@@ -21,6 +21,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useAdminNav } from '@/components/admin/AdminNavContext';
 import { AdminPageHeader, adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import ConnectSocialsEmpty from '@/components/admin/ConnectSocialsEmpty';
 import {
@@ -32,7 +33,6 @@ import { useLanguage } from '@/lib/locale-context';
 import { t, tf, localeTag, type Locale } from '@/lib/i18n';
 import AnalyticsExportDialog from '@/components/admin/AnalyticsExportDialog';
 import { useConnectedSocials } from '@/hooks/useConnectedSocials';
-import { useMetaSync } from '@/hooks/useMetaSync';
 import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import {
   useAnalytics,
@@ -319,6 +319,8 @@ function PerformanceChart({
 export default function LaterAnalyticsPanel() {
   const { locale } = useLanguage();
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
+  const { section } = useAdminNav();
+  const analyticsActive = section === 'analytics';
   const {
     hasConnectedSocials,
     hasInstagram,
@@ -334,8 +336,6 @@ export default function LaterAnalyticsPanel() {
         canAccessPlatform(account.platform)
       ),
     [connectedAccountsRaw, canAccessPlatform]
-  );  const { data: metaSync, refetch: refetchMetaSync } = useMetaSync(
-    hasInstagram || hasConnectedSocials
   );
   const [sub, setSub] = useState<AnalyticsSubTab>(() => {
     if (typeof window === 'undefined') return 'analytics';
@@ -346,15 +346,20 @@ export default function LaterAnalyticsPanel() {
   });
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => rangeFromPreset('1w'));
   // Workspace-scoped analytics — aggregates every connected API for this brand.
+  // Demographics only when Audience is open (heavy Graph fan-out).
   const {
     data: analyticsApi,
     refetch: refetchAnalytics,
     dataUpdatedAt: analyticsUpdatedAt,
     isPending: analyticsPending,
-  } = useAnalytics(hasConnectedSocials || socialsLoading === false, {
-    from: dateRange.from,
-    to: dateRange.to,
-  });
+  } = useAnalytics(
+    analyticsActive && (hasConnectedSocials || socialsLoading === false),
+    {
+      from: dateRange.from,
+      to: dateRange.to,
+    },
+    { includeDemographics: sub === 'audience' }
+  );
   const [rangeOpen, setRangeOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState(dateRange.from);
   const [draftTo, setDraftTo] = useState(dateRange.to);
@@ -370,31 +375,25 @@ export default function LaterAnalyticsPanel() {
     if (fromUrl) setSub(fromUrl);
   }, []);
 
-  // Prefetch live posts for Posts / Reels / Hashtags / overview fallbacks.
+  // Lazy: only hit Posts/Stories Graph routes when that tab is open.
+  // Overview already receives media from /api/analytics.
   const {
     data: postsApi,
     isLoading: postsLoading,
-    refetch: refetchPosts,
   } = useAnalyticsPosts(
-    hasConnectedSocials &&
-      (sub === 'posts' ||
-        sub === 'reels' ||
-        sub === 'hashtags' ||
-        sub === 'analytics' ||
-        sub === 'monthly' ||
-        sub === 'audience')
+    analyticsActive &&
+      hasConnectedSocials &&
+      (sub === 'posts' || sub === 'reels' || sub === 'hashtags' || sub === 'monthly')
   );
   const {
     data: storiesApi,
     isLoading: storiesLoading,
-    refetch: refetchStories,
   } = useAnalyticsStories(
-    hasConnectedSocials && (sub === 'stories' || sub === 'analytics')
+    analyticsActive && hasConnectedSocials && sub === 'stories'
   );
 
-  // Hard refresh when switching analytics sub-tabs / workspace / date range.
-  // Skip the initial mount — React Query already loads with staleTime; remounts
-  // are avoided by admin keep-alive so this only runs on intentional filter changes.
+  // Hard refresh only when workspace / date range changes — not on every sub-tab click.
+  // Tab-specific hooks enable themselves via `enabled` when the user opens Posts/Stories.
   const analyticsHardRefreshSkip = useRef(true);
   useEffect(() => {
     if (!hasConnectedSocials) return;
@@ -403,30 +402,12 @@ export default function LaterAnalyticsPanel() {
       return;
     }
     void refetchAnalytics();
-    void refetchMetaSync();
-    if (
-      sub === 'posts' ||
-      sub === 'reels' ||
-      sub === 'hashtags' ||
-      sub === 'analytics' ||
-      sub === 'monthly' ||
-      sub === 'audience'
-    ) {
-      void refetchPosts();
-    }
-    if (sub === 'stories' || sub === 'analytics') {
-      void refetchStories();
-    }
   }, [
-    sub,
     hasConnectedSocials,
     activeWorkspace.id,
     dateRange.from,
     dateRange.to,
     refetchAnalytics,
-    refetchMetaSync,
-    refetchPosts,
-    refetchStories,
   ]);
 
   // Keep Revenue / Link-in-bio in sync with Bio Builder products + checkout sales.
@@ -449,6 +430,7 @@ export default function LaterAnalyticsPanel() {
 
   // Poll bio/checkout stats while Revenue or Link-in-bio tabs are open.
   useEffect(() => {
+    if (!analyticsActive) return;
     if (sub !== 'revenue' && sub !== 'linkinbio' && sub !== 'monthly') return;
     if (!activeWorkspace.id) return;
     const tick = () => {
@@ -459,9 +441,10 @@ export default function LaterAnalyticsPanel() {
       refreshWorkspaces();
       setBioTick((n) => n + 1);
     };
-    const id = window.setInterval(tick, 30_000);
+    const id = window.setInterval(tick, 90_000);
     return () => window.clearInterval(id);
   }, [
+    analyticsActive,
     sub,
     activeWorkspace.id,
     dateRange.from,
@@ -592,25 +575,7 @@ export default function LaterAnalyticsPanel() {
 
   const chart = activeWorkspace.analytics.revenue_chart;
 
-  const liveMedia = useMemo(() => {
-    const fromApi = analyticsApi?.media;
-    if (fromApi && fromApi.length > 0) return fromApi;
-    // Normalize IG snapshot rows so shares/views/platform always exist.
-    return (metaSync?.snapshot?.media ?? []).map((item) => ({
-      id: item.id,
-      platform: 'instagram' as const,
-      caption: item.caption ?? null,
-      media_type: item.media_type ?? null,
-      media_url: item.media_url ?? null,
-      thumbnail_url: item.thumbnail_url ?? item.media_url ?? null,
-      permalink: item.permalink ?? null,
-      like_count: item.like_count ?? 0,
-      comments_count: item.comments_count ?? 0,
-      shares_count: 0,
-      view_count: null as number | null,
-      timestamp: item.timestamp ?? null,
-    }));
-  }, [analyticsApi?.media, metaSync?.snapshot?.media]);
+  const liveMedia = useMemo(() => analyticsApi?.media ?? [], [analyticsApi?.media]);
 
   /** Only content published inside the selected date range. */
   const rangedMedia = useMemo(
@@ -644,10 +609,18 @@ export default function LaterAnalyticsPanel() {
   }, [analyticsApi?.totals?.followers, analyticsApi?.metrics?.followers, platformSlices]);
 
   const igProfile = useMemo(() => {
-    const snap = metaSync?.snapshot?.instagram;
+    const snap = analyticsApi?.instagram as
+      | {
+          username?: string | null;
+          name?: string | null;
+          profile_picture_url?: string | null;
+          followers_count?: number | null;
+        }
+      | null
+      | undefined;
     const slice = platformSlices.instagram;
     const handle =
-      (snap?.username ? `@${snap.username.replace(/^@/, '')}` : null) ||
+      (snap?.username ? `@${String(snap.username).replace(/^@/, '')}` : null) ||
       slice?.handle ||
       instagramAccount?.handle ||
       null;
@@ -668,7 +641,7 @@ export default function LaterAnalyticsPanel() {
       handle ||
       'Instagram';
     return { handle, avatar, followers, displayName };
-  }, [metaSync?.snapshot?.instagram, instagramAccount, platformSlices.instagram]);
+  }, [analyticsApi?.instagram, instagramAccount, platformSlices.instagram]);
 
   const engagement = useMemo(() => {
     if (!connectedAccounts.length && rangedMedia.length === 0 && !analyticsApi?.metrics) {
@@ -988,10 +961,7 @@ export default function LaterAnalyticsPanel() {
     {
       label: t('kpiPlannedPosts', locale),
       value: String(
-        analyticsApi?.planner_imported ??
-          metaSync?.snapshot?.planner_imported ??
-          liveMedia.length ??
-          0
+        analyticsApi?.planner_imported ?? liveMedia.length ?? 0
       ),
       delta: '—',
       deltaTone: 'neutral',
@@ -1191,7 +1161,7 @@ export default function LaterAnalyticsPanel() {
       ) : null}
 
       {connectedAccounts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
           {connectedAccounts.map((account) => {
             const Icon = PLATFORM_ICON[account.platform] || InstagramIcon;
             const slice = platformSlices[account.platform];
@@ -1202,35 +1172,35 @@ export default function LaterAnalyticsPanel() {
             return (
               <div
                 key={`${account.platform}-${account.handle || account.external_id || 'row'}`}
-                className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3.5 py-3 flex items-center gap-3 shadow-none"
+                className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-2.5 py-2 flex items-center gap-2 shadow-none min-w-0 overflow-hidden"
               >
                 {avatar ? (
                   <OptimizedImage
                     src={avatar}
                     alt=""
-                    width={44}
-                    height={44}
-                    sizes="44px"
-                    className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full object-cover border-2 border-[#E6E3DB]"
+                    width={32}
+                    height={32}
+                    sizes="32px"
+                    className="w-8 h-8 min-h-[32px] min-w-[32px] rounded-full object-cover border border-[#E6E3DB] flex-shrink-0"
                   />
                 ) : (
-                  <span className="w-11 h-11 min-h-[44px] min-w-[44px] rounded-full bg-[#F0EFEA] inline-flex items-center justify-center text-[#2C2621]">
-                    <Icon size={18} />
+                  <span className="w-8 h-8 min-h-[32px] min-w-[32px] rounded-full bg-[#F0EFEA] inline-flex items-center justify-center text-[#2C2621] flex-shrink-0">
+                    <Icon size={14} />
                   </span>
                 )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <p className="text-[9px] font-inter font-medium uppercase tracking-[0.12em] text-[#8A857D] truncate leading-tight">
                     {PLATFORM_LABEL[account.platform] || account.platform}
                   </p>
-                  <p className="text-sm font-medium text-[#2C2621] truncate">
+                  <p className="text-xs font-medium text-[#2C2621] truncate leading-tight mt-0.5">
                     {handle || PLATFORM_LABEL[account.platform] || account.platform}
                   </p>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
+                <div className="text-right flex-shrink-0 pl-1 min-w-[2.75rem]">
+                  <p className="text-[9px] font-inter font-medium uppercase tracking-[0.1em] text-[#8A857D] leading-tight">
                     {t('kpiFollowers', locale)}
                   </p>
-                  <p className="text-base font-medium tabular-nums text-[#2C2621]">
+                  <p className="text-sm font-medium tabular-nums text-[#2C2621] leading-tight mt-0.5">
                     {formatCompact(followers, locale)}
                   </p>
                 </div>

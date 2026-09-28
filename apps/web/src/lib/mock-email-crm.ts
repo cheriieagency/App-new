@@ -237,30 +237,58 @@ function daysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-/** Runtime syncs (join / purchase) in demo mode. */
-let extraSubscribers: EmailSubscriber[] = [];
-let extraBroadcasts: EmailBroadcast[] = [];
-let nextSubId = 200;
-let nextBroadcastId = 50;
-/** Extra sends layered onto seed automation counters (demo). */
-const automationSendBump = new Map<string, number>();
-const automationLastSent = new Map<string, string>();
-let extraCommunityEmails: CommunityAutomationEmail[] = [];
-let nextCommunityEmailId = 100;
+/**
+ * In-memory CRM buckets keyed by creatorId so demo mode never leaks
+ * subscribers / broadcasts / automations across logged-in users.
+ */
+type CreatorCrmBucket = {
+  subscribers: EmailSubscriber[];
+  broadcasts: EmailBroadcast[];
+  automations: EmailAutomation[];
+  communityEmails: CommunityAutomationEmail[];
+  nextSubId: number;
+  nextBroadcastId: number;
+  nextAutomationId: number;
+  nextCommunityEmailId: number;
+  automationSendBump: Map<string, number>;
+  automationLastSent: Map<string, string>;
+};
 
-const SEED: EmailSubscriber[] = [];
+const creatorBuckets = new Map<string, CreatorCrmBucket>();
 
-const SEED_BROADCASTS: EmailBroadcast[] = [];
+function normalizeCreatorId(creatorId?: string | null): string {
+  const id = String(creatorId ?? '').trim();
+  if (!id) {
+    throw new Error('creatorId_required');
+  }
+  return id;
+}
 
-/** Mutable automation store (seed + creator-added). */
-let automationStore: EmailAutomation[] = [];
-let nextAutomationId = 10;
+function getCreatorBucket(creatorId: string): CreatorCrmBucket {
+  const key = normalizeCreatorId(creatorId);
+  let bucket = creatorBuckets.get(key);
+  if (!bucket) {
+    bucket = {
+      subscribers: [],
+      broadcasts: [],
+      automations: [],
+      communityEmails: [],
+      nextSubId: 1,
+      nextBroadcastId: 1,
+      nextAutomationId: 1,
+      nextCommunityEmailId: 1,
+      automationSendBump: new Map(),
+      automationLastSent: new Map(),
+    };
+    creatorBuckets.set(key, bucket);
+  }
+  return bucket;
+}
 
-const SEED_COMMUNITY_EMAILS: CommunityAutomationEmail[] = [];
-
-function allSubscribers(): EmailSubscriber[] {
+function allSubscribers(creatorId: string): EmailSubscriber[] {
+  const bucket = getCreatorBucket(creatorId);
   const byEmail = new Map<string, EmailSubscriber>();
-  for (const s of [...SEED, ...extraSubscribers]) {
+  for (const s of bucket.subscribers) {
     byEmail.set(s.email.toLowerCase(), s);
   }
   return Array.from(byEmail.values()).sort(
@@ -268,12 +296,13 @@ function allSubscribers(): EmailSubscriber[] {
   );
 }
 
-export function listEmailSubscribers(opts?: {
+export function listEmailSubscribers(opts: {
+  creatorId: string;
   tag?: string;
   q?: string;
   community_id?: number;
 }) {
-  let list = allSubscribers();
+  let list = allSubscribers(opts.creatorId);
   if (opts?.community_id) {
     // Strict brand scope — only contacts acquired via this workspace.
     list = list.filter((s) => s.community_id === opts.community_id);
@@ -297,18 +326,23 @@ export function listEmailSubscribers(opts?: {
   return list;
 }
 
-export function listEmailBroadcasts() {
-  return [...extraBroadcasts, ...SEED_BROADCASTS].sort(
+export function listEmailBroadcasts(creatorId: string) {
+  const bucket = getCreatorBucket(creatorId);
+  return [...bucket.broadcasts].sort(
     (a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
   );
 }
 
 /** Automations available in Email CRM (optionally scoped to a brand). */
-export function listEmailAutomations(opts?: { community_id?: number }): EmailAutomation[] {
-  return automationStore
+export function listEmailAutomations(opts: {
+  creatorId: string;
+  community_id?: number;
+}): EmailAutomation[] {
+  const bucket = getCreatorBucket(opts.creatorId);
+  return bucket.automations
     .map((a) => {
-      const bump = automationSendBump.get(a.id) ?? 0;
-      const last = automationLastSent.get(a.id) ?? a.last_sent_at;
+      const bump = bucket.automationSendBump.get(a.id) ?? 0;
+      const last = bucket.automationLastSent.get(a.id) ?? a.last_sent_at;
       return {
         ...a,
         body: a.body || '',
@@ -324,23 +358,26 @@ export function listEmailAutomations(opts?: { community_id?: number }): EmailAut
     );
 }
 
-function bumpAutomationSend(automationId: string) {
-  automationSendBump.set(
+function bumpAutomationSend(creatorId: string, automationId: string) {
+  const bucket = getCreatorBucket(creatorId);
+  bucket.automationSendBump.set(
     automationId,
-    (automationSendBump.get(automationId) ?? 0) + 1
+    (bucket.automationSendBump.get(automationId) ?? 0) + 1
   );
-  automationLastSent.set(automationId, new Date().toISOString());
+  bucket.automationLastSent.set(automationId, new Date().toISOString());
 }
 
 /** Toggle active/paused for demo automations. */
 export function setEmailAutomationStatus(
+  creatorId: string,
   id: string,
   status: 'active' | 'paused'
 ): EmailAutomation | null {
-  const idx = automationStore.findIndex((a) => a.id === id);
+  const bucket = getCreatorBucket(creatorId);
+  const idx = bucket.automations.findIndex((a) => a.id === id);
   if (idx < 0) return null;
-  automationStore[idx] = { ...automationStore[idx], status };
-  return listEmailAutomations().find((a) => a.id === id) ?? null;
+  bucket.automations[idx] = { ...bucket.automations[idx], status };
+  return listEmailAutomations({ creatorId }).find((a) => a.id === id) ?? null;
 }
 
 export type UpsertAutomationInput = {
@@ -355,7 +392,10 @@ export type UpsertAutomationInput = {
 };
 
 /** Create or update an automation rule. */
-export function upsertEmailAutomation(input: UpsertAutomationInput): EmailAutomation {
+export function upsertEmailAutomation(
+  input: UpsertAutomationInput & { creatorId: string }
+): EmailAutomation {
+  const bucket = getCreatorBucket(input.creatorId);
   const trigger = input.trigger;
   const label = triggerLabel(trigger);
   const defaults =
@@ -363,10 +403,10 @@ export function upsertEmailAutomation(input: UpsertAutomationInput): EmailAutoma
     AUTOMATION_TRIGGER_OPTIONS[0];
 
   if (input.id) {
-    const idx = automationStore.findIndex((a) => a.id === input.id);
+    const idx = bucket.automations.findIndex((a) => a.id === input.id);
     if (idx >= 0) {
-      const prev = automationStore[idx];
-      automationStore[idx] = {
+      const prev = bucket.automations[idx];
+      bucket.automations[idx] = {
         ...prev,
         name: input.name.trim() || prev.name,
         description: (input.description ?? prev.description).trim() || prev.description,
@@ -378,12 +418,12 @@ export function upsertEmailAutomation(input: UpsertAutomationInput): EmailAutoma
         community_id:
           input.community_id !== undefined ? input.community_id : prev.community_id,
       };
-      return { ...automationStore[idx] };
+      return { ...bucket.automations[idx] };
     }
   }
 
   const created: EmailAutomation = {
-    id: `auto-${nextAutomationId++}`,
+    id: `auto-${bucket.nextAutomationId++}`,
     name: input.name.trim() || defaults.defaultName,
     description:
       (input.description ?? '').trim() ||
@@ -397,22 +437,25 @@ export function upsertEmailAutomation(input: UpsertAutomationInput): EmailAutoma
     last_sent_at: null,
     community_id: input.community_id ?? null,
   };
-  automationStore = [created, ...automationStore];
+  bucket.automations = [created, ...bucket.automations];
   return { ...created };
 }
 
 /** Remove an automation from the in-memory store. */
-export function deleteEmailAutomation(id: string): boolean {
-  const before = automationStore.length;
-  automationStore = automationStore.filter((a) => a.id !== id);
-  return automationStore.length < before;
+export function deleteEmailAutomation(creatorId: string, id: string): boolean {
+  const bucket = getCreatorBucket(creatorId);
+  const before = bucket.automations.length;
+  bucket.automations = bucket.automations.filter((a) => a.id !== id);
+  return bucket.automations.length < before;
 }
 
 /** Recent automated emails for a community (purchase unlocks + member autos). */
-export function listCommunityAutomationEmails(opts?: {
+export function listCommunityAutomationEmails(opts: {
+  creatorId: string;
   community_id?: number;
 }): CommunityAutomationEmail[] {
-  const all = [...extraCommunityEmails, ...SEED_COMMUNITY_EMAILS].sort(
+  const bucket = getCreatorBucket(opts.creatorId);
+  const all = [...bucket.communityEmails].sort(
     (a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
   );
   if (opts?.community_id != null) {
@@ -422,20 +465,25 @@ export function listCommunityAutomationEmails(opts?: {
 }
 
 export function logCommunityAutomationEmail(
-  input: Omit<CommunityAutomationEmail, 'id' | 'sent_at'> & { sent_at?: string }
+  input: Omit<CommunityAutomationEmail, 'id' | 'sent_at'> & {
+    creatorId: string;
+    sent_at?: string;
+  }
 ): CommunityAutomationEmail {
+  const bucket = getCreatorBucket(input.creatorId);
+  const { creatorId: _creatorId, sent_at, ...rest } = input;
   const row: CommunityAutomationEmail = {
-    ...input,
-    id: `ce-live-${nextCommunityEmailId++}`,
-    sent_at: input.sent_at ?? new Date().toISOString(),
+    ...rest,
+    id: `ce-live-${bucket.nextCommunityEmailId++}`,
+    sent_at: sent_at ?? new Date().toISOString(),
   };
-  extraCommunityEmails = [row, ...extraCommunityEmails];
+  bucket.communityEmails = [row, ...bucket.communityEmails];
   return row;
 }
 
-export function getEmailCrmStats() {
-  const subscribers = allSubscribers();
-  const broadcasts = listEmailBroadcasts().filter((b) => b.status === 'sent');
+export function getEmailCrmStats(creatorId: string) {
+  const subscribers = allSubscribers(creatorId);
+  const broadcasts = listEmailBroadcasts(creatorId).filter((b) => b.status === 'sent');
   const avgOpen =
     broadcasts.length === 0
       ? 0
@@ -449,6 +497,7 @@ export function getEmailCrmStats() {
 
 /** Auto-sync: join community / buy product → email list. */
 export function syncSubscriber(input: {
+  creatorId: string;
   email: string;
   name: string;
   user_id?: string | null;
@@ -457,8 +506,11 @@ export function syncSubscriber(input: {
   community_id?: number | null;
   extra_tags?: string[];
 }): EmailSubscriber {
+  const bucket = getCreatorBucket(input.creatorId);
   const email = input.email.trim().toLowerCase();
-  const existing = allSubscribers().find((s) => s.email.toLowerCase() === email);
+  const existing = allSubscribers(input.creatorId).find(
+    (s) => s.email.toLowerCase() === email
+  );
   const label = SOURCE_LABELS[input.source];
   const tags = Array.from(
     new Set([
@@ -480,16 +532,15 @@ export function syncSubscriber(input: {
       tags,
       community_id: input.community_id ?? existing.community_id,
     };
-    extraSubscribers = [
+    bucket.subscribers = [
       updated,
-      ...extraSubscribers.filter((s) => s.email.toLowerCase() !== email),
+      ...bucket.subscribers.filter((s) => s.email.toLowerCase() !== email),
     ];
-    // Also override seed via extras
     return updated;
   }
 
   const created: EmailSubscriber = {
-    id: `sub-${nextSubId++}`,
+    id: `sub-${bucket.nextSubId++}`,
     user_id: input.user_id ?? null,
     name: input.name,
     email,
@@ -500,45 +551,85 @@ export function syncSubscriber(input: {
     community_id: input.community_id ?? null,
     subscribed_at: new Date().toISOString(),
   };
-  extraSubscribers = [created, ...extraSubscribers];
+  bucket.subscribers = [created, ...bucket.subscribers];
   return created;
 }
 
 export function createBroadcast(input: {
+  creatorId: string;
   subject: string;
   body: string;
   audience: string;
   image_url?: string | null;
-  status?: 'sent' | 'test';
+  status?: 'sent' | 'test' | 'draft';
+  recipient_count?: number;
 }): EmailBroadcast {
+  const bucket = getCreatorBucket(input.creatorId);
   const audienceOpt =
     AUDIENCE_OPTIONS.find((a) => a.value === input.audience) ?? AUDIENCE_OPTIONS[0];
   const recipients =
     input.audience === 'all'
-      ? allSubscribers()
-      : allSubscribers().filter((s) => s.source === input.audience);
-  const count = Math.max(recipients.length, input.status === 'test' ? 1 : 0);
+      ? allSubscribers(input.creatorId)
+      : allSubscribers(input.creatorId).filter((s) => s.source === input.audience);
+  const count =
+    input.recipient_count ??
+    Math.max(recipients.length, input.status === 'test' || input.status === 'draft' ? 0 : 0);
   const broadcast: EmailBroadcast = {
-    id: `bc-${nextBroadcastId++}`,
+    id: `bc-${bucket.nextBroadcastId++}`,
     subject: input.subject,
     body: input.body,
     image_url: input.image_url ?? null,
     audience: input.audience,
     audience_label: audienceOpt.label,
     recipient_count: count,
-    open_rate: input.status === 'test' ? 0 : 0,
+    open_rate: 0,
     click_rate: 0,
     status: input.status ?? 'sent',
     sent_at: new Date().toISOString(),
   };
-  if (input.status !== 'test') {
-    // Simulate early engagement metrics for sent broadcasts.
+  if (broadcast.status === 'sent') {
+    // Simulate early engagement metrics for sent broadcasts in demo mode.
     broadcast.open_rate = Math.round((48 + (count % 20)) * 10) / 10;
     broadcast.click_rate = Math.round((12 + (count % 15)) * 10) / 10;
-    broadcast.status = 'sent';
   }
-  extraBroadcasts = [broadcast, ...extraBroadcasts];
+  bucket.broadcasts = [broadcast, ...bucket.broadcasts];
   return broadcast;
+}
+
+/** Upsert the single in-progress draft for a creator (demo mode). */
+export function upsertDraftBroadcast(input: {
+  creatorId: string;
+  subject: string;
+  body: string;
+  audience: string;
+  image_url?: string | null;
+}): EmailBroadcast {
+  const bucket = getCreatorBucket(input.creatorId);
+  const audienceOpt =
+    AUDIENCE_OPTIONS.find((a) => a.value === input.audience) ?? AUDIENCE_OPTIONS[0];
+  const existingIdx = bucket.broadcasts.findIndex((b) => b.status === 'draft');
+  const draft: EmailBroadcast = {
+    id:
+      existingIdx >= 0
+        ? bucket.broadcasts[existingIdx].id
+        : `bc-${bucket.nextBroadcastId++}`,
+    subject: input.subject,
+    body: input.body,
+    image_url: input.image_url ?? null,
+    audience: input.audience,
+    audience_label: audienceOpt.label,
+    recipient_count: 0,
+    open_rate: 0,
+    click_rate: 0,
+    status: 'draft',
+    sent_at: new Date().toISOString(),
+  };
+  if (existingIdx >= 0) {
+    bucket.broadcasts[existingIdx] = draft;
+  } else {
+    bucket.broadcasts = [draft, ...bucket.broadcasts];
+  }
+  return draft;
 }
 
 export type MergeTagContext = {
@@ -570,7 +661,9 @@ export function applyMergeTags(
  * Queue the automated post-purchase community invite email (demo CRM).
  * Syncs the buyer as a VIP/community subscriber and logs a 1:1 broadcast.
  */
-export function sendCommunityAccessInvite(input: CommunityAccessEmailInput): {
+export function sendCommunityAccessInvite(
+  input: CommunityAccessEmailInput & { creatorId: string }
+): {
   subscriber: EmailSubscriber;
   broadcast: EmailBroadcast;
   communityUrl: string;
@@ -578,6 +671,7 @@ export function sendCommunityAccessInvite(input: CommunityAccessEmailInput): {
 } {
   const content = buildCommunityAccessEmail(input);
   const subscriber = syncSubscriber({
+    creatorId: input.creatorId,
     email: input.buyerEmail,
     name: input.buyerName || content.firstName,
     source: 'vip_access',
@@ -586,18 +680,20 @@ export function sendCommunityAccessInvite(input: CommunityAccessEmailInput): {
   });
   const personalized = applyMergeTags(content.body, content.firstName);
   const broadcast = createBroadcast({
+    creatorId: input.creatorId,
     subject: content.subject,
     body: personalized,
     audience: 'vip_access',
     status: 'sent',
+    recipient_count: 1,
   });
   // One-to-one automated send — override aggregate recipient count.
-  broadcast.recipient_count = 1;
   broadcast.audience_label = 'Community access (auto)';
   broadcast.open_rate = 0;
   broadcast.click_rate = 0;
-  bumpAutomationSend('auto-community-access');
+  bumpAutomationSend(input.creatorId, 'auto-community-access');
   logCommunityAutomationEmail({
+    creatorId: input.creatorId,
     community_id: input.communityId,
     community_name: input.communityName,
     kind: 'purchase_access',
@@ -615,26 +711,32 @@ export function sendCommunityAccessInvite(input: CommunityAccessEmailInput): {
   };
 }
 
-export function getMockEmailCrmPayload(opts?: {
+export function getMockEmailCrmPayload(opts: {
+  creatorId: string;
   tag?: string;
   q?: string;
   community_id?: number;
 }) {
+  const creatorId = opts.creatorId;
   const subscribers = listEmailSubscribers(opts);
-  const broadcasts = listEmailBroadcasts();
-  const automations = listEmailAutomations({ community_id: opts?.community_id });
-  const community_emails = listCommunityAutomationEmails({
+  const broadcasts = listEmailBroadcasts(creatorId);
+  const automations = listEmailAutomations({
+    creatorId,
     community_id: opts?.community_id,
   });
-  const global = getEmailCrmStats();
+  const community_emails = listCommunityAutomationEmails({
+    creatorId,
+    community_id: opts?.community_id,
+  });
+  const stats = getEmailCrmStats(creatorId);
   // Scope headline stats to the active brand when community_id is set.
   const total_subscribers = opts?.community_id
     ? subscribers.length
-    : global.total_subscribers;
+    : stats.total_subscribers;
   return {
-    ...global,
+    ...stats,
     total_subscribers,
-    average_open_rate: global.average_open_rate,
+    average_open_rate: stats.average_open_rate,
     subscribers,
     broadcasts,
     automations,
@@ -642,7 +744,7 @@ export function getMockEmailCrmPayload(opts?: {
     audiences: AUDIENCE_OPTIONS,
     tags: [
       'all',
-      ...Array.from(new Set(allSubscribers().flatMap((s) => s.tags))),
+      ...Array.from(new Set(allSubscribers(creatorId).flatMap((s) => s.tags))),
     ],
     demo: true as const,
   };

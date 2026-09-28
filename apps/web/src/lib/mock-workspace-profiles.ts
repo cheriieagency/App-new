@@ -24,6 +24,8 @@ export type WorkspaceBioBlock = {
   title: string;
   subtitle: string;
   emoji: string;
+  /** Optional custom icon image; when set it overrides emoji in the preview. */
+  icon_url?: string | null;
   color: string;
   visible: boolean;
   destination_url?: string;
@@ -194,6 +196,16 @@ export function listWorkspaceProfiles(): WorkspaceProfile[] {
 }
 
 /**
+ * Replace the in-memory + localStorage workspace list (e.g. after DB refresh).
+ * Keeps Publish / Preview updates targeting the same ids the UI shows.
+ */
+export function replaceWorkspaceProfiles(next: WorkspaceProfile[]): void {
+  profiles = Array.isArray(next) ? next.map((p) => cloneProfile(p)) : [];
+  profilesHydrated = true;
+  persistProfiles();
+}
+
+/**
  * Ensure every account has at least one workspace.
  * Uses the signup-provided name when available (arg / sessionStorage).
  * Called on first admin load / after signup — idempotent.
@@ -292,7 +304,27 @@ export function updateWorkspaceBio(
   id: string,
   patch: Partial<WorkspaceBioData>
 ): WorkspaceProfile | null {
-  const idx = profiles.findIndex((p) => p.id === id);
+  hydrateProfilesFromStorage();
+  let idx = profiles.findIndex((p) => p.id === id);
+  // If React state has a DB workspace that isn't in the module store yet, seed it.
+  if (idx < 0 && id.trim()) {
+    const seeded = blankWorkspaceProfile();
+    profiles = [
+      ...profiles,
+      {
+        ...seeded,
+        id,
+        name: seeded.name,
+        handle: patch.handle
+          ? patch.handle.startsWith('@')
+            ? patch.handle
+            : `@${patch.handle}`
+          : seeded.handle,
+        bio: { ...seeded.bio, ...patch, blocks: patch.blocks ? patch.blocks.map((b) => ({ ...b })) : [] },
+      },
+    ];
+    idx = profiles.findIndex((p) => p.id === id);
+  }
   if (idx < 0) return null;
   const current = profiles[idx];
   profiles[idx] = {
@@ -304,6 +336,9 @@ export function updateWorkspaceBio(
       blocks: patch.blocks
         ? patch.blocks.map((b) => ({ ...b }))
         : current.bio.blocks,
+      social_links: Array.isArray(patch.social_links)
+        ? patch.social_links.map((l) => ({ ...l }))
+        : current.bio.social_links ?? [],
     },
     // Keep public handle in sync with bio handle.
     handle: patch.handle

@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
+import { useLocale } from '@/lib/locale-context';
+import { t } from '@/lib/i18n';
 
 export const IG_BUSINESS_REQUIRED_MESSAGE =
   'Please convert your Instagram account to a Creator/Business account and link it to a Facebook Page to fetch analytics.';
@@ -17,6 +19,7 @@ export default function IgBusinessRequiredBanner({
   className?: string;
   showSettingsLink?: boolean;
 }) {
+  const { locale } = useLocale();
   return (
     <div
       role="status"
@@ -27,17 +30,17 @@ export default function IgBusinessRequiredBanner({
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-[#2C2621]">
-          Instagram Business account required
+          {t('igBusinessRequiredTitle', locale)}
         </p>
         <p className="text-xs sm:text-[13px] text-[#8A857D] font-medium mt-1 leading-relaxed">
-          {IG_BUSINESS_REQUIRED_MESSAGE}
+          {t('igBusinessRequiredBody', locale)}
         </p>
         {showSettingsLink ? (
           <Link
             href="/admin/settings/socials"
             className="inline-flex items-center min-h-[44px] mt-2 text-xs font-medium text-[#2C2621] underline underline-offset-2 hover:text-[#2C3B2E]"
           >
-            Open connected accounts →
+            {t('igBusinessOpenSettings', locale)}
           </Link>
         ) : null}
       </div>

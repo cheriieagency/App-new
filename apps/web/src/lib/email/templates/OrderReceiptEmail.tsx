@@ -1,16 +1,10 @@
 import * as React from 'react';
+import { Heading, Link, Section, Text } from '@react-email/components';
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Text,
-} from '@react-email/components';
+  ClikdEmailLayout,
+  emailBrand,
+  emailStyles,
+} from '@/lib/email/templates/ClikdEmailLayout';
 
 export type OrderReceiptEmailProps = {
   buyerName: string;
@@ -35,133 +29,65 @@ export function OrderReceiptEmail({
   const firstName = buyerName.trim().split(/\s+/)[0] || 'there';
 
   return (
-    <Html>
-      <Head />
-      <Preview>
-        {meetUrl ? `Your Google Meet link for ${productTitle}` : `Receipt for ${productTitle}`}
-      </Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Text style={brand}>
-            clikd<span style={{ color: '#F472B6' }}>:</span>
-          </Text>
-          <Heading style={h1}>Thanks for your purchase</Heading>
-          <Text style={paragraph}>Hi {firstName},</Text>
-          <Text style={paragraph}>
-            Your order from {workspaceName} is confirmed. Here are the details:
-          </Text>
-          <Section style={card}>
-            <Text style={cardLabel}>Product</Text>
-            <Text style={cardValue}>{productTitle}</Text>
-            <Text style={{ ...cardLabel, marginTop: '12px' }}>Amount</Text>
-            <Text style={cardValue}>{amountLabel}</Text>
-            {orderId ? (
-              <>
-                <Text style={{ ...cardLabel, marginTop: '12px' }}>Order ID</Text>
-                <Text style={cardValue}>{orderId}</Text>
-              </>
-            ) : null}
-            {meetUrl ? (
-              <>
-                <Text style={{ ...cardLabel, marginTop: '12px' }}>Google Meet</Text>
-                <Text style={cardValue}>
-                  <Link href={meetUrl} style={link}>
-                    Join your 1:1 call
-                  </Link>
-                </Text>
-              </>
-            ) : null}
-          </Section>
-          <Text style={paragraph}>Keep this email as your receipt.</Text>
-          <Hr style={hr} />
-          <Text style={footer}>
-            Transactional receipt from {workspaceName} via clikd:.
-            <br />
-            <Link href={unsubscribeUrl} style={link}>
-              Unsubscribe from marketing
-            </Link>
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+    <ClikdEmailLayout
+      previewText={
+        meetUrl
+          ? `Your Google Meet link for ${productTitle}`
+          : `Receipt for ${productTitle}`
+      }
+      footer={
+        <>
+          Transactional receipt from {workspaceName} via clikd:.
+          <br />
+          <Link href={unsubscribeUrl} style={emailStyles.link}>
+            Unsubscribe from marketing
+          </Link>
+        </>
+      }
+    >
+      <Text
+        style={{
+          ...emailStyles.label,
+          color: emailBrand.mint,
+          marginBottom: '8px',
+        }}
+      >
+        Order confirmed
+      </Text>
+      <Heading style={emailStyles.h1}>Thanks for your purchase</Heading>
+      <Text style={emailStyles.paragraph}>Hi {firstName},</Text>
+      <Text style={emailStyles.paragraph}>
+        Your order from {workspaceName} is confirmed. Here are the details:
+      </Text>
+      <Section style={emailStyles.panel}>
+        <Text style={emailStyles.label}>Product</Text>
+        <Text style={emailStyles.value}>{productTitle}</Text>
+        <Text style={{ ...emailStyles.label, marginTop: '12px' }}>Amount</Text>
+        <Text style={emailStyles.value}>{amountLabel}</Text>
+        {orderId ? (
+          <>
+            <Text style={{ ...emailStyles.label, marginTop: '12px' }}>
+              Order ID
+            </Text>
+            <Text style={emailStyles.value}>{orderId}</Text>
+          </>
+        ) : null}
+        {meetUrl ? (
+          <>
+            <Text style={{ ...emailStyles.label, marginTop: '12px' }}>
+              Google Meet
+            </Text>
+            <Text style={emailStyles.value}>
+              <Link href={meetUrl} style={emailStyles.link}>
+                Join your 1:1 call
+              </Link>
+            </Text>
+          </>
+        ) : null}
+      </Section>
+      <Text style={emailStyles.paragraph}>Keep this email as your receipt.</Text>
+    </ClikdEmailLayout>
   );
 }
-
-const main = {
-  backgroundColor: '#FAFAFA',
-  fontFamily:
-    '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-};
-
-const container = {
-  margin: '0 auto',
-  padding: '32px 24px',
-  maxWidth: '560px',
-  backgroundColor: '#ffffff',
-  borderRadius: '16px',
-  border: '1px solid #e2e8f0',
-};
-
-const brand = {
-  fontSize: '18px',
-  fontWeight: 800 as const,
-  color: '#0F172A',
-  margin: '0 0 16px',
-};
-
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 800 as const,
-  color: '#2B2568',
-  margin: '0 0 16px',
-};
-
-const paragraph = {
-  fontSize: '15px',
-  lineHeight: '1.65',
-  color: '#334155',
-  margin: '0 0 12px',
-};
-
-const card = {
-  backgroundColor: '#F8FAFC',
-  borderRadius: '12px',
-  border: '1px solid #e2e8f0',
-  padding: '16px',
-  margin: '16px 0 20px',
-};
-
-const cardLabel = {
-  fontSize: '11px',
-  fontWeight: 700 as const,
-  color: '#94a3b8',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.06em',
-  margin: '0 0 4px',
-};
-
-const cardValue = {
-  fontSize: '15px',
-  fontWeight: 700 as const,
-  color: '#0F172A',
-  margin: 0,
-};
-
-const hr = {
-  borderColor: '#e2e8f0',
-  margin: '28px 0 16px',
-};
-
-const footer = {
-  fontSize: '12px',
-  lineHeight: '1.5',
-  color: '#94a3b8',
-  margin: 0,
-};
-
-const link = {
-  color: '#F472B6',
-  textDecoration: 'underline',
-};
 
 export default OrderReceiptEmail;

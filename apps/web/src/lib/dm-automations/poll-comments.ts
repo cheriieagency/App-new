@@ -151,7 +151,7 @@ async function commentAlreadyHandled(commentId: string): Promise<boolean> {
     const rows = await sql`
       SELECT id FROM public.dm_logs
       WHERE comment_id = ${commentId}
-        AND status IN ('sent', 'delivered', 'skipped')
+        AND status IN ('sent', 'delivered', 'skipped', 'processing')
       LIMIT 1
     `;
     return Array.isArray(rows) && rows.length > 0;

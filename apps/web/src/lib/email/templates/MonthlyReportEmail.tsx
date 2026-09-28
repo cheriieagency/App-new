@@ -1,16 +1,10 @@
 import * as React from 'react';
+import { Heading, Link, Section, Text } from '@react-email/components';
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Link,
-  Preview,
-  Section,
-  Text,
-} from '@react-email/components';
+  ClikdEmailLayout,
+  emailBrand,
+  emailStyles,
+} from '@/lib/email/templates/ClikdEmailLayout';
 
 export type MonthlyReportEmailProps = {
   workspaceName: string;
@@ -37,140 +31,86 @@ export function MonthlyReportEmail({
   customNote,
   unsubscribeUrl,
 }: MonthlyReportEmailProps) {
+  const kpis = [
+    { label: 'Views', value: views.toLocaleString('en-US') },
+    { label: 'Eng. rate', value: `${engagementRate}%` },
+    { label: 'Followers', value: followerGrowth.toLocaleString('en-US') },
+    { label: 'Posts', value: String(totalPosts) },
+  ];
+
   return (
-    <Html>
-      <Head />
-      <Preview>
-        {title} · {periodLabel}
-      </Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Text style={brand}>
-            clikd<span style={{ color: '#F472B6' }}>:</span>
-          </Text>
-          <Heading style={h1}>{title}</Heading>
-          <Text style={paragraph}>
-            Performance snapshot for <strong>{workspaceName}</strong> ·{' '}
-            {periodLabel}
-          </Text>
+    <ClikdEmailLayout
+      previewText={`${title} · ${periodLabel}`}
+      footer={
+        <>
+          Powered by clikd.app
+          <br />
+          <Link href={unsubscribeUrl} style={emailStyles.link}>
+            Unsubscribe from marketing
+          </Link>
+        </>
+      }
+    >
+      <Heading style={emailStyles.h1}>{title}</Heading>
+      <Text style={emailStyles.paragraph}>
+        Performance snapshot for <strong>{workspaceName}</strong> · {periodLabel}
+      </Text>
 
-          {customNote ? (
-            <Section style={note}>
-              <Text style={noteText}>{customNote}</Text>
-            </Section>
-          ) : null}
+      {customNote ? (
+        <Section style={emailStyles.lilacPanel}>
+          <Text style={{ ...emailStyles.paragraph, margin: 0, color: emailBrand.midnight }}>
+            {customNote}
+          </Text>
+        </Section>
+      ) : null}
 
-          <Section style={kpiRow}>
-            <Text style={kpi}>
-              <span style={kpiLabel}>Views</span>
-              <br />
-              <span style={kpiValue}>{views.toLocaleString('en-US')}</span>
+      <Section style={{ margin: '8px 0 4px' }}>
+        {kpis.map((kpi) => (
+          <Section
+            key={kpi.label}
+            style={{
+              display: 'inline-block',
+              width: '46%',
+              verticalAlign: 'top' as const,
+              backgroundColor: emailBrand.canvas,
+              border: `1px solid ${emailBrand.border}`,
+              borderRadius: '12px',
+              padding: '12px 14px',
+              margin: '1%',
+            }}
+          >
+            <Text style={{ ...emailStyles.label, margin: '0 0 6px' }}>
+              {kpi.label}
             </Text>
-            <Text style={kpi}>
-              <span style={kpiLabel}>Eng. rate</span>
-              <br />
-              <span style={kpiValue}>{engagementRate}%</span>
-            </Text>
-            <Text style={kpi}>
-              <span style={kpiLabel}>Followers</span>
-              <br />
-              <span style={kpiValue}>{followerGrowth.toLocaleString('en-US')}</span>
-            </Text>
-            <Text style={kpi}>
-              <span style={kpiLabel}>Posts</span>
-              <br />
-              <span style={kpiValue}>{totalPosts}</span>
+            <Text
+              style={{
+                margin: 0,
+                fontFamily: emailBrand.fontDisplay,
+                fontSize: '20px',
+                fontWeight: 700 as const,
+                color: emailBrand.ink,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {kpi.value}
             </Text>
           </Section>
+        ))}
+      </Section>
 
-          <Section style={{ textAlign: 'center' as const, margin: '28px 0' }}>
-            <Link href={shareUrl} style={cta}>
-              Open client report / save PDF
-            </Link>
-          </Section>
+      <Section style={{ textAlign: 'center' as const, margin: '20px 0' }}>
+        <Link href={shareUrl} style={emailStyles.buttonPink}>
+          Open client report / save PDF
+        </Link>
+      </Section>
 
-          <Text style={paragraph}>
-            This is a verified static snapshot for this workspace only. Share the
-            link with clients — they don&apos;t need a clikd: login. Use Save as
-            PDF in the browser print dialog if you need a file.
-          </Text>
-          <Hr style={hr} />
-          <Text style={footer}>
-            Powered by clikd.app
-            <br />
-            <Link href={unsubscribeUrl} style={link}>
-              Unsubscribe from marketing
-            </Link>
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+      <Text style={emailStyles.paragraph}>
+        This is a verified static snapshot for this workspace only. Share the link
+        with clients — they don&apos;t need a clikd: login. Use Save as PDF in the
+        browser print dialog if you need a file.
+      </Text>
+    </ClikdEmailLayout>
   );
 }
 
-const main = {
-  backgroundColor: '#0F172A',
-  fontFamily:
-    '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-};
-const container = {
-  margin: '0 auto',
-  padding: '32px 24px',
-  maxWidth: '560px',
-};
-const brand = {
-  color: '#F8FAFC',
-  fontSize: '18px',
-  fontWeight: 800,
-  letterSpacing: '-0.02em',
-};
-const h1 = {
-  color: '#F8FAFC',
-  fontSize: '24px',
-  fontWeight: 800,
-  margin: '16px 0 8px',
-};
-const paragraph = {
-  color: '#CBD5E1',
-  fontSize: '14px',
-  lineHeight: '1.55',
-};
-const note = {
-  backgroundColor: '#1E293B',
-  borderRadius: '12px',
-  padding: '12px 16px',
-  margin: '16px 0',
-};
-const noteText = { color: '#E2E8F0', fontSize: '13px', margin: 0 };
-const kpiRow = { margin: '20px 0' };
-const kpi = {
-  display: 'inline-block',
-  width: '46%',
-  backgroundColor: '#1E293B',
-  borderRadius: '12px',
-  padding: '12px',
-  margin: '1%',
-  color: '#F8FAFC',
-  verticalAlign: 'top' as const,
-};
-const kpiLabel = {
-  fontSize: '10px',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.08em',
-  color: '#94A3B8',
-  fontWeight: 700,
-};
-const kpiValue = { fontSize: '20px', fontWeight: 800 };
-const cta = {
-  display: 'inline-block',
-  backgroundColor: '#F472B6',
-  color: '#0F172A',
-  fontWeight: 800,
-  fontSize: '13px',
-  padding: '14px 22px',
-  borderRadius: '12px',
-  textDecoration: 'none',
-};
-const hr = { borderColor: '#334155', margin: '24px 0' };
-const footer = { color: '#64748B', fontSize: '11px' };
-const link = { color: '#F472B6' };
+export default MonthlyReportEmail;

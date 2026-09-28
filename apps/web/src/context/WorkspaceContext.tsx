@@ -135,25 +135,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             seen.add(p.id);
             return true;
           });
+          // Keep module store in sync so Publish/Preview don't miss the active id.
+          const { replaceWorkspaceProfiles } = await import(
+            '@/lib/mock-workspace-profiles'
+          );
+          replaceWorkspaceProfiles(unique);
           setWorkspaces(unique);
-          try {
-            localStorage.setItem(
-              'nc_workspace_profiles_v2',
-              JSON.stringify(unique)
-            );
-          } catch {
-            /* ignore */
-          }
           return;
         }
         // Empty DB list — clear stale local duplicates.
         if (Array.isArray(json.profiles) && json.profiles.length === 0 && json.demo === false) {
+          const { replaceWorkspaceProfiles } = await import(
+            '@/lib/mock-workspace-profiles'
+          );
+          replaceWorkspaceProfiles([]);
           setWorkspaces([]);
-          try {
-            localStorage.setItem('nc_workspace_profiles_v2', '[]');
-          } catch {
-            /* ignore */
-          }
           return;
         }
       } catch {

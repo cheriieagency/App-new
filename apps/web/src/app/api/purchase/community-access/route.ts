@@ -48,6 +48,24 @@ export async function POST(request: Request) {
       getSiteUrl();
 
     const communityUrl = buildCommunityAccessUrl(communityId, origin);
+
+    let creatorId: string | null = null;
+    if (process.env.DATABASE_URL?.trim()) {
+      try {
+        const owners = await sql`
+          SELECT creator_id, name FROM communities WHERE id = ${communityId} LIMIT 1
+        `;
+        creatorId = (owners?.[0]?.creator_id as string) || null;
+      } catch {
+        /* ignore */
+      }
+    }
+    // Demo fallback: scope mock CRM to community owner when known, else community key.
+    if (!creatorId) {
+      const managedCreator = (community as { creator_id?: string } | null)?.creator_id;
+      creatorId = managedCreator?.trim() || `community:${communityId}`;
+    }
+
     const result = process.env.DATABASE_URL?.trim()
       ? {
           communityUrl,
@@ -62,6 +80,7 @@ export async function POST(request: Request) {
           broadcast: { id: null },
         }
       : sendCommunityAccessInvite({
+          creatorId,
           buyerName,
           buyerEmail,
           productTitle,
@@ -69,21 +88,6 @@ export async function POST(request: Request) {
           communityName,
           origin,
         });
-
-    let creatorId: string | null = null;
-    if (process.env.DATABASE_URL?.trim()) {
-      try {
-        const owners = await sql`
-          SELECT creator_id, name FROM communities WHERE id = ${communityId} LIMIT 1
-        `;
-        creatorId = (owners?.[0]?.creator_id as string) || null;
-        if (owners?.[0]?.name) {
-          // Prefer live community name from DB when present.
-        }
-      } catch {
-        /* ignore */
-      }
-    }
 
     if (creatorId) {
       await persistSubscriber({

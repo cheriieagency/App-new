@@ -9,6 +9,7 @@ import {
   PINTEREST_OAUTH_STATE_COOKIE,
   exchangePinterestCode,
   fetchPinterestUserAccount,
+  pinterestOAuthCookieDomain,
   resolvePinterestAccountIdentity,
 } from '@/lib/pinterest/oauth';
 import { upsertOAuthSocialAccount } from '@/lib/social/oauth-accounts';
@@ -21,7 +22,10 @@ function resolveRequestOrigin(request: Request): string {
   const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
   const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
   if (forwardedHost) {
-    const proto = forwardedProto || 'http';
+    const isLocal =
+      forwardedHost.startsWith('localhost') ||
+      forwardedHost.startsWith('127.0.0.1');
+    const proto = forwardedProto || (isLocal ? 'http' : 'https');
     try {
       return new URL(`${proto}://${forwardedHost}`).origin;
     } catch {
@@ -31,13 +35,15 @@ function resolveRequestOrigin(request: Request): string {
   return new URL(request.url).origin;
 }
 
-function clearState(res: NextResponse) {
+function clearState(res: NextResponse, origin: string) {
+  const cookieDomain = pinterestOAuthCookieDomain(origin);
   res.cookies.set(PINTEREST_OAUTH_STATE_COOKIE, '', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' || origin.startsWith('https'),
     path: '/',
     maxAge: 0,
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
 }
 
@@ -59,7 +65,7 @@ export async function GET(request: Request) {
       detail,
       continueHref: `${dest.pathname}${dest.search}`,
     });
-    clearState(res);
+    clearState(res, origin);
     return res;
   };
 
@@ -68,7 +74,12 @@ export async function GET(request: Request) {
 
   const jar = await cookies();
   const expected = jar.get(PINTEREST_OAUTH_STATE_COOKIE)?.value;
-  if (!state || !expected || state !== expected) return fail('invalid_state');
+  if (!state || !expected || state !== expected) {
+    return fail(
+      'invalid_state',
+      'OAuth state cookie missing or mismatched. Retry Connect from the same host (www vs non-www).'
+    );
+  }
 
   const workspaceId = resolveOAuthWorkspaceId({
     state,
@@ -121,7 +132,7 @@ export async function GET(request: Request) {
       platform: 'pinterest',
       continueHref: `${dest.pathname}${dest.search}`,
     });
-    clearState(res);
+    clearState(res, origin);
     return res;
   } catch (error) {
     console.error('[pinterest/callback]', error);

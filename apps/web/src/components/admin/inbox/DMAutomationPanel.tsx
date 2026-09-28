@@ -9,6 +9,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Loader2,
+  MessageCircle,
+  MessageSquare,
   MessageSquarePlus,
   MousePointerClick,
   Percent,
@@ -24,6 +26,7 @@ import {
 import { toast } from 'sonner';
 import { adminCardClass, adminKpiClass } from '@/components/admin/AdminUi';
 import AdminEmptyState from '@/components/admin/AdminEmptyState';
+import DmChatFlowSection from '@/components/admin/inbox/DmChatFlowSection';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useLanguage } from '@/lib/locale-context';
 import { localeTag, t, tf, type Locale, type TranslationKey } from '@/lib/i18n';
@@ -205,8 +208,10 @@ export default function DMAutomationPanel() {
   const [recentComments, setRecentComments] = useState<RecentIgComment[]>([]);
   const [selectedCommentText, setSelectedCommentText] = useState('');
   const [devToolsOpen, setDevToolsOpen] = useState(false);
-  const [autoWatchLabel, setAutoWatchLabel] = useState(
-    'Auto-watching Instagram every 20s…'
+  const [createChooserOpen, setCreateChooserOpen] = useState(false);
+  const [dmFlowOpenSignal, setDmFlowOpenSignal] = useState(0);
+  const [autoWatchLabel, setAutoWatchLabel] = useState(() =>
+    t('dmLiveStatusDefault', locale)
   );
   /** True when Meta counts comments but API returns none (app not Live / no Advanced Access). */
   const [metaCommentsBlocked, setMetaCommentsBlocked] = useState(false);
@@ -214,6 +219,11 @@ export default function DMAutomationPanel() {
     'https://developers.facebook.com/apps/1891008578454284/settings/basic/';
   const metaAppRolesUrl =
     'https://developers.facebook.com/apps/1891008578454284/roles/roles/';
+
+  // Refresh default status copy when LanguageSwitcher changes locale.
+  useEffect(() => {
+    setAutoWatchLabel(t('dmLiveStatusDefault', locale));
+  }, [locale]);
 
   const storefrontDefault = useMemo(() => {
     const handle = (activeWorkspace.handle || activeWorkspace.bio?.handle || '')
@@ -269,13 +279,13 @@ export default function DMAutomationPanel() {
       if (result.httpOk === false) {
         setAutoWatchLabel(
           result.error
-            ? `Auto-watch paused: ${result.error}`
-            : 'Auto-watch paused (retrying…)'
+            ? tf('dmLiveStatusPaused', locale, { error: result.error })
+            : t('dmLiveStatusPausedRetry', locale)
         );
         return;
       }
       if (result.throttled) {
-        setAutoWatchLabel('Auto-watching Instagram every 20s…');
+        setAutoWatchLabel(t('dmLiveStatusDefault', locale));
         return;
       }
       const sent = Number(result.sent) || 0;
@@ -290,20 +300,21 @@ export default function DMAutomationPanel() {
         setMetaCommentsBlocked(blocked);
         setAutoWatchLabel(
           blocked
-            ? 'Blocked by Meta app mode — see fix below'
-            : first.length > 120
-              ? `Auto-watch issue: ${first.slice(0, 117)}…`
-              : `Auto-watch issue: ${first}`
+            ? t('dmLiveStatusBlocked', locale)
+            : tf('dmLiveStatusBackupIssue', locale, {
+                error:
+                  first.length > 120 ? `${first.slice(0, 117)}…` : first,
+              })
         );
         return;
       }
       setMetaCommentsBlocked(false);
       setAutoWatchLabel(
         sent > 0
-          ? `Auto-sent ${sent} DM${sent === 1 ? '' : 's'} — watching every 20s…`
+          ? tf('dmLiveStatusJustSent', locale, { count: sent })
           : fetched > 0
-            ? `Saw ${fetched} recent comment${fetched === 1 ? '' : 's'} — watching every 20s…`
-            : 'Auto-watching Instagram every 20s…'
+            ? tf('dmLiveStatusSawComments', locale, { count: fetched })
+            : t('dmLiveStatusDefault', locale)
       );
       if (sent > 0) {
         toast.success(
@@ -852,6 +863,11 @@ export default function DMAutomationPanel() {
   });
 
   const openCreate = () => {
+    setCreateChooserOpen(true);
+  };
+
+  const openCreateCommentRule = () => {
+    setCreateChooserOpen(false);
     setForm({
       ...EMPTY_FORM,
       dmMessageText: t('dmDefaultMessage', locale),
@@ -860,6 +876,11 @@ export default function DMAutomationPanel() {
       ctaButtonUrl: storefrontDefault,
     });
     setModalOpen(true);
+  };
+
+  const openCreateDmFlow = () => {
+    setCreateChooserOpen(false);
+    setDmFlowOpenSignal((n) => n + 1);
   };
 
   const openEdit = (rule: AutomationRule) => {
@@ -956,7 +977,7 @@ export default function DMAutomationPanel() {
                 className={`inline-block h-1.5 w-1.5 rounded-full ${
                   metaCommentsBlocked
                     ? 'bg-amber-500'
-                    : 'bg-[rgba(44,59,46,0.08)]0 animate-pulse'
+                    : 'bg-emerald-500 animate-pulse'
                 }`}
                 aria-hidden
               />
@@ -1393,7 +1414,7 @@ export default function DMAutomationPanel() {
                     }
                     onClick={() => toggleMutation.mutate(rule)}
                     className={`relative h-11 min-h-[44px] w-[52px] rounded-full transition-colors disabled:opacity-60 ${
-                      rule.isActive ? 'bg-[rgba(44,59,46,0.08)]0' : 'bg-slate-200'
+                      rule.isActive ? 'bg-[#2C3B2E]' : 'bg-slate-200'
                     }`}
                   >
                     <span
@@ -1426,6 +1447,66 @@ export default function DMAutomationPanel() {
           </ul>
         )}
       </div>
+
+      <DmChatFlowSection
+        storefrontDefault={storefrontDefault}
+        openSignal={dmFlowOpenSignal}
+      />
+
+      {createChooserOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <button
+            type="button"
+            aria-label={t('dmClose', locale)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setCreateChooserOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative z-10 w-full sm:max-w-md bg-[#FFFFFF] rounded-t-3xl sm:rounded-xl shadow-2xl p-5 sm:p-6 space-y-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="font-playfair font-medium text-xl text-[#2C2621]">
+                {t('dmCreateChooserTitle', locale)}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCreateChooserOpen(false)}
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] inline-flex items-center justify-center"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={openCreateCommentRule}
+              className="w-full text-left rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] hover:bg-[#F0EFEA] p-4 min-h-[44px] transition-colors"
+            >
+              <p className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
+                <MessageSquare size={16} />
+                {t('dmCreateChooserComment', locale)}
+              </p>
+              <p className="text-xs text-[#8A857D] mt-1 leading-relaxed">
+                {t('dmCreateChooserCommentDesc', locale)}
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={openCreateDmFlow}
+              className="w-full text-left rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] hover:bg-[#F0EFEA] p-4 min-h-[44px] transition-colors"
+            >
+              <p className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
+                <MessageCircle size={16} />
+                {t('dmCreateChooserDm', locale)}
+              </p>
+              <p className="text-xs text-[#8A857D] mt-1 leading-relaxed">
+                {t('dmCreateChooserDmDesc', locale)}
+              </p>
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">

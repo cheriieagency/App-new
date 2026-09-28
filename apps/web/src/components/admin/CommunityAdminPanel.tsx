@@ -539,15 +539,28 @@ export default function CommunityAdminPanel({
     isLoading: communitiesLoading,
   } = useCommunities(true);
 
-  // Hard filter: workspace_id === activeWorkspaceId only.
-  const workspaceCommunities = workspaceCommunitiesRaw.filter(
-    (c) => String(c.workspace_id) === String(activeWorkspace.id)
-  );
+  // Prefer communities bound to this workspace; also keep owner/admin rows
+  // (e.g. Clikd Insiders) so staff admins never see a false empty state.
+  const workspaceCommunities = workspaceCommunitiesRaw.filter((c) => {
+    const sameWorkspace =
+      String(c.workspace_id || '') === String(activeWorkspace.id);
+    const isInsiders =
+      String((c as { slug?: string }).slug || '') === 'clikd-insiders' ||
+      /insider/i.test(String(c.name || ''));
+    return sameWorkspace || isInsiders;
+  });
   const workspaceCommunity =
-    workspaceCommunityRaw &&
-    String(workspaceCommunityRaw.workspace_id) === String(activeWorkspace.id)
+    workspaceCommunities.find(
+      (c) => String(c.workspace_id || '') === String(activeWorkspace.id)
+    ) ||
+    workspaceCommunities[0] ||
+    (workspaceCommunityRaw &&
+    (String(workspaceCommunityRaw.workspace_id || '') ===
+      String(activeWorkspace.id) ||
+      String((workspaceCommunityRaw as { slug?: string }).slug || '') ===
+        'clikd-insiders')
       ? workspaceCommunityRaw
-      : workspaceCommunities[0] ?? null;
+      : null);
 
   // Only bind to the community owned by this workspace (ignore stale profile ids).
   const [overrideCommunityId, setOverrideCommunityId] = useState<number | null>(
@@ -847,7 +860,14 @@ export default function CommunityAdminPanel({
         : community
           ? [community]
           : []
-  ).filter((c) => String(c.workspace_id) === String(activeWorkspace.id));
+  ).filter((c) => {
+    const sameWorkspace =
+      String(c.workspace_id || '') === String(activeWorkspace.id);
+    const isInsiders =
+      String((c as { slug?: string }).slug || '') === 'clikd-insiders' ||
+      /insider/i.test(String(c.name || ''));
+    return sameWorkspace || isInsiders;
+  });
 
   if (!community) {
     const defaultName =

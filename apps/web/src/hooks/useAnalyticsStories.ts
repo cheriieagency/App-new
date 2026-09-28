@@ -43,10 +43,8 @@ export function useAnalyticsStories(enabled = true) {
     queryFn: async (): Promise<AnalyticsStoriesResponse> => {
       const url = new URL('/api/analytics/stories', window.location.origin);
       url.searchParams.set('workspaceId', workspaceId);
-      url.searchParams.set('_', String(Date.now()));
       const res = await fetch(url.toString(), {
         credentials: 'include',
-        cache: 'no-store',
         headers: {
           'x-workspace-id': workspaceId,
           'x-active-workspace-id': workspaceId,

@@ -46,7 +46,6 @@ import {
   Home,
   Camera,
   Globe as GlobeIcon,
-  Bell,
   Mail,
   MapPin,
   Monitor,
@@ -62,12 +61,9 @@ import {
 } from 'lucide-react';
 import useHandleStreamResponse from '@/utils/useHandleStreamResponse';
 import { useLocale } from '@/lib/locale-context';
-import { t, type TranslationKey } from '@/lib/i18n';
-import {
-  filterInAppNotifications,
-  loadNotificationPrefs,
-} from '@/lib/notification-prefs';
+import { t } from '@/lib/i18n';
 import useUpload from '@/utils/useUpload';
+import AdminNotificationBell from '@/components/admin/AdminNotificationBell';
 import dynamic from 'next/dynamic';
 import {
   getMockCommunityAdminPayload,
@@ -1763,30 +1759,9 @@ export default function AdminPage() {
   const [bioSubTab, setBioSubTab] = useState<BioSubTab>('design');
   const [saved, setSaved] = useState('');
   const [createWsOpen, setCreateWsOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
   const bioHydratingRef = useRef(false);
-  const [headerNotifs, setHeaderNotifs] = useState(() =>
-    filterInAppNotifications(loadNotificationPrefs(session?.user?.id))
-  );
-
-  // Keep header bell in sync with Settings → Notifications preferences.
-  useEffect(() => {
-    const refresh = () => {
-      setHeaderNotifs(
-        filterInAppNotifications(loadNotificationPrefs(session?.user?.id))
-      );
-    };
-    refresh();
-    const onPrefs = () => refresh();
-    window.addEventListener('clikd:notif-prefs', onPrefs as EventListener);
-    window.addEventListener('storage', onPrefs);
-    return () => {
-      window.removeEventListener('clikd:notif-prefs', onPrefs as EventListener);
-      window.removeEventListener('storage', onPrefs);
-    };
-  }, [session?.user?.id]);
 
   // Deep-link support for community sub-views.
   useEffect(() => {
@@ -2219,25 +2194,25 @@ export default function AdminPage() {
         );
       }
 
+      const themeLabel =
+        BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)?.label ||
+        activeWorkspace.bio.theme_label;
       const bioPatch = {
         profile_photo: bioAvatarUrl || null,
         display_name: bioDisplayName,
         handle: cleanHandle,
         bio_text: bioBioText,
         theme: bioTheme,
-        theme_label:
-          BIO_THEME_PRESETS.find((p) => p.presetId === bioTheme.presetId)?.label ||
-          activeWorkspace.bio.theme_label,
-        blocks: blocks as WorkspaceBioBlock[],
-        social_links: socialLinks,
+        theme_label: themeLabel,
+        // Full block payloads (icons, prices, UTM, coaching flags, …).
+        blocks: blocks.map((b) => ({ ...b })) as WorkspaceBioBlock[],
+        social_links: socialLinks.map((l) => ({ ...l })),
       };
 
-      // Durable source of truth for public /bio/{handle} is workspaces.profile_data.
-      const workspaceOk = await updateActiveBio(bioPatch);
-      if (!workspaceOk) {
-        throw new Error(t('toastBioSaveFailed', locale));
-      }
+      // Optimistic local mirror so Preview / sidebar stay in sync immediately.
+      await updateActiveBio(bioPatch, { durable: false });
 
+      // Single durable publish: bio_blocks + workspaces.profile_data (public page).
       const r = await fetch('/api/admin/bio', {
         method: 'POST',
         headers: {
@@ -2249,9 +2224,12 @@ export default function AdminPage() {
               }
             : {}),
         },
+        credentials: 'include',
+        cache: 'no-store',
         body: JSON.stringify({
           ...bioPatch,
-          avatar_url: bioAvatarUrl,
+          avatar_url: bioAvatarUrl || null,
+          theme_label: themeLabel,
           workspaceId: activeWorkspaceId,
           workspace_id: activeWorkspaceId,
         }),
@@ -2259,9 +2237,13 @@ export default function AdminPage() {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) {
         throw new Error(
-          (data as { error?: string }).error || t('toastPublishFailed', locale)
+          (data as { error?: string; message?: string }).message ||
+            (data as { error?: string }).error ||
+            t('toastPublishFailed', locale)
         );
       }
+      // Keep client workspace store aligned with what just published.
+      await updateActiveBio(bioPatch, { durable: false });
       return {
         ...(data as Record<string, unknown>),
         handle: cleanHandle,
@@ -2480,52 +2462,11 @@ export default function AdminPage() {
           >
             <Sparkles size={14} />
           </button>
+          <AdminNotificationBell />
           <div className="relative">
             <button
               type="button"
               onClick={() => {
-                setAccountMenuOpen(false);
-                setNotifOpen((v) => !v);
-              }}
-              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full hover:bg-[#F0EFEA] flex items-center justify-center text-[#8A857D] relative transition-colors"
-              aria-label={t('notificationsTitle', locale)}
-            >
-              <Bell size={17} strokeWidth={1.75} />
-              {headerNotifs.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#B85C38]" />
-              )}
-            </button>
-            {notifOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-[#FFFFFF] border border-[#E6E3DB] rounded-xl shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)] z-40 overflow-hidden">
-                <div className="px-4 py-3 border-b border-[#E6E3DB]">
-                  <p className="text-xs font-medium text-[#2C2621]">
-                    {t('notificationsTitle', locale)}
-                  </p>
-                </div>
-                {headerNotifs.length === 0 ? (
-                  <p className="px-4 py-4 text-xs font-medium text-[#8A857D]">
-                    {t('notifEmpty', locale)}
-                  </p>
-                ) : (
-                  headerNotifs.map((n) => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      onClick={() => setNotifOpen(false)}
-                      className="w-full text-left px-4 py-3 text-xs font-medium text-[#8A857D] hover:bg-[#F0EFEA] border-b border-slate-50 last:border-0"
-                    >
-                      {t(n.messageKey as TranslationKey, locale)}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setNotifOpen(false);
                 setAccountMenuOpen((v) => !v);
               }}
               className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-full overflow-hidden border border-[#E6E3DB] shadow-none bg-[#2C3B2E] flex items-center justify-center text-white text-xs font-medium"
@@ -2698,8 +2639,8 @@ export default function AdminPage() {
           >
             <FeatureGate
               feature="directMessages"
-              title="Social Inbox & DMs"
-              description="Reply to Instagram DMs and run Comment-to-DM automations on Creator and Pro/Agency."
+              title={t('inboxFeatureGateTitle', locale)}
+              description={t('inboxFeatureGateDesc', locale)}
             >
               <SocialInboxPanel />
             </FeatureGate>

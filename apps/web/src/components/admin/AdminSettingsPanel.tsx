@@ -254,13 +254,13 @@ export default function AdminSettingsPanel() {
   });
 
   const { data: emailData } = useQuery<{ automations: EmailAutomation[] }>({
-    queryKey: ['admin-email'],
+    queryKey: ['admin-email', session?.user?.id ?? null, 'workflows'],
     queryFn: async () => {
-      const r = await fetch('/api/admin/email');
+      const r = await fetch('/api/admin/email', { credentials: 'include' });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
-    enabled: tab === 'workflows',
+    enabled: tab === 'workflows' && Boolean(session?.user?.id),
   });
 
   const membersByWorkspace = useMemo(() => {

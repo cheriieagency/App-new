@@ -127,7 +127,8 @@ function readStoredWorkspaceId(): string | null {
 /** Hydrates /api/analytics for the ACTIVE workspace (live, auto-refresh). */
 export function useAnalytics(
   enabled = true,
-  range?: { from?: string; to?: string } | null
+  range?: { from?: string; to?: string } | null,
+  options?: { includeDemographics?: boolean } | null
 ) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -136,9 +137,17 @@ export function useAnalytics(
     workspaceCtx?.activeWorkspaceId || readStoredWorkspaceId() || null;
   const from = range?.from?.trim() || '';
   const to = range?.to?.trim() || '';
+  const includeDemographics = Boolean(options?.includeDemographics);
 
   const query = useQuery<AnalyticsApiResponse>({
-    queryKey: ['analytics', workspaceId ?? 'none', pathname ?? '', from, to],
+    queryKey: [
+      'analytics',
+      workspaceId ?? 'none',
+      pathname ?? '',
+      from,
+      to,
+      includeDemographics ? 'demo' : 'lite',
+    ],
     enabled: enabled && Boolean(workspaceId),
     ...LIVE_ANALYTICS_QUERY,
     placeholderData: keepPreviousData,
@@ -158,14 +167,13 @@ export function useAnalytics(
       params.set('workspaceId', ws);
       if (from) params.set('from', from);
       if (to) params.set('to', to);
-      params.set('_', String(Date.now()));
+      if (includeDemographics) params.set('includeDemographics', '1');
       const r = await fetch(`/api/analytics?${params}`, {
         headers: {
           'x-workspace-id': ws,
           'x-active-workspace-id': ws,
         },
         credentials: 'include',
-        cache: 'no-store',
       });
       // Soft-parse even on 401 — route returns structured fallback JSON.
       return r.json();

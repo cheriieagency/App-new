@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { authClient } from '@/lib/auth-client';
 import {
   Mail,
   Users,
@@ -303,6 +304,8 @@ function DroppableBodyField({
 export default function EmailAdminPanel() {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const { data: session } = authClient.useSession();
+  const sessionUserId = session?.user?.id ?? null;
   const { activeWorkspace } = useWorkspace();
   const {
     hasFeature,
@@ -316,6 +319,7 @@ export default function EmailAdminPanel() {
   const rawCommunityId = Number(activeWorkspace.community?.community_id);
   const workspaceCommunityId =
     Number.isFinite(rawCommunityId) && rawCommunityId > 0 ? rawCommunityId : null;
+  const draftHydratedRef = useRef(false);
   const [tag, setTag] = useState('all');
   const [q, setQ] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
@@ -365,9 +369,17 @@ export default function EmailAdminPanel() {
   const [autoBody, setAutoBody] = useState('');
   const [autoStatus, setAutoStatus] = useState<'active' | 'paused'>('active');
 
-  // Workspace CRM list — optional community scope when a real community is linked.
+  // CRM is locked to the signed-in user — query key includes user id so cache never leaks.
   const { data, isLoading } = useQuery<EmailResponse>({
-    queryKey: ['admin-email', tag, q, workspaceCommunityId],
+    queryKey: [
+      'admin-email',
+      sessionUserId,
+      activeWorkspace.id,
+      tag,
+      q,
+      workspaceCommunityId,
+    ],
+    enabled: Boolean(sessionUserId),
     queryFn: async () => {
       const params = new URLSearchParams();
       if (tag && tag !== 'all') params.set('tag', tag);
@@ -375,11 +387,67 @@ export default function EmailAdminPanel() {
       if (workspaceCommunityId) {
         params.set('community_id', String(workspaceCommunityId));
       }
-      const r = await fetch(`/api/admin/email?${params.toString()}`);
+      const r = await fetch(`/api/admin/email?${params.toString()}`, {
+        credentials: 'include',
+      });
       if (!r.ok) throw new Error('Failed');
       return r.json();
     },
   });
+
+  // Reset composer when switching logins/workspaces so drafts never cross users.
+  useEffect(() => {
+    draftHydratedRef.current = false;
+    setSubject('');
+    setBody('');
+    setAudience('all');
+    setImageUrl(null);
+  }, [sessionUserId, activeWorkspace.id]);
+
+  useEffect(() => {
+    if (!data?.broadcasts || draftHydratedRef.current) return;
+    const draft = data.broadcasts.find((b) => b.status === 'draft');
+    if (!draft) {
+      draftHydratedRef.current = true;
+      return;
+    }
+    setSubject(draft.subject || '');
+    setBody(draft.body || '');
+    setAudience(draft.audience || 'all');
+    setImageUrl(draft.image_url ?? null);
+    draftHydratedRef.current = true;
+  }, [data?.broadcasts]);
+
+  // Autosave composer drafts to the backend under this creator.
+  useEffect(() => {
+    if (!sessionUserId || !draftHydratedRef.current) return;
+    if (!subject.trim() && !body.trim()) return;
+    const timer = window.setTimeout(() => {
+      void fetch('/api/admin/email', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_draft',
+          workspaceId: activeWorkspace.id,
+          subject,
+          bodyContent: body,
+          audience,
+          imageUrl,
+        }),
+      }).catch(() => {
+        /* draft save is best-effort */
+      });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [
+    sessionUserId,
+    activeWorkspace.id,
+    subject,
+    body,
+    audience,
+    imageUrl,
+  ]);
 
   const handleImageFile = async (file: File, insertAt?: number) => {
     if (!file.type.startsWith('image/')) {
@@ -444,6 +512,7 @@ export default function EmailAdminPanel() {
       }
       const r = await fetch('/api/admin/email/send', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
@@ -519,6 +588,7 @@ export default function EmailAdminPanel() {
     mutationFn: async () => {
       const r = await fetch('/api/admin/email', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'sync_community_members',
@@ -553,6 +623,7 @@ export default function EmailAdminPanel() {
     mutationFn: async (contacts: Array<{ name: string; email: string }>) => {
       const r = await fetch('/api/admin/email', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'import_subscribers',
@@ -752,6 +823,7 @@ export default function EmailAdminPanel() {
     mutationFn: async (input: { id: string; status: 'active' | 'paused' }) => {
       const r = await fetch('/api/admin/email', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'toggle_automation',
@@ -893,24 +965,25 @@ export default function EmailAdminPanel() {
     () => [
       {
         label: t('totalSubscribers', locale),
-        value: data?.total_subscribers ?? activeWorkspace.email.total_subscribers,
+        // Never fall back to shared workspace seed stats — only this login's CRM.
+        value: data?.total_subscribers ?? 0,
         icon: Users,
         color: '#3B82F6',
       },
       {
         label: t('averageOpenRate', locale),
-        value: `${data?.average_open_rate ?? activeWorkspace.email.average_open_rate}%`,
+        value: `${data?.average_open_rate ?? 0}%`,
         icon: Percent,
         color: '#10B981',
       },
       {
         label: t('broadcastsSent', locale),
-        value: data?.total_broadcasts ?? activeWorkspace.email.broadcasts_sent,
+        value: data?.total_broadcasts ?? 0,
         icon: Send,
         color: '#9b8afb',
       },
     ],
-    [data, activeWorkspace.email, locale]
+    [data, locale]
   );
 
   if (isLoading) {

@@ -113,6 +113,7 @@ export default function ContentPlannerShell({
     'tiktok',
     'linkedin',
     'youtube',
+    'pinterest',
   ] as const);
 
   const project = activeWorkspace?.name ?? 'Ebba Creator Lab';
@@ -417,85 +418,100 @@ export default function ContentPlannerShell({
   );
 
   const pageHeader = (
-    <AdminPageHeader
-      eyebrow={eyebrow ?? t('adminContentPlanner', locale)}
-      title={title ?? t('adminNavPlanner', locale)}
-      description={
-        description ??
-        (activeWorkspace ? `${activeWorkspace.name} · ${activeWorkspace.handle}` : undefined)
-      }
-      actions={
-        <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto min-w-0">
-          {headerExtra ? (
-            <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end w-full">
+    <div className="space-y-4 min-w-0">
+      {/* Title row — keep actions light so chips never fight the headline */}
+      <AdminPageHeader
+        eyebrow={eyebrow ?? t('adminContentPlanner', locale)}
+        title={title ?? t('adminNavPlanner', locale)}
+        description={
+          description ??
+          (activeWorkspace
+            ? `${activeWorkspace.name} · ${activeWorkspace.handle}`
+            : undefined)
+        }
+        actions={
+          headerExtra ? (
+            <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end">
               {headerExtra}
             </div>
-          ) : null}
-          {/* Platform filters — above view tabs, right-aligned */}
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none justify-start sm:justify-end max-w-full">
-            <button
-              type="button"
-              onClick={() => setPlatformFilter('all')}
-              className={`text-xs px-3.5 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 transition-colors ${
-                platformFilter === 'all'
-                  ? 'bg-[#2C3B2E] text-[#F9F8F6] font-medium'
-                  : 'bg-[#FFFFFF] text-[#8A857D] border border-[#E6E3DB] font-medium hover:bg-[#F0EFEA]'
-              }`}
-            >
-              {t('allPlatforms', locale)}
-            </button>
-            {plannerPlatformFilters.map((p) => {
-              const active = platformFilter === p;
-              const Icon = PLATFORM_ICONS[p];
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => {
-                    setPlatformFilter(p);
-                    if (view === 'feed' && p !== 'instagram' && p !== 'tiktok') {
-                      setView('board');
-                    }
-                  }}
-                  className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[36px] rounded-xl whitespace-nowrap flex-shrink-0 font-medium transition-colors ${
-                    active
-                      ? 'bg-[#2C3B2E] text-[#F9F8F6]'
-                      : 'bg-[#FFFFFF] text-[#8A857D] border border-[#E6E3DB] hover:bg-[#F0EFEA]'
-                  }`}
-                >
-                  <Icon size={13} className={active ? 'text-[#F9F8F6]' : undefined} />
-                  {PLATFORM_META[p].label}
-                </button>
-              );
-            })}
-          </div>
+          ) : undefined
+        }
+      />
 
-          {/* View tabs — Progress / Calendar / Table / … */}
-          <div className="flex gap-0.5 overflow-x-auto scrollbar-none p-1 rounded-xl bg-transparent border border-[#E6E3DB] w-fit max-w-full sm:ml-auto">
-            {viewTabs.map(({ key, label, icon: Icon }) => (
+      {/* Full-width toolbars — stack so platform + view controls never overlap */}
+      <div className="flex flex-col gap-3 min-w-0 w-full">
+        <div
+          className="flex gap-1.5 overflow-x-auto overscroll-x-contain scrollbar-none pb-0.5 -mx-1 px-1"
+          role="toolbar"
+          aria-label={t('allPlatforms', locale)}
+        >
+          <button
+            type="button"
+            onClick={() => setPlatformFilter('all')}
+            className={`text-xs px-3.5 py-2 min-h-[44px] rounded-xl whitespace-nowrap flex-shrink-0 transition-colors ${
+              platformFilter === 'all'
+                ? 'bg-[#2C3B2E] text-[#F9F8F6] font-medium'
+                : 'bg-[#FFFFFF] text-[#8A857D] border border-[#E6E3DB] font-medium hover:bg-[#F0EFEA]'
+            }`}
+          >
+            {t('allPlatforms', locale)}
+          </button>
+          {plannerPlatformFilters.map((p) => {
+            const active = platformFilter === p;
+            const Icon = PLATFORM_ICONS[p];
+            return (
               <button
-                key={key}
+                key={p}
                 type="button"
-                onClick={() => setView(key)}
-                className={`inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-lg text-xs transition-colors flex-shrink-0 ${
-                  view === key
-                    ? 'bg-[#FFFFFF] text-[#2C2621] border border-[#E6E3DB] font-medium'
-                    : 'text-[#8A857D] font-normal hover:text-[#2C2621]'
+                onClick={() => {
+                  setPlatformFilter(p);
+                  if (view === 'feed' && p !== 'instagram' && p !== 'tiktok') {
+                    setView('board');
+                  }
+                }}
+                className={`inline-flex items-center gap-1.5 text-xs px-3 py-2 min-h-[44px] rounded-xl whitespace-nowrap flex-shrink-0 font-medium transition-colors ${
+                  active
+                    ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                    : 'bg-[#FFFFFF] text-[#8A857D] border border-[#E6E3DB] hover:bg-[#F0EFEA]'
                 }`}
               >
-                <Icon
-                  size={13}
-                  className={
-                    key === 'copilot' && view !== 'copilot' ? 'text-[#B85C38]' : undefined
-                  }
-                />
-                {label}
+                <Icon size={13} className={active ? 'text-[#F9F8F6]' : undefined} />
+                {PLATFORM_META[p].label}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      }
-    />
+
+        <div
+          className="flex gap-0.5 overflow-x-auto overscroll-x-contain scrollbar-none p-1 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF]/60 w-full max-w-full"
+          role="tablist"
+          aria-label={t('adminNavPlanner', locale)}
+        >
+          {viewTabs.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={view === key}
+              onClick={() => setView(key)}
+              className={`inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-lg text-xs transition-colors flex-shrink-0 ${
+                view === key
+                  ? 'bg-[#FFFFFF] text-[#2C2621] border border-[#E6E3DB] font-medium shadow-none'
+                  : 'text-[#8A857D] font-normal hover:text-[#2C2621]'
+              }`}
+            >
+              <Icon
+                size={13}
+                className={
+                  key === 'copilot' && view !== 'copilot' ? 'text-[#B85C38]' : undefined
+                }
+              />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 
   const views = (
