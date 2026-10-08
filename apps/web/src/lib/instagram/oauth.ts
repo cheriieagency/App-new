@@ -41,37 +41,62 @@ function isLocalHost(hostname: string): boolean {
 
 /**
  * Exact redirect_uri for authorize + token exchange.
- * Prefer live request origin so localhost never bounces to production.
+ *
+ * Priority (must match the Instagram Developer Portal registration exactly):
+ *  1. INSTAGRAM_ONLY_REDIRECT_URI / NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI / INSTAGRAM_REDIRECT_URI
+ *  2. Live request origin (dev only when no explicit redirect is set)
+ *  3. NEXT_PUBLIC_APP_URL / BETTER_AUTH_URL / site URL
+ *
+ * Explicit redirect env must win — otherwise localhost Connect sends
+ * http://localhost:…/callback while the portal only has https://clikd.app/…
+ * → Instagram error "Invalid redirect_uri".
  */
 export function getInstagramOnlyCallbackUrl(
   requestOrigin?: string | null
 ): string {
+  const callbackPath = '/api/auth/instagram-only/callback';
+
+  const normalize = (raw: string): string | null => {
+    try {
+      const url = new URL(raw.trim());
+      return `${url.origin}${callbackPath}`;
+    } catch {
+      return null;
+    }
+  };
+
+  // 1) Explicit redirect URIs registered in the Instagram app
+  for (const raw of [
+    process.env.INSTAGRAM_ONLY_REDIRECT_URI,
+    process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI,
+    process.env.INSTAGRAM_REDIRECT_URI,
+  ]) {
+    const value = raw?.trim();
+    if (!value) continue;
+    const normalized = normalize(value);
+    if (normalized) return normalized;
+  }
+
+  // 2) Live request host (only when no portal redirect is configured)
   const fromRequest = requestOrigin?.trim();
   if (fromRequest) {
-    try {
-      return `${new URL(fromRequest).origin}/api/auth/instagram-only/callback`;
-    } catch {
-      /* fall through */
-    }
+    const normalized = normalize(fromRequest);
+    if (normalized) return normalized;
   }
 
-  const fromEnv =
-    process.env.INSTAGRAM_ONLY_REDIRECT_URI?.trim() ||
-    process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI?.trim() ||
-    process.env.INSTAGRAM_REDIRECT_URI?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    process.env.BETTER_AUTH_URL?.trim() ||
-    getSiteUrl();
-
-  try {
-    const url = new URL(fromEnv);
-    if (url.pathname.includes('/api/auth/instagram-only/callback')) {
-      return `${url.origin}/api/auth/instagram-only/callback`;
-    }
-    return `${url.origin}/api/auth/instagram-only/callback`;
-  } catch {
-    return `${getSiteUrl()}/api/auth/instagram-only/callback`;
+  // 3) App URL fallbacks
+  for (const raw of [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.BETTER_AUTH_URL,
+    getSiteUrl(),
+  ]) {
+    const value = raw?.trim();
+    if (!value) continue;
+    const normalized = normalize(value);
+    if (normalized) return normalized;
   }
+
+  return `${getSiteUrl()}${callbackPath}`;
 }
 
 /** Cookie Domain so www + apex share OAuth state on production. */
