@@ -20,11 +20,16 @@ export const TIKTOK_RETURN_TO_COOKIE = 'clikd_tiktok_return_to';
 /**
  * Login Kit + Content Posting scopes requested at authorize time.
  * Exact list sent as `scope=` on https://www.tiktok.com/v2/auth/authorize/
- * `video.publish` = Direct Post · `video.upload` = inbox drafts.
+ * `user.info.stats` = follower_count / likes_count (required after TikTok scope migration)
+ * `video.publish` = Direct Post · `video.upload` = inbox drafts
+ *
+ * Scopes must also be enabled on the TikTok Developer app; TikTok omits
+ * unapproved scopes from the consent screen instead of failing authorize.
  */
 export const TIKTOK_OAUTH_SCOPES = [
   'user.info.basic',
   'user.info.profile',
+  'user.info.stats',
   'video.publish',
   'video.upload',
 ] as const;
@@ -149,7 +154,7 @@ export function buildTikTokLoginUrl(
   }
   // Append scope with literal commas — URLSearchParams would encode them as %2C,
   // and TikTok must see `video.publish` in the query string as-is.
-  return `${authUrl.toString()}&scope=user.info.basic,user.info.profile,video.publish,video.upload`;
+  return `${authUrl.toString()}&scope=${TIKTOK_OAUTH_SCOPES.join(',')}`;
 }
 
 export type TikTokTokenResponse = {
@@ -338,42 +343,80 @@ export type TikTokUserProfile = {
   likes_count: number;
 };
 
-const USER_INFO_FIELDS = [
+/** Fields covered by `user.info.basic` alone (always safe after Login Kit). */
+const USER_INFO_BASIC_FIELDS = [
   'open_id',
   'union_id',
   'avatar_url',
   'display_name',
-  'follower_count',
-  'likes_count',
 ].join(',');
 
-/** Fetch TikTok profile + follower stats for the connected open_id. */
-export async function fetchTikTokUserInfo(
-  accessToken: string
-): Promise<TikTokUserProfile> {
-  const url = new URL('https://open.tiktokapis.com/v2/user/info/');
-  url.searchParams.set('fields', USER_INFO_FIELDS);
+/**
+ * Stats fields need `user.info.stats`. Requesting them without that grant
+ * returns scope_not_authorized and used to abort the whole OAuth connect.
+ */
+const USER_INFO_STATS_FIELDS = ['follower_count', 'likes_count'].join(',');
 
+type TikTokUserInfoPayload = {
+  data?: {
+    user?: {
+      open_id?: string;
+      union_id?: string;
+      avatar_url?: string;
+      display_name?: string;
+      follower_count?: number;
+      likes_count?: number;
+    };
+  };
+  error?: { code?: string; message?: string };
+};
+
+async function requestTikTokUserInfo(
+  accessToken: string,
+  fields: string
+): Promise<TikTokUserInfoPayload> {
+  const url = new URL('https://open.tiktokapis.com/v2/user/info/');
+  url.searchParams.set('fields', fields);
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  const payload = (await res.json()) as TikTokUserInfoPayload;
+  if (!res.ok || (payload.error?.code && payload.error.code !== 'ok')) {
+    throw new Error(
+      payload.error?.message ||
+        `Failed to fetch TikTok user info (${res.status})`
+    );
+  }
+  return payload;
+}
 
-  const payload = (await res.json()) as {
-    data?: {
-      user?: {
-        open_id?: string;
-        union_id?: string;
-        avatar_url?: string;
-        display_name?: string;
-        follower_count?: number;
-        likes_count?: number;
-      };
-    };
-    error?: { code?: string; message?: string };
-  };
+/**
+ * Fetch TikTok profile for the connected open_id.
+ * Tries basic + stats first; on scope_not_authorized falls back to basic only
+ * so OAuth connect still succeeds when `user.info.stats` is not granted yet.
+ */
+export async function fetchTikTokUserInfo(
+  accessToken: string
+): Promise<TikTokUserProfile> {
+  const withStats = `${USER_INFO_BASIC_FIELDS},${USER_INFO_STATS_FIELDS}`;
+
+  let payload: TikTokUserInfoPayload;
+  try {
+    payload = await requestTikTokUserInfo(accessToken, withStats);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const scopeBlocked =
+      /scope_not_authorized|did not authorize the scope/i.test(message);
+    if (!scopeBlocked) throw error;
+    console.warn(
+      '[tiktok] user.info.stats not granted — falling back to basic fields',
+      message
+    );
+    payload = await requestTikTokUserInfo(accessToken, USER_INFO_BASIC_FIELDS);
+  }
 
   const user = payload.data?.user;
-  if (!res.ok || !user?.open_id) {
+  if (!user?.open_id) {
     throw new Error(
       payload.error?.message || 'Failed to fetch TikTok user info'
     );
