@@ -310,7 +310,7 @@ export default function AiCopilotPanel({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 lg:gap-5">
       {/* Mode sidebar */}
-      <aside className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-3 sm:p-4 h-fit lg:sticky lg:top-28">
+      <aside className="bg-white border border-[#E6E3DB] rounded-sm  p-3 sm:p-4 h-fit lg:sticky lg:top-28">
         <div className="flex items-center gap-2 mb-3 px-1">
           <Sparkles size={15} className="text-[var(--nc-coral)]" />
           <h2 className="text-sm font-black text-[#2c3340]">AI Copilot</h2>
@@ -347,7 +347,7 @@ export default function AiCopilotPanel({
 
       <div className="space-y-4">
         {mode !== 'saved' && (
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-6 space-y-4">
+          <div className="bg-white border border-[#E6E3DB] rounded-sm  p-4 sm:p-6 space-y-4">
             <div>
               <p className="text-xs font-extrabold text-zinc-500 mb-1 lg:hidden">{activeMode.hint}</p>
               <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1.5">
@@ -450,7 +450,7 @@ export default function AiCopilotPanel({
               </p>
             </div>
             {savedIdeas.length === 0 ? (
-              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-8 text-center">
+              <div className="bg-white border border-[#E6E3DB] rounded-sm  p-8 text-center">
                 <Bookmark size={22} className="mx-auto mb-2 text-zinc-300" />
                 <p className="text-sm font-extrabold text-[#2c3340]">No saved ideas yet</p>
                 <p className="text-xs text-zinc-500 font-medium mt-1 max-w-sm mx-auto">
@@ -461,7 +461,7 @@ export default function AiCopilotPanel({
               savedIdeas.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-3"
+                  className="bg-white border border-[#E6E3DB] rounded-sm  p-4 sm:p-5 space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -525,7 +525,7 @@ export default function AiCopilotPanel({
             {ideas.map((idea) => (
               <div
                 key={idea.id}
-                className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-3"
+                className="bg-white border border-[#E6E3DB] rounded-sm  p-4 sm:p-5 space-y-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -591,7 +591,7 @@ export default function AiCopilotPanel({
         )}
 
         {mode === 'caption' && captionResult && (
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-3">
+          <div className="bg-white border border-[#E6E3DB] rounded-sm  p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-black text-[#2c3340]">Föreslagen caption</p>
               <div className="flex items-center gap-1">
@@ -635,7 +635,7 @@ export default function AiCopilotPanel({
         )}
 
         {mode === 'hashtags' && hashtagResult && (
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 space-y-3">
+          <div className="bg-white border border-[#E6E3DB] rounded-sm  p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-black text-[#2c3340]">Hashtag-förslag</p>
               <button
@@ -675,7 +675,7 @@ export default function AiCopilotPanel({
             {hooks.map((hook, i) => (
               <div
                 key={i}
-                className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3"
+                className="bg-white border border-[#E6E3DB] rounded-sm p-4 flex items-start gap-3"
               >
                 <span className="text-xs font-black text-zinc-300 mt-0.5">{i + 1}</span>
                 <p className="flex-1 text-sm font-bold text-[#2c3340]">{hook}</p>

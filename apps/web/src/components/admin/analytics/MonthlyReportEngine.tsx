@@ -448,10 +448,10 @@ export default function MonthlyReportEngine() {
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`h-11 min-h-[44px] px-3 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-colors ${
+                className={`h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] inline-flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                   active
-                    ? 'bg-[#2C3B2E] text-white'
-                    : 'bg-[#F0EFEA] text-[#8A857D] hover:bg-[#F0EFEA] border border-[#E6E3DB]'
+                    ? 'bg-[#F0EFEA] text-[#2C2621]'
+                    : 'bg-transparent text-[#8A857D] hover:bg-[#F0EFEA]/70 hover:text-[#2C2621]'
                 }`}
               >
                 <Icon size={13} /> {label}
@@ -468,7 +468,7 @@ export default function MonthlyReportEngine() {
             <button
               type="button"
               onClick={() => setTab('builder')}
-              className="h-10 min-h-[40px] px-3 rounded-xl bg-clikd-pink text-white text-xs font-medium"
+              className="h-10 min-h-[40px] px-3 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium"
             >
               New report
             </button>
@@ -515,14 +515,14 @@ export default function MonthlyReportEngine() {
                         );
                         toast.success(t('toastShareLinkCopied', locale));
                       }}
-                      className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
+                      className="h-10 min-h-[40px] px-3 rounded-sm border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <Copy size={13} /> Copy link
                     </button>
                     <button
                       type="button"
                       onClick={() => openPdf(r.public_share_token)}
-                      className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
+                      className="h-10 min-h-[40px] px-3 rounded-sm border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <FileDown size={13} /> PDF
                     </button>
@@ -530,7 +530,7 @@ export default function MonthlyReportEngine() {
                       href={shareUrl(r.public_share_token)}
                       target="_blank"
                       rel="noreferrer"
-                      className="h-10 min-h-[40px] px-3 rounded-xl bg-[#2C3B2E] text-white text-xs font-medium inline-flex items-center gap-1.5"
+                      className="h-10 min-h-[40px] px-3 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <ExternalLink size={13} /> Open
                     </a>
@@ -541,7 +541,7 @@ export default function MonthlyReportEngine() {
                         setPreviewToken(r.public_share_token);
                         setTab('preview');
                       }}
-                      className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium"
+                      className="h-10 min-h-[40px] px-3 rounded-sm border border-[#E6E3DB] text-xs font-medium"
                     >
                       Preview
                     </button>
@@ -557,7 +557,7 @@ export default function MonthlyReportEngine() {
                           deleteReport.mutate(r.id);
                         }
                       }}
-                      className="h-10 min-h-[40px] px-3 rounded-xl border border-rose-100 text-rose-600 text-xs font-medium inline-flex items-center gap-1.5"
+                      className="h-10 min-h-[40px] px-3 rounded-sm border border-rose-100 text-rose-600 text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <Trash2 size={13} /> Delete
                     </button>
@@ -596,7 +596,7 @@ export default function MonthlyReportEngine() {
               aria-checked={autoEnabled}
               onClick={() => setAutoEnabled((v) => !v)}
               className={`relative h-7 w-12 rounded-full transition-colors flex-shrink-0 ${
-                autoEnabled ? 'bg-[rgba(44,59,46,0.08)]' : 'bg-[#E6E3DB]'
+                autoEnabled ? 'bg-[#2C2621]' : 'bg-[#E6E3DB]'
               }`}
             >
               <span
@@ -615,7 +615,7 @@ export default function MonthlyReportEngine() {
               <select
                 value={autoSendDay}
                 onChange={(e) => setAutoSendDay(Number(e.target.value))}
-                className="h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-medium bg-[#FFFFFF]"
+                className="h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm font-medium bg-[#FFFFFF]"
               >
                 {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                   <option key={d} value={d}>
@@ -638,7 +638,7 @@ export default function MonthlyReportEngine() {
               value={autoEmails}
               onChange={(e) => setAutoEmails(e.target.value)}
               placeholder="client@brand.com, you@clikd.app"
-              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+              className="mt-1.5 w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
             />
             <p className="text-[10px] text-[#8A857D] mt-1">
               Comma-separated. Each email gets the guest link (open / print as PDF).
@@ -657,10 +657,10 @@ export default function MonthlyReportEngine() {
                   onClick={() =>
                     togglePlatform(autoPlatforms, setAutoPlatforms, p)
                   }
-                  className={`h-10 min-h-[40px] px-3 rounded-xl text-xs font-medium capitalize ${
+                  className={`h-8 min-h-[32px] px-2.5 rounded-sm text-xs font-medium capitalize ${
                     autoPlatforms.includes(p)
-                      ? 'bg-[#2C3B2E] text-white'
-                      : 'bg-[#F0EFEA] border border-[#E6E3DB] text-[#8A857D]'
+                      ? 'bg-[#F0EFEA] text-[#2C2621]'
+                      : 'bg-transparent border border-[#E6E3DB] text-[#8A857D] hover:bg-[#F0EFEA]/70'
                   }`}
                 >
                   {p}
@@ -676,7 +676,7 @@ export default function MonthlyReportEngine() {
             <input
               value={autoSubject}
               onChange={(e) => setAutoSubject(e.target.value)}
-              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+              className="mt-1.5 w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
             />
             <p className="text-[10px] text-[#8A857D] mt-1">
               Tokens: {'{{month}}'} {'{{workspace}}'}
@@ -691,7 +691,7 @@ export default function MonthlyReportEngine() {
               value={autoNote}
               onChange={(e) => setAutoNote(e.target.value)}
               rows={3}
-              className="mt-1.5 w-full rounded-xl border border-[#E6E3DB] px-3 py-2 text-sm resize-none"
+              className="mt-1.5 w-full rounded-sm border border-[#E6E3DB] px-3 py-2 text-sm resize-none"
               placeholder="Optional note for your client…"
             />
           </label>
@@ -748,7 +748,7 @@ export default function MonthlyReportEngine() {
               type="button"
               disabled={saveAutomation.isPending}
               onClick={() => saveAutomation.mutate()}
-              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-white text-xs font-medium inline-flex items-center gap-2 disabled:opacity-60"
+              className="h-11 min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium inline-flex items-center gap-2 disabled:opacity-60"
             >
               {saveAutomation.isPending ? (
                 <Loader2 className="animate-spin" size={14} />
@@ -759,7 +759,7 @@ export default function MonthlyReportEngine() {
               type="button"
               disabled={runAutomation.isPending}
               onClick={() => runAutomation.mutate()}
-              className="h-11 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] text-xs font-medium inline-flex items-center gap-2 disabled:opacity-60"
+              className="h-11 min-h-[44px] px-4 rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] text-xs font-medium inline-flex items-center gap-2 disabled:opacity-60"
             >
               {runAutomation.isPending ? (
                 <Loader2 className="animate-spin" size={14} />
@@ -775,7 +775,7 @@ export default function MonthlyReportEngine() {
       {tab === 'builder' && (
         <div className={`${adminCardClass} p-5 sm:p-6 space-y-4`}>
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-[#2C3B2E]" />
+            <Sparkles size={16} className="text-[#2C2621]" />
             <h3 className="text-sm font-medium text-[#2C2621]">
               Report builder & AI generator
             </h3>
@@ -789,7 +789,7 @@ export default function MonthlyReportEngine() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={`${activeWorkspace.name} monthly report`}
-              className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+              className="mt-1.5 w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
             />
           </label>
 
@@ -802,7 +802,7 @@ export default function MonthlyReportEngine() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+                className="mt-1.5 w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
               />
             </label>
             <label className="block">
@@ -813,7 +813,7 @@ export default function MonthlyReportEngine() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="mt-1.5 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+                className="mt-1.5 w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
               />
             </label>
           </div>
@@ -828,10 +828,10 @@ export default function MonthlyReportEngine() {
                   key={p}
                   type="button"
                   onClick={() => togglePlatform(platforms, setPlatforms, p)}
-                  className={`h-10 min-h-[40px] px-3 rounded-xl text-xs font-medium capitalize ${
+                  className={`h-8 min-h-[32px] px-2.5 rounded-sm text-xs font-medium capitalize ${
                     platforms.includes(p)
-                      ? 'bg-[#2C3B2E] text-white'
-                      : 'bg-[#F0EFEA] border border-[#E6E3DB] text-[#8A857D]'
+                      ? 'bg-[#F0EFEA] text-[#2C2621]'
+                      : 'bg-transparent border border-[#E6E3DB] text-[#8A857D] hover:bg-[#F0EFEA]/70'
                   }`}
                 >
                   {p}
@@ -867,7 +867,7 @@ export default function MonthlyReportEngine() {
             type="button"
             disabled={buildMutation.isPending || platforms.length === 0}
             onClick={() => buildMutation.mutate()}
-            className="h-11 min-h-[44px] px-4 rounded-xl bg-clikd-pink text-white text-xs font-medium inline-flex items-center gap-2 disabled:opacity-50"
+            className="h-11 min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium inline-flex items-center gap-2 disabled:opacity-50"
           >
             {buildMutation.isPending ? (
               <Loader2 className="animate-spin" size={14} />
@@ -900,14 +900,14 @@ export default function MonthlyReportEngine() {
                       );
                       toast.success(t('toastShareLinkCopied', locale));
                     }}
-                    className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
+                    className="h-10 min-h-[40px] px-3 rounded-sm border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
                   >
                     <Copy size={13} /> Copy link
                   </button>
                   <button
                     type="button"
                     onClick={() => openPdf(previewReport.public_share_token)}
-                    className="h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
+                    className="h-10 min-h-[40px] px-3 rounded-sm border border-[#E6E3DB] text-xs font-medium inline-flex items-center gap-1.5"
                   >
                     <FileDown size={13} /> Save as PDF
                   </button>
@@ -915,7 +915,7 @@ export default function MonthlyReportEngine() {
                     href={shareUrl(previewReport.public_share_token)}
                     target="_blank"
                     rel="noreferrer"
-                    className="h-10 min-h-[40px] px-3 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium inline-flex items-center gap-1.5"
+                    className="h-10 min-h-[40px] px-3 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium inline-flex items-center gap-1.5"
                   >
                     <ExternalLink size={13} /> Open full guest page
                   </a>
