@@ -131,7 +131,7 @@ export function buildMetaLoginUrl(
   const appId = metaEnv.appId();
   if (!appId) throw new Error('META_APP_ID is not configured');
 
-  const url = new URL('https://www.facebook.com/v19.0/dialog/oauth');
+  const url = new URL('https://www.facebook.com/v20.0/dialog/oauth');
   url.searchParams.set('client_id', appId);
   url.searchParams.set('redirect_uri', getMetaCallbackUrl(requestOrigin));
   url.searchParams.set('state', state);

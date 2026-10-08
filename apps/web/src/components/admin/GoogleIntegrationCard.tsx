@@ -87,7 +87,7 @@ export default function GoogleIntegrationCard({
 
   return (
     <div
-      className={`rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full ${className}`}
+      className={`rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full ${className}`}
     >
       <div className="min-w-0">
         <p className="text-sm font-medium text-[#2C2621]">
@@ -113,17 +113,17 @@ export default function GoogleIntegrationCard({
               type="button"
               disabled
               aria-pressed="true"
-              className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.2)] text-[#2C3B2E] text-sm font-medium cursor-default"
+              className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] border border-[#E6E3DB] text-[#2C2621] text-sm font-medium cursor-default"
             >
               <CheckCircle2 size={16} strokeWidth={2.5} />
               Connected · Google
             </button>
             <div className="mt-2 flex items-center gap-2 min-w-0 px-1">
-              <span className="w-7 h-7 rounded-full bg-[#FFFFFF] border border-[rgba(44,59,46,0.2)] flex items-center justify-center flex-shrink-0">
+              <span className="w-7 h-7 rounded-full bg-[#FFFFFF] border border-[#E6E3DB] flex items-center justify-center flex-shrink-0">
                 <GoogleGlyph size={14} />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-[#2C3B2E]">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-[#2C2621]">
                   Google
                 </p>
                 <p className="text-xs font-medium text-[#2C2621] truncate">
@@ -134,7 +134,7 @@ export default function GoogleIntegrationCard({
             <button
               type="button"
               onClick={() => void disconnect()}
-              className="mt-2 w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-[rgba(184,92,56,0.28)] bg-[#FFFFFF] text-[#B85C38] text-xs font-medium hover:bg-[rgba(184,92,56,0.08)] transition-colors"
+              className="mt-2 w-full inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-3.5 rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] text-[#8A857D] text-[11px] font-medium hover:bg-[#F0EFEA] hover:text-[#2C2621] transition-colors"
             >
               <Unplug size={14} />
               {t('socials.disconnectAccount')}
@@ -144,7 +144,7 @@ export default function GoogleIntegrationCard({
           <div className="min-w-0 sm:min-w-[200px] flex-1 sm:flex-none flex flex-col gap-1.5">
             <a
               href={connectUrl}
-              className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#FFFFFF] border border-[#E6E3DB] text-[#2C2621] text-sm font-medium  hover:bg-[#F0EFEA] transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-3.5 rounded-sm bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621] text-sm font-medium transition-colors"
             >
               <GoogleGlyph size={16} />
               Connect Google Account

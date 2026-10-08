@@ -42,7 +42,8 @@ const SOCIAL_ICONS = {
 } as const;
 
 const LOGIN_PATH: Partial<Record<SocialPlatform, string>> = {
-  instagram: '/api/auth/meta/login?target=instagram',
+  // Instagram Login API (no Facebook Page). Meta suite = Facebook / Both buttons.
+  instagram: '/api/auth/instagram-only/login',
   facebook: '/api/auth/meta/login?target=facebook',
   tiktok: '/api/auth/tiktok/profile?force=true',
   // Business connect lives under Settings → Connected Accounts dual card.
