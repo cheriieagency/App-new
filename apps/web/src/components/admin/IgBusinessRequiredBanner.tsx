@@ -38,7 +38,7 @@ export default function IgBusinessRequiredBanner({
         {showSettingsLink ? (
           <Link
             href="/admin/settings/socials"
-            className="inline-flex items-center min-h-[44px] mt-2 text-xs font-medium text-[#2C2621] underline underline-offset-2 hover:text-[#2C3B2E]"
+            className="inline-flex items-center min-h-[44px] mt-2 text-xs font-medium text-[#2C2621] underline underline-offset-2 hover:text-[#8A857D]"
           >
             {t('igBusinessOpenSettings', locale)}
           </Link>

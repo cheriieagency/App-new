@@ -585,8 +585,8 @@ export default function AnalyticsExportDialog({
     * { box-sizing: border-box; }
     body { font-family: "Plus Jakarta Sans", system-ui, sans-serif; color: #0F172A; margin: 0; padding: 32px; background: #FAFAFA; }
     .brand { font-weight: 800; font-size: 18px; margin-bottom: 4px; }
-    .brand span { color: #2C3B2E; }
-    h1 { font-size: 24px; margin: 8px 0 4px; color: #2C3B2E; }
+    .brand span { color: #2C2621; }
+    h1 { font-size: 24px; margin: 8px 0 4px; color: #2C2621; }
     .meta { color: #64748b; font-size: 13px; margin-bottom: 24px; }
     h2 { font-size: 15px; margin: 28px 0 10px; color: #0F172A; letter-spacing: 0.02em; }
     table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
@@ -662,7 +662,7 @@ export default function AnalyticsExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(520px,94vw)] rounded-xl border-[#E6E3DB] bg-[#FFFFFF] p-0 gap-0 overflow-hidden shadow-2xl">
+      <DialogContent className="max-w-[min(520px,94vw)] rounded-sm border-[#E6E3DB] bg-[#FFFFFF] p-0 gap-0 overflow-hidden shadow-2xl">
         <DialogHeader className="px-5 sm:px-6 pt-5 pb-4 border-b border-[#E6E3DB] text-left">
           <DialogTitle className="font-outfit font-medium text-xl text-[#2C2621] tracking-tight">
             {t('admin.export')}
@@ -685,10 +685,10 @@ export default function AnalyticsExportDialog({
                     key={key}
                     type="button"
                     onClick={() => applyPreset(key)}
-                    className={`h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-medium transition-colors ${
+                    className={`h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] transition-colors ${
                       active
-                        ? 'bg-[#2C3B2E] text-[#F9F8F6]'
-                        : 'bg-[#F0EFEA] text-[#8A857D] border border-[#E6E3DB] hover:bg-[#F0EFEA]'
+                        ? 'bg-[#F0EFEA] text-[#2C2621]'
+                        : 'bg-transparent text-[#8A857D] border border-[#E6E3DB] hover:bg-[#F0EFEA]/70'
                     }`}
                   >
                     {label}
@@ -709,7 +709,7 @@ export default function AnalyticsExportDialog({
                     setPreset('custom');
                     setFrom(e.target.value);
                   }}
-                  className="mt-1 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+                  className="mt-1 w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
                 />
               </label>
               <label className="block">
@@ -724,7 +724,7 @@ export default function AnalyticsExportDialog({
                     setPreset('custom');
                     setTo(e.target.value);
                   }}
-                  className="mt-1 w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+                  className="mt-1 w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
                 />
               </label>
             </div>
@@ -745,7 +745,7 @@ export default function AnalyticsExportDialog({
               <button
                 type="button"
                 onClick={() => selectAll(true)}
-                className="text-[11px] font-medium text-[#2C3B2E] hover:underline min-h-[32px] px-1"
+                className="text-[11px] font-medium text-[#2C2621] hover:underline min-h-[32px] px-1"
               >
                 Select all
               </button>
@@ -766,16 +766,16 @@ export default function AnalyticsExportDialog({
               return (
                 <label
                   key={section.id}
-                  className={`flex items-start gap-3 rounded-xl border px-3.5 py-3 min-h-[52px] cursor-pointer transition-colors ${
+                  className={`flex items-start gap-3 rounded-sm border px-3.5 py-3 min-h-[52px] cursor-pointer transition-colors ${
                     on
-                      ? 'border-[#E6E3DB] bg-[rgba(44,59,46,0.08)]/25'
+                      ? 'border-[#E6E3DB] bg-[#F0EFEA]/25'
                       : 'border-[#E6E3DB] bg-[#FFFFFF] hover:bg-[#F0EFEA]'
                   }`}
                 >
                   <span
                     className={`mt-0.5 h-5 w-5 rounded-md border flex items-center justify-center flex-shrink-0 ${
                       on
-                        ? 'bg-[#2C3B2E] border-[#2C3B2E] text-white'
+                        ? 'bg-[#2C2621] border-[#2C2621] text-[#F9F8F6]'
                         : 'border-[#E6E3DB] bg-[#FFFFFF]'
                     }`}
                     aria-hidden
@@ -809,16 +809,16 @@ export default function AnalyticsExportDialog({
               <button
                 type="button"
                 onClick={() => setFormat('pdf')}
-                className={`min-h-[56px] rounded-xl border px-3 py-3 text-left transition-colors ${
+                className={`min-h-[56px] rounded-sm border px-3 py-3 text-left transition-colors ${
                   format === 'pdf'
-                    ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)] ring-1 ring-[#2C3B2E]/25'
+                    ? 'border-[#E6E3DB] bg-[#F0EFEA] ring-1 ring-[#E6E3DB]'
                     : 'border-[#E6E3DB] bg-[#FFFFFF] hover:bg-[#F0EFEA]'
                 }`}
               >
                 <span className="flex items-center gap-2">
                   <FileText
                     size={16}
-                    className={format === 'pdf' ? 'text-[#2C3B2E]' : 'text-[#8A857D]'}
+                    className={format === 'pdf' ? 'text-[#2C2621]' : 'text-[#8A857D]'}
                   />
                   <span className="text-sm font-medium text-[#2C2621]">Visual PDF</span>
                 </span>
@@ -829,16 +829,16 @@ export default function AnalyticsExportDialog({
               <button
                 type="button"
                 onClick={() => setFormat('csv')}
-                className={`min-h-[56px] rounded-xl border px-3 py-3 text-left transition-colors ${
+                className={`min-h-[56px] rounded-sm border px-3 py-3 text-left transition-colors ${
                   format === 'csv'
-                    ? 'border-[#2C3B2E] bg-[rgba(44,59,46,0.08)] ring-1 ring-[#2C3B2E]/25'
+                    ? 'border-[#E6E3DB] bg-[#F0EFEA] ring-1 ring-[#E6E3DB]'
                     : 'border-[#E6E3DB] bg-[#FFFFFF] hover:bg-[#F0EFEA]'
                 }`}
               >
                 <span className="flex items-center gap-2">
                   <FileSpreadsheet
                     size={16}
-                    className={format === 'csv' ? 'text-[#2C3B2E]' : 'text-[#8A857D]'}
+                    className={format === 'csv' ? 'text-[#2C2621]' : 'text-[#8A857D]'}
                   />
                   <span className="text-sm font-medium text-[#2C2621]">CSV file</span>
                 </span>
@@ -854,7 +854,7 @@ export default function AnalyticsExportDialog({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] text-sm font-medium text-[#8A857D] hover:bg-[#F0EFEA] w-full sm:w-auto"
+            className="min-h-[44px] px-4 rounded-sm border border-[#E6E3DB] text-sm font-medium text-[#8A857D] hover:bg-[#F0EFEA] w-full sm:w-auto"
           >
             {t('common.cancel')}
           </button>
@@ -862,7 +862,7 @@ export default function AnalyticsExportDialog({
             type="button"
             disabled={busy || selectedCount === 0 || from > to}
             onClick={() => void handleDownload()}
-            className="min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-40 w-full sm:w-auto"
+            className="min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-40 w-full sm:w-auto"
           >
             {busy ? (
               <Loader2 size={14} className="animate-spin" />

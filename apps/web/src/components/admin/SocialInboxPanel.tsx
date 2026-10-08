@@ -893,11 +893,11 @@ export default function SocialInboxPanel() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="font-playfair font-medium text-[28px] sm:text-[32px] text-[#2C2621] tracking-tight">
+          <h1 className="font-playfair font-medium text-[20px] sm:text-[24px] text-[#2C2621] tracking-tight">
             {t('socialInboxTitle', locale)}
           </h1>
         </div>
-        <p className="text-sm text-[#8A857D] font-medium -mt-4">
+        <p className="text-[11px] text-[#8A857D] font-medium -mt-3 leading-snug">
           {t('inboxConnectHint', locale)}
         </p>
         <ConnectSocialsEmpty />
@@ -912,17 +912,17 @@ export default function SocialInboxPanel() {
       {/* Top toolbar — title, handle, sync */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <h1 className="font-playfair font-medium text-[28px] sm:text-[32px] leading-none text-[#2C2621] tracking-tight">
+          <h1 className="font-playfair font-medium text-[20px] sm:text-[24px] leading-none text-[#2C2621] tracking-tight">
             {t('socialInboxTitle', locale)}
           </h1>
           {handleBadge ? (
-            <span className="inline-flex items-center h-8 px-2.5 rounded-full bg-[#F0EFEA] text-[#8A857D] text-xs font-mono font-medium truncate max-w-[200px]">
+            <span className="inline-flex items-center h-7 px-2 rounded-sm bg-[#F0EFEA] text-[#8A857D] text-[10px] font-medium truncate max-w-[200px]">
               {handleBadge}
             </span>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center p-0.5 rounded-xl bg-[#F0EFEA]">
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center p-0.5 rounded-sm bg-[#F0EFEA]/50">
             {(
               [
                 { key: 'inbox' as const, label: t('socialInboxTitle', locale), icon: Inbox },
@@ -948,13 +948,13 @@ export default function SocialInboxPanel() {
                       );
                     }
                   }}
-                  className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+                  className={`h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] inline-flex items-center gap-1.5 transition-colors ${
                     on
-                      ? 'bg-[#FFFFFF] text-[#2C2621] shadow-none'
+                      ? 'bg-white text-[#2C2621] shadow-[0_0_0_1px_rgba(230,227,219,0.9)]'
                       : 'text-[#8A857D] hover:text-[#2C2621]'
                   }`}
                 >
-                  <Icon size={13} />
+                  <Icon size={12} />
                   {label}
                 </button>
               );
@@ -965,12 +965,12 @@ export default function SocialInboxPanel() {
               type="button"
               onClick={() => void onRefresh()}
               disabled={syncing}
-              className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 h-8 min-h-[32px] px-2.5 rounded-sm bg-transparent text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C2621] disabled:opacity-50"
             >
               {syncing ? (
-                <Loader2 size={13} className="animate-spin" />
+                <Loader2 size={12} className="animate-spin" />
               ) : (
-                <RefreshCw size={13} />
+                <RefreshCw size={12} />
               )}
               {t('inboxSync', locale)}
             </button>
@@ -981,13 +981,13 @@ export default function SocialInboxPanel() {
       {mainTab === 'automations' ? <DMAutomationPanel /> : null}
 
       {mainTab === 'inbox' && syncError && hasInstagram ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900">
+        <div className="rounded-sm border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900">
           {tf('inboxSyncIssue', locale, { error: syncError })}
         </div>
       ) : null}
 
       {mainTab === 'inbox' && dmPermissionIssue ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-950 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+        <div className="rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-950 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           <p className="min-w-0">
             {t('inboxDmNeedPerms', locale)}
             {inboxStatus?.missing_scopes?.length
@@ -997,7 +997,7 @@ export default function SocialInboxPanel() {
           </p>
           <a
             href={reconnectHref}
-            className="inline-flex items-center justify-center h-10 min-h-[40px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium whitespace-nowrap"
+            className="inline-flex items-center justify-center h-10 min-h-[40px] px-4 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium whitespace-nowrap"
           >
             {t('inboxReconnectIg', locale)}
           </a>
@@ -1010,7 +1010,7 @@ export default function SocialInboxPanel() {
           <div className="flex flex-col xl:flex-row xl:items-center gap-2.5 xl:gap-3">
             {showPlatformSwitcher || hasInstagram || hasTikTokInbox ? (
               <div
-                className="inline-flex items-center p-1 rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] self-start"
+                className="inline-flex items-center p-0.5 rounded-sm bg-[#F0EFEA]/50 self-start"
                 role="tablist"
                 aria-label={t('socialInboxTitle', locale)}
               >
@@ -1047,9 +1047,9 @@ export default function SocialInboxPanel() {
                         role="tab"
                         aria-selected={on}
                         onClick={() => setPlatformFilter(tab.key)}
-                        className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-all ${
+                        className={`h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] inline-flex items-center gap-1.5 transition-all ${
                           on
-                            ? 'bg-[#FFFFFF] text-[#2C2621] shadow-none'
+                            ? 'bg-white text-[#2C2621] shadow-[0_0_0_1px_rgba(230,227,219,0.9)]'
                             : 'text-[#8A857D] hover:text-[#2C2621]'
                         }`}
                       >
@@ -1081,10 +1081,10 @@ export default function SocialInboxPanel() {
                       key={tab.key}
                       type="button"
                       onClick={() => setChannelFilter(tab.key)}
-                      className={`h-9 min-h-[36px] px-3 rounded-full text-xs font-medium border transition-colors ${
+                      className={`h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] transition-colors ${
                         on
-                          ? 'bg-[#2C3B2E] text-[#F9F8F6] border-[#2C3B2E]'
-                          : 'bg-[#FFFFFF] text-[#8A857D] border-[#E6E3DB] hover:border-[#E6E3DB]'
+                          ? 'bg-[#F0EFEA] text-[#2C2621]'
+                          : 'bg-transparent text-[#8A857D] hover:bg-[#F0EFEA]/70 hover:text-[#2C2621]'
                       }`}
                     >
                       {tab.label}
@@ -1103,7 +1103,7 @@ export default function SocialInboxPanel() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('inboxSearchConversations', locale)}
-                className="w-full h-9 min-h-[36px] pl-9 pr-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-sm font-medium text-[#2C2621] placeholder:text-[#8A857D] focus:outline-none focus:ring-0 focus:border-[#E6E3DB]"
+                className="w-full h-8 min-h-[32px] pl-9 pr-3 rounded-sm border border-[#E6E3DB] bg-white text-xs font-medium text-[#2C2621] placeholder:text-[#8A857D] focus:outline-none focus:ring-0 focus:border-[#E6E3DB]"
               />
             </div>
           </div>
@@ -1151,8 +1151,8 @@ export default function SocialInboxPanel() {
                         onClick={() => setActiveId(thread.id)}
                         className={`relative w-full flex items-start gap-3 px-3.5 py-3 text-left min-h-[64px] transition-colors border-l-2 ${
                           selected
-                            ? 'bg-[rgba(44,59,46,0.06)] border-l-[#2C3B2E]'
-                            : 'border-l-transparent hover:bg-[#F0EFEA]/90'
+                            ? 'bg-[#F0EFEA] border-l-[#C4BFB6]'
+                            : 'border-l-transparent hover:bg-[#F0EFEA]/60'
                         }`}
                       >
                         <div className="relative flex-shrink-0">
@@ -1164,7 +1164,7 @@ export default function SocialInboxPanel() {
                           <span
                             className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center ring-2 ring-[#FFFFFF] ${
                               tt
-                                ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                                ? 'bg-[#F0EFEA] text-[#2C2621]'
                                 : 'bg-gradient-to-br from-[#F58529] to-[#DD2A7B] text-[#F9F8F6]'
                             }`}
                             title={tt ? 'TikTok' : 'Instagram'}
@@ -1205,7 +1205,7 @@ export default function SocialInboxPanel() {
                           </p>
                         </div>
                         {thread.unread ? (
-                          <span className="mt-2 h-2 w-2 rounded-full bg-[#2C3B2E] flex-shrink-0" />
+                          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#8A857D] flex-shrink-0" />
                         ) : null}
                       </button>
                     );
@@ -1231,7 +1231,7 @@ export default function SocialInboxPanel() {
                         <span
                           className={`inline-flex items-center gap-1 h-5 px-1.5 rounded-md text-[10px] font-medium ${
                             isTikTokThread(active)
-                              ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                              ? 'bg-[#F0EFEA] text-[#2C2621]'
                               : 'bg-gradient-to-r from-[#F58529] to-[#DD2A7B] text-[#F9F8F6]'
                           }`}
                         >
@@ -1253,7 +1253,7 @@ export default function SocialInboxPanel() {
                       href={profileUrl(active)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#8A857D] hover:bg-[#F0EFEA] flex-shrink-0"
+                      className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#8A857D] hover:bg-[#F0EFEA] flex-shrink-0"
                     >
                       {t('inboxProfile', locale)}
                       <ExternalLink size={12} />
@@ -1280,10 +1280,10 @@ export default function SocialInboxPanel() {
                             className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
-                              className={`group relative min-w-[96px] max-w-[78%] px-3.5 py-2.5 text-[13.5px] leading-relaxed shadow-none ${
+                              className={`group relative min-w-[96px] max-w-[78%] px-3.5 py-2.5 text-[13px] leading-relaxed shadow-none ${
                                 outgoing
-                                  ? 'bg-[#243228] text-[#F9F8F6] rounded-xl rounded-br-md'
-                                  : 'bg-[#F0EFEA] text-[#2C2621] rounded-xl rounded-tl-md'
+                                  ? 'bg-[#E6E3DB] text-[#2C2621] rounded-sm rounded-br-md'
+                                  : 'bg-[#F9F8F6] border border-[#E6E3DB] text-[#2C2621] rounded-sm rounded-tl-md'
                               }`}
                             >
                               {editingMsgId === msg.id ? (
@@ -1293,11 +1293,7 @@ export default function SocialInboxPanel() {
                                     onChange={(e) => setEditDraft(e.target.value)}
                                     rows={3}
                                     autoFocus
-                                    className={`w-full resize-none rounded-lg border px-2.5 py-2 text-[13.5px] leading-relaxed outline-none ${
-                                      outgoing
-                                        ? 'border-white/20 bg-white/10 text-[#F9F8F6] placeholder:text-[#F9F8F6]/50'
-                                        : 'border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621]'
-                                    }`}
+                                    className="w-full resize-none rounded-sm border border-[#E6E3DB] bg-white px-2.5 py-2 text-[13px] leading-relaxed outline-none text-[#2C2621]"
                                     onKeyDown={(e) => {
                                       if (e.key === 'Escape') {
                                         e.preventDefault();
@@ -1316,11 +1312,7 @@ export default function SocialInboxPanel() {
                                     <button
                                       type="button"
                                       onClick={cancelInlineEdit}
-                                      className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium ${
-                                        outgoing
-                                          ? 'text-[#F9F8F6]/80 hover:bg-white/10'
-                                          : 'text-[#8A857D] hover:bg-[#FFFFFF]'
-                                      }`}
+                                      className="h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D] hover:bg-white/60"
                                     >
                                       {t('cancel', locale)}
                                     </button>
@@ -1328,11 +1320,7 @@ export default function SocialInboxPanel() {
                                       type="button"
                                       disabled={busy || !editDraft.trim()}
                                       onClick={() => void saveInlineEdit()}
-                                      className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium disabled:opacity-50 ${
-                                        outgoing
-                                          ? 'bg-[#F9F8F6] text-[#243228] hover:opacity-90'
-                                          : 'bg-[#2C3B2E] text-[#F9F8F6] hover:opacity-90'
-                                      }`}
+                                      className="h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] disabled:opacity-50 bg-white text-[#2C2621] hover:bg-[#F0EFEA]"
                                     >
                                       {busy ? (
                                         <Loader2
@@ -1349,13 +1337,7 @@ export default function SocialInboxPanel() {
                                 <>
                               <p>{msg.text}</p>
                               <div className="mt-1.5 flex items-center justify-between gap-2">
-                                <p
-                                  className={`text-[10px] tabular-nums ${
-                                    outgoing
-                                      ? 'text-[#F9F8F6]/50'
-                                      : 'text-[#8A857D]'
-                                  }`}
-                                >
+                                <p className="text-[10px] tabular-nums text-[#8A857D]">
                                   {msg.time}
                                   {msg.liked ? (
                                     <span className="ml-1.5 inline-flex items-center gap-0.5 text-[#E11D48]">
@@ -1369,11 +1351,9 @@ export default function SocialInboxPanel() {
                                       <button
                                         type="button"
                                         disabled={busy}
-                                        className={`inline-flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg transition-opacity ${
-                                          outgoing
-                                            ? 'text-[#F9F8F6]/80 hover:bg-white/10 hover:text-[#F9F8F6]'
-                                            : 'text-[#8A857D] hover:bg-[#FFFFFF] hover:text-[#2C2621]'
-                                        } ${busy ? 'opacity-50' : 'opacity-100'}`}
+                                        className={`inline-flex h-8 w-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-[#8A857D] hover:bg-[#FFFFFF] hover:text-[#2C2621] transition-opacity ${
+                                          busy ? 'opacity-50' : 'opacity-100'
+                                        }`}
                                         aria-label={
                                           active.channel === 'dm'
                                             ? t('inboxMessageActions', locale)
@@ -1482,7 +1462,7 @@ export default function SocialInboxPanel() {
                     className="border-t border-[#E6E3DB] bg-[#FFFFFF] p-3 flex-shrink-0"
                     onSubmit={(e) => void onSend(e)}
                   >
-                    <div className="flex items-center gap-1 rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 pl-1.5 pr-1.5 py-1 focus-within:ring-0 focus-within:border-[#E6E3DB] focus-within:bg-[#FFFFFF] transition-shadow">
+                    <div className="flex items-center gap-1 rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/80 pl-1.5 pr-1.5 py-1 focus-within:ring-0 focus-within:border-[#E6E3DB] focus-within:bg-[#FFFFFF] transition-shadow">
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -1496,7 +1476,7 @@ export default function SocialInboxPanel() {
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="h-10 w-10 min-h-[40px] rounded-xl text-[#8A857D] hover:text-[#2C2621] hover:bg-[#FFFFFF] inline-flex items-center justify-center flex-shrink-0"
+                        className="h-10 w-10 min-h-[40px] rounded-sm text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA] inline-flex items-center justify-center flex-shrink-0"
                         aria-label={t('inboxAttachMedia', locale)}
                         title={t('inboxAttachMedia', locale)}
                       >
@@ -1506,7 +1486,7 @@ export default function SocialInboxPanel() {
                         type="button"
                         onClick={() => void onAiQuickReply()}
                         disabled={aiLoading || !active}
-                        className="h-10 w-10 min-h-[40px] rounded-xl text-[#8A857D] hover:text-[#2C3B2E] hover:bg-[#FFFFFF] inline-flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+                        className="h-10 w-10 min-h-[40px] rounded-sm text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA] inline-flex items-center justify-center flex-shrink-0 disabled:opacity-40"
                         aria-label={t('inboxAiQuickReply', locale)}
                         title={t('inboxAiQuickReply', locale)}
                       >
@@ -1531,7 +1511,7 @@ export default function SocialInboxPanel() {
                       <button
                         type="submit"
                         disabled={!draft.trim() || sending}
-                        className="h-10 min-h-[40px] w-10 rounded-xl bg-[#243228] text-[#F9F8F6] inline-flex items-center justify-center hover:bg-[#2C3B2E] disabled:opacity-35 flex-shrink-0"
+                        className="h-10 min-h-[40px] w-10 rounded-sm bg-[#F0EFEA] text-[#2C2621] inline-flex items-center justify-center hover:bg-[#E6E3DB] disabled:opacity-35 flex-shrink-0"
                         aria-label={t('send', locale)}
                       >
                         {sending ? (

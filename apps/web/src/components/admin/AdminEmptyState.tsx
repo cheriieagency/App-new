@@ -14,7 +14,7 @@ type AdminEmptyStateProps = {
 };
 
 /**
- * Editorial empty state — italic serif headline, calm sand border, forest CTA.
+ * Soft warm empty state — serif headline, sand border, muted CTA.
  */
 export default function AdminEmptyState({
   icon: Icon,
@@ -26,11 +26,11 @@ export default function AdminEmptyState({
   secondary,
 }: AdminEmptyStateProps) {
   const ctaClass =
-    'inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium hover:bg-[#243228] transition-colors shadow-none';
+    'inline-flex items-center justify-center h-11 min-h-[44px] px-5 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium hover:bg-[#E6E3DB] transition-colors shadow-none';
 
   return (
-    <div className="bg-[#FFFFFF] rounded-xl border border-[#E6E3DB] shadow-none p-10 sm:p-12 text-center">
-      <div className="mx-auto w-12 h-12 rounded-xl border border-[#E6E3DB] text-[#2C3B2E] flex items-center justify-center mb-6">
+    <div className="bg-[#FFFFFF] rounded-sm border border-[#E6E3DB] shadow-none p-10 sm:p-12 text-center">
+      <div className="mx-auto w-12 h-12 rounded-sm border border-[#E6E3DB] text-[#8A857D] flex items-center justify-center mb-6">
         <Icon size={20} strokeWidth={1.5} />
       </div>
       <h3 className="font-playfair italic font-normal text-xl text-[#2C2621] tracking-tight">

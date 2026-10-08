@@ -261,7 +261,7 @@ export default function DmChatFlowSection({
         <div className="px-5 sm:px-7 py-5 border-b border-[#E6E3DB] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h2 className="font-playfair font-medium text-lg text-[#2C2621] tracking-tight inline-flex items-center gap-2">
-              <GitBranch size={18} className="text-[#2C3B2E]" />
+              <GitBranch size={18} className="text-[#2C2621]" />
               {t('dmFlowTitle', locale)}
             </h2>
             <p className="text-sm text-[#8A857D] mt-0.5">
@@ -271,7 +271,7 @@ export default function DmChatFlowSection({
           <button
             type="button"
             onClick={openCreate}
-            className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-sm font-medium inline-flex items-center justify-center gap-2 hover:opacity-90"
+            className="h-11 min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 hover:opacity-90"
           >
             <Plus size={16} />
             {t('dmFlowCreate', locale)}
@@ -286,7 +286,7 @@ export default function DmChatFlowSection({
             <button
               type="button"
               onClick={() => void refetch()}
-              className="h-11 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-xs font-medium"
+              className="h-11 min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium"
             >
               {t('dmRetry', locale)}
             </button>
@@ -318,10 +318,10 @@ export default function DmChatFlowSection({
                       {flow.title}
                     </p>
                     <span
-                      className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      className={`text-[10px] font-medium uppercase tracking-[0.08em] px-2 py-0.5 rounded-sm ${
                         flow.isActive
-                          ? 'bg-[rgba(44,59,46,0.1)] text-[#2C3B2E]'
-                          : 'bg-slate-100 text-slate-500'
+                          ? 'bg-[#F0EFEA] text-[#2C2621]'
+                          : 'bg-transparent text-[#8A857D] border border-[#E6E3DB]'
                       }`}
                     >
                       {flow.isActive
@@ -344,7 +344,7 @@ export default function DmChatFlowSection({
                     aria-checked={flow.isActive}
                     onClick={() => toggleMutation.mutate(flow)}
                     className={`relative h-11 min-h-[44px] w-[52px] rounded-full transition-colors ${
-                      flow.isActive ? 'bg-[#2C3B2E]' : 'bg-slate-200'
+                      flow.isActive ? 'bg-[#2C2621]' : 'bg-[#E6E3DB]'
                     }`}
                   >
                     <span
@@ -356,7 +356,7 @@ export default function DmChatFlowSection({
                   <button
                     type="button"
                     onClick={() => openEdit(flow)}
-                    className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] inline-flex items-center justify-center gap-1.5 text-xs font-medium"
+                    className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] inline-flex items-center justify-center gap-1.5 text-xs font-medium"
                   >
                     <Pencil size={14} /> {t('dmEdit', locale)}
                   </button>
@@ -367,7 +367,7 @@ export default function DmChatFlowSection({
                         deleteMutation.mutate(flow.id);
                       }
                     }}
-                    className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-xl border border-rose-100 bg-rose-50 text-rose-700 inline-flex items-center justify-center gap-1.5 text-xs font-medium"
+                    className="h-11 min-h-[44px] min-w-[44px] px-3 rounded-sm border border-rose-100 bg-rose-50 text-rose-700 inline-flex items-center justify-center gap-1.5 text-xs font-medium"
                   >
                     <Trash2 size={14} /> {t('dmDelete', locale)}
                   </button>
@@ -389,7 +389,7 @@ export default function DmChatFlowSection({
           <div
             role="dialog"
             aria-modal="true"
-            className="relative z-10 w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-[#FFFFFF] rounded-t-3xl sm:rounded-xl shadow-2xl p-5 sm:p-6 space-y-4"
+            className="relative z-10 w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-[#FFFFFF] rounded-t-sm sm:rounded-sm shadow-2xl p-5 sm:p-6 space-y-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -405,13 +405,13 @@ export default function DmChatFlowSection({
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] inline-flex items-center justify-center"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-sm bg-[#F0EFEA] inline-flex items-center justify-center"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <p className="text-xs text-[#8A857D] leading-relaxed rounded-xl bg-[#F0EFEA]/80 border border-[#E6E3DB] px-3 py-2.5">
+            <p className="text-xs text-[#8A857D] leading-relaxed rounded-sm bg-[#F0EFEA]/80 border border-[#E6E3DB] px-3 py-2.5">
               {t('dmFlowWizardHint', locale)}
             </p>
 
@@ -424,7 +424,7 @@ export default function DmChatFlowSection({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, title: e.target.value }))
                 }
-                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+                className="w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
               />
             </label>
 
@@ -438,7 +438,7 @@ export default function DmChatFlowSection({
                   setForm((f) => ({ ...f, keyword: e.target.value }))
                 }
                 placeholder="Hey Eve!"
-                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-mono"
+                className="w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm font-mono"
               />
             </label>
 
@@ -452,7 +452,7 @@ export default function DmChatFlowSection({
                   setForm((f) => ({ ...f, welcomeMessage: e.target.value }))
                 }
                 rows={3}
-                className="w-full rounded-xl border border-[#E6E3DB] px-3 py-2.5 text-sm resize-y min-h-[88px]"
+                className="w-full rounded-sm border border-[#E6E3DB] px-3 py-2.5 text-sm resize-y min-h-[88px]"
               />
             </label>
 
@@ -466,11 +466,11 @@ export default function DmChatFlowSection({
                   setForm((f) => ({ ...f, quickReplyTitle: e.target.value }))
                 }
                 maxLength={20}
-                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm"
+                className="w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm"
               />
             </label>
 
-            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 px-4 py-3">
+            <label className="flex items-start gap-3 cursor-pointer rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/80 px-4 py-3">
               <input
                 type="checkbox"
                 checked={form.checkFollower}
@@ -494,7 +494,7 @@ export default function DmChatFlowSection({
                   setForm((f) => ({ ...f, followerMessage: e.target.value }))
                 }
                 rows={3}
-                className="w-full rounded-xl border border-[#E6E3DB] px-3 py-2.5 text-sm resize-y min-h-[88px]"
+                className="w-full rounded-sm border border-[#E6E3DB] px-3 py-2.5 text-sm resize-y min-h-[88px]"
               />
             </label>
 
@@ -508,7 +508,7 @@ export default function DmChatFlowSection({
                   setForm((f) => ({ ...f, linkUrl: e.target.value }))
                 }
                 placeholder={storefrontDefault}
-                className="w-full h-11 min-h-[44px] rounded-xl border border-[#E6E3DB] px-3 text-sm font-mono"
+                className="w-full h-11 min-h-[44px] rounded-sm border border-[#E6E3DB] px-3 text-sm font-mono"
               />
             </label>
 
@@ -526,7 +526,7 @@ export default function DmChatFlowSection({
                     }))
                   }
                   rows={2}
-                  className="w-full rounded-xl border border-[#E6E3DB] px-3 py-2.5 text-sm resize-y min-h-[72px]"
+                  className="w-full rounded-sm border border-[#E6E3DB] px-3 py-2.5 text-sm resize-y min-h-[72px]"
                 />
               </label>
             ) : null}
@@ -535,7 +535,7 @@ export default function DmChatFlowSection({
               type="button"
               disabled={saveMutation.isPending}
               onClick={() => saveMutation.mutate(form)}
-              className="h-11 min-h-[44px] w-full rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-60"
+              className="h-11 min-h-[44px] w-full rounded-sm bg-[#F0EFEA] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {saveMutation.isPending ? (
                 <Loader2 className="animate-spin" size={16} />

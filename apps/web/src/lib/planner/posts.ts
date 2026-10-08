@@ -32,7 +32,7 @@ import {
 } from '@/lib/planner/more-options';
 
 let schemaReady: Promise<void> | null = null;
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 let schemaVersionApplied = 0;
 
 async function safeAlter(label: string, run: () => Promise<unknown>) {
@@ -161,6 +161,14 @@ export async function ensurePlannerPostsSchema(): Promise<void> {
       ALTER TABLE public.planner_posts
         ADD COLUMN IF NOT EXISTS media_aspect text
     `);
+    await safeAlter('planner_posts_internal_notes', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS internal_notes text
+    `);
+    await safeAlter('planner_posts_client_notes', () => sql`
+      ALTER TABLE public.planner_posts
+        ADD COLUMN IF NOT EXISTS client_notes text
+    `);
 
     schemaVersionApplied = SCHEMA_VERSION;
   })().catch((error) => {
@@ -225,6 +233,10 @@ function rowToPost(row: Record<string, unknown>): PlannerPost {
       typeof row.trending_sound_note === 'string'
         ? row.trending_sound_note
         : null,
+    internal_notes:
+      typeof row.internal_notes === 'string' ? row.internal_notes : null,
+    client_notes:
+      typeof row.client_notes === 'string' ? row.client_notes : null,
     collaborators: normalizeCollaborators(row.collaborators),
     first_comment:
       typeof row.first_comment === 'string' ? row.first_comment : null,
@@ -398,6 +410,8 @@ export type UpsertDurablePlannerPostInput = {
   media_aspect?: MediaAspectRatio | null;
   publish_mode?: PublishMode;
   trending_sound_note?: string | null;
+  internal_notes?: string | null;
+  client_notes?: string | null;
   collaborators?: string[];
   first_comment?: string | null;
   location_name?: string | null;
@@ -502,6 +516,14 @@ export async function upsertDurablePlannerPost(
       input.trending_sound_note !== undefined
         ? input.trending_sound_note
         : existing?.trending_sound_note ?? null,
+    internal_notes:
+      input.internal_notes !== undefined
+        ? normalizeOptionalText(input.internal_notes, 8000)
+        : existing?.internal_notes ?? null,
+    client_notes:
+      input.client_notes !== undefined
+        ? normalizeOptionalText(input.client_notes, 8000)
+        : existing?.client_notes ?? null,
     collaborators:
       input.collaborators !== undefined
         ? normalizeCollaborators(input.collaborators)
@@ -563,6 +585,7 @@ export async function upsertDurablePlannerPost(
       id, workspace_id, user_id, title, caption, hashtags, platforms,
       workflow, status, scheduled_at, published_at, media_url, media_type,
       media_items, media_urls, media_aspect, publish_mode, trending_sound_note,
+      internal_notes, client_notes,
       collaborators, first_comment, location_name, location_id,
       link_in_bio_url, post_tags, campaign_tag,
       youtube, idea_title, project, campaigns, assignees,
@@ -586,6 +609,8 @@ export async function upsertDurablePlannerPost(
       ${post.media_aspect ?? null},
       ${post.publish_mode ?? 'auto_publish'},
       ${post.trending_sound_note ?? null},
+      ${post.internal_notes ?? null},
+      ${post.client_notes ?? null},
       ${JSON.stringify(post.collaborators ?? [])},
       ${post.first_comment ?? null},
       ${post.location_name ?? null},
@@ -623,6 +648,8 @@ export async function upsertDurablePlannerPost(
       media_aspect = EXCLUDED.media_aspect,
       publish_mode = EXCLUDED.publish_mode,
       trending_sound_note = EXCLUDED.trending_sound_note,
+      internal_notes = EXCLUDED.internal_notes,
+      client_notes = EXCLUDED.client_notes,
       collaborators = EXCLUDED.collaborators,
       first_comment = EXCLUDED.first_comment,
       location_name = EXCLUDED.location_name,

@@ -290,15 +290,15 @@ function PerformanceChart({
         <path
           d={smooth(revPts)}
           fill="none"
-          stroke="#2C3B2E"
+          stroke="#2C2621"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         {last && (
           <>
-            <circle cx={last.x} cy={last.y} r="7" fill="#2C3B2E" stroke="#fff" strokeWidth="3" />
-            <circle cx={last.x} cy={last.y} r="12" fill="#2C3B2E" fillOpacity="0.15" />
+            <circle cx={last.x} cy={last.y} r="7" fill="#2C2621" stroke="#fff" strokeWidth="3" />
+            <circle cx={last.x} cy={last.y} r="12" fill="#2C2621" fillOpacity="0.15" />
           </>
         )}
       </svg>
@@ -999,6 +999,7 @@ export default function LaterAnalyticsPanel() {
     return (
       <div className="space-y-6">
         <AdminPageHeader
+          compact
           eyebrow={t('analyticsAndRevenue', locale)}
           title={activeTabLabel}
         />
@@ -1010,10 +1011,10 @@ export default function LaterAnalyticsPanel() {
                 key={key}
                 type="button"
                 onClick={() => setSub(key)}
-                className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+                className={`h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors flex-shrink-0 ${
                   active
-                    ? 'text-[#2C2621] bg-[rgba(44,59,46,0.08)]'
-                    : 'text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]'
+                    ? 'bg-[#F0EFEA] text-[#2C2621]'
+                    : 'bg-transparent text-[#8A857D] hover:bg-[#F0EFEA]/70 hover:text-[#2C2621]'
                 }`}
               >
                 {label}
@@ -1029,6 +1030,7 @@ export default function LaterAnalyticsPanel() {
   return (
     <div className="space-y-6">
       <AdminPageHeader
+        compact
         eyebrow={t('analyticsAndRevenue', locale)}
         title={activeTabLabel}
         actions={
@@ -1046,7 +1048,7 @@ export default function LaterAnalyticsPanel() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="h-10 min-h-[40px] px-3.5 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#8A857D] inline-flex items-center gap-1.5 hover:bg-[#F0EFEA] transition-colors"
+                  className="h-8 min-h-[32px] px-2.5 rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D] inline-flex items-center gap-1.5 hover:bg-[#F0EFEA] hover:text-[#2C2621] transition-colors"
                   aria-label={t('dateRangePresets', locale)}
                 >
                   <CalendarDays size={14} className="text-[#8A857D]" aria-hidden />
@@ -1058,7 +1060,7 @@ export default function LaterAnalyticsPanel() {
               </PopoverTrigger>
               <PopoverContent
                 align="end"
-                className="w-[min(320px,92vw)] rounded-xl border-[#E6E3DB] bg-[#FFFFFF] p-0 shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]"
+                className="w-[min(320px,92vw)] rounded-sm border-[#E6E3DB] bg-[#FFFFFF] p-0 shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]"
               >
                 <div className="px-4 pt-3.5 pb-2">
                   <p className="text-[10px] font-inter font-medium uppercase tracking-[0.16em] text-[#8A857D]">
@@ -1084,10 +1086,10 @@ export default function LaterAnalyticsPanel() {
                           setDateRange(rangeFromPreset(key));
                           setRangeOpen(false);
                         }}
-                        className={`w-full h-10 min-h-[40px] px-3 rounded-xl text-left text-sm font-medium transition-colors ${
+                        className={`w-full h-10 min-h-[40px] px-3 rounded-sm text-left text-sm font-medium transition-colors ${
                           selected
-                            ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
-                            : 'text-[#8A857D] hover:bg-[#F0EFEA]'
+                            ? 'bg-[#F0EFEA] text-[#2C2621]'
+                            : 'text-[#8A857D] hover:bg-[#F0EFEA]/70'
                         }`}
                       >
                         {t(labelKey, locale)}
@@ -1110,7 +1112,7 @@ export default function LaterAnalyticsPanel() {
                         value={draftFrom}
                         max={draftTo}
                         onChange={(e) => setDraftFrom(e.target.value)}
-                        className="w-full h-10 min-h-[40px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-0"
+                        className="w-full h-10 min-h-[40px] rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-0"
                       />
                     </label>
                     <label className="space-y-1">
@@ -1123,7 +1125,7 @@ export default function LaterAnalyticsPanel() {
                         min={draftFrom}
                         max={toDateInputValue(new Date())}
                         onChange={(e) => setDraftTo(e.target.value)}
-                        className="w-full h-10 min-h-[40px] rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-0"
+                        className="w-full h-10 min-h-[40px] rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-3 text-sm font-medium text-[#2C2621] focus:outline-none focus:ring-0"
                       />
                     </label>
                   </div>
@@ -1138,7 +1140,7 @@ export default function LaterAnalyticsPanel() {
                       });
                       setRangeOpen(false);
                     }}
-                    className="w-full h-10 min-h-[40px] rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-xs font-medium transition-colors disabled:opacity-40"
+                    className="w-full h-10 min-h-[40px] rounded-sm bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621] text-xs font-medium transition-colors disabled:opacity-40"
                   >
                     {t('dateRangeApply', locale)}
                   </button>
@@ -1148,7 +1150,7 @@ export default function LaterAnalyticsPanel() {
             <button
               type="button"
               onClick={() => setExportOpen(true)}
-              className="h-10 min-h-[40px] px-4 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-xs font-medium inline-flex items-center gap-1.5 transition-colors"
+              className="h-8 min-h-[32px] px-3 rounded-sm bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621] text-[9px] font-medium uppercase tracking-[0.08em] inline-flex items-center gap-1.5 transition-colors"
             >
               <Download size={13} /> {t('exportLabel', locale)}
             </button>
@@ -1172,7 +1174,7 @@ export default function LaterAnalyticsPanel() {
             return (
               <div
                 key={`${account.platform}-${account.handle || account.external_id || 'row'}`}
-                className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-2.5 py-2 flex items-center gap-2 shadow-none min-w-0 overflow-hidden"
+                className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-2.5 py-2 flex items-center gap-2 shadow-none min-w-0 overflow-hidden"
               >
                 {avatar ? (
                   <OptimizedImage
@@ -1242,10 +1244,10 @@ export default function LaterAnalyticsPanel() {
                   window.history.replaceState({}, '', next);
                 }
               }}
-              className={`h-9 min-h-[36px] px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+              className={`h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] whitespace-nowrap transition-colors flex-shrink-0 ${
                 active
-                  ? 'text-[#2C2621] bg-[rgba(44,59,46,0.08)]'
-                  : 'text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]'
+                  ? 'bg-[#F0EFEA] text-[#2C2621]'
+                  : 'bg-transparent text-[#8A857D] hover:bg-[#F0EFEA]/70 hover:text-[#2C2621]'
               }`}
             >
               {label}
@@ -1446,7 +1448,7 @@ function LinkInBioAnalyticsTab({
         <div className="px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB]">
           <div>
             <h3 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
-              <Link2 size={14} className="text-[#2C3B2E]" aria-hidden />
+              <Link2 size={14} className="text-[#2C2621]" aria-hidden />
               {t('linkinBioAnalyticsTitle', locale)}
             </h3>
             <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
@@ -1473,7 +1475,7 @@ function LinkInBioAnalyticsTab({
                   <span
                     className={`w-6 h-6 min-h-[24px] min-w-[24px] rounded-md text-[11px] font-medium tabular-nums inline-flex items-center justify-center flex-shrink-0 ${
                       i === 0
-                        ? 'bg-[#2C3B2E] text-[#F9F8F6]'
+                        ? 'bg-[#F0EFEA] text-[#2C2621]'
                         : 'bg-[#F0EFEA] text-[#8A857D]'
                     }`}
                   >
@@ -1491,7 +1493,7 @@ function LinkInBioAnalyticsTab({
                     <div className="mt-2 flex items-center gap-2">
                       <div className="h-1.5 flex-1 max-w-[220px] rounded-full bg-[#F0EFEA] overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-[#243228]"
+                          className="h-full rounded-full bg-[#C4BFB6]"
                           style={{ width: `${share}%` }}
                         />
                       </div>
@@ -1581,7 +1583,7 @@ function AnalyticsOverviewTab({
       label: t('metricLikes', locale),
       value: data.likes,
       pct: Math.round((data.likes / totalEngagement) * 100),
-      color: '#2C3B2E',
+      color: '#2C2621',
       icon: Heart,
     },
     {
@@ -1589,7 +1591,7 @@ function AnalyticsOverviewTab({
       label: t('metricComments', locale),
       value: data.comments,
       pct: Math.round((data.comments / totalEngagement) * 100),
-      color: '#2C3B2E',
+      color: '#2C2621',
       icon: MessageCircle,
     },
     {
@@ -1597,7 +1599,7 @@ function AnalyticsOverviewTab({
       label: t('metricShares', locale),
       value: data.shares,
       pct: Math.round((data.shares / totalEngagement) * 100),
-      color: '#2C3B2E',
+      color: '#2C2621',
       icon: Share2,
     },
     {
@@ -1633,7 +1635,7 @@ function AnalyticsOverviewTab({
                   {m.value}
                 </p>
               )}
-              <p className="mt-3 text-xs font-medium tabular-nums text-[#2C3B2E]">{m.delta}</p>
+              <p className="mt-3 text-xs font-medium tabular-nums text-[#2C2621]">{m.delta}</p>
             </div>
           );
         })}
@@ -1668,7 +1670,7 @@ function AnalyticsOverviewTab({
           {typeof data.erDelta === 'number' ? (
             <p
               className={`mt-3 text-xs font-medium ${
-                data.erDelta >= 0 ? 'text-[#2C3B2E]' : 'text-rose-500'
+                data.erDelta >= 0 ? 'text-[#2C2621]' : 'text-rose-500'
               }`}
             >
               {tf('engagementRateTrend', locale, {
@@ -1678,7 +1680,7 @@ function AnalyticsOverviewTab({
           ) : null}
           <div className="mt-5 h-2 rounded-full bg-[#F0EFEA] overflow-hidden">
             <div
-              className="h-full rounded-full bg-[#2C3B2E]"
+              className="h-full rounded-full bg-[#C4BFB6]"
               style={{ width: `${Math.min(100, data.engagementRate * 12)}%` }}
             />
           </div>
@@ -1724,10 +1726,10 @@ function AnalyticsOverviewTab({
               return (
                 <div
                   key={row.key}
-                  className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 px-4 py-3.5 flex items-center gap-3 min-h-[56px]"
+                  className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/80 px-4 py-3.5 flex items-center gap-3 min-h-[56px]"
                 >
                   <span
-                    className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-xl inline-flex items-center justify-center flex-shrink-0"
+                    className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-sm inline-flex items-center justify-center flex-shrink-0"
                     style={{ background: `${row.color}22`, color: row.color }}
                   >
                     <Icon size={16} />
@@ -1757,7 +1759,7 @@ function AnalyticsOverviewTab({
           const Icon = m.icon;
           return (
             <div key={m.label} className={`${adminCardClass} p-4 sm:p-5 flex items-center gap-3`}>
-              <span className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-xl bg-[#F0EFEA] text-[#8A857D] inline-flex items-center justify-center flex-shrink-0">
+              <span className="w-10 h-10 min-h-[40px] min-w-[40px] rounded-sm bg-[#F0EFEA] text-[#8A857D] inline-flex items-center justify-center flex-shrink-0">
                 <Icon size={18} />
               </span>
               <div className="min-w-0">
@@ -1798,24 +1800,24 @@ function PostPerfRowItem({
     tone === 'best'
       ? Math.min(100, (post.er / maxEr) * 100)
       : Math.min(100, Math.max(8, Math.log10(maxViews + 1) * 28));
-  const barColor = tone === 'best' ? '#2C3B2E' : '#8A857D';
+  const barColor = tone === 'best' ? '#2C2621' : '#8A857D';
 
   return (
     <button
       type="button"
       onClick={() => onSelect(post)}
-      className="w-full text-left flex items-center gap-3 px-3 py-2.5 min-h-[64px] hover:bg-[#F0EFEA]/80 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2C3B2E]/25"
+      className="w-full text-left flex items-center gap-3 px-3 py-2.5 min-h-[64px] hover:bg-[#F0EFEA]/80 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E6E3DB]"
     >
       <span
         className={`w-6 h-6 min-h-[24px] min-w-[24px] rounded-md text-[11px] font-medium tabular-nums inline-flex items-center justify-center flex-shrink-0 ${
           tone === 'best'
-            ? 'bg-[#2C3B2E] text-[#F9F8F6]'
-            : 'bg-[#8A857D] text-[#F9F8F6]'
+            ? 'bg-[#F0EFEA] text-[#2C2621]'
+            : 'bg-[#E6E3DB] text-[#8A857D]'
         }`}
       >
         {rank}
       </span>
-      <div className="relative w-12 h-12 min-h-[48px] min-w-[48px] rounded-xl overflow-hidden bg-[#F0EFEA] flex-shrink-0">
+      <div className="relative w-12 h-12 min-h-[48px] min-w-[48px] rounded-sm overflow-hidden bg-[#F0EFEA] flex-shrink-0">
         <OptimizedImage
           src={post.image}
           alt=""
@@ -1836,8 +1838,8 @@ function PostPerfRowItem({
           <span
             className={`text-[11px] font-medium tabular-nums flex-shrink-0 px-1.5 py-0.5 rounded-md ${
               tone === 'best'
-                ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
-                : 'bg-[rgba(44,59,46,0.06)] text-[#2C3B2E]'
+                ? 'bg-[#F0EFEA] text-[#2C2621]'
+                : 'bg-[#F0EFEA] text-[#2C2621]'
             }`}
           >
             {tone === 'best'
@@ -1969,7 +1971,7 @@ function ContentPerformanceTab({
         return {
           key,
           label: PLATFORM_LABEL[key] || key,
-          accent: PLATFORM_ACCENT[key] || '#2C3B2E',
+          accent: PLATFORM_ACCENT[key] || '#2C2621',
           Icon: PLATFORM_ICON[key] || InstagramIcon,
           count: sorted.length,
           best,
@@ -1989,7 +1991,7 @@ function ContentPerformanceTab({
       {pills.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {pills.map((account) => {
-            const accent = PLATFORM_ACCENT[account.platform] || '#2C3B2E';
+            const accent = PLATFORM_ACCENT[account.platform] || '#2C2621';
             const Icon = PLATFORM_ICON[account.platform] || InstagramIcon;
             const muted =
               account.status === 'disconnected' ||
@@ -1998,7 +2000,7 @@ function ContentPerformanceTab({
             return (
               <div
                 key={account.platform}
-                className={`inline-flex items-center gap-2 min-h-11 px-3 rounded-xl border text-sm font-medium ${
+                className={`inline-flex items-center gap-2 min-h-11 px-3 rounded-sm border text-sm font-medium ${
                   muted
                     ? 'bg-[#F0EFEA] border-[#E6E3DB] text-[#8A857D]'
                     : 'bg-[#FFFFFF] border-[#E6E3DB] text-[#2C2621]'
@@ -2023,7 +2025,7 @@ function ContentPerformanceTab({
                   account.status === 'disconnected' ? (
                     <a
                       href="/admin/settings/socials"
-                      className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#2C3B2E] hover:text-[#243228] underline-offset-2 hover:underline"
+                      className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#2C2621] hover:text-[#2C2621] underline-offset-2 hover:underline"
                     >
                       Connect
                     </a>
@@ -2049,7 +2051,7 @@ function ContentPerformanceTab({
         </div>
       ) : byPlatform.length === 0 ? (
         <div className={`${adminCardClass} px-4 py-8 text-center`}>
-          <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-sm font-medium text-[#B85C38]">
+          <p className="inline-flex items-center min-h-11 px-3 rounded-sm bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-sm font-medium text-[#B85C38]">
             Connect account or publish content to view analytics
           </p>
         </div>
@@ -2058,7 +2060,7 @@ function ContentPerformanceTab({
           <section key={group.key} className="space-y-3">
             <div className="flex items-center gap-2.5 min-h-11">
               <span
-                className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-xl inline-flex items-center justify-center text-white flex-shrink-0"
+                className="w-9 h-9 min-h-[36px] min-w-[36px] rounded-sm inline-flex items-center justify-center text-white flex-shrink-0"
                 style={{ backgroundColor: group.accent }}
                 aria-hidden
               >
@@ -2076,7 +2078,7 @@ function ContentPerformanceTab({
 
             {group.count === 0 ? (
               <div className={`${adminCardClass} px-4 py-6`}>
-                <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-xs sm:text-sm font-medium text-[#B85C38]">
+                <p className="inline-flex items-center min-h-11 px-3 rounded-sm bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-xs sm:text-sm font-medium text-[#B85C38]">
                   Connect account or publish content to view analytics
                 </p>
               </div>
@@ -2086,7 +2088,7 @@ function ContentPerformanceTab({
                   <div className="px-3.5 py-3 border-b border-[#E6E3DB]">
                     <h4 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
                       <span
-                        className="w-2 h-2 rounded-full bg-[#2C3B2E]"
+                        className="w-2 h-2 rounded-full bg-[#C4BFB6]"
                         aria-hidden
                       />
                       {t('bestPerformingPosts', locale)}
@@ -2271,7 +2273,7 @@ function HashtagsAnalyticsTab({
       <div className={`${adminCardClass} overflow-hidden`}>
         <div className="px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB]">
           <h3 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
-            <Hash size={14} className="text-[#2C3B2E]" aria-hidden />
+            <Hash size={14} className="text-[#2C2621]" aria-hidden />
             {t('hashtagsUsedTitle', locale)}
           </h3>
           <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
@@ -2312,7 +2314,7 @@ function HashtagsAnalyticsTab({
               ) : used.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 sm:px-5 py-10 text-center">
-                    <p className="inline-flex items-center min-h-11 px-3 rounded-xl bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-sm font-medium text-[#B85C38]">
+                    <p className="inline-flex items-center min-h-11 px-3 rounded-sm bg-[rgba(184,92,56,0.08)] border border-[rgba(184,92,56,0.18)] text-sm font-medium text-[#B85C38]">
                       No hashtags in recent posts yet — publish with #tags or generate AI ideas below
                     </p>
                   </td>
@@ -2324,9 +2326,9 @@ function HashtagsAnalyticsTab({
                     className="border-b border-[#E6E3DB] last:border-0 hover:bg-[#F0EFEA]/70"
                   >
                     <td className="px-4 sm:px-5 py-3">
-                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2C3B2E]">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[#2C2621]">
                         <span
-                          className="w-1.5 h-1.5 rounded-full bg-[#2C3B2E]"
+                          className="w-1.5 h-1.5 rounded-full bg-[#C4BFB6]"
                           aria-hidden
                         />
                         {h.tag}
@@ -2336,7 +2338,7 @@ function HashtagsAnalyticsTab({
                       </span>
                       <div className="mt-1.5 h-1 max-w-[120px] rounded-full bg-[#F0EFEA] overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-[#243228]"
+                          className="h-full rounded-full bg-[#C4BFB6]"
                           style={{
                             width: `${(h.reach / maxReach) * 100}%`,
                           }}
@@ -2356,7 +2358,7 @@ function HashtagsAnalyticsTab({
                       <span
                         className={`inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg text-xs font-medium tabular-nums ${
                           h.trend >= 0
-                            ? 'bg-[rgba(44,59,46,0.08)] text-[#2C3B2E]'
+                            ? 'bg-[#F0EFEA] text-[#2C2621]'
                             : 'bg-rose-50 text-rose-600'
                         }`}
                       >
@@ -2376,7 +2378,7 @@ function HashtagsAnalyticsTab({
         <div className="px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h3 className="text-sm font-medium text-[#2C2621] inline-flex items-center gap-2">
-              <Sparkles size={14} className="text-[#2C3B2E]" aria-hidden />
+              <Sparkles size={14} className="text-[#2C2621]" aria-hidden />
               {t('aiHashtagIdeasTitle', locale)}
             </h3>
             <p className="text-[11px] font-medium text-[#8A857D] mt-0.5">
@@ -2387,7 +2389,7 @@ function HashtagsAnalyticsTab({
             type="button"
             onClick={() => void regenerate()}
             disabled={generating}
-            className="h-11 min-h-[44px] px-3.5 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-xs font-medium inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 self-start"
+            className="h-8 min-h-[32px] px-3 rounded-sm bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621] text-xs font-medium inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 self-start"
           >
             <Sparkles size={13} />
             {generating
@@ -2418,7 +2420,7 @@ function HashtagsAnalyticsTab({
               return (
                 <div
                   key={id}
-                  className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-3.5 flex flex-col gap-3"
+                  className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/60 p-3.5 flex flex-col gap-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-xs font-medium text-[#2C2621]">
@@ -2430,7 +2432,7 @@ function HashtagsAnalyticsTab({
                       className="h-9 min-h-[36px] px-2.5 rounded-lg text-[11px] font-medium text-[#8A857D] hover:bg-[#FFFFFF] hover:text-[#2C2621] inline-flex items-center gap-1 transition-colors border border-transparent hover:border-[#E6E3DB]"
                     >
                       {copied ? (
-                        <Check size={12} className="text-[#2C3B2E]" />
+                        <Check size={12} className="text-[#2C2621]" />
                       ) : (
                         <Copy size={12} />
                       )}
@@ -2443,7 +2445,7 @@ function HashtagsAnalyticsTab({
                     {set.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg bg-[#FFFFFF] border border-[#E6E3DB] text-[11px] font-medium text-[#2C3B2E]"
+                        className="inline-flex items-center h-7 min-h-[28px] px-2 rounded-lg bg-[#FFFFFF] border border-[#E6E3DB] text-[11px] font-medium text-[#2C2621]"
                       >
                         {tag}
                       </span>
@@ -2490,7 +2492,7 @@ function DemoBarList({
           </div>
           <div className="mt-1 h-2 rounded-full bg-[#F0EFEA] overflow-hidden">
             <div
-              className="h-full rounded-full bg-[#2C3B2E]"
+              className="h-full rounded-full bg-[#C4BFB6]"
               style={{ width: `${Math.min(100, Math.max(2, row.pct))}%` }}
             />
           </div>
@@ -2511,12 +2513,12 @@ function ActiveHoursChart({ hours, locale }: { hours: number[]; locale: Locale }
           return (
             <div
               key={hour}
-              className="flex-1 min-w-0 rounded-t-sm bg-[#2C3B2E]/15 hover:bg-[#2C3B2E]/70 transition-colors"
+              className="flex-1 min-w-0 rounded-t-sm bg-[#E6E3DB] hover:bg-[#C4BFB6] transition-colors"
               style={{
                 height: `${h}%`,
                 background:
                   hour === peak && value > 0
-                    ? '#2C3B2E'
+                    ? '#2C2621'
                     : undefined,
               }}
               title={`${String(hour).padStart(2, '0')}:00 · ${value}`}
@@ -2652,18 +2654,18 @@ function AudienceInsights({
 
         {/* Total across all platforms + accounts + reach */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-xl bg-[#2C3B2E] text-[#F9F8F6] p-4 sm:p-5">
-            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#F9F8F6]/60">
+          <div className="rounded-sm bg-[#FFFFFF] border border-[#E6E3DB] text-[#2C2621] p-4 sm:p-5">
+            <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               {t('totalFollowersAll', locale)}
             </p>
             <p className="text-2xl sm:text-3xl font-medium mt-1 tabular-nums">
               {formatCompact(followerTotal, locale)}
             </p>
-            <p className="text-xs text-[#F9F8F6]/55 font-medium mt-1">
+            <p className="text-xs text-[#8A857D] font-medium mt-1">
               {accountRows.length} {t('accounts', locale).toLowerCase()}
             </p>
           </div>
-          <div className="rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] p-4 sm:p-5">
+          <div className="rounded-sm bg-[#FFFFFF] border border-[#E6E3DB] p-4 sm:p-5">
             <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               {t('accounts', locale)}
             </p>
@@ -2671,7 +2673,7 @@ function AudienceInsights({
               {accountCount || accountRows.length}
             </p>
           </div>
-          <div className="rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] p-4 sm:p-5">
+          <div className="rounded-sm bg-[#FFFFFF] border border-[#E6E3DB] p-4 sm:p-5">
             <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D]">
               {t('reach7d', locale)}
             </p>
@@ -2702,13 +2704,13 @@ function AudienceInsights({
                 return (
                   <div
                     key={row.key}
-                    className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-4 flex flex-col gap-3 min-h-[44px]"
+                    className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] p-4 flex flex-col gap-3 min-h-[44px]"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
                         className="relative w-10 h-10 min-h-[40px] min-w-[40px] rounded-full border border-[#E6E3DB] inline-flex items-center justify-center flex-shrink-0 overflow-hidden bg-[#F0EFEA]"
                         style={{
-                          color: PLATFORM_COLORS[row.platform] || '#2C3B2E',
+                          color: PLATFORM_COLORS[row.platform] || '#2C2621',
                         }}
                       >
                         {row.avatar_url ? (
@@ -2747,7 +2749,7 @@ function AudienceInsights({
                           className="h-full rounded-full transition-[width] duration-500"
                           style={{
                             width: `${Math.min(100, Math.max(row.followers > 0 ? 3 : 0, pct))}%`,
-                            background: PLATFORM_COLORS[row.platform] || '#2C3B2E',
+                            background: PLATFORM_COLORS[row.platform] || '#2C2621',
                           }}
                         />
                       </div>
@@ -2789,7 +2791,7 @@ function AudienceInsights({
               onClick={() => setDemoPlatform('all')}
               className={`min-h-11 px-3.5 rounded-xl text-sm font-medium border transition-colors ${
                 demoPlatform === 'all'
-                  ? 'bg-[#2C3B2E] text-[#F9F8F6] border-[#2C3B2E]'
+                  ? 'bg-[#F0EFEA] text-[#2C2621] border-[#E6E3DB]'
                   : 'bg-[#FFFFFF] text-[#8A857D] border-[#E6E3DB] hover:border-[#E6E3DB]'
               }`}
             >
@@ -2797,7 +2799,7 @@ function AudienceInsights({
             </button>
             {platformSlices.map((slice) => {
               const selected = demoPlatform === slice.platform;
-              const color = PLATFORM_COLORS[slice.platform] || '#2C3B2E';
+              const color = PLATFORM_COLORS[slice.platform] || '#2C2621';
               return (
                 <button
                   key={slice.platform}
@@ -2805,7 +2807,7 @@ function AudienceInsights({
                   onClick={() => setDemoPlatform(slice.platform)}
                   className={`min-h-11 px-3.5 rounded-xl text-sm font-medium border transition-colors inline-flex items-center gap-2 ${
                     selected
-                      ? 'bg-[#2C3B2E] text-[#F9F8F6] border-[#2C3B2E]'
+                      ? 'bg-[#F0EFEA] text-[#2C2621] border-[#E6E3DB]'
                       : 'bg-[#FFFFFF] text-[#8A857D] border-[#E6E3DB] hover:border-[#E6E3DB]'
                   }`}
                 >
@@ -2881,19 +2883,19 @@ function AudienceInsights({
               )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+              <div className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
                 <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                   {t('audienceTopCountries', locale)}
                 </p>
                 <DemoBarList rows={activeDemo.countries} emptyLabel="—" />
               </div>
-              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+              <div className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
                 <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                   {t('audienceTopCities', locale)}
                 </p>
                 <DemoBarList rows={activeDemo.cities} emptyLabel="—" />
               </div>
-              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+              <div className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
                 <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                   {t('audienceGender', locale)}
                 </p>
@@ -2910,7 +2912,7 @@ function AudienceInsights({
                   emptyLabel="—"
                 />
               </div>
-              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+              <div className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
                 <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                   {t('audienceAge', locale)}
                 </p>
@@ -2918,7 +2920,7 @@ function AudienceInsights({
               </div>
             </div>
 
-            <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
+            <div className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/60 p-4">
               <p className="text-[10px] font-inter font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-3">
                 {t('audienceActiveTimes', locale)}
               </p>
