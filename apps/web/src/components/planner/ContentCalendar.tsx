@@ -41,7 +41,7 @@ const NOTE_COLORS: { key: NoteColor; swatch: string; card: string }[] = [
 ];
 
 /** Forest accent for “today” — matches planner shell / new style. */
-const TODAY_ACCENT = '#2C3B2E';
+const TODAY_ACCENT = '#1C1917';
 
 function dateKey(d: Date) {
   const y = d.getFullYear();
@@ -80,7 +80,7 @@ function postDate(post: PlannerPost): Date | null {
 function statusDot(post: PlannerPost) {
   if (post.workflow === 'PUBLISHED' || post.status === 'published') return 'bg-emerald-500';
   if (post.workflow === 'SCHEDULED' || post.status === 'scheduled') return 'bg-sky-500';
-  if (post.workflow === 'READY') return 'bg-[#2C3B2E]';
+  if (post.workflow === 'READY') return 'bg-[#1C1917]';
   if (post.workflow === 'IN_PROGRESS') return 'bg-[#8A857D]';
   return 'bg-amber-400';
 }
@@ -124,10 +124,10 @@ function ToolbarBtn({
       onClick={onClick}
       aria-label={ariaLabel}
       className={[
-        'inline-flex items-center justify-center gap-1.5 h-9 min-h-[36px] px-3 rounded-lg text-[13px] font-medium transition-colors border',
+        'inline-flex items-center justify-center gap-1.5 h-9 min-h-[36px] px-3 rounded-sm text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors border',
         active
-          ? 'bg-[#2C3B2E] text-[#F9F8F6] border-[#2C3B2E] shadow-sm'
-          : 'bg-[#FFFFFF] text-[#2C2621] border-[#E6E3DB] hover:bg-[#F0EFEA]',
+          ? 'bg-[#1C1917] text-white border-[#1C1917]'
+          : 'bg-white text-[#2C2621] border-[#E6E3DB] hover:bg-[#F0EFEA]',
         className,
       ].join(' ')}
     >
@@ -522,8 +522,8 @@ export default function ContentCalendar({
   }, [postsInView]);
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#E6E3DB] rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(44,38,33,0.03)]">
-      {/* Toolbar — matches reference calendar chrome */}
+    <div className="bg-white border border-[#E6E3DB] rounded-sm overflow-hidden">
+      {/* Toolbar — create-post warm canvas */}
       <div className="flex flex-col xl:flex-row xl:items-center gap-3 px-3 sm:px-4 py-3 border-b border-[#E6E3DB]">
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <ToolbarBtn
@@ -534,17 +534,17 @@ export default function ContentCalendar({
             <ChevronLeft size={16} />
           </ToolbarBtn>
           <ToolbarBtn onClick={() => onCursorChange(new Date())}>{t('today', locale)}</ToolbarBtn>
-          <div className="inline-flex items-center rounded-lg border border-[#E6E3DB] bg-[#FFFFFF] p-0.5 gap-0.5">
+          <div className="inline-flex items-stretch border border-[#E6E3DB] bg-white">
             {viewModes.map(({ key, labelKey }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setMode(key)}
                 className={[
-                  'h-8 min-h-[32px] px-2.5 sm:px-3 rounded-md text-[12px] sm:text-[13px] font-medium transition-colors',
+                  'h-8 min-h-[32px] px-2.5 sm:px-3 text-[9px] font-semibold uppercase tracking-[0.1em] border-r border-[#E6E3DB] last:border-r-0 transition-colors',
                   mode === key
-                    ? 'bg-[#2C3B2E] text-[#F9F8F6] shadow-sm'
-                    : 'text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]',
+                    ? 'bg-[#1C1917] text-white'
+                    : 'text-[#5C574F] hover:text-[#2C2621] hover:bg-[#F0EFEA]',
                 ].join(' ')}
               >
                 {t(labelKey, locale)}
@@ -562,7 +562,7 @@ export default function ContentCalendar({
           >
             <ChevronLeft size={18} />
           </button>
-          <p className="text-[15px] sm:text-base font-semibold text-[#2C2621] capitalize truncate tracking-tight">
+          <p className="text-xs sm:text-sm font-semibold text-[#2C2621] capitalize truncate tracking-tight">
             {rangeLabel}
           </p>
           <button
@@ -590,7 +590,7 @@ export default function ContentCalendar({
             ) : (
               <a
                 href={googleConnectUrl}
-                className="text-[13px] font-medium text-[#2C3B2E] hover:text-[#243228] transition-colors h-9 px-1 inline-flex items-center"
+                className="text-[13px] font-medium text-[#1C1917] hover:text-[#2C2621] transition-colors h-9 px-1 inline-flex items-center"
               >
                 {t('linkGoogleCalendar', locale)}
               </a>
@@ -691,7 +691,7 @@ export default function ContentCalendar({
             onClick={() => setEditorOpen(false)}
           />
           <div
-            className={`relative w-full max-w-md rounded-2xl border shadow-xl p-5 ${colorClass(editorColor)}`}
+            className={`relative w-full max-w-md rounded-sm border shadow-xl p-5 ${colorClass(editorColor)}`}
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
@@ -735,7 +735,7 @@ export default function ContentCalendar({
                   type="button"
                   onClick={() => setEditorColor(c.key)}
                   className={`w-8 h-8 min-h-[32px] rounded-full ${c.swatch} ${
-                    editorColor === c.key ? 'ring-2 ring-offset-2 ring-[#2C3B2E]/40' : ''
+                    editorColor === c.key ? 'ring-2 ring-offset-2 ring-[#1C1917]/40' : ''
                   }`}
                   aria-label={c.key}
                 />
@@ -766,7 +766,7 @@ export default function ContentCalendar({
                 type="button"
                 onClick={saveNote}
                 disabled={!editorText.trim()}
-                className="h-11 min-h-[44px] rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] font-semibold"
+                className="h-11 min-h-[44px] rounded-xl bg-[#1C1917] hover:bg-[#2C2621] text-[#F9F8F6] font-semibold"
               >
                 {t('saveNote', locale)}
               </Button>

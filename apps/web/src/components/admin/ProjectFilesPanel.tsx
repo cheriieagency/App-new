@@ -76,6 +76,7 @@ export default function ProjectFilesPanel({
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState(FOLDER_COLORS[4]);
+  const [dragOver, setDragOver] = useState(false);
 
   const workspaceHeaders: Record<string, string> = activeWorkspace.id
     ? {
@@ -231,19 +232,27 @@ export default function ProjectFilesPanel({
     if (fileRef.current) fileRef.current.value = '';
   };
 
+  const requestDeleteFolder = (folderId: string, name: string) => {
+    if (!window.confirm(`Delete folder “${name}”? Files inside stay under All files.`)) {
+      return;
+    }
+    deleteFolderMutation.mutate(folderId);
+  };
+
   const activeFolder = folders.find((f) => f.id === activeFolderId) || null;
+  const filesBusy = uploading || uploadMutation.isPending;
 
   return (
-    <section className="space-y-4 pt-2 border-t border-slate-200/80">
+    <section className="space-y-4 pt-2 border-t border-[#E6E3DB]">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D]">
             Project files
           </p>
-          <h2 className="font-clikd-wordmark font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight mt-1">
+          <h2 className="text-sm font-semibold text-[#2C2621] tracking-tight mt-1">
             Documents & folders
           </h2>
-          <p className="text-sm text-slate-500 font-medium mt-1">
+          <p className="text-[11px] text-[#8A857D] mt-1 leading-snug">
             Add PDFs, decks, briefs, and other files — organize them in folders.
           </p>
         </div>
@@ -252,19 +261,19 @@ export default function ProjectFilesPanel({
           <button
             type="button"
             onClick={() => setCreatingFolder(true)}
-            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 h-8 min-h-[32px] px-2.5 rounded-sm bg-transparent text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C2621] transition-colors"
           >
-            <FolderPlus size={14} />
+            <FolderPlus size={12} />
             New folder
           </button>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            disabled={uploading || uploadMutation.isPending}
-            className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+            disabled={filesBusy}
+            className="inline-flex items-center justify-center gap-1.5 h-8 min-h-[32px] px-3 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-[9px] font-medium uppercase tracking-[0.08em] hover:bg-[#E6E3DB] transition-colors disabled:opacity-50"
           >
-            <Upload size={14} />
-            {uploading || uploadMutation.isPending ? 'Uploading…' : 'Upload file'}
+            <Upload size={12} />
+            {filesBusy ? 'Uploading…' : 'Upload file'}
           </button>
           <input
             ref={fileRef}
@@ -279,7 +288,7 @@ export default function ProjectFilesPanel({
 
       {creatingFolder ? (
         <div className={`${adminCardClass} p-4 space-y-3`}>
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D]">
             New folder
           </p>
           <input
@@ -287,18 +296,26 @@ export default function ProjectFilesPanel({
             value={folderName}
             onChange={(e) => setFolderName(e.target.value)}
             placeholder="e.g. Contracts, Briefs, Decks"
-            className="w-full h-11 min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="w-full h-9 min-h-[36px] border-0 border-b border-[#E6E3DB] bg-transparent px-0 text-xs text-[#2C2621] placeholder:text-[#C4BFB6] focus:outline-none focus:border-[#2C2621]"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && folderName.trim()) {
+                e.preventDefault();
+                createFolderMutation.mutate();
+              }
+              if (e.key === 'Escape') {
+                setCreatingFolder(false);
+                setFolderName('');
+              }
+            }}
           />
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {FOLDER_COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setFolderColor(c)}
-                className={`w-8 h-8 min-h-[32px] min-w-[32px] rounded-full ${
-                  folderColor === c
-                    ? 'ring-2 ring-offset-2 ring-slate-900'
-                    : ''
+                className={`w-6 h-6 min-h-[24px] min-w-[24px] ${
+                  folderColor === c ? 'ring-2 ring-offset-1 ring-[#1C1917]' : ''
                 }`}
                 style={{ background: c }}
                 aria-label={`Color ${c}`}
@@ -312,7 +329,7 @@ export default function ProjectFilesPanel({
                 setCreatingFolder(false);
                 setFolderName('');
               }}
-              className="h-11 min-h-[44px] px-4 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50"
+              className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8A857D] hover:text-[#2C2621] h-8 min-h-[32px] px-2"
             >
               Cancel
             </button>
@@ -320,7 +337,7 @@ export default function ProjectFilesPanel({
               type="button"
               disabled={!folderName.trim() || createFolderMutation.isPending}
               onClick={() => createFolderMutation.mutate()}
-              className="h-11 min-h-[44px] px-4 rounded-xl bg-slate-900 text-white text-xs font-semibold disabled:opacity-40"
+              className="inline-flex items-center justify-center h-8 min-h-[32px] px-3 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-[9px] font-medium uppercase tracking-[0.08em] hover:bg-[#E6E3DB] disabled:opacity-40"
             >
               Create folder
             </button>
@@ -329,20 +346,24 @@ export default function ProjectFilesPanel({
       ) : null}
 
       <div className={`${adminCardClass} p-4 sm:p-5 space-y-4`}>
-        <div className="flex flex-wrap items-start gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-start gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={() => setActiveFolderId(null)}
-            className={`flex flex-col items-center gap-1.5 min-w-[72px] max-w-[96px] rounded-xl p-1.5 transition-all ${
-              activeFolderId === null
-                ? 'ring-2 ring-[#F472B6] ring-offset-2'
-                : 'hover:opacity-90'
+            className={`flex flex-col items-center gap-1 min-w-[56px] max-w-[72px] p-1 transition-opacity ${
+              activeFolderId === null ? 'opacity-100' : 'hover:opacity-90'
             }`}
           >
-            <div className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl bg-[#0F172A] text-white flex items-center justify-center">
-              <Folder size={26} />
+            <div
+              className={`w-10 h-10 min-h-[40px] min-w-[40px] flex items-center justify-center transition-colors ${
+                activeFolderId === null
+                  ? 'bg-[#E6E3DB] text-[#2C2621]'
+                  : 'bg-[#F0EFEA] text-[#8A857D]'
+              }`}
+            >
+              <Folder size={16} strokeWidth={1.75} />
             </div>
-            <p className="text-sm font-extrabold text-slate-900 text-center leading-snug">
+            <p className="text-[10px] font-semibold text-[#2C2621] text-center leading-snug">
               All files
             </p>
           </button>
@@ -352,29 +373,32 @@ export default function ProjectFilesPanel({
               <button
                 type="button"
                 onClick={() => setActiveFolderId(folder.id)}
-                className={`flex flex-col items-center gap-1.5 min-w-[72px] max-w-[96px] rounded-xl p-1.5 transition-all ${
-                  activeFolderId === folder.id
-                    ? 'ring-2 ring-[#F472B6] ring-offset-2'
-                    : 'hover:opacity-90'
+                className={`flex flex-col items-center gap-1 min-w-[56px] max-w-[72px] p-1 transition-opacity ${
+                  activeFolderId === folder.id ? 'opacity-100' : 'hover:opacity-90'
                 }`}
               >
                 <div
-                  className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl text-white flex items-center justify-center"
-                  style={{ background: folder.color }}
+                  className={`w-10 h-10 min-h-[40px] min-w-[40px] text-white flex items-center justify-center ${
+                    activeFolderId === folder.id
+                      ? 'outline outline-1 outline-offset-1 outline-[#E6E3DB]'
+                      : 'opacity-90'
+                  }`}
+                  style={{ background: folder.color || '#8A857D' }}
                 >
-                  <Folder size={26} />
+                  <Folder size={16} strokeWidth={1.75} />
                 </div>
-                <p className="text-sm font-extrabold text-slate-900 text-center line-clamp-2 leading-snug">
+                <p className="text-[10px] font-semibold text-[#2C2621] text-center line-clamp-2 leading-snug">
                   {folder.name}
                 </p>
               </button>
               <button
                 type="button"
-                onClick={() => deleteFolderMutation.mutate(folder.id)}
-                className="absolute -top-1 -right-1 h-8 w-8 min-h-[32px] min-w-[32px] rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-rose-600 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 inline-flex items-center justify-center shadow-sm"
+                onClick={() => requestDeleteFolder(folder.id, folder.name)}
+                disabled={deleteFolderMutation.isPending}
+                className="absolute -top-0.5 -right-0.5 h-6 w-6 min-h-[24px] min-w-[24px] bg-white border border-[#E6E3DB] text-[#A8A29E] hover:text-[#B85C38] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 inline-flex items-center justify-center disabled:opacity-40"
                 aria-label={`Delete ${folder.name}`}
               >
-                <Trash2 size={12} />
+                <Trash2 size={10} />
               </button>
             </div>
           ))}
@@ -382,39 +406,56 @@ export default function ProjectFilesPanel({
           <button
             type="button"
             onClick={() => setCreatingFolder(true)}
-            className="flex flex-col items-center gap-1.5 min-w-[72px] max-w-[96px] rounded-xl p-1.5 hover:opacity-90"
+            className="flex flex-col items-center gap-1 min-w-[56px] max-w-[72px] p-1 hover:opacity-90"
           >
-            <div className="w-14 h-14 min-h-[56px] min-w-[56px] rounded-2xl border-2 border-dashed border-slate-300 text-slate-400 flex items-center justify-center">
-              <Plus size={22} />
+            <div className="w-10 h-10 min-h-[40px] min-w-[40px] border border-dashed border-[#E6E3DB] text-[#A8A29E] flex items-center justify-center hover:bg-[#F0EFEA] hover:text-[#8A857D] transition-colors">
+              <Plus size={14} strokeWidth={1.75} />
             </div>
-            <p className="text-sm font-extrabold text-slate-500 text-center leading-snug">
+            <p className="text-[10px] font-semibold text-[#8A857D] text-center leading-snug">
               New folder
             </p>
           </button>
         </div>
 
-        <div className="border-t border-slate-100 pt-4">
+        <div
+          className="border-t border-[#E6E3DB] pt-4"
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            onFiles(e.dataTransfer.files);
+          }}
+        >
           <div className="flex items-center justify-between gap-2 mb-3">
-            <p className="text-xs font-bold text-slate-600">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D]">
               {activeFolder ? activeFolder.name : 'All files'}
             </p>
           </div>
 
           {isLoading ? (
-            <p className="text-sm text-slate-400 font-medium py-8 text-center">
+            <p className="text-xs text-[#A8A29E] font-medium py-8 text-center">
               Loading files…
             </p>
           ) : files.length === 0 ? (
             <button
               type="button"
+              disabled={filesBusy}
               onClick={() => fileRef.current?.click()}
-              className="w-full min-h-[140px] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-slate-300 hover:text-slate-500 transition-colors"
+              className={`w-full min-h-[120px] border border-dashed bg-[#F9F8F6] flex flex-col items-center justify-center gap-1.5 text-[#A8A29E] transition-colors disabled:opacity-50 ${
+                dragOver
+                  ? 'border-[#1C1917] text-[#2C2621]'
+                  : 'border-[#E6E3DB] hover:border-[#1C1917]/40 hover:text-[#8A857D]'
+              }`}
             >
-              <FileText size={26} strokeWidth={1.75} />
-              <p className="text-sm font-semibold">
+              <FileText size={20} strokeWidth={1.75} />
+              <p className="text-xs font-semibold">
                 Drop PDFs, docs, or other files here
               </p>
-              <p className="text-xs font-medium">
+              <p className="text-[10px] font-medium">
                 PDF, Word, Excel, images, video, ZIP
               </p>
             </button>
@@ -423,21 +464,21 @@ export default function ProjectFilesPanel({
               {files.map((file) => (
                 <li
                   key={file.id}
-                  className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5"
+                  className="flex items-center gap-3 border border-[#E6E3DB] bg-white px-2.5 py-2"
                 >
-                  <div className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-slate-100 text-slate-500 inline-flex items-center justify-center flex-shrink-0">
-                    <FileText size={18} />
+                  <div className="h-9 w-9 min-h-[36px] min-w-[36px] bg-[#F0EFEA] text-[#8A857D] inline-flex items-center justify-center flex-shrink-0">
+                    <FileText size={15} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <a
                       href={file.file_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-sm font-bold text-slate-900 truncate block hover:text-[#2B2568]"
+                      className="text-xs font-semibold text-[#2C2621] truncate block hover:underline"
                     >
                       {file.file_name}
                     </a>
-                    <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#A8A29E]">
                       {fileKindLabel(file.file_type, file.file_name)} ·{' '}
                       {formatBytes(file.size_bytes)}
                     </p>
@@ -446,10 +487,10 @@ export default function ProjectFilesPanel({
                     type="button"
                     onClick={() => deleteFileMutation.mutate(file.id)}
                     disabled={deleteFileMutation.isPending}
-                    className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 inline-flex items-center justify-center flex-shrink-0"
+                    className="h-8 w-8 min-h-[32px] min-w-[32px] text-[#A8A29E] hover:text-[#B85C38] inline-flex items-center justify-center flex-shrink-0 disabled:opacity-40"
                     aria-label={`Delete ${file.file_name}`}
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={13} />
                   </button>
                 </li>
               ))}

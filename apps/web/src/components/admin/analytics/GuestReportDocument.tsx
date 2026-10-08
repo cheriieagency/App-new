@@ -195,7 +195,7 @@ export default function GuestReportDocument({
 
   return (
     <div
-      className={`rounded-xl bg-white text-[#2C2621] p-5 sm:p-7 space-y-6 border border-[#E6E3DB] shadow-[0_1px_2px_rgba(44,38,33,0.04)] ${className}`}
+      className={`rounded-sm bg-white text-[#2C2621] p-5 sm:p-7 space-y-6 border border-[#E6E3DB] shadow-[0_1px_2px_rgba(44,38,33,0.04)] ${className}`}
     >
       <div>
         <p className="text-[10px] font-mono font-medium uppercase tracking-[0.16em] text-[#8A857D]">
@@ -209,7 +209,7 @@ export default function GuestReportDocument({
       </div>
 
       {!hasLiveData ? (
-        <div className="rounded-xl border border-dashed border-[#E6E3DB] bg-[#F9F8F6] px-4 py-6 text-sm text-[#8A857D]">
+        <div className="rounded-sm border border-dashed border-[#E6E3DB] bg-[#F9F8F6] px-4 py-6 text-sm text-[#8A857D]">
           No live posts or connected audiences were found for this period.
           Connect social accounts and publish in-range content, then rebuild the
           report. Nothing here is mocked.
@@ -225,7 +225,7 @@ export default function GuestReportDocument({
         ].map((k) => (
           <div
             key={k.label}
-            className="rounded-xl bg-[#F9F8F6] border border-[#E6E3DB] p-4"
+            className="rounded-sm bg-[#F9F8F6] border border-[#E6E3DB] p-4"
           >
             <p className="text-[10px] font-mono uppercase tracking-widest text-[#8A857D]">
               {k.label}
@@ -246,7 +246,7 @@ export default function GuestReportDocument({
           ].map((k) => (
             <div
               key={k.label}
-              className="rounded-xl bg-[#F9F8F6] border border-[#E6E3DB] px-3 py-2.5 text-center"
+              className="rounded-sm bg-[#F9F8F6] border border-[#E6E3DB] px-3 py-2.5 text-center"
             >
               <p className="text-[10px] font-mono uppercase tracking-widest text-[#8A857D]">
                 {k.label}
@@ -262,7 +262,7 @@ export default function GuestReportDocument({
           <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D]">
             Views by platform
           </p>
-          <div className="h-56 w-full rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3">
+          <div className="h-56 w-full rounded-sm border border-[#E6E3DB] bg-[#F9F8F6] p-3">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
@@ -288,11 +288,11 @@ export default function GuestReportDocument({
                     fontSize: 12,
                   }}
                 />
-                <Bar dataKey="views" fill="#2C3B2E" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="views" fill="#2C2621" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="h-56 w-full rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-3">
+          <div className="h-56 w-full rounded-sm border border-[#E6E3DB] bg-[#F9F8F6] p-3">
             <p className="text-[10px] font-mono uppercase tracking-widest text-[#8A857D] mb-2 px-1">
               Engagement rate by platform
             </p>
@@ -334,7 +334,7 @@ export default function GuestReportDocument({
       ) : null}
 
       {options.includeCsv ? (
-        <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-4 space-y-3">
+        <div className="rounded-sm border border-[#E6E3DB] bg-[#F9F8F6] p-4 space-y-3">
           <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D]">
             Download CSV
           </p>
@@ -346,7 +346,7 @@ export default function GuestReportDocument({
             <button
               type="button"
               onClick={onDownloadSummaryCsv}
-              className="h-11 min-h-[44px] px-3 rounded-xl border border-[#E6E3DB] bg-white text-xs font-bold text-[#2C2621] inline-flex items-center gap-1.5"
+              className="h-11 min-h-[44px] px-3 rounded-sm border border-[#E6E3DB] bg-white text-xs font-bold text-[#2C2621] inline-flex items-center gap-1.5"
             >
               <Download size={13} /> Summary CSV
             </button>
@@ -354,7 +354,7 @@ export default function GuestReportDocument({
               type="button"
               onClick={onDownloadPlatformCsv}
               disabled={platformBreakdown.length === 0}
-              className="h-11 min-h-[44px] px-3 rounded-xl border border-[#E6E3DB] bg-white text-xs font-bold text-[#2C2621] inline-flex items-center gap-1.5 disabled:opacity-40"
+              className="h-11 min-h-[44px] px-3 rounded-sm border border-[#E6E3DB] bg-white text-xs font-bold text-[#2C2621] inline-flex items-center gap-1.5 disabled:opacity-40"
             >
               <Download size={13} /> Platforms CSV
             </button>
@@ -362,7 +362,7 @@ export default function GuestReportDocument({
               type="button"
               onClick={onDownloadPostsCsv}
               disabled={topPosts.length === 0}
-              className="h-11 min-h-[44px] px-3 rounded-xl border border-[#E6E3DB] bg-white text-xs font-bold text-[#2C2621] inline-flex items-center gap-1.5 disabled:opacity-40"
+              className="h-11 min-h-[44px] px-3 rounded-sm border border-[#E6E3DB] bg-white text-xs font-bold text-[#2C2621] inline-flex items-center gap-1.5 disabled:opacity-40"
             >
               <Download size={13} /> Top posts CSV
             </button>
@@ -379,7 +379,7 @@ export default function GuestReportDocument({
             {followersByPlatform.map((f) => (
               <li
                 key={f.platform}
-                className="flex justify-between text-sm rounded-xl bg-[#F9F8F6] border border-[#E6E3DB] px-3 py-2.5"
+                className="flex justify-between text-sm rounded-sm bg-[#F9F8F6] border border-[#E6E3DB] px-3 py-2.5"
               >
                 <span className="capitalize font-medium">
                   {f.platform}
@@ -407,7 +407,7 @@ export default function GuestReportDocument({
             {platformBreakdown.map((p) => (
               <li
                 key={p.platform}
-                className="flex justify-between text-sm rounded-xl bg-[#F9F8F6] border border-[#E6E3DB] px-3 py-2.5 gap-3"
+                className="flex justify-between text-sm rounded-sm bg-[#F9F8F6] border border-[#E6E3DB] px-3 py-2.5 gap-3"
               >
                 <span className="capitalize font-medium">{p.platform}</span>
                 <span className="text-[#8A857D] tabular-nums text-right">
@@ -425,7 +425,7 @@ export default function GuestReportDocument({
           <p className="text-xs font-medium uppercase tracking-widest text-[#8A857D] mb-2">
             In-depth · Top posts
           </p>
-          <div className="overflow-x-auto rounded-xl border border-[#E6E3DB]">
+          <div className="overflow-x-auto rounded-sm border border-[#E6E3DB]">
             <table className="w-full min-w-[520px] text-left text-sm">
               <thead className="bg-[#F9F8F6] text-[10px] font-mono uppercase tracking-widest text-[#8A857D]">
                 <tr>
@@ -487,7 +487,7 @@ export default function GuestReportDocument({
             {topPosts.slice(0, 8).map((p) => (
               <li
                 key={p.id}
-                className="rounded-xl bg-[#F9F8F6] border border-[#E6E3DB] overflow-hidden flex gap-3"
+                className="rounded-sm bg-[#F9F8F6] border border-[#E6E3DB] overflow-hidden flex gap-3"
               >
                 {p.mediaUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -516,8 +516,8 @@ export default function GuestReportDocument({
       ) : null}
 
       {aiInsights?.executiveSummary ? (
-        <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] p-4 space-y-3">
-          <p className="text-xs font-medium text-[#2C3B2E] uppercase tracking-widest">
+        <div className="rounded-sm border border-[#E6E3DB] bg-[#F9F8F6] p-4 space-y-3">
+          <p className="text-xs font-medium text-[#2C2621] uppercase tracking-widest">
             Strategy notes
           </p>
           <p className="text-sm text-[#2C2621] leading-relaxed">
@@ -525,7 +525,7 @@ export default function GuestReportDocument({
           </p>
           {aiInsights.wins?.length ? (
             <div>
-              <p className="text-[11px] font-medium text-emerald-700 uppercase mb-1">
+              <p className="text-[11px] font-medium text-[#8A857D] uppercase mb-1">
                 Wins
               </p>
               <ul className="list-disc list-inside text-sm text-[#8A857D] space-y-1">

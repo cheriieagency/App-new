@@ -7,11 +7,12 @@ import {
   CalendarClock,
   Check,
   ChevronDown,
+  Circle,
   Copy,
   FileText,
-  FolderKanban,
   Hash,
   ImageIcon,
+  Info,
   Loader2,
   Mail,
   MessageCircle,
@@ -33,7 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -53,12 +53,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import CarouselMediaUploader from '@/components/planner/CarouselMediaUploader';
-import FeedPreview, { type PlatformHandles } from '@/components/planner/FeedPreview';
-import MediaAspectPicker from '@/components/planner/MediaAspectPicker';
+import MediaEditorModal from '@/components/planner/MediaEditorModal';
+import { type PlatformHandles } from '@/components/planner/FeedPreview';
 import {
   defaultMediaAspect,
   isMediaAspectRatio,
   mediaAspectChoices,
+  mediaAspectTailwind,
+  type ContentFormat,
   type MediaAspectRatio,
 } from '@/lib/planner/media-aspect';
 import {
@@ -151,7 +153,7 @@ const PROJECT_COLORS = [
   '#0EA5E9',
 ];
 
-/** Soft section label — sentence case, not ALL CAPS. */
+/** Post Details–style field label (uppercase, tracked). */
 function FieldLabel({
   children,
   className,
@@ -163,14 +165,26 @@ function FieldLabel({
     <p
       className={
         className
-          ? `text-xs font-medium text-slate-500 ${className}`
-          : 'text-xs font-medium text-slate-500 mb-1.5'
+          ? `text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D] ${className}`
+          : 'text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D] mb-1'
       }
     >
       {children}
     </p>
   );
 }
+
+/** Single cohesive segmented control — one shared border, no separate buttons. */
+const SEGMENT_ROW =
+  'inline-flex flex-nowrap items-stretch max-w-full overflow-x-auto scrollbar-none border border-[#E6E3DB] rounded-sm bg-white';
+const SEGMENT_BTN =
+  'inline-flex items-center justify-center h-8 min-h-[32px] px-2 sm:px-2.5 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors whitespace-nowrap border-0 border-r border-[#E6E3DB] last:border-r-0 rounded-none flex-shrink-0';
+const SEGMENT_ON = 'bg-[#1C1917] text-white';
+const SEGMENT_OFF = 'bg-transparent text-[#5C574F] hover:bg-[#F0EFEA] hover:text-[#2C2621]';
+const OUTLINE_BTN =
+  'inline-flex items-center justify-center h-8 min-h-[32px] px-2.5 border border-[#1C1917] bg-white text-[9px] font-semibold uppercase tracking-[0.1em] text-[#1C1917] hover:bg-[#F5F4F0] transition-colors';
+const UNDERLINE_INPUT =
+  'w-full h-9 min-h-[36px] bg-transparent border-0 border-b border-[#E6E3DB] rounded-none px-0 text-xs text-[#2C2621] placeholder:text-[#C4BFB6] focus:outline-none focus:border-[#2C2621]';
 
 function toLocalInputValue(iso: string | null | undefined) {
   if (!iso) return '';
@@ -272,6 +286,12 @@ export default function PostStudioModal({
   const [subtasks, setSubtasks] = useState<PlannerSubtask[]>([]);
   const [mediaItems, setMediaItems] = useState<PlannerMediaItem[]>([]);
   const [mediaAspect, setMediaAspect] = useState<MediaAspectRatio>('4:5');
+  const [contentFormat, setContentFormat] = useState<ContentFormat>('post');
+  const [placeOnGrid, setPlaceOnGrid] = useState(true);
+  const [internalNotes, setInternalNotes] = useState('');
+  const [clientNotes, setClientNotes] = useState('');
+  const mediaReplaceRef = useRef<HTMLInputElement>(null);
+  const [mediaEditorOpen, setMediaEditorOpen] = useState(false);
   /** TikTok-only: upload to TikTok drafts so you can add a trending sound in the app. */
   const [tiktokTrendingSound, setTiktokTrendingSound] = useState(false);
   const [trendingSoundNote, setTrendingSoundNote] = useState('');
@@ -356,6 +376,10 @@ export default function PostStudioModal({
       setCampaignIds((prev) =>
         prev.includes(data.campaign.id) ? prev : [...prev, data.campaign.id]
       );
+      setMoreOptions((prev) => ({
+        ...prev,
+        campaignTag: data.campaign.name,
+      }));
       setCreatingProject(false);
       setNewProjectName('');
       setNewProjectColor(PROJECT_COLORS[0]);
@@ -385,6 +409,16 @@ export default function PostStudioModal({
           ? post.media_aspect
           : defaultMediaAspect(post.platforms)
       );
+      {
+        const items = post.media_items ?? [];
+        if (items.length > 1) setContentFormat('carousel');
+        else if (post.media_aspect === '9:16' || post.media_type === 'video')
+          setContentFormat('reel');
+        else setContentFormat('post');
+      }
+      setPlaceOnGrid(true);
+      setInternalNotes(post.internal_notes || '');
+      setClientNotes(post.client_notes || '');
       {
         const mode = parsePublishMode(post.publish_mode);
         setTiktokTrendingSound(
@@ -425,6 +459,10 @@ export default function PostStudioModal({
       setSubtasks([]);
       setMediaItems([]);
       setMediaAspect('4:5');
+      setContentFormat('post');
+      setPlaceOnGrid(true);
+      setInternalNotes('');
+      setClientNotes('');
       setTiktokTrendingSound(false);
       setTrendingSoundNote('');
       setMoreOptions(EMPTY_MORE_OPTIONS);
@@ -441,13 +479,13 @@ export default function PostStudioModal({
     setCommentImage(null);
   }, [open, post, projectName, defaultScheduledAt, defaultCampaignIds]);
 
-  // Keep frame size valid when platforms / media change
+  // Keep frame size valid when platforms / media / format change
   useEffect(() => {
-    const choices = mediaAspectChoices(platforms, mediaItems);
+    const choices = mediaAspectChoices(platforms, mediaItems, contentFormat);
     if (!choices.includes(mediaAspect) && choices[0]) {
       setMediaAspect(choices[0]);
     }
-  }, [platforms, mediaItems, mediaAspect]);
+  }, [platforms, mediaItems, mediaAspect, contentFormat]);
 
   const togglePlatform = (p: SocialPlatform) => {
     setPlatforms((prev) =>
@@ -458,14 +496,6 @@ export default function PostStudioModal({
   const toggleCampaign = (id: string) => {
     setCampaignIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  const toggleAssignee = (a: PlannerAssignee) => {
-    setAssignees((prev) =>
-      prev.some((x) => x.id === a.id)
-        ? prev.filter((x) => x.id !== a.id)
-        : [...prev, a]
     );
   };
 
@@ -518,7 +548,8 @@ export default function PostStudioModal({
   };
 
   const save = async (
-    mode: 'draft' | 'schedule' | 'post'
+    mode: 'draft' | 'schedule' | 'post',
+    opts?: { workflowOverride?: WorkflowStatus }
   ) => {
     if (saving) return;
     if (platforms.length === 0) {
@@ -592,12 +623,14 @@ export default function PostStudioModal({
 
     setSaving(true);
     try {
+      // Draft keeps the status pill (or an explicit override e.g. Send to approval).
       const nextWorkflow: WorkflowStatus =
-        mode === 'post'
+        opts?.workflowOverride ??
+        (mode === 'post'
           ? 'READY'
           : mode === 'schedule'
             ? 'SCHEDULED'
-            : 'IDEA';
+            : workflow);
 
       const r = await fetch('/api/planner', {
         method: 'POST',
@@ -629,6 +662,8 @@ export default function PostStudioModal({
             publishMode === 'tiktok_draft'
               ? trendingSoundNote.trim() || null
               : null,
+          internal_notes: internalNotes.trim() || null,
+          client_notes: clientNotes.trim() || null,
           collaborators: moreOptions.collaborators,
           first_comment: moreOptions.firstComment.trim() || null,
           location_name: moreOptions.locationName.trim() || null,
@@ -1036,13 +1071,225 @@ export default function PostStudioModal({
     </DropdownMenu>
   );
 
+  const aspectOptions = mediaAspectChoices(
+    platforms,
+    mediaItems,
+    contentFormat
+  );
+  const activeAspect = aspectOptions.includes(mediaAspect)
+    ? mediaAspect
+    : aspectOptions[0] ?? mediaAspect;
+  const previewAspectClass = mediaAspectTailwind(activeAspect);
+  const primaryMedia = mediaItems.find((m) => Boolean(m.url)) ?? null;
+  const scheduleDate = scheduledAt.slice(0, 10);
+  const scheduleTime = scheduledAt.includes('T') ? scheduledAt.slice(11, 16) : '';
+  const timezoneLabel = (() => {
+    try {
+      return (
+        Intl.DateTimeFormat(undefined, { timeZoneName: 'long' })
+          .formatToParts(new Date())
+          .find((p) => p.type === 'timeZoneName')?.value ||
+        Intl.DateTimeFormat().resolvedOptions().timeZone
+      );
+    } catch {
+      return 'Local time';
+    }
+  })();
+
+  const applyScheduleParts = (date: string, time: string) => {
+    if (!date) {
+      setScheduledAt('');
+      return;
+    }
+    setScheduledAt(`${date}T${time || '10:00'}`);
+  };
+
+  const applyFormat = (format: ContentFormat) => {
+    setContentFormat(format);
+    // Preview + ratio chips follow format immediately.
+    if (format === 'reel' || format === 'story') {
+      setMediaAspect('9:16');
+    } else if (format === 'carousel' || format === 'post') {
+      setMediaAspect((prev) =>
+        prev === '9:16' ? '4:5' : isMediaAspectRatio(prev) ? prev : '4:5'
+      );
+    }
+  };
+
+  const STATUS_PILLS: { key: WorkflowStatus; label: string }[] = [
+    { key: 'IDEA', label: 'Draft' },
+    { key: 'READY', label: 'In approval queue' },
+    { key: 'IN_PROGRESS', label: 'Needs editing' },
+    { key: 'SCHEDULED', label: 'Scheduled' },
+    { key: 'PUBLISHED', label: 'Published' },
+  ];
+
+  const mediaColumn = (
+    <div className="h-full overflow-y-auto px-3 sm:px-4 py-3 space-y-3 bg-white text-xs">
+      <div className="w-full max-w-[380px] mx-auto flex flex-col items-center">
+        {/* Preview frame follows Format + Ratio */}
+        <div
+          className={`relative w-full max-h-[min(520px,58vh)] border border-[#E6E3DB] bg-[#FAFAFA] overflow-hidden transition-[aspect-ratio] duration-200 ease-out ${previewAspectClass} ${
+            activeAspect === '9:16' ? 'max-w-[260px]' : 'max-w-full'
+          }`}
+        >
+          {primaryMedia ? (
+            primaryMedia.type === 'video' ? (
+              <video
+                src={primaryMedia.url}
+                className="w-full h-full object-cover"
+                controls
+                playsInline
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={primaryMedia.url}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            )
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#C4BFB6]">
+              <ImageIcon size={28} strokeWidth={1.25} />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
+                Empty
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 w-full">
+          <button
+            type="button"
+            disabled={!primaryMedia?.url}
+            onClick={() => {
+              if (!primaryMedia?.url) return;
+              const a = document.createElement('a');
+              a.href = primaryMedia.url;
+              a.download = 'post-media';
+              a.target = '_blank';
+              a.rel = 'noopener noreferrer';
+              a.click();
+            }}
+            className={`${OUTLINE_BTN} disabled:opacity-40`}
+          >
+            Download
+          </button>
+          <button
+            type="button"
+            onClick={() => mediaReplaceRef.current?.click()}
+            className={OUTLINE_BTN}
+          >
+            Replace
+          </button>
+          <input
+            ref={mediaReplaceRef}
+            type="file"
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              const result = await upload({ file });
+              if (!result?.url) {
+                toast.error('Upload failed');
+                return;
+              }
+              const item: PlannerMediaItem = {
+                id: `media-${Date.now()}`,
+                url: result.url,
+                type: file.type.startsWith('video/') ? 'video' : 'image',
+              };
+              setMediaItems((prev) =>
+                prev.length ? [item, ...prev.slice(1)] : [item]
+              );
+            }}
+          />
+          <div className="flex-1" />
+          <button
+            type="button"
+            disabled={!primaryMedia?.url}
+            onClick={() => setMediaEditorOpen(true)}
+            className={`${OUTLINE_BTN} disabled:opacity-40`}
+          >
+            Edit
+          </button>
+        </div>
+
+        {platforms.includes('instagram') &&
+        activeAspect === '9:16' &&
+        contentFormat !== 'reel' &&
+        contentFormat !== 'story' ? (
+          <div className="mt-3 space-y-2 w-full">
+            <p className="text-[11px] text-[#8A857D] leading-snug">
+              Vertical 9:16 works for Reels & Stories. Instagram feed posts
+              usually need 4:5, 3:4, 1:1, or 1.91:1 before scheduling.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setContentFormat('post');
+                setMediaAspect('4:5');
+              }}
+              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#2C2621] underline underline-offset-2"
+            >
+              Crop to 4:5, 3:4, 1:1, or 1.91:1
+            </button>
+          </div>
+        ) : null}
+
+        <div className="mt-4 w-full">
+          <CarouselMediaUploader
+            items={mediaItems}
+            onChange={setMediaItems}
+            compact
+            aspectLabel={activeAspect}
+          />
+        </div>
+
+        <MediaEditorModal
+          open={mediaEditorOpen}
+          items={mediaItems}
+          initialIndex={0}
+          onClose={() => setMediaEditorOpen(false)}
+          onSave={(next) => {
+            setMediaItems(next);
+            setMediaEditorOpen(false);
+          }}
+        />
+      </div>
+    </div>
+  );
+
   const editorPane = (
-    <div className="h-full overflow-y-auto px-4 sm:px-5 py-4 space-y-4">
-      {/* Platforms */}
+    <div className="h-full overflow-y-auto px-4 sm:px-5 py-3 space-y-3.5 text-xs">
+      <p className="text-[10px] text-[#8A857D] leading-snug">
+        <span className="font-semibold uppercase tracking-[0.1em] text-[#2C2621]">
+          {scheduledAt ? 'Scheduled.' : 'Not going out yet.'}
+        </span>{' '}
+        {scheduledAt
+          ? 'This post has a date and time.'
+          : 'This post has no date. Pick a date and time.'}
+      </p>
+
+      {/* Internal name */}
       <div>
-        <FieldLabel>Platforms</FieldLabel>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {visiblePlatformOptions.map(({ key, label, Icon }) => {
+        <FieldLabel>Internal name</FieldLabel>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Untitled"
+          className={UNDERLINE_INPUT}
+        />
+      </div>
+
+      {/* Publish to */}
+      <div>
+        <FieldLabel>Publish to</FieldLabel>
+        <div className={SEGMENT_ROW} role="group" aria-label="Publish to">
+          {visiblePlatformOptions.map(({ key, label }) => {
             const active = platforms.includes(key);
             const connected = connectedPlatforms.has(key);
             return (
@@ -1052,121 +1299,264 @@ export default function PostStudioModal({
                 onClick={() => togglePlatform(key)}
                 title={`${label}${connected ? ' · Connected' : ' · Not connected'}`}
                 aria-pressed={active}
-                className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] px-2.5 rounded-md border text-xs font-medium transition-colors ${
-                  active
-                    ? 'border-slate-800 bg-slate-900 text-white'
-                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
-                }`}
+                className={`${SEGMENT_BTN} ${active ? SEGMENT_ON : SEGMENT_OFF}`}
               >
-                <Icon size={15} />
-                <span className="hidden sm:inline">{label}</span>
+                {label}
               </button>
             );
           })}
         </div>
-        <p className="mt-1.5 text-[11px] text-slate-400">
+        <p className="mt-1 text-[10px] text-[#A8A29E]">
           Only connected accounts for this workspace will publish.
         </p>
       </div>
 
+      {/* Format */}
+      <div>
+        <FieldLabel>Format</FieldLabel>
+        <div className={SEGMENT_ROW} role="group" aria-label="Format">
+          {(
+            [
+              { key: 'post', label: 'Post' },
+              { key: 'reel', label: 'Reel' },
+              { key: 'carousel', label: 'Carousel' },
+              { key: 'story', label: 'Story' },
+            ] as const
+          ).map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => applyFormat(f.key)}
+              className={`${SEGMENT_BTN} ${
+                contentFormat === f.key ? SEGMENT_ON : SEGMENT_OFF
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Ratio */}
+      <div>
+        <FieldLabel>Ratio</FieldLabel>
+        <div className={SEGMENT_ROW} role="group" aria-label="Ratio">
+          {aspectOptions.map((ratio) => (
+            <button
+              key={ratio}
+              type="button"
+              onClick={() => setMediaAspect(ratio)}
+              className={`${SEGMENT_BTN} ${
+                activeAspect === ratio ? SEGMENT_ON : SEGMENT_OFF
+              }`}
+            >
+              {ratio}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Schedule */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-2">
+          <FieldLabel className="mb-0">Schedule</FieldLabel>
+          <Info size={12} className="text-[#C4BFB6]" aria-hidden />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <label className="block">
+            <span className="sr-only">Date</span>
+            <input
+              type="date"
+              value={scheduleDate}
+              onChange={(e) => applyScheduleParts(e.target.value, scheduleTime)}
+              className={UNDERLINE_INPUT}
+            />
+          </label>
+          <label className="block">
+            <span className="sr-only">Time</span>
+            <input
+              type="time"
+              value={scheduleTime}
+              onChange={(e) => applyScheduleParts(scheduleDate, e.target.value)}
+              className={UNDERLINE_INPUT}
+            />
+          </label>
+        </div>
+        <p className="mt-1.5 text-[11px] text-[#A8A29E]">{timezoneLabel}</p>
+      </div>
+
+      {/* Place on grid */}
+      <label className="flex items-center gap-3 min-h-[44px] cursor-pointer">
+        <FieldLabel className="mb-0">Place on grid</FieldLabel>
+        <Checkbox
+          checked={placeOnGrid}
+          onCheckedChange={(v) => setPlaceOnGrid(v === true)}
+          aria-label="Place on grid"
+        />
+      </label>
+
       {/* Caption */}
       <div>
         <FieldLabel>{t('studioCaption', locale)}</FieldLabel>
-        <div className="rounded-md border border-slate-200 bg-white overflow-hidden focus-within:border-slate-400 transition-colors">
+        <div className="rounded-sm border border-[#E6E3DB] bg-white overflow-hidden focus-within:border-[#2C2621] transition-colors">
           <Textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             placeholder="Write your caption…"
-            className="min-h-[120px] border-0 rounded-none resize-none text-sm shadow-none focus-visible:ring-0 px-3 pt-3 pb-2"
+            className="min-h-[88px] border-0 rounded-none resize-none text-xs md:text-xs shadow-none focus-visible:ring-0 focus-visible:border-transparent px-2.5 pt-2.5 pb-1.5 placeholder:text-[#C4BFB6]"
           />
-          {(showHashtagField || hashtags.trim()) && (
-            <div className="px-3 pb-2 flex items-center gap-1.5">
-              <Input
-                value={hashtags}
-                onChange={(e) => setHashtags(e.target.value)}
-                placeholder="#tips #creator #nordic"
-                className="h-9 flex-1 rounded-md border-slate-200 bg-white font-mono text-xs"
-              />
-              {hashtagFavouritesMenu}
-              <button
-                type="button"
-                disabled={!normalizeHashtagString(hashtags)}
-                onClick={() => {
-                  const saved = saveFavoriteHashtags(workspaceId, hashtags);
-                  if (!saved) {
-                    toast.message(t('toastAddHashtagsFirst', locale));
-                    return;
-                  }
-                  setFavoriteHashtags(listFavoriteHashtags(workspaceId));
-                  toast.success(t('toastSavedToFavourites', locale));
-                }}
-                className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-40 transition-colors"
-                title="Save favourite hashtags"
-                aria-label="Save favourite"
-              >
-                <Star size={14} />
-              </button>
-            </div>
-          )}
-          <div className="flex items-center gap-0.5 px-1.5 py-1 border-t border-slate-100">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 border-t border-[#E6E3DB]">
             <button
               type="button"
               onClick={() => void polish()}
               disabled={polishing || !caption.trim()}
-              className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-md text-[11px] font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40 transition-colors"
-              title="AI polish"
+              className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#2C2621] underline underline-offset-2 disabled:opacity-40"
             >
-              {polishing ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Sparkles size={14} />
-              )}
-              AI
+              {polishing ? 'Polishing…' : 'Suggest caption with AI'}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowHashtagField((v) => !v)}
-              className={`inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] rounded-md transition-colors ${
-                showHashtagField || hashtags.trim()
-                  ? 'text-slate-800 bg-slate-100'
-                  : 'text-slate-500 hover:bg-slate-100'
-              }`}
-              title="Hashtags"
-              aria-label="Hashtags"
-            >
-              <Hash size={14} />
-            </button>
-            <span className="ml-auto pr-2 text-[10px] font-medium text-slate-400 tabular-nums">
-              {caption.length}
+            <span className="ml-auto text-[9px] font-medium text-[#A8A29E] tabular-nums">
+              {caption.length}/2200 chars
+              {platforms[0]
+                ? ` · ${platforms[0].charAt(0).toUpperCase()}${platforms[0].slice(1)}`
+                : ''}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Media */}
+      {/* Hashtags */}
       <div>
-        <FieldLabel>Media</FieldLabel>
-        {platforms.includes('tiktok') && !mediaItems.some((m) => m.url) ? (
-          <p className="mb-2 text-[11px] text-slate-500">
-            TikTok needs a video or photo before Publish.
-          </p>
-        ) : null}
-        <CarouselMediaUploader
-          items={mediaItems}
-          onChange={setMediaItems}
-          compact
-        />
-        <div className="mt-3">
-          <MediaAspectPicker
-            value={
-              mediaAspectChoices(platforms, mediaItems).includes(mediaAspect)
-                ? mediaAspect
-                : mediaAspectChoices(platforms, mediaItems)[0] ?? mediaAspect
-            }
-            options={mediaAspectChoices(platforms, mediaItems)}
-            onChange={setMediaAspect}
+        <div className="flex items-center gap-2 mb-1.5">
+          <FieldLabel className="mb-0">Hashtags</FieldLabel>
+          {hashtagFavouritesMenu}
+          <button
+            type="button"
+            disabled={!normalizeHashtagString(hashtags)}
+            onClick={() => {
+              const saved = saveFavoriteHashtags(workspaceId, hashtags);
+              if (!saved) {
+                toast.message(t('toastAddHashtagsFirst', locale));
+                return;
+              }
+              setFavoriteHashtags(listFavoriteHashtags(workspaceId));
+              toast.success(t('toastSavedToFavourites', locale));
+            }}
+            className="inline-flex items-center justify-center h-8 w-8 min-h-[32px] min-w-[32px] text-[#8A857D] hover:bg-[#F0EFEA] disabled:opacity-40"
+            title="Save favourite hashtags"
+            aria-label="Save favourite"
+          >
+            <Star size={13} />
+          </button>
+        </div>
+        <div className="rounded-sm border border-[#E6E3DB] bg-white overflow-hidden focus-within:border-[#2C2621] transition-colors">
+          <Textarea
+            value={hashtags}
+            onChange={(e) => {
+              setHashtags(e.target.value);
+              setShowHashtagField(true);
+            }}
+            placeholder="#hashtag1 #hashtag2 #hashtag3"
+            className="min-h-[56px] border-0 rounded-none resize-none font-mono text-[11px] md:text-[11px] shadow-none focus-visible:ring-0 focus-visible:border-transparent px-2.5 py-2.5 placeholder:text-[#C4BFB6]"
           />
         </div>
+      </div>
+
+      {/* Pillar */}
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <FieldLabel className="mb-0">Pillar</FieldLabel>
+          {!creatingProject ? (
+            <button
+              type="button"
+              onClick={() => setCreatingProject(true)}
+              className={OUTLINE_BTN}
+            >
+              <Plus size={11} className="mr-1" strokeWidth={2.5} />
+              Add pillar
+            </button>
+          ) : null}
+        </div>
+        <div className={SEGMENT_ROW} role="group" aria-label="Pillar">
+          <button
+            type="button"
+            onClick={() => {
+              setMoreOptions((prev) => ({ ...prev, campaignTag: '' }));
+              setCampaignIds([]);
+            }}
+            className={`${SEGMENT_BTN} ${
+              !moreOptions.campaignTag.trim() && campaignIds.length === 0
+                ? SEGMENT_ON
+                : SEGMENT_OFF
+            }`}
+          >
+            None
+          </button>
+          {campaignLabels.slice(0, 6).map((c) => {
+            const active =
+              moreOptions.campaignTag === c.name || campaignIds.includes(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setMoreOptions((prev) => ({ ...prev, campaignTag: c.name }));
+                  if (!campaignIds.includes(c.id)) toggleCampaign(c.id);
+                }}
+                className={`${SEGMENT_BTN} ${active ? SEGMENT_ON : SEGMENT_OFF}`}
+              >
+                {c.name}
+              </button>
+            );
+          })}
+        </div>
+        {creatingProject ? (
+          <div className="mt-2 space-y-2">
+            <input
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              placeholder="Pillar name"
+              autoFocus
+              className={UNDERLINE_INPUT}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newProjectName.trim()) {
+                  e.preventDefault();
+                  createProjectMutation.mutate();
+                }
+                if (e.key === 'Escape') {
+                  setCreatingProject(false);
+                  setNewProjectName('');
+                }
+              }}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={
+                  !newProjectName.trim() || createProjectMutation.isPending
+                }
+                onClick={() => createProjectMutation.mutate()}
+                className={`${OUTLINE_BTN} disabled:opacity-40`}
+              >
+                {createProjectMutation.isPending ? (
+                  <Loader2 size={11} className="mr-1 animate-spin" />
+                ) : (
+                  <Plus size={11} className="mr-1" strokeWidth={2.5} />
+                )}
+                Create
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCreatingProject(false);
+                  setNewProjectName('');
+                }}
+                className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8A857D] hover:text-[#2C2621]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* TikTok music → uploads to TikTok drafts via Content Posting API */}
@@ -1187,24 +1577,24 @@ export default function PostStudioModal({
               }
             />
           </div>
-          <p className="mb-2 text-[11px] text-slate-500 leading-snug">
+          <p className="mb-2 text-[11px] text-[#8A857D] leading-snug">
             Optional. Your video is sent to TikTok drafts so you can add a
             trending sound in the app before posting.
           </p>
-          <label className="flex items-center gap-2.5 min-h-[44px] rounded-md border border-slate-200 bg-white px-3 cursor-pointer">
+          <label className="flex items-center gap-2.5 min-h-[44px] rounded-sm border border-[#E6E3DB] bg-white px-2.5 cursor-pointer hover:border-[#2C2621]/40 transition-colors">
             <Checkbox
               checked={tiktokTrendingSound}
               onCheckedChange={(v) => setTiktokTrendingSound(v === true)}
               aria-label="Save to TikTok drafts for trending sound"
             />
-            <span className="text-sm font-medium text-slate-800">
+            <span className="text-xs font-medium text-[#2C2621]">
               Save to TikTok drafts (add sound in app)
             </span>
           </label>
           {tiktokTrendingSound ? (
             <div className="mt-2 space-y-2">
               <label className="block">
-                <span className="block text-[11px] font-medium text-slate-500 mb-1">
+                <span className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D] mb-1">
                   Sound name (reminder)
                 </span>
                 <input
@@ -1212,7 +1602,7 @@ export default function PostStudioModal({
                   value={trendingSoundNote}
                   onChange={(e) => setTrendingSoundNote(e.target.value)}
                   placeholder="e.g. original sound — Artist"
-                  className="w-full h-10 min-h-[40px] px-3 rounded-md border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400"
+                  className={UNDERLINE_INPUT}
                 />
               </label>
               {!hasTikTokVideo ? (
@@ -1225,7 +1615,7 @@ export default function PostStudioModal({
                   Connect TikTok under Settings → Socials before publishing.
                 </p>
               ) : (
-                <p className="text-[11px] text-slate-500 leading-snug">
+                <p className="text-[11px] text-[#8A857D] leading-snug">
                   On Publish, the video goes to your TikTok inbox/drafts. Open
                   TikTok to attach the sound and post.
                 </p>
@@ -1241,91 +1631,251 @@ export default function PostStudioModal({
         campaignSuggestions={campaignLabels.map((c) => c.name)}
       />
 
-      {/* Schedule & status */}
+      {/* Status */}
       <div>
-        <FieldLabel>Schedule & status</FieldLabel>
-        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
-          <input
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            className="flex-1 min-w-[180px] h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800"
-          />
-          <select
-            value={workflow}
-            onChange={(e) => setWorkflow(e.target.value as WorkflowStatus)}
-            className="h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 sm:min-w-[160px]"
-            aria-label={t('studioStatus', locale)}
-          >
-            {WORKFLOW_COLUMNS.map((c) => (
-              <option key={c.key} value={c.key}>
-                {c.emoji} {t(WORKFLOW_LABEL_KEYS[c.key], locale)}
-              </option>
-            ))}
-          </select>
+        <FieldLabel>Status</FieldLabel>
+        <div className={SEGMENT_ROW} role="group" aria-label="Status">
+          {STATUS_PILLS.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setWorkflow(s.key)}
+              className={`${SEGMENT_BTN} ${
+                workflow === s.key ? SEGMENT_ON : SEGMENT_OFF
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
+        <button
+          type="button"
+          onClick={() => setWorkflow('PUBLISHED')}
+          className="mt-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#2C2621] underline underline-offset-2 h-9 min-h-[36px]"
+        >
+          Mark as posted
+        </button>
       </div>
 
-      {/* Advanced */}
-      <Accordion type="single" collapsible className="rounded-md border border-slate-200 px-3">
-        <AccordionItem value="advanced" className="border-0">
-          <AccordionTrigger className="py-3 text-sm font-medium text-slate-600 hover:no-underline">
-            Advanced settings
-          </AccordionTrigger>
-          <AccordionContent className="pb-4 space-y-4">
-            <div>
-              <FieldLabel>{t('teamWorkspaceBrand', locale)}</FieldLabel>
-              <select
-                value={project}
-                onChange={(e) => setProject(e.target.value)}
-                className="w-full h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800"
-              >
-                {workspaces.map((w) => (
-                  <option key={w.id} value={w.name}>
-                    {w.name} ({w.handle})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <FieldLabel>{t('studioAssignees', locale)}</FieldLabel>
-              <div className="flex flex-wrap gap-1.5">
-                {PLANNER_TEAM.map((a) => {
-                  const active = assignees.some((x) => x.id === a.id);
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => toggleAssignee(a)}
-                      className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] pl-1.5 pr-2.5 rounded-md border text-xs font-medium transition-colors ${
-                        active
-                          ? 'border-slate-800 bg-slate-900 text-white'
-                          : 'border-slate-200 bg-white text-slate-500'
-                      }`}
+      {(() => {
+        const igSelected = platforms.includes('instagram');
+        const igConnected = igSelected && connectedPlatforms.has('instagram');
+        const hasSchedule = Boolean(scheduleDate && scheduleTime);
+        const isScheduledStatus = workflow === 'SCHEDULED';
+        const hasMedia = mediaItems.some((m) => Boolean(m.url));
+        const feedCropOk =
+          !igSelected ||
+          contentFormat === 'reel' ||
+          contentFormat === 'story' ||
+          activeAspect === '1:1' ||
+          activeAspect === '4:5' ||
+          activeAspect === '3:4' ||
+          activeAspect === '1.91:1';
+        const checklist = [
+          {
+            ok: !igSelected || igConnected,
+            label: igSelected
+              ? igConnected
+                ? 'Instagram connected'
+                : 'Instagram connected. Connect under Settings → Socials.'
+              : 'Publish channel selected',
+          },
+          {
+            ok: hasSchedule,
+            label: hasSchedule
+              ? 'Date and time set'
+              : 'Date and time set. Add date & time.',
+          },
+          {
+            ok: isScheduledStatus,
+            label: isScheduledStatus
+              ? 'Status is Scheduled'
+              : 'Status is Scheduled. Schedule after approval.',
+          },
+          {
+            ok: hasMedia,
+            label: hasMedia ? 'Media attached' : 'Media attached. Add media.',
+          },
+          {
+            ok: feedCropOk,
+            label: feedCropOk
+              ? 'Instagram feed crop (4:5, 3:4, 1:1, or 1.91:1)'
+              : 'Instagram feed crop (4:5, 3:4, 1:1, or 1.91:1). Switch ratio or format.',
+          },
+        ];
+        const left = checklist.filter((c) => !c.ok).length;
+        return (
+          <Accordion
+            type="multiple"
+            defaultValue={['checklist', 'notes', 'feedback']}
+            className="border-t border-[#E6E3DB] mt-1"
+          >
+            <AccordionItem value="checklist" className="border-b border-[#E6E3DB]">
+              <AccordionTrigger className="py-3 hover:no-underline gap-2">
+                <span className="flex flex-1 items-center gap-2 min-w-0 text-left">
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#2C2621]">
+                    Auto-publish checklist
+                  </span>
+                  {left > 0 ? (
+                    <span className="text-[9px] font-medium text-red-600 truncate">
+                      {left} left. Won&apos;t auto-publish until completed.
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-medium text-emerald-700">
+                      Ready to auto-publish
+                    </span>
+                  )}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3">
+                <ul className="space-y-2">
+                  {checklist.map((item) => (
+                    <li
+                      key={item.label}
+                      className="flex items-start gap-2 text-[11px] text-[#2C2621]"
                     >
-                      <img
-                        src={a.avatar_url}
-                        alt=""
-                        className="w-6 h-6 rounded-sm object-cover"
-                      />
-                      {a.name}
-                      {active ? <Check size={12} /> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                      {item.ok ? (
+                        <Check
+                          size={13}
+                          className="mt-0.5 text-emerald-600 flex-shrink-0"
+                          strokeWidth={2.5}
+                        />
+                      ) : (
+                        <Circle
+                          size={12}
+                          className="mt-0.5 text-[#C4BFB6] flex-shrink-0"
+                          strokeWidth={1.75}
+                        />
+                      )}
+                      <span className={item.ok ? 'text-[#5C574F]' : 'text-[#8A857D]'}>
+                        {item.label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
 
+            <AccordionItem value="notes" className="border-b border-[#E6E3DB]">
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#2C2621]">
+                  Notes
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-3 space-y-3">
+                <div>
+                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#2C2621]">
+                    Internal notes{' '}
+                    <span className="font-normal italic normal-case tracking-normal text-[#A8A29E]">
+                      team and account owner
+                    </span>
+                  </p>
+                  <Textarea
+                    value={internalNotes}
+                    onChange={(e) => setInternalNotes(e.target.value)}
+                    placeholder="Notes only your team and account owner can see…"
+                    className="min-h-[72px] rounded-sm border-[#E6E3DB] text-xs resize-y"
+                  />
+                </div>
+                <div>
+                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#2C2621]">
+                    Notes for client{' '}
+                    <span className="font-normal italic normal-case tracking-normal text-[#A8A29E]">
+                      shown in client portal
+                    </span>
+                  </p>
+                  <Textarea
+                    value={clientNotes}
+                    onChange={(e) => setClientNotes(e.target.value)}
+                    placeholder="Notes the client can see in their portal…"
+                    className="min-h-[72px] rounded-sm border-[#E6E3DB] text-xs resize-y"
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="feedback" className="border-b border-[#E6E3DB]">
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#2C2621]">
+                  Feedback
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                <div className="space-y-4">
+                  <div>
+                    {localComments.length === 0 ? (
+                      <p className="text-[12px] text-[#8A857D]">
+                        No notes yet. Add the first.
+                      </p>
+                    ) : (
+                      <div className="space-y-2.5 max-h-48 overflow-y-auto">
+                        {localComments.map((c) => (
+                          <div
+                            key={c.id}
+                            className="rounded-sm border border-[#E6E3DB] bg-white px-2.5 py-2"
+                          >
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="text-[10px] font-semibold text-[#2C2621]">
+                                {c.author_name}
+                              </span>
+                              <span className="text-[9px] text-[#A8A29E]">
+                                {formatRelative(c.created_at)}
+                              </span>
+                            </div>
+                            {c.text ? (
+                              <p className="text-[11px] text-[#5C574F] whitespace-pre-wrap">
+                                {c.text}
+                              </p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-[#E6E3DB] pt-4 space-y-2">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#2C2621]">
+                      Reply
+                    </p>
+                    <Textarea
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder="Add a note to this thread…"
+                      className="min-h-[96px] rounded-sm border-[#E6E3DB] bg-white text-xs md:text-xs resize-none shadow-none focus-visible:ring-0 focus-visible:border-[#2C2621] placeholder:text-[#C4BFB6]"
+                    />
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatVisibility('private');
+                          void sendComment();
+                        }}
+                        disabled={sending || !comment.trim()}
+                        className="inline-flex items-center justify-center h-9 min-h-[36px] px-4 bg-[#8A857D] text-white text-[9px] font-semibold uppercase tracking-[0.14em] disabled:opacity-40 hover:bg-[#2C2621] transition-colors"
+                      >
+                        {sending ? 'Sending…' : 'Send reply'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="advanced" className="border-b-0">
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#2C2621]">
+                  Advanced settings
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4 space-y-4">
             <div>
               <FieldLabel>{t('campaignLabels', locale)}</FieldLabel>
-              <p className="text-[11px] text-slate-400 mb-2 -mt-1">
+              <p className="text-[11px] text-[#8A857D] mb-2 -mt-0.5 leading-snug">
                 {t('campaignLabelsHint', locale)}
               </p>
               {creatingProject ? (
-                <div className="rounded-md border border-slate-200 p-3 space-y-3">
-                  <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                    <FolderKanban size={12} />
+                <div className="border border-[#E6E3DB] rounded-sm p-3 space-y-3 bg-white">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D]">
                     {t('newProject', locale)}
                   </p>
                   <input
@@ -1333,7 +1883,7 @@ export default function PostStudioModal({
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder={t('projectNamePlaceholder', locale)}
                     autoFocus
-                    className="w-full h-10 min-h-[40px] rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:border-slate-400"
+                    className={UNDERLINE_INPUT}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newProjectName.trim()) {
                         e.preventDefault();
@@ -1351,9 +1901,9 @@ export default function PostStudioModal({
                         key={c}
                         type="button"
                         onClick={() => setNewProjectColor(c)}
-                        className={`w-7 h-7 min-h-[28px] rounded-md ${
+                        className={`w-6 h-6 min-h-[24px] ${
                           newProjectColor === c
-                            ? 'ring-2 ring-offset-1 ring-slate-500'
+                            ? 'ring-2 ring-offset-1 ring-[#2C2621]'
                             : ''
                         }`}
                         style={{ background: c }}
@@ -1368,7 +1918,7 @@ export default function PostStudioModal({
                         setCreatingProject(false);
                         setNewProjectName('');
                       }}
-                      className="h-10 min-h-[40px] px-3 rounded-md text-xs font-medium text-slate-500 hover:bg-slate-50"
+                      className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8A857D] hover:text-[#2C2621]"
                     >
                       {t('cancel', locale)}
                     </button>
@@ -1378,28 +1928,28 @@ export default function PostStudioModal({
                         !newProjectName.trim() || createProjectMutation.isPending
                       }
                       onClick={() => createProjectMutation.mutate()}
-                      className="inline-flex items-center justify-center gap-1.5 h-10 min-h-[40px] px-3 rounded-md bg-slate-900 text-white text-xs font-medium disabled:opacity-40"
+                      className={`${OUTLINE_BTN} disabled:opacity-40`}
                     >
                       {createProjectMutation.isPending ? (
-                        <Loader2 size={14} className="animate-spin" />
+                        <Loader2 size={11} className="mr-1 animate-spin" />
                       ) : (
-                        <Plus size={14} />
+                        <Plus size={11} className="mr-1" strokeWidth={2.5} />
                       )}
                       {t('createProject', locale)}
                     </button>
                   </div>
                 </div>
               ) : campaignLabels.length === 0 ? (
-                <div className="rounded-md border border-dashed border-slate-200 px-3 py-3 space-y-2">
-                  <p className="text-xs font-medium text-slate-700">
+                <div className="border border-dashed border-[#E6E3DB] rounded-sm px-3 py-3 space-y-2">
+                  <p className="text-[11px] text-[#8A857D]">
                     {t('noProjectsYet', locale)}
                   </p>
                   <button
                     type="button"
                     onClick={() => setCreatingProject(true)}
-                    className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-md border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                    className={OUTLINE_BTN}
                   >
-                    <Plus size={14} />
+                    <Plus size={11} className="mr-1" strokeWidth={2.5} />
                     {t('createProject', locale)}
                   </button>
                 </div>
@@ -1412,27 +1962,27 @@ export default function PostStudioModal({
                         key={c.id}
                         type="button"
                         onClick={() => toggleCampaign(c.id)}
-                        className={`inline-flex items-center gap-1.5 h-10 min-h-[40px] px-2.5 rounded-md border text-xs font-medium transition-colors ${
+                        className={`inline-flex items-center gap-1.5 h-8 min-h-[32px] px-2.5 border text-[10px] font-medium transition-colors ${
                           active
-                            ? 'border-slate-800 bg-slate-900 text-white'
-                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                            ? 'border-[#1C1917] bg-[#1C1917] text-white'
+                            : 'border-[#E6E3DB] bg-white text-[#5C574F] hover:border-[#2C2621]/40'
                         }`}
                       >
                         <span
-                          className="w-1.5 h-1.5 rounded-sm flex-shrink-0"
+                          className="w-1.5 h-1.5 flex-shrink-0"
                           style={{ background: active ? '#fff' : c.color }}
                         />
                         {c.name}
-                        {active ? <Check size={12} /> : null}
+                        {active ? <Check size={11} /> : null}
                       </button>
                     );
                   })}
                   <button
                     type="button"
                     onClick={() => setCreatingProject(true)}
-                    className="inline-flex items-center gap-1 h-10 min-h-[40px] px-2.5 rounded-md border border-dashed border-slate-200 bg-white text-xs font-medium text-slate-500 hover:border-slate-300 hover:text-slate-800 transition-colors"
+                    className="inline-flex items-center gap-1 h-8 min-h-[32px] px-2.5 border border-dashed border-[#E6E3DB] bg-white text-[10px] font-medium text-[#8A857D] hover:border-[#2C2621] hover:text-[#2C2621] transition-colors"
                   >
-                    <Plus size={12} />
+                    <Plus size={11} strokeWidth={2.5} />
                     {t('createProject', locale)}
                   </button>
                 </div>
@@ -1441,11 +1991,11 @@ export default function PostStudioModal({
 
             <div>
               <FieldLabel>{t('studioSubtasks', locale)}</FieldLabel>
-              <div className="space-y-1 mb-2">
+              <div className="space-y-1.5 mb-2">
                 {subtasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center gap-2 h-10 min-h-[40px] px-2 rounded-md border border-slate-200"
+                    className="flex items-center gap-2 h-9 min-h-[36px] px-2 border border-[#E6E3DB] rounded-sm bg-white"
                   >
                     <Checkbox
                       checked={task.done}
@@ -1460,10 +2010,10 @@ export default function PostStudioModal({
                       }
                     />
                     <span
-                      className={`flex-1 text-sm ${
+                      className={`flex-1 text-xs ${
                         task.done
-                          ? 'line-through text-slate-400'
-                          : 'text-slate-800'
+                          ? 'line-through text-[#A8A29E]'
+                          : 'text-[#2C2621]'
                       }`}
                     >
                       {task.title}
@@ -1475,15 +2025,15 @@ export default function PostStudioModal({
                           prev.filter((t) => t.id !== task.id)
                         )
                       }
-                      className="h-9 w-9 min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-300 hover:text-slate-600"
+                      className="h-8 w-8 min-h-[32px] min-w-[32px] flex items-center justify-center text-[#C4BFB6] hover:text-[#2C2621]"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <Input
+              <div className="flex gap-2 items-end">
+                <input
                   value={newTask}
                   onChange={(e) => setNewTask(e.target.value)}
                   onKeyDown={(e) => {
@@ -1500,7 +2050,7 @@ export default function PostStudioModal({
                     }
                   }}
                   placeholder="Add a subtask…"
-                  className="h-10 rounded-md border-slate-200"
+                  className={`flex-1 ${UNDERLINE_INPUT}`}
                 />
                 <button
                   type="button"
@@ -1516,15 +2066,18 @@ export default function PostStudioModal({
                     ]);
                     setNewTask('');
                   }}
-                  className="h-10 w-10 min-h-[40px] min-w-[40px] rounded-md border border-slate-200 hover:bg-slate-50 flex items-center justify-center"
+                  className={OUTLINE_BTN}
+                  aria-label="Add subtask"
                 >
-                  <Plus size={16} />
+                  <Plus size={11} strokeWidth={2.5} />
                 </button>
               </div>
             </div>
           </AccordionContent>
         </AccordionItem>
-      </Accordion>
+          </Accordion>
+        );
+      })()}
     </div>
   );
 
@@ -1707,49 +2260,92 @@ export default function PostStudioModal({
     </div>
   );
 
-  const sidePane = (
-    <div className="flex flex-col h-full min-h-0 bg-slate-50/40">
-      <div className="px-3 pt-3 pb-2 flex gap-1 flex-shrink-0">
-        {(
-          [
-            { key: 'preview' as const, label: t('livePreview', locale) },
-            { key: 'team' as const, label: 'Team & Activity' },
-          ] as const
-        ).map(({ key, label }) => (
+  const footerActions = (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 border-t border-[#E6E3DB] bg-white flex-shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+        {canDeletePost ? (
           <button
-            key={key}
             type="button"
-            onClick={() => setSideTab(key)}
-            className={`flex-1 h-10 min-h-[40px] rounded-md text-xs font-medium transition-colors ${
-              sideTab === key
-                ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                : 'bg-transparent text-slate-500 hover:text-slate-700'
-            }`}
+            onClick={() => void deletePost()}
+            disabled={deleting || saving}
+            className="h-11 min-h-[44px] px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-red-600 hover:text-red-700 disabled:opacity-40"
           >
-            {label}
+            {deleting ? 'Deleting…' : 'Delete'}
           </button>
-        ))}
+        ) : null}
+        <button
+          type="button"
+          disabled={saving || !caption.trim() || platforms.length === 0}
+          onClick={() => {
+            setWorkflow('READY');
+            void save('draft', { workflowOverride: 'READY' });
+          }}
+          className="inline-flex items-center justify-center h-11 min-h-[44px] px-4 rounded-sm bg-[#1C1917] text-white text-[11px] font-semibold uppercase tracking-[0.14em] disabled:opacity-40 hover:bg-[#2C2621]"
+        >
+          Send to approval
+        </button>
       </div>
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {sideTab === 'preview' ? (
-          <div className="h-full overflow-y-auto px-3 pb-4">
-            <FeedPreview
-              caption={
-                [caption, hashtags].filter(Boolean).join('\n\n') || 'Caption…'
+      <div className="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          className="h-11 min-h-[44px] px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A857D] hover:text-[#2C2621]"
+        >
+          Cancel
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              disabled={saving || !caption.trim() || platforms.length === 0}
+              className="inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-4 rounded-sm bg-[#1C1917] text-white text-[11px] font-semibold uppercase tracking-[0.14em] disabled:opacity-40 hover:bg-[#2C2621]"
+            >
+              {saving ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <>
+                  Save
+                  <ChevronDown size={14} className="opacity-80" />
+                </>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 z-[80]">
+            <DropdownMenuLabel className="text-xs font-medium text-slate-500">
+              Save options
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold"
+              disabled={saving}
+              onSelect={() => void save('draft')}
+            >
+              <FileText size={14} />
+              {t('saveDraft', locale)}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold"
+              disabled={saving || !scheduledAt}
+              onSelect={() => void save('schedule')}
+            >
+              <CalendarClock size={14} />
+              {t('schedulePost', locale)}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold"
+              disabled={
+                saving ||
+                ![...platforms].some((p) => connectedPlatforms.has(p)) ||
+                (platforms.includes('tiktok') &&
+                  !mediaItems.some((m) => Boolean(m.url)))
               }
-              mediaItems={mediaItems}
-              platforms={platforms}
-              mediaAspect={mediaAspect}
-              username={activeBrand?.handle || '@brand'}
-              displayName={activeBrand?.name || project}
-              brandAvatar={activeBrand?.avatar_url}
-              brandColor={activeBrand?.color}
-              platformHandles={platformHandles}
-            />
-          </div>
-        ) : (
-          teamContent
-        )}
+              onSelect={() => void save('post')}
+            >
+              <Send size={14} />
+              {t('publishNow', locale)}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -1759,62 +2355,43 @@ export default function PostStudioModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="p-0 gap-0 overflow-hidden flex flex-col border-0 sm:border border-slate-200/80 bg-white
+        className="p-0 gap-0 overflow-hidden flex flex-col border border-[#E6E3DB] bg-white
           w-full max-w-none sm:max-w-[min(1200px,96vw)]
           h-[100dvh] max-h-[100dvh] sm:h-[min(880px,92vh)] sm:max-h-[92vh]
-          rounded-none sm:rounded-lg
-          top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]"
+          rounded-none sm:rounded-sm
+          top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]
+          shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]"
       >
-        {/* Header */}
-        <div className="flex items-center gap-2 px-3 sm:px-5 h-14 border-b border-slate-200 flex-shrink-0">
-          <DialogTitle className="sr-only">Post Studio</DialogTitle>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="lg:hidden h-10 w-10 min-h-[40px] min-w-[40px] rounded-md text-slate-500 hover:bg-slate-100 flex items-center justify-center"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-400 truncate">{project}</p>
-            <p className="text-sm font-medium text-slate-900 truncate">
-              {derivedTitle || t('newPostDefault', locale)}
+        {/* Header — Post Details */}
+        <div className="flex items-center gap-3 px-4 sm:px-5 h-12 border-b border-[#E6E3DB] flex-shrink-0">
+          <DialogTitle className="sr-only">Post Details</DialogTitle>
+          <div className="flex items-baseline gap-2 min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#2C2621] truncate">
+              ( {contentFormat} details ) {contentFormat}
+            </p>
+            <p className="hidden sm:inline text-[11px] text-[#A8A29E] truncate">
+              Edited by Ebba · just now
             </p>
           </div>
-          {canDeletePost ? (
-            <button
-              type="button"
-              onClick={() => void deletePost()}
-              disabled={deleting || saving}
-              className="inline-flex h-10 w-10 min-h-[40px] min-w-[40px] items-center justify-center rounded-md text-slate-400 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-40 transition-colors"
-              aria-label={t('deletePost', locale)}
-              title={t('deletePost', locale)}
-            >
-              {deleting ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Trash2 size={14} />
-              )}
-            </button>
-          ) : null}
+          <p className="hidden md:block text-[10px] uppercase tracking-[0.12em] text-[#C4BFB6]">
+            Drag header to move
+          </p>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 disabled={!canShare && !shareCopied}
-                className="hidden sm:inline-flex h-10 min-h-[40px] px-3 rounded-md text-xs font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 items-center gap-1.5 disabled:opacity-40 transition-colors"
+                className="hidden sm:inline-flex h-10 min-h-[40px] px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8A857D] hover:text-[#2C2621] items-center gap-1 disabled:opacity-40"
                 title="Share with a client"
               >
                 {sharing ? (
                   <Loader2 size={13} className="animate-spin" />
                 ) : shareCopied ? (
-                  <Check size={13} className="text-slate-700" />
+                  <Check size={13} />
                 ) : (
                   <Share2 size={13} />
                 )}
-                {shareCopied ? 'Copied' : 'Share'}
-                <ChevronDown size={12} className="opacity-60" />
+                Share
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 z-[80]">
@@ -1832,150 +2409,44 @@ export default function PostStudioModal({
               <DropdownMenuItem
                 className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold"
                 disabled={sharing || !caption.trim() || platforms.length === 0}
-                onSelect={() => {
-                  setEmailShareOpen(true);
-                }}
+                onSelect={() => setEmailShareOpen(true)}
               >
                 <Mail size={14} />
                 Email client…
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <p className="px-2 py-1.5 text-[10px] text-slate-400 font-medium leading-snug">
-                Clients only see the Public chat on the shared page.
-              </p>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                disabled={saving || !caption.trim() || platforms.length === 0}
-                className="h-10 min-h-[40px] rounded-md bg-slate-900 hover:bg-slate-800 text-white font-medium px-3 sm:px-4 text-xs sm:text-sm gap-1.5"
-              >
-                {saving ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <>
-                    <span className="sm:hidden">Actions</span>
-                    <span className="hidden sm:inline">Publish</span>
-                    <ChevronDown size={14} className="opacity-90" />
-                  </>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 z-[80]">
-              <DropdownMenuLabel className="text-xs font-medium text-slate-500">
-                Save options
-              </DropdownMenuLabel>
-              <DropdownMenuItem
-                className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold"
-                disabled={saving}
-                onSelect={() => void save('draft')}
-              >
-                <FileText size={14} />
-                {t('saveDraft', locale)}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold"
-                disabled={saving || !scheduledAt}
-                onSelect={() => void save('schedule')}
-              >
-                <CalendarClock size={14} />
-                {t('schedulePost', locale)}
-                {!scheduledAt ? (
-                  <span className="ml-auto text-[10px] font-medium text-slate-400">
-                    set date
-                  </span>
-                ) : null}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="h-11 min-h-[44px] gap-2 cursor-pointer font-semibold text-slate-700"
-                disabled={
-                  saving ||
-                  ![...platforms].some((p) => connectedPlatforms.has(p)) ||
-                  (platforms.includes('tiktok') &&
-                    !mediaItems.some((m) => Boolean(m.url)))
-                }
-                onSelect={() => void save('post')}
-              >
-                <Send size={14} />
-                {t('publishNow', locale)}
-              </DropdownMenuItem>
-              {platforms.includes('tiktok') &&
-              !mediaItems.some((m) => Boolean(m.url)) ? (
-                <p className="px-2 py-1.5 text-[10px] text-amber-700 font-medium leading-snug">
-                  Add a video or photo to publish to TikTok.
-                </p>
-              ) : null}
-              {platforms.some((p) => !connectedPlatforms.has(p)) ? (
-                <p className="px-2 py-1.5 text-[10px] text-slate-400 font-medium leading-snug">
-                  Only connected channels will be posted. Connect others in
-                  Settings → Socials.
-                </p>
-              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="hidden lg:flex h-10 w-10 min-h-[40px] min-w-[40px] rounded-md text-slate-400 hover:bg-slate-100 items-center justify-center"
+            className="h-10 w-10 min-h-[40px] min-w-[40px] rounded-sm text-[#8A857D] hover:bg-[#F0EFEA] flex items-center justify-center"
             aria-label="Close"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Mobile: tabbed panes */}
+        {/* Mobile: media / details / team */}
         <div className="lg:hidden flex-1 min-h-0 flex flex-col overflow-hidden">
           <div className="flex-1 min-h-0 overflow-hidden">
+            {mobilePane === 'preview' && mediaColumn}
             {mobilePane === 'editor' && editorPane}
-            {mobilePane === 'preview' && (
-              <div className="h-full overflow-y-auto px-3 py-3 bg-slate-50/40">
-                <FeedPreview
-                  caption={
-                    [caption, hashtags].filter(Boolean).join('\n\n') ||
-                    'Caption…'
-                  }
-                  mediaItems={mediaItems}
-                  platforms={platforms}
-                  mediaAspect={mediaAspect}
-                  username={activeBrand?.handle || '@brand'}
-                  displayName={activeBrand?.name || project}
-                  brandAvatar={activeBrand?.avatar_url}
-                  brandColor={activeBrand?.color}
-                  platformHandles={platformHandles}
-                />
-              </div>
-            )}
             {mobilePane === 'team' && teamContent}
           </div>
-          <nav className="flex-shrink-0 grid grid-cols-3 border-t border-slate-100 bg-white pb-[env(safe-area-inset-bottom)]">
+          <nav className="flex-shrink-0 grid grid-cols-3 border-t border-[#E6E3DB] bg-white pb-[env(safe-area-inset-bottom)]">
             {(
               [
-                {
-                  key: 'editor' as const,
-                  label: t('contentTab', locale),
-                  icon: FileText,
-                },
-                {
-                  key: 'preview' as const,
-                  label: t('livePreview', locale),
-                  icon: ImageIcon,
-                },
-                {
-                  key: 'team' as const,
-                  label: t('teamTab', locale),
-                  icon: MessageCircle,
-                },
+                { key: 'preview' as const, label: 'Media', icon: ImageIcon },
+                { key: 'editor' as const, label: 'Details', icon: FileText },
+                { key: 'team' as const, label: t('teamTab', locale), icon: MessageCircle },
               ] as const
             ).map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setMobilePane(key)}
-                className={`flex flex-col items-center justify-center gap-0.5 h-14 min-h-[56px] text-[10px] font-semibold ${
-                  mobilePane === key ? 'text-slate-700' : 'text-slate-400'
+                className={`flex flex-col items-center justify-center gap-0.5 h-14 min-h-[56px] text-[10px] font-semibold uppercase tracking-[0.1em] ${
+                  mobilePane === key ? 'text-[#2C2621]' : 'text-[#A8A29E]'
                 }`}
               >
                 <Icon size={18} />
@@ -1983,15 +2454,17 @@ export default function PostStudioModal({
               </button>
             ))}
           </nav>
+          {footerActions}
         </div>
 
-        {/* Desktop: 60 / 40 editor + preview/team */}
-        <div className="hidden lg:grid flex-1 min-h-0 grid-cols-[minmax(0,3fr)_minmax(0,2fr)] overflow-hidden">
-          <section className="border-r border-slate-100 min-h-0 overflow-hidden">
-            {editorPane}
+        {/* Desktop: media left · form right */}
+        <div className="hidden lg:grid flex-1 min-h-0 grid-cols-[minmax(280px,2fr)_minmax(0,3fr)] overflow-hidden">
+          <section className="border-r border-[#E6E3DB] min-h-0 overflow-hidden">
+            {mediaColumn}
           </section>
-          <section className="min-h-0 overflow-hidden">{sidePane}</section>
+          <section className="min-h-0 overflow-hidden">{editorPane}</section>
         </div>
+        <div className="hidden lg:block">{footerActions}</div>
       </DialogContent>
     </Dialog>
 

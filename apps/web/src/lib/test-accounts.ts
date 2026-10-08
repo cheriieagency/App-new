@@ -31,6 +31,7 @@ export const PRO_UNLOCK_EMAILS = [
   'ebbabrobeck@test.se',
   CLIKD_QA_ACCOUNT.email,
   EMMA_MOULINE_ACCOUNT.email,
+  'contact@ugcbyfelicia.se',
 ] as const;
 
 function normalizeEmail(email: string | null | undefined): string {

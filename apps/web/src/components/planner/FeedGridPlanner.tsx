@@ -477,7 +477,7 @@ export default function FeedGridPlanner({
         </p>
       </div>
 
-      <aside className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-4 sm:p-5 min-h-[320px]">
+      <aside className="bg-white border border-[#E6E3DB] rounded-sm  p-4 sm:p-5 min-h-[320px]">
         <div className="flex items-center justify-between gap-2 mb-1">
           <h3 className="text-sm font-black text-[#2c3340]">{t('draftBank', locale)}</h3>
           <span className="text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-1 rounded-full">
@@ -489,7 +489,7 @@ export default function FeedGridPlanner({
         </p>
 
         {drafts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-200 bg-slate-50/80 py-12 text-center">
+          <div className="rounded-sm border border-dashed border-zinc-200 bg-slate-50/80 py-12 text-center">
             <p className="text-sm font-bold text-zinc-400">{t('noDraftsYet', locale)}</p>
             <p className="text-xs text-zinc-400 mt-1">{t('createIdeasHint', locale)}</p>
           </div>
@@ -504,7 +504,7 @@ export default function FeedGridPlanner({
                   setDraggingId(null);
                   setDragOverIndex(null);
                 }}
-                className={`rounded-2xl border border-zinc-100 bg-white p-3 flex items-center gap-3 cursor-grab active:cursor-grabbing shadow-sm hover:border-[var(--nc-coral)]/40 transition-colors ${
+                className={`rounded-sm border border-zinc-100 bg-white p-3 flex items-center gap-3 cursor-grab active:cursor-grabbing shadow-sm hover:border-[var(--nc-coral)]/40 transition-colors ${
                   draggingId === draft.id ? 'opacity-50' : ''
                 }`}
               >

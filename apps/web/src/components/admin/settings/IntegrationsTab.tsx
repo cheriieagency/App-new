@@ -114,9 +114,10 @@ export default function IntegrationsTab({
     }
     if (result.error) {
       toast.error(
-        tf('toastConnectionFailedDetail', locale, {
-          error: result.error.replace(/_/g, ' '),
-        })
+        result.detail?.trim() ||
+          tf('toastConnectionFailedDetail', locale, {
+            error: result.error.replace(/_/g, ' '),
+          })
       );
     }
   };

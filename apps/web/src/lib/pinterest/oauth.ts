@@ -16,11 +16,18 @@ export const PINTEREST_OAUTH_SCOPES = [
   'user_accounts:read',
 ] as const;
 
+function isLocalHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1'
+  );
+}
+
 function isLocalOrigin(origin: string | null | undefined): boolean {
   if (!origin) return false;
   try {
-    const host = new URL(origin).hostname;
-    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    return isLocalHost(new URL(origin).hostname);
   } catch {
     return false;
   }
@@ -28,13 +35,11 @@ function isLocalOrigin(origin: string | null | undefined): boolean {
 
 /**
  * Normalize OAuth redirect URIs for exact Pinterest matching:
- * no trailing slash, no www., no query/hash.
+ * no trailing slash, no query/hash.
+ * Keep www. — stripping it breaks state cookies when users start on www.
  */
 export function normalizeOAuthRedirectUri(uri: string): string {
   const parsed = new URL(uri.trim());
-  if (parsed.hostname.startsWith('www.')) {
-    parsed.hostname = parsed.hostname.slice(4);
-  }
   parsed.search = '';
   parsed.hash = '';
   const path = parsed.pathname.replace(/\/+$/, '') || '';
@@ -43,20 +48,64 @@ export function normalizeOAuthRedirectUri(uri: string): string {
 
 /**
  * Absolute redirect_uri for authorize + token exchange (must be identical).
- * On localhost, always derive from the live request origin so a production
- * PINTEREST_REDIRECT_URI in .env.local does not send the code to clikd.app.
- * Otherwise prefer the explicit env URI when set (must match Pinterest console).
+ *
+ * Prefer the live request host so:
+ * - localhost Connect never bounces to production
+ * - www vs apex cookie host matches the callback host
+ *
+ * Env PINTEREST_REDIRECT_URI is only used when it shares the same hostname
+ * as the request (or when no request origin is available).
  */
 export function getPinterestCallbackUrl(requestOrigin?: string | null): string {
-  const derived = normalizeOAuthRedirectUri(
+  const derivedFromRequest = requestOrigin
+    ? normalizeOAuthRedirectUri(
+        `${requestOrigin.replace(/\/+$/, '')}/api/auth/callback/pinterest`
+      )
+    : null;
+
+  if (derivedFromRequest && isLocalOrigin(requestOrigin)) {
+    return derivedFromRequest;
+  }
+
+  const explicit = pinterestEnv.redirectUri()?.trim();
+  if (explicit) {
+    const normalizedExplicit = normalizeOAuthRedirectUri(explicit);
+    if (!derivedFromRequest) return normalizedExplicit;
+    try {
+      const reqHost = new URL(derivedFromRequest).hostname.replace(/^www\./, '');
+      const envHost = new URL(normalizedExplicit).hostname.replace(/^www\./, '');
+      // Same site (www/apex variants) → prefer the live request host.
+      if (reqHost === envHost && derivedFromRequest) {
+        return derivedFromRequest;
+      }
+      // Different host → keep env only when request host is unknown.
+    } catch {
+      /* fall through */
+    }
+  }
+
+  if (derivedFromRequest) return derivedFromRequest;
+
+  return normalizeOAuthRedirectUri(
     `${appBaseUrl(requestOrigin)}/api/auth/callback/pinterest`
   );
-  if (isLocalOrigin(requestOrigin) || isLocalOrigin(derived)) {
-    return derived;
+}
+
+/** Cookie Domain so www + apex share OAuth state on production. */
+export function pinterestOAuthCookieDomain(
+  requestOrigin?: string | null
+): string | undefined {
+  if (!requestOrigin) return undefined;
+  try {
+    const host = new URL(requestOrigin).hostname;
+    if (isLocalHost(host)) return undefined;
+    if (host === 'clikd.app' || host.endsWith('.clikd.app')) {
+      return '.clikd.app';
+    }
+  } catch {
+    /* ignore */
   }
-  const explicit = pinterestEnv.redirectUri()?.trim();
-  if (explicit) return normalizeOAuthRedirectUri(explicit);
-  return derived;
+  return undefined;
 }
 
 export function buildPinterestLoginUrl(
@@ -110,6 +159,8 @@ export async function exchangePinterestCode(
       grant_type: 'authorization_code',
       code,
       redirect_uri: redirectUri,
+      // Longer-lived rotating refresh tokens (Pinterest v5).
+      continuous_refresh: 'true',
     }),
   });
 
@@ -146,6 +197,7 @@ export async function refreshPinterestAccessToken(
     body: new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken.trim(),
+      continuous_refresh: 'true',
     }),
   });
 

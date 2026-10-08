@@ -10,6 +10,7 @@ import { missingEnvKeys, pinterestEnv } from '@/lib/config/env';
 import {
   PINTEREST_OAUTH_STATE_COOKIE,
   buildPinterestLoginUrl,
+  pinterestOAuthCookieDomain,
 } from '@/lib/pinterest/oauth';
 import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 import {
@@ -37,17 +38,13 @@ function requestOrigin(request: Request): string {
   const forwardedHost = headersList.get('x-forwarded-host')?.split(',')[0]?.trim();
   const forwardedProto = headersList.get('x-forwarded-proto')?.split(',')[0]?.trim();
   if (forwardedHost) {
-    const proto = forwardedProto || 'http';
+    const isLocal =
+      forwardedHost.startsWith('localhost') ||
+      forwardedHost.startsWith('127.0.0.1');
+    // Off-localhost, default to https — Vercel/proxies sometimes omit x-forwarded-proto.
+    const proto = forwardedProto || (isLocal ? 'http' : 'https');
     try {
-      const origin = new URL(`${proto}://${forwardedHost}`).origin;
-      // Local Connect must stay on localhost even if a stale NEXTAUTH_URL leaks.
-      if (
-        forwardedHost.startsWith('localhost') ||
-        forwardedHost.startsWith('127.0.0.1')
-      ) {
-        return origin;
-      }
-      return origin;
+      return new URL(`${proto}://${forwardedHost}`).origin;
     } catch {
       /* fall through */
     }
@@ -90,13 +87,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(signIn);
   }
 
-  const { canAccessPendingApiPlatform } = await import(
-    '@/lib/config/pending-api-platforms'
-  );
-  if (!canAccessPendingApiPlatform(session.user.email, 'pinterest')) {
-    return popupFail(origin, 'platform_unavailable');
-  }
-
   // CSRF nonce + workspace binding embedded in OAuth state.
   const state = appendWorkspaceToOAuthState(crypto.randomUUID(), workspaceId);
 
@@ -105,16 +95,22 @@ export async function GET(request: Request) {
     loginUrl = buildPinterestLoginUrl(state, origin);
   } catch (error) {
     console.error('[pinterest/login]', error);
-    return popupFail(origin, 'pinterest_oauth_failed');
+    return popupFail(
+      origin,
+      'pinterest_oauth_failed',
+      error instanceof Error ? error.message : undefined
+    );
   }
 
   const res = NextResponse.redirect(loginUrl);
+  const cookieDomain = pinterestOAuthCookieDomain(origin);
   res.cookies.set(PINTEREST_OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' || origin.startsWith('https'),
     path: '/',
     maxAge: 60 * 10,
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
   setActiveWorkspaceCookies(res, workspaceId);
   return res;

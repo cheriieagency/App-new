@@ -175,6 +175,28 @@ export async function POST(request: Request) {
             console.warn('[stripe webhook] receipt email', error);
           }
         }
+
+        // Creator bell: real purchase (not mock).
+        try {
+          const { createUserNotification } = await import(
+            '@/lib/notifications/persist'
+          );
+          const buyerLabel = buyerName || buyerEmail || 'A customer';
+          await createUserNotification({
+            userId: sellerUserId,
+            prefKey: 'notifPurchases',
+            title: `Purchase: ${productTitle}`,
+            body: `${buyerLabel} · ${amountGrossSek} SEK`,
+            href: '/admin?section=biobuilder',
+            meta: {
+              order_id: order ? String(order.id) : session.id,
+              workspace_id: workspaceId,
+              product_title: productTitle,
+            },
+          });
+        } catch (error) {
+          console.warn('[stripe webhook] notification failed', error);
+        }
       }
     }
 

@@ -111,6 +111,10 @@ export type PlannerPost = {
   publish_mode?: 'auto_publish' | 'notification_reminder' | 'tiktok_draft';
   /** Optional trending sound name / notes for manual push mode. */
   trending_sound_note?: string | null;
+  /** Team-only notes (not shown to clients). */
+  internal_notes?: string | null;
+  /** Client-portal notes (visible on share). */
+  client_notes?: string | null;
   /** Up to 3 Instagram @usernames invited as collaborators. */
   collaborators?: string[];
   /** Auto-posted as the first comment after Instagram publish. */
@@ -938,6 +942,14 @@ export function upsertPlannerPost(
         input.trending_sound_note !== undefined
           ? input.trending_sound_note
           : existing.trending_sound_note ?? null,
+      internal_notes:
+        input.internal_notes !== undefined
+          ? input.internal_notes
+          : existing.internal_notes ?? null,
+      client_notes:
+        input.client_notes !== undefined
+          ? input.client_notes
+          : existing.client_notes ?? null,
       collaborators:
         input.collaborators !== undefined
           ? input.collaborators
@@ -1017,6 +1029,8 @@ export function upsertPlannerPost(
     media_aspect: input.media_aspect ?? null,
     publish_mode: input.publish_mode ?? 'auto_publish',
     trending_sound_note: input.trending_sound_note ?? null,
+    internal_notes: input.internal_notes ?? null,
+    client_notes: input.client_notes ?? null,
     collaborators: input.collaborators ?? [],
     first_comment: input.first_comment ?? null,
     location_name: input.location_name ?? null,

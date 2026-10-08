@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWorkspace } from '@/context/WorkspaceContext';
 
-export const DM_COMMENT_POLL_INTERVAL_MS = 20_000;
+export const DM_COMMENT_POLL_INTERVAL_MS = 60_000;
 
 export type CommentToDmPollResult = {
   ok?: boolean;

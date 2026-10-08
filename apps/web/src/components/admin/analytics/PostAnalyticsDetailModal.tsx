@@ -81,7 +81,7 @@ export default function PostAnalyticsDetailModal({
   const accent = PLATFORM_ACCENT[post.platformKey] || '#0F172A';
   const engagement = post.likes + post.comments + post.shares;
   const mix = [
-    { key: 'metricLikes' as const, value: post.likes, color: '#2C3B2E' },
+    { key: 'metricLikes' as const, value: post.likes, color: '#2C2621' },
     { key: 'metricComments' as const, value: post.comments, color: '#6366F1' },
     { key: 'metricShares' as const, value: post.shares, color: '#10B981' },
   ];
@@ -111,12 +111,12 @@ export default function PostAnalyticsDetailModal({
         onClick={onClose}
       />
       <div
-        className={`${adminCardClass} relative z-10 w-full sm:max-w-xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-xl shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]`}
+        className={`${adminCardClass} relative z-10 w-full sm:max-w-xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-sm shadow-[0_12px_30px_-12px_rgba(44,38,33,0.08)]`}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-[#E6E3DB] bg-[#FFFFFF]/95 backdrop-blur-md">
           <div className="min-w-0 flex items-center gap-2.5">
             <span
-              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-xl inline-flex items-center justify-center text-white flex-shrink-0"
+              className="h-9 w-9 min-h-[36px] min-w-[36px] rounded-sm inline-flex items-center justify-center text-white flex-shrink-0"
               style={{ backgroundColor: accent }}
             >
               <Icon size={16} className="text-white" />
@@ -134,7 +134,7 @@ export default function PostAnalyticsDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl hover:bg-[#F0EFEA] inline-flex items-center justify-center text-[#8A857D]"
+            className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-sm hover:bg-[#F0EFEA] inline-flex items-center justify-center text-[#8A857D]"
             aria-label={t('postDetailClose', locale)}
           >
             <X size={18} />
@@ -143,7 +143,7 @@ export default function PostAnalyticsDetailModal({
 
         <div className="p-4 sm:p-5 space-y-5">
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-full sm:w-36 h-44 sm:h-36 rounded-xl overflow-hidden bg-[#F0EFEA] flex-shrink-0">
+            <div className="w-full sm:w-36 h-44 sm:h-36 rounded-sm overflow-hidden bg-[#F0EFEA] flex-shrink-0">
               {post.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -174,7 +174,7 @@ export default function PostAnalyticsDetailModal({
                   href={post.permalink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA]"
+                  className="inline-flex items-center gap-1.5 h-10 min-h-[40px] px-3 rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA]"
                 >
                   <ExternalLink size={13} />
                   {t('postDetailOpenOriginal', locale)}
@@ -183,7 +183,7 @@ export default function PostAnalyticsDetailModal({
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/70 px-4 py-4 flex items-center justify-between gap-3">
+          <div className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/70 px-4 py-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-mono font-medium uppercase tracking-wider text-[#8A857D]">
                 {t('metricEngagementRate', locale)}
@@ -192,7 +192,7 @@ export default function PostAnalyticsDetailModal({
                 {post.er.toFixed(1)}%
               </p>
             </div>
-            <div className="h-14 w-14 rounded-full border-4 border-[#2C3B2E]/30 flex items-center justify-center">
+            <div className="h-14 w-14 rounded-full border-4 border-[#E6E3DB]/30 flex items-center justify-center">
               <span className="text-sm font-medium text-[#DB2777] tabular-nums">
                 ER
               </span>
@@ -210,7 +210,7 @@ export default function PostAnalyticsDetailModal({
             ).map((m) => (
               <div
                 key={m.label}
-                className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-3 py-3 min-h-[72px]"
+                className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-3 py-3 min-h-[72px]"
               >
                 <p className="text-[9px] font-mono font-medium uppercase tracking-wider text-[#8A857D]">
                   {m.label}

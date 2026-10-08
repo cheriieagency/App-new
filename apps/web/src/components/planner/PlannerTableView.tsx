@@ -47,15 +47,15 @@ export default function PlannerTableView({
   ];
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+    <div className="bg-white border border-[#E6E3DB] rounded-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-left">
           <thead>
-            <tr className="border-b border-slate-100">
+            <tr className="border-b border-[#E6E3DB]">
               {headers.map((h, i) => (
                 <th
                   key={h || `actions-${i}`}
-                  className="px-5 py-3 text-[10px] font-mono font-bold uppercase tracking-[0.12em] text-slate-400"
+                  className="px-4 py-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D]"
                 >
                   {h}
                 </th>
@@ -69,7 +69,7 @@ export default function PlannerTableView({
               return (
                 <tr
                   key={post.id}
-                  className="border-b border-zinc-50 hover:bg-zinc-50/60 transition-colors"
+                  className="border-b border-[#E6E3DB]/70 hover:bg-[#F9F8F6] transition-colors"
                 >
                   <td className="px-4 py-3">
                     <button
@@ -77,7 +77,7 @@ export default function PlannerTableView({
                       onClick={() => onOpen(post)}
                       className="flex items-center gap-3 min-h-[44px] text-left w-full"
                     >
-                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-zinc-100 flex-shrink-0">
+                      <div className="w-12 h-12 overflow-hidden bg-[#FAFAFA] border border-[#E6E3DB] flex-shrink-0">
                         {thumb ? (
                           thumb.type === 'video' ? (
                             <video
@@ -86,6 +86,7 @@ export default function PlannerTableView({
                               muted
                             />
                           ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={thumb.url}
                               alt=""
@@ -93,19 +94,21 @@ export default function PlannerTableView({
                             />
                           )
                         ) : (
-                          <div className="w-full h-full bg-zinc-100" />
+                          <div className="w-full h-full bg-[#F0EFEA]" />
                         )}
                       </div>
-                      <span className="text-sm font-extrabold text-[#2c3340] line-clamp-2">
+                      <span className="text-xs font-semibold text-[#2C2621] line-clamp-2">
                         {post.title}
                       </span>
                     </button>
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 rounded-full ${col?.badge ?? 'bg-zinc-100 text-zinc-600'}`}
+                      className={`inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.1em] px-2 py-1 border ${
+                        col?.badge ?? 'border-[#E6E3DB] bg-[#F9F8F6] text-[#5C574F]'
+                      }`}
                     >
-                      {col?.emoji} {col?.label ?? post.workflow}
+                      {col?.label ?? post.workflow}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -115,12 +118,13 @@ export default function PlannerTableView({
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs font-bold text-zinc-600 whitespace-nowrap">
+                  <td className="px-4 py-3 text-[11px] font-medium text-[#5C574F] whitespace-nowrap">
                     {formatDate(post.scheduled_at, localeTag(locale))}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex -space-x-1.5">
                       {post.assignees.map((a) => (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           key={a.id}
                           src={a.avatar_url}
@@ -131,7 +135,7 @@ export default function PlannerTableView({
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs font-extrabold text-zinc-500">
+                  <td className="px-4 py-3 text-[11px] font-medium text-[#8A857D]">
                     {post.subtasks.length
                       ? checklistProgress(post.subtasks)
                       : '—'}
@@ -141,15 +145,15 @@ export default function PlannerTableView({
                       <button
                         type="button"
                         onClick={() => onOpen(post)}
-                        className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-extrabold text-[var(--nc-coral)] hover:bg-[color-mix(in_srgb,var(--nc-coral)_10%,white)]"
+                        className="inline-flex items-center gap-1.5 h-9 min-h-[36px] px-2.5 border border-[#1C1917] text-[9px] font-semibold uppercase tracking-[0.1em] text-[#1C1917] hover:bg-[#F5F4F0]"
                       >
-                        <Pencil size={13} /> {t('quickEdit', locale)}
+                        <Pencil size={12} /> {t('quickEdit', locale)}
                       </button>
                       {onDelete && !isPlatformImportedPost(post) ? (
                         <button
                           type="button"
                           onClick={() => onDelete(post)}
-                          className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-[#8A857D] hover:bg-[#FEF2F2] hover:text-[#B85C38] transition-colors"
+                          className="inline-flex items-center justify-center h-9 w-9 min-h-[36px] min-w-[36px] text-[#8A857D] hover:text-[#B85C38] transition-colors"
                           aria-label={t('deletePost', locale)}
                           title={t('deletePost', locale)}
                         >
@@ -165,7 +169,7 @@ export default function PlannerTableView({
               <tr>
                 <td
                   colSpan={7}
-                  className="px-4 py-12 text-center text-sm text-zinc-400 font-medium"
+                  className="px-4 py-12 text-center text-xs text-[#8A857D]"
                 >
                   {t('noPostsMatchFilter', locale)}
                 </td>

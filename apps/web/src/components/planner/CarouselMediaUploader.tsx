@@ -57,11 +57,14 @@ export default function CarouselMediaUploader({
   items,
   onChange,
   compact = false,
+  /** Shown in compact slides header, e.g. "4:5". */
+  aspectLabel,
 }: {
   items: PlannerMediaItem[];
   onChange: (items: PlannerMediaItem[]) => void;
   /** Tighter dropzone + inline source actions for the redesigned Post Studio. */
   compact?: boolean;
+  aspectLabel?: string;
 }) {
   const { locale } = useLocale();
   const workspace = useWorkspaceOptional();
@@ -179,38 +182,322 @@ export default function CarouselMediaUploader({
   };
 
   const badge = mediaTypeBadge(items);
-  const sourceBtn = compact
-    ? 'inline-flex items-center justify-center gap-1.5 h-9 min-h-[36px] px-2.5 rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:pointer-events-none'
-    : 'inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 bg-white text-[11px] font-extrabold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:pointer-events-none';
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const sourceBtn =
+    'inline-flex items-center justify-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl border border-zinc-200 bg-white text-[11px] font-extrabold text-zinc-700 hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:pointer-events-none';
+  const slideCount = items.filter((i) => Boolean(i.url)).length;
+
+  const openAdd = () => {
+    if (atCap || uploading) return;
+    setAddMenuOpen((v) => !v);
+  };
+
+  // Compact Post Studio layout — Seen-style slides strip (no giant empty dropzone).
+  if (compact) {
+    const countShown = Math.max(slideCount, items.length);
+    return (
+      <div className="space-y-2 w-full">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*,video/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void addFiles(e.target.files);
+            e.target.value = '';
+            setAddMenuOpen(false);
+          }}
+        />
+
+        {uploading ? (
+          <UploadProgressBar progress={uploadProgress} label="Uploading…" />
+        ) : null}
+
+        {/* SLIDES 1/10 · 4:5 */}
+        <p className="text-[9px] font-semibold uppercase tracking-[0.14em]">
+          <span className="text-[#2C2621]">Slides</span>
+          <span className="text-[#8A857D]">
+            {' '}
+            {countShown}/{MAX_ITEMS}
+            {aspectLabel ? ` · ${aspectLabel}` : ''}
+          </span>
+        </p>
+
+        <div
+          className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-none"
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!atCap) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            void addFiles(e.dataTransfer.files);
+          }}
+        >
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              draggable
+              onDragStart={() => setDragIndex(index)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setOverIndex(index);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragIndex != null) reorder(dragIndex, index);
+                setDragIndex(null);
+                setOverIndex(null);
+              }}
+              onDragEnd={() => {
+                setDragIndex(null);
+                setOverIndex(null);
+              }}
+              className={`relative flex-shrink-0 w-[68px] h-[68px] overflow-hidden border bg-[#FAFAFA] ${
+                overIndex === index && dragIndex !== index
+                  ? 'border-[#1C1917]'
+                  : 'border-[#E6E3DB]'
+              }`}
+            >
+              {item.type === 'video' ? (
+                <video
+                  src={item.url}
+                  className="w-full h-full object-cover"
+                  muted
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeAt(index);
+                }}
+                className="absolute top-0 right-0 h-[18px] w-[18px] bg-[#1C1917] text-white flex items-center justify-center"
+                aria-label="Remove slide"
+              >
+                <X size={10} strokeWidth={2.5} />
+              </button>
+            </div>
+          ))}
+
+          {!atCap ? (
+            <button
+              type="button"
+              onClick={openAdd}
+              disabled={uploading}
+              className={`flex-shrink-0 w-[68px] h-[68px] border border-dashed flex items-center justify-center transition-colors ${
+                dragOver
+                  ? 'border-[#1C1917] text-[#1C1917] bg-[#F5F4F0]'
+                  : 'border-[#D6D3CD] text-[#A8A29E] hover:border-[#1C1917]/50 hover:text-[#1C1917]'
+              }`}
+              aria-label="Add slide"
+            >
+              <Plus size={18} strokeWidth={1.75} />
+            </button>
+          ) : null}
+        </div>
+
+        {addMenuOpen ? (
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+              className="inline-flex items-center gap-1 h-8 min-h-[32px] px-2.5 border border-[#1C1917] text-[9px] font-semibold uppercase tracking-[0.1em] text-[#1C1917] hover:bg-[#F5F4F0]"
+            >
+              <HardDrive size={12} />
+              Device
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedIds(new Set());
+                setLibraryOpen(true);
+                setAddMenuOpen(false);
+              }}
+              className="inline-flex items-center gap-1 h-8 min-h-[32px] px-2.5 border border-[#1C1917] text-[9px] font-semibold uppercase tracking-[0.1em] text-[#1C1917] hover:bg-[#F5F4F0]"
+            >
+              <Images size={12} />
+              Library
+            </button>
+            <GoogleDriveImportButton
+              target="planner"
+              className="inline-flex items-center gap-1 h-8 min-h-[32px] px-2.5 border border-[#1C1917] text-[9px] font-semibold uppercase tracking-[0.1em] text-[#1C1917] hover:bg-[#F5F4F0]"
+              onImported={(file) => {
+                if (!file.fileUrl) {
+                  toast.error(t('toastDriveImportNoFile', locale));
+                  return;
+                }
+                if (atCap) {
+                  toast.message(
+                    tf('toastMaxFilesPerPost', locale, { count: MAX_ITEMS })
+                  );
+                  return;
+                }
+                appendItems([
+                  {
+                    id: nextMediaId(),
+                    url: file.fileUrl,
+                    sourceUrl: file.fileUrl,
+                    type: isVideoAsset({
+                      fileType: file.fileType,
+                      fileName: file.fileName,
+                      url: file.fileUrl,
+                    })
+                      ? 'video'
+                      : 'image',
+                    overlays: [],
+                  },
+                ]);
+                setAddMenuOpen(false);
+              }}
+            />
+          </div>
+        ) : null}
+
+        <MediaEditorModal
+          open={editorOpen}
+          items={items}
+          initialIndex={editorIndex}
+          onClose={() => setEditorOpen(false)}
+          onSave={(next) => {
+            onChange(next);
+            setEditorOpen(false);
+          }}
+        />
+
+        {libraryOpen ? (
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+            <button
+              type="button"
+              aria-label="Close"
+              className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+              onClick={() => setLibraryOpen(false)}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Media Library"
+              className="relative z-10 w-full sm:max-w-xl bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col"
+            >
+              <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-zinc-100">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-400">
+                    Media Library
+                  </p>
+                  <h3 className="font-clikd-wordmark font-extrabold text-lg text-zinc-900 mt-0.5 flex items-center gap-2">
+                    <FolderOpen size={18} className="text-slate-500" />
+                    Brand assets
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLibraryOpen(false)}
+                  className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-zinc-50 flex items-center justify-center"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="px-4 py-4 overflow-y-auto flex-1">
+                {libraryQuery.isLoading ? (
+                  <div className="py-12 flex items-center justify-center gap-2 text-sm text-zinc-400">
+                    <Loader2 className="animate-spin" size={16} /> Loading…
+                  </div>
+                ) : libraryAssets.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-zinc-500">
+                    No files in Media Library yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {libraryAssets.map((asset) => {
+                      const selected = selectedIds.has(asset.id);
+                      const disabled = !selected && selectedIds.size >= room;
+                      return (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(asset.id)) next.delete(asset.id);
+                              else if (next.size < room) next.add(asset.id);
+                              return next;
+                            });
+                          }}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 ${
+                            selected
+                              ? 'border-slate-900'
+                              : 'border-transparent opacity-90'
+                          } disabled:opacity-40`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={asset.image}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                          {selected ? (
+                            <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-slate-900 text-white flex items-center justify-center">
+                              <Check size={12} />
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="px-4 py-3 border-t border-zinc-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLibraryOpen(false)}
+                  className="h-10 px-3 text-xs font-semibold text-zinc-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={addFromLibrary}
+                  disabled={!selectedIds.size}
+                  className="h-10 px-4 rounded-md bg-slate-900 text-white text-xs font-semibold disabled:opacity-40"
+                >
+                  Add selected
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
-    <div className={compact ? 'space-y-2' : 'space-y-3'}>
-      {!compact ? (
-        <div className="flex items-center justify-between gap-2">
-          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-            Media
-          </label>
-          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-600">
-            {items.length === 1 && items[0].type === 'video' ? (
-              <Film size={10} />
-            ) : (
-              <ImageIcon size={10} />
-            )}
-            {badge}
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center justify-end">
-          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
-            {items.length === 1 && items[0].type === 'video' ? (
-              <Film size={12} />
-            ) : (
-              <ImageIcon size={12} />
-            )}
-            {badge}
-          </span>
-        </div>
-      )}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+          Media
+        </label>
+        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-600">
+          {items.length === 1 && items[0].type === 'video' ? (
+            <Film size={10} />
+          ) : (
+            <ImageIcon size={10} />
+          )}
+          {badge}
+        </span>
+      </div>
 
       <input
         ref={fileRef}
@@ -235,9 +522,7 @@ export default function CarouselMediaUploader({
           setDragOver(false);
           void addFiles(e.dataTransfer.files);
         }}
-        className={`relative rounded-md border border-dashed flex flex-col items-center justify-center gap-1.5 transition-colors px-3 ${
-          compact ? 'min-h-[88px] py-3' : 'min-h-[120px] py-4 border-2 rounded-xl'
-        } ${
+        className={`relative rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-colors px-3 min-h-[120px] py-4 ${
           atCap
             ? 'border-slate-100 bg-slate-50/80 opacity-60'
             : dragOver
@@ -254,8 +539,8 @@ export default function CarouselMediaUploader({
           </div>
         ) : (
           <>
-            <Upload size={compact ? 18 : 22} className="text-slate-300" />
-            <p className={`text-slate-600 text-center ${compact ? 'text-xs font-medium' : 'text-sm font-semibold'}`}>
+            <Upload size={22} className="text-slate-300" />
+            <p className="text-slate-600 text-center text-sm font-semibold">
               Single image, video, or carousel
             </p>
             <p className="text-[11px] text-slate-400 text-center px-2">
@@ -265,8 +550,7 @@ export default function CarouselMediaUploader({
         )}
       </div>
 
-      {/* Source options: device / Media Library / Google Drive */}
-      <div className={`flex flex-wrap gap-2 ${compact ? '' : 'flex-col sm:flex-row'}`}>
+      <div className="flex flex-wrap gap-2 flex-col sm:flex-row">
         <button
           type="button"
           disabled={atCap || uploading}

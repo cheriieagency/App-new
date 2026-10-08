@@ -269,7 +269,7 @@ export default function AdminSidebar() {
             <Link
               href="/"
               className="flex items-center px-0.5 min-h-[44px] hover:opacity-80 transition-opacity"
-              aria-label="Clikd home"
+              aria-label={t('sidebarClikdHome')}
             >
               <span className="font-playfair italic text-3xl font-medium tracking-tight text-[#2C2621] leading-none">
                 C.
@@ -299,7 +299,7 @@ export default function AdminSidebar() {
               const className = [
                 'w-full flex items-center gap-3 h-11 min-h-[44px] px-3.5 transition-colors duration-200 border-l-2',
                 active
-                  ? 'border-[#2C3B2E] text-[#2C2621] font-medium bg-transparent'
+                  ? 'border-[#1C1917] text-[#2C2621] font-medium bg-transparent'
                   : 'border-transparent text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]/60 font-normal',
               ].join(' ');
 
@@ -343,7 +343,7 @@ export default function AdminSidebar() {
                     {mediaOpen && section === 'media' && (
                       <div
                         id="admin-media-submenu"
-                        className="pl-3 ml-3 border-l border-slate-200/80 space-y-0.5 py-0.5"
+                        className="pl-3 ml-3 border-l border-[#E6E3DB] space-y-0.5 py-0.5"
                       >
                         {/* Permanent root — all brand assets; not deletable */}
                         <div className="space-y-0.5">
@@ -368,7 +368,7 @@ export default function AdminSidebar() {
                                   if (e.key === 'Escape') setRenamingFolderId(null);
                                 }}
                                 className="flex-1 min-w-0 h-10 min-h-[40px] rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                                aria-label="Rename folder"
+                                aria-label={t('sidebarRenameFolder')}
                               />
                             </form>
                           ) : (
@@ -376,8 +376,8 @@ export default function AdminSidebar() {
                               className={[
                                 'group w-full flex items-center gap-1 rounded-xl transition-colors',
                                 activeMediaFolderId === MEDIA_LIBRARY_ROOT_ID
-                                  ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
-                                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+                                  ? 'bg-[#F0EFEA] text-[#2C2621]'
+                                  : 'text-[#8A857D] hover:bg-[#F0EFEA]/60 hover:text-[#2C2621]',
                               ].join(' ')}
                             >
                               <button
@@ -415,9 +415,9 @@ export default function AdminSidebar() {
                                   setRenameDraft(rootFolderName);
                                   setRenamingFolderId(MEDIA_LIBRARY_ROOT_ID);
                                 }}
-                                className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700"
-                                aria-label="Rename folder"
-                                title="Rename"
+                                className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl text-[#A8A29E] hover:text-[#2C2621]"
+                                aria-label={t('sidebarRenameFolder')}
+                                title={t('sidebarRename')}
                               >
                                 <Pencil size={12} />
                               </button>
@@ -427,7 +427,7 @@ export default function AdminSidebar() {
                           {/* Nested folders under Brand assets (Drive-style) */}
                           <div
                             id="admin-media-folders"
-                            className="pl-3 ml-3 border-l border-slate-200/70 space-y-0.5 py-0.5"
+                            className="pl-3 ml-3 border-l border-[#E6E3DB] space-y-0.5 py-0.5"
                           >
                             {mediaFolders.map((f) => {
                               const selected = f.id === activeMediaFolderId;
@@ -455,7 +455,7 @@ export default function AdminSidebar() {
                                         if (e.key === 'Escape') setRenamingFolderId(null);
                                       }}
                                       className="flex-1 min-w-0 h-10 min-h-[40px] rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                                      aria-label="Rename folder"
+                                      aria-label={t('sidebarRenameFolder')}
                                     />
                                   </form>
                                 );
@@ -500,18 +500,18 @@ export default function AdminSidebar() {
                                   className={[
                                     'group w-full flex items-center gap-1 rounded-xl transition-colors',
                                     selected
-                                      ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
-                                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+                                      ? 'bg-[#F0EFEA] text-[#2C2621]'
+                                      : 'text-[#8A857D] hover:bg-[#F0EFEA]/60 hover:text-[#2C2621]',
                                     draggingFolderId === f.id ? 'opacity-50' : '',
                                     dropFolderId === f.id && draggingFolderId !== f.id
-                                      ? 'ring-2 ring-[#F472B6]/50 ring-inset'
+                                      ? 'outline outline-1 outline-[#1C1917] outline-offset-[-1px]'
                                       : '',
                                   ].join(' ')}
                                 >
                                   <span
-                                    className="flex-shrink-0 h-10 w-6 min-h-[40px] inline-flex items-center justify-center text-slate-300 cursor-grab active:cursor-grabbing"
+                                    className="flex-shrink-0 h-10 w-6 min-h-[40px] inline-flex items-center justify-center text-[#C4BFB6] cursor-grab active:cursor-grabbing"
                                     aria-hidden
-                                    title="Drag to reorder"
+                                      title={t('sidebarDragReorder')}
                                   >
                                     <GripVertical size={12} />
                                   </span>
@@ -542,9 +542,9 @@ export default function AdminSidebar() {
                                       setRenameDraft(f.name);
                                       setRenamingFolderId(f.id);
                                     }}
-                                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700"
-                                    aria-label="Rename folder"
-                                    title="Rename"
+                                    className="opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0 h-10 w-10 min-h-[40px] min-w-[40px] inline-flex items-center justify-center rounded-xl text-[#A8A29E] hover:text-[#2C2621]"
+                                    aria-label={t('sidebarRenameFolder')}
+                                    title={t('sidebarRename')}
                                   >
                                     <Pencil size={12} />
                                   </button>
@@ -560,12 +560,12 @@ export default function AdminSidebar() {
                                 }
                                 setCreateMediaFolderOpen(true);
                               }}
-                              className="w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-left text-slate-500 hover:bg-slate-50 hover:text-[#1a1848] font-medium transition-colors"
+                              className="w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-left text-[#8A857D] hover:bg-[#F0EFEA]/60 hover:text-[#2C2621] font-medium transition-colors"
                             >
                               <Plus
                                 size={12}
                                 strokeWidth={2.5}
-                                className="flex-shrink-0 text-[#F472B6]"
+                                className="flex-shrink-0 text-[#8A857D]"
                                 aria-hidden
                               />
                               <span className="text-[12px] truncate tracking-tight">
@@ -624,10 +624,10 @@ export default function AdminSidebar() {
                     {projectsOpen && section === 'projects' && (
                       <div
                         id="admin-projects-submenu"
-                        className="pl-3 ml-3 border-l border-slate-200/80 space-y-0.5 py-0.5"
+                        className="pl-2.5 ml-3 border-l border-[#E6E3DB] space-y-0.5 py-0.5"
                       >
                         {campaigns.length === 0 ? (
-                          <p className="px-3 py-2 text-[11px] font-medium text-slate-400">
+                          <p className="px-2.5 py-2 text-[10px] font-medium text-[#A8A29E]">
                             {t('noProjectsYet')}
                           </p>
                         ) : (
@@ -671,23 +671,23 @@ export default function AdminSidebar() {
                                   applyProjectReorder(fromId, c.id);
                                 }}
                                 className={[
-                                  'group w-full flex items-center gap-1 rounded-xl transition-colors',
+                                  'group w-full flex items-center gap-0.5 transition-colors',
                                   selected
-                                    ? 'bg-[#E9D5FF]/70 text-[#1a1848]'
-                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+                                    ? 'bg-[#F0EFEA] text-[#2C2621]'
+                                    : 'text-[#8A857D] hover:bg-[#F0EFEA]/60 hover:text-[#2C2621]',
                                   draggingProjectId === c.id ? 'opacity-50' : '',
                                   dropProjectId === c.id &&
                                   draggingProjectId !== c.id
-                                    ? 'ring-2 ring-[#F472B6]/50 ring-inset'
+                                    ? 'outline outline-1 outline-[#1C1917] outline-offset-[-1px]'
                                     : '',
                                 ].join(' ')}
                               >
                                 <span
-                                  className="flex-shrink-0 h-10 w-6 min-h-[40px] inline-flex items-center justify-center text-slate-300 cursor-grab active:cursor-grabbing"
+                                  className="flex-shrink-0 h-9 w-5 min-h-[36px] inline-flex items-center justify-center text-[#C4BFB6] cursor-grab active:cursor-grabbing"
                                   aria-hidden
-                                  title="Drag to reorder"
+                                  title={t('sidebarDragReorder')}
                                 >
-                                  <GripVertical size={12} />
+                                  <GripVertical size={11} />
                                 </span>
                                 <button
                                   type="button"
@@ -700,16 +700,16 @@ export default function AdminSidebar() {
                                     }
                                   }}
                                   className={[
-                                    'flex-1 flex items-center gap-2.5 h-10 min-h-[40px] pl-0 pr-3 rounded-xl text-left transition-colors',
+                                    'flex-1 flex items-center gap-2 h-9 min-h-[36px] pl-0 pr-2 text-left transition-colors',
                                     selected ? 'font-semibold' : 'font-medium',
                                   ].join(' ')}
                                   aria-current={selected ? 'page' : undefined}
                                 >
                                   <span
-                                    className="w-2 h-2 rounded-full flex-shrink-0"
-                                    style={{ background: c.color }}
+                                    className="w-1.5 h-1.5 flex-shrink-0"
+                                    style={{ background: c.color || '#1C1917' }}
                                   />
-                                  <span className="text-[12px] truncate tracking-tight">
+                                  <span className="text-[11px] truncate tracking-tight">
                                     {c.name}
                                   </span>
                                 </button>
@@ -727,15 +727,15 @@ export default function AdminSidebar() {
                             setSection('projects');
                             setCreateProjectOpen(true);
                           }}
-                          className="w-full flex items-center gap-2.5 h-10 min-h-[40px] px-3 rounded-xl text-left text-slate-500 hover:bg-slate-50 hover:text-[#1a1848] font-medium transition-colors"
+                          className="w-full flex items-center gap-2 h-9 min-h-[36px] px-2.5 text-left text-[#8A857D] hover:bg-[#F0EFEA]/60 hover:text-[#2C2621] font-medium transition-colors"
                         >
                           <Plus
                             size={12}
-                            strokeWidth={2.5}
-                            className="flex-shrink-0 text-[#F472B6]"
+                            strokeWidth={2}
+                            className="flex-shrink-0 text-[#8A857D]"
                             aria-hidden
                           />
-                          <span className="text-[12px] truncate tracking-tight">
+                          <span className="text-[11px] truncate tracking-tight">
                             {t('createProject')}
                           </span>
                         </button>
@@ -784,7 +784,7 @@ export default function AdminSidebar() {
                     <Lock
                       size={12}
                       className={`flex-shrink-0 ${active ? 'opacity-80' : 'opacity-45'}`}
-                      aria-label="Requires Creator"
+                      aria-label={t('sidebarRequiresCreator')}
                     />
                   ) : null}
                 </Link>

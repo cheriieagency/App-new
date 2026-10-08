@@ -10,6 +10,7 @@ import {
   deletePersistedAutomation,
   setPersistedAutomationStatus,
   upsertPersistedAutomation,
+  upsertPersistedDraftBroadcast,
 } from '@/lib/email/crm-persist';
 import {
   AUDIENCE_OPTIONS,
@@ -66,8 +67,14 @@ export async function GET(request: Request) {
   const providerReady = Boolean(resendEnv.apiKey());
 
   if (!process.env.DATABASE_URL?.trim()) {
+    // Demo store is bucketed by the signed-in user — never shared across logins.
     return Response.json({
-      ...getMockEmailCrmPayload({ tag, q, community_id: cid }),
+      ...getMockEmailCrmPayload({
+        creatorId: session.user.id,
+        tag,
+        q,
+        community_id: cid,
+      }),
       email_provider_ready: providerReady,
     });
   }
@@ -199,6 +206,40 @@ export async function POST(request: Request) {
 
     if (process.env.DATABASE_URL?.trim()) {
       await ensureEmailCrmSchema();
+    }
+
+    if (action === 'save_draft') {
+      const subject = String(body.subject ?? '');
+      const bodyContent = String(body.bodyContent ?? body.body ?? '');
+      const audience = String(body.audience ?? body.recipientFilter ?? 'all');
+      const imageUrl =
+        body.imageUrl != null && String(body.imageUrl).trim()
+          ? String(body.imageUrl).trim()
+          : null;
+      const workspaceId =
+        body.workspaceId != null && String(body.workspaceId).trim()
+          ? String(body.workspaceId).trim()
+          : null;
+      // Empty composers still upsert so clearing the editor clears the saved draft.
+      const saved = await upsertPersistedDraftBroadcast({
+        creatorId: session.user.id,
+        workspaceId,
+        subject,
+        body: bodyContent,
+        audience,
+        imageUrl,
+      });
+      if (!saved) {
+        return Response.json(
+          { error: 'draft_save_failed', message: 'Could not save draft' },
+          { status: 500 }
+        );
+      }
+      return Response.json({
+        success: true,
+        draft: saved.broadcast,
+        demo: saved.demo,
+      });
     }
 
     if (action === 'toggle_automation') {
@@ -462,6 +503,7 @@ export async function POST(request: Request) {
 
       if (!process.env.DATABASE_URL?.trim()) {
         const subscriber = syncSubscriber({
+          creatorId,
           email,
           name,
           user_id: userId,
@@ -500,6 +542,7 @@ export async function POST(request: Request) {
 
 /** Helper used by other routes without auth re-check in demo. */
 export function syncEmailSubscriberDemo(input: {
+  creatorId: string;
   email: string;
   name: string;
   user_id?: string | null;

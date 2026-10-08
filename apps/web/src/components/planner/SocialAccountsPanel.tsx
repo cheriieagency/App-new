@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/dialog';
 import { localeTag, useLanguage } from '@/lib/i18n';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
-import { looksLikeOpaquePinterestId } from '@/lib/pinterest/heal-identity';
+import { looksLikeOpaquePinterestId } from '@/lib/pinterest/identity-label';
 import { useWorkspaceOptional } from '@/context/WorkspaceContext';
 import { usePendingApiPlatformAccess } from '@/hooks/usePendingApiPlatformAccess';
 import WorkspaceOAuthGuideBanner from '@/components/admin/WorkspaceOAuthGuideBanner';
@@ -63,11 +63,14 @@ const PLATFORM_TITLES: Record<SocialPlatform, string> = {
 
 const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
   instagram: [
+    'public_profile',
+    'email',
     'instagram_basic',
     'instagram_content_publish',
-    'pages_show_list',
+    'instagram_manage_comments',
+    'instagram_manage_messages',
     'pages_read_engagement',
-    'business_management',
+    'pages_show_list',
   ],
   tiktok: [
     'user.info.basic',
@@ -88,11 +91,14 @@ const OAUTH_PERMISSIONS: Record<SocialPlatform, string[]> = {
     'r_organization_social',
   ],
   facebook: [
-    'pages_show_list',
-    'pages_manage_posts',
+    'public_profile',
+    'email',
+    'instagram_basic',
+    'instagram_content_publish',
+    'instagram_manage_comments',
+    'instagram_manage_messages',
     'pages_read_engagement',
-    'pages_manage_metadata',
-    'business_management',
+    'pages_show_list',
   ],
   pinterest: [
     'boards:read',

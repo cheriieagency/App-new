@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { NotebookPen, Plus, Trash2 } from 'lucide-react';
-import { adminCardClass } from '@/components/admin/AdminUi';
 import { useLanguage } from '@/lib/locale-context';
 import { t } from '@/lib/i18n';
 
@@ -101,24 +100,24 @@ export default function PlannerNotesPanel({ workspaceId = null }: PlannerNotesPa
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-4 min-h-[420px]">
       {/* Note list */}
-      <aside className={`${adminCardClass} p-3 flex flex-col gap-2`}>
+      <aside className="bg-white border border-[#E6E3DB] rounded-sm p-3 flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2 px-1 pt-1">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-slate-400">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A857D]">
             {t('notesTab', locale)}
           </p>
           <button
             type="button"
             onClick={createNote}
-            className="inline-flex items-center justify-center h-10 w-10 min-h-[44px] min-w-[44px] rounded-xl text-[#2B2568] hover:bg-[#E9D5FF]/50 transition-colors"
+            className="inline-flex items-center justify-center h-10 w-10 min-h-[40px] min-w-[40px] text-[#2C2621] hover:bg-[#F0EFEA] transition-colors"
             aria-label={t('notesNew', locale)}
           >
-            <Plus size={18} strokeWidth={2.25} />
+            <Plus size={16} strokeWidth={2.25} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-1 max-h-[520px]">
           {notes.length === 0 ? (
-            <p className="px-2 py-6 text-xs text-slate-400 text-center leading-relaxed">
+            <p className="px-2 py-6 text-xs text-[#8A857D] text-center leading-relaxed">
               {t('notesEmpty', locale)}
             </p>
           ) : (
@@ -129,16 +128,16 @@ export default function PlannerNotesPanel({ workspaceId = null }: PlannerNotesPa
                   key={note.id}
                   type="button"
                   onClick={() => setActiveId(note.id)}
-                  className={`w-full text-left rounded-xl px-3 py-2.5 min-h-[44px] transition-colors ${
+                  className={`w-full text-left px-3 py-2.5 min-h-[44px] transition-colors border ${
                     selected
-                      ? 'bg-[#E9D5FF]/60 text-slate-900'
-                      : 'hover:bg-slate-50 text-slate-700'
+                      ? 'border-[#1C1917] bg-[#F9F8F6] text-[#2C2621]'
+                      : 'border-transparent hover:bg-[#F0EFEA] text-[#5C574F]'
                   }`}
                 >
-                  <p className="text-sm font-semibold truncate">
+                  <p className="text-xs font-semibold truncate">
                     {note.title.trim() || t('notesUntitled', locale)}
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                  <p className="text-[11px] text-[#A8A29E] mt-0.5 truncate">
                     {note.body.trim() || t('notesPlaceholder', locale)}
                   </p>
                 </button>
@@ -149,20 +148,20 @@ export default function PlannerNotesPanel({ workspaceId = null }: PlannerNotesPa
       </aside>
 
       {/* Editor */}
-      <section className={`${adminCardClass} p-5 sm:p-6 flex flex-col min-h-[420px]`}>
+      <section className="bg-white border border-[#E6E3DB] rounded-sm p-5 sm:p-6 flex flex-col min-h-[420px]">
         {!active ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 px-4">
-            <div className="h-12 w-12 rounded-2xl bg-[#E9D5FF]/60 text-[#2B2568] flex items-center justify-center">
-              <NotebookPen size={22} strokeWidth={2} />
+            <div className="h-12 w-12 border border-[#E6E3DB] bg-[#F9F8F6] text-[#8A857D] flex items-center justify-center">
+              <NotebookPen size={22} strokeWidth={1.75} />
             </div>
-            <p className="text-sm font-semibold text-slate-800">{t('notesTitle', locale)}</p>
-            <p className="text-sm text-slate-500 max-w-sm">{t('notesHint', locale)}</p>
+            <p className="text-sm font-semibold text-[#2C2621]">{t('notesTitle', locale)}</p>
+            <p className="text-xs text-[#8A857D] max-w-sm">{t('notesHint', locale)}</p>
             <button
               type="button"
               onClick={createNote}
-              className="mt-2 inline-flex items-center gap-2 h-11 min-h-[44px] px-4 rounded-xl bg-[#2B2568] text-white text-sm font-bold hover:bg-[#1a1848] transition-colors"
+              className="mt-2 inline-flex items-center gap-1.5 h-9 min-h-[36px] px-3 bg-[#1C1917] text-white text-[10px] font-semibold uppercase tracking-[0.1em] hover:bg-[#2C2621] transition-colors"
             >
-              <Plus size={16} strokeWidth={2.25} />
+              <Plus size={13} strokeWidth={2.25} />
               {t('notesNew', locale)}
             </button>
           </div>
@@ -174,24 +173,24 @@ export default function PlannerNotesPanel({ workspaceId = null }: PlannerNotesPa
                 value={active.title}
                 onChange={(e) => updateActive({ title: e.target.value })}
                 placeholder={t('notesTitlePlaceholder', locale)}
-                className="flex-1 min-w-0 text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 placeholder:text-slate-300 bg-transparent outline-none border-0"
+                className="flex-1 min-w-0 text-base sm:text-lg font-semibold tracking-tight text-[#2C2621] placeholder:text-[#C4BFB6] bg-transparent outline-none border-0 border-b border-[#E6E3DB] focus:border-[#2C2621] pb-2"
               />
               <button
                 type="button"
                 onClick={deleteActive}
-                className="inline-flex items-center justify-center h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors flex-shrink-0"
+                className="inline-flex items-center justify-center h-10 w-10 min-h-[40px] min-w-[40px] text-[#A8A29E] hover:text-[#B85C38] transition-colors flex-shrink-0"
                 aria-label={t('notesDelete', locale)}
               >
-                <Trash2 size={16} strokeWidth={2} />
+                <Trash2 size={15} strokeWidth={2} />
               </button>
             </div>
             <textarea
               value={active.body}
               onChange={(e) => updateActive({ body: e.target.value })}
               placeholder={t('notesPlaceholder', locale)}
-              className="flex-1 w-full min-h-[280px] resize-none text-sm sm:text-[15px] leading-relaxed text-slate-700 placeholder:text-slate-300 bg-transparent outline-none border-0"
+              className="flex-1 w-full min-h-[280px] resize-none text-sm leading-relaxed text-[#2C2621] placeholder:text-[#C4BFB6] bg-transparent outline-none border-0"
             />
-            <p className="mt-3 text-[11px] font-mono text-slate-400">
+            <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#A8A29E]">
               {t('notesAutosaved', locale)}
             </p>
           </>

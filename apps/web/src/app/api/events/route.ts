@@ -92,7 +92,31 @@ export async function POST(request: Request) {
         )
         RETURNING *
       `;
-      return Response.json(result[0]);
+      const created = result[0] as Record<string, unknown> | undefined;
+      if (created && session.user.id) {
+        const when = new Date(String(start_time));
+        const whenLabel = Number.isFinite(when.getTime())
+          ? when.toLocaleString('sv-SE', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })
+          : String(start_time);
+        void import('@/lib/notifications/persist')
+          .then(({ createUserNotification }) =>
+            createUserNotification({
+              userId: session.user.id,
+              prefKey: 'notifLiveReminders',
+              title: `Live scheduled: ${title}`,
+              body: whenLabel,
+              href: '/admin?section=community&tab=event',
+              meta: { event_id: created.id ?? null, start_time },
+            })
+          )
+          .catch((err) =>
+            console.warn('[events] notification failed', err)
+          );
+      }
+      return Response.json(created);
     } catch (dbError) {
       console.error(dbError);
       if (!process.env.DATABASE_URL?.trim()) {

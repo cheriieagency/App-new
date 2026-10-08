@@ -18,6 +18,7 @@ import {
   decodeMetaOAuthState,
   exchangeCodeForShortLivedToken,
   exchangeForLongLivedToken,
+  metaOAuthCookieDomain,
   resolveMetaPagesAndInstagram,
   type MetaOAuthTarget,
 } from '@/lib/meta/oauth';
@@ -32,13 +33,32 @@ import {
 import { resolveOwnedWorkspaceForOAuth } from '@/lib/social/workspace-access';
 import { oauthPopupCompleteResponse } from '@/lib/oauth/popup-callback';
 
-function clearOAuthState(res: NextResponse) {
+function resolveRequestOrigin(request: Request): string {
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (forwardedHost) {
+    const isLocal =
+      forwardedHost.startsWith('localhost') ||
+      forwardedHost.startsWith('127.0.0.1');
+    const proto = forwardedProto || (isLocal ? 'http' : 'https');
+    try {
+      return new URL(`${proto}://${forwardedHost}`).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  return new URL(request.url).origin;
+}
+
+function clearOAuthState(res: NextResponse, origin: string) {
+  const cookieDomain = metaOAuthCookieDomain(origin);
   res.cookies.set(META_OAUTH_STATE_COOKIE, '', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' || origin.startsWith('https'),
     path: '/',
     maxAge: 0,
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
 }
 
@@ -71,7 +91,7 @@ function failRedirect(
     detail,
     continueHref: `${dest.pathname}${dest.search}`,
   });
-  clearOAuthState(res);
+  clearOAuthState(res, origin);
   return res;
 }
 
@@ -81,7 +101,7 @@ export async function GET(request: Request) {
   const state = url.searchParams.get('state');
   const oauthError = url.searchParams.get('error');
   const oauthErrorDesc = url.searchParams.get('error_description');
-  const origin = url.origin;
+  const origin = resolveRequestOrigin(request);
 
   if (oauthError) {
     return failRedirect(
@@ -102,7 +122,11 @@ export async function GET(request: Request) {
     (state !== expectedState &&
       baseOAuthState(state) !== baseOAuthState(expectedState))
   ) {
-    return failRedirect(origin, 'meta_fetch_failed', 'invalid_state');
+    return failRedirect(
+      origin,
+      'meta_fetch_failed',
+      'invalid_state — retry Connect from the same host (www vs non-www)'
+    );
   }
 
   const decoded = decodeMetaOAuthState(baseOAuthState(state));
@@ -267,7 +291,7 @@ export async function GET(request: Request) {
       platform: platformName(target),
       continueHref: `${dest.pathname}${dest.search}`,
     });
-    clearOAuthState(res);
+    clearOAuthState(res, origin);
     setActiveWorkspaceCookies(res, workspaceId);
     return res;
   } catch (error) {

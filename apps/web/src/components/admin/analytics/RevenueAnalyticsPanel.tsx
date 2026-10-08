@@ -266,7 +266,7 @@ export default function RevenueAnalyticsPanel({
                 <button
                   type="button"
                   onClick={() => setPayoutOpen(true)}
-                  className="h-11 min-h-[44px] px-3.5 rounded-xl bg-clikd-pink text-white text-xs font-medium inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity"
+                  className="h-11 min-h-[44px] px-3.5 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-xs font-medium inline-flex items-center gap-1.5 hover:bg-[#E6E3DB] transition-opacity"
                 >
                   <Wallet size={14} /> Request Payout
                 </button>
@@ -291,7 +291,7 @@ export default function RevenueAnalyticsPanel({
             <button
               type="button"
               onClick={() => void refetch()}
-              className="h-10 min-h-[40px] px-3.5 rounded-xl border border-[#E6E3DB] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA]"
+              className="h-10 min-h-[40px] px-3.5 rounded-sm border border-[#E6E3DB] text-xs font-medium text-[#2C2621] hover:bg-[#F0EFEA]"
             >
               Retry
             </button>
@@ -317,8 +317,8 @@ export default function RevenueAnalyticsPanel({
                 <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2C3B2E" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#2C3B2E" stopOpacity={0.02} />
+                      <stop offset="0%" stopColor="#2C2621" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#2C2621" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
@@ -349,7 +349,7 @@ export default function RevenueAnalyticsPanel({
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#2C3B2E"
+                    stroke="#2C2621"
                     strokeWidth={2}
                     fill="url(#revFill)"
                     animationDuration={700}
@@ -372,7 +372,7 @@ export default function RevenueAnalyticsPanel({
               <p className="text-sm text-[#8A857D] mt-0.5">By gross revenue</p>
             </div>
           </div>
-          <ul className="divide-y divide-slate-50">
+          <ul className="divide-y divide-[#E6E3DB]">
             {(data?.salesByProduct || []).length === 0 ? (
               <li className="px-5 sm:px-7 py-10 text-sm text-[#8A857D] text-center">
                 No product sales yet
@@ -391,7 +391,7 @@ export default function RevenueAnalyticsPanel({
                       {row.orderCount} order{row.orderCount === 1 ? '' : 's'}
                     </p>
                   </div>
-                  <p className="text-sm font-medium tabular-nums text-[#2C3B2E] shrink-0">
+                  <p className="text-sm font-medium tabular-nums text-[#2C2621] shrink-0">
                     {formatSek(row.revenue, tag)}
                   </p>
                 </li>
@@ -452,7 +452,7 @@ export default function RevenueAnalyticsPanel({
                       <td className="px-5 sm:px-7 py-3.5 text-sm tabular-nums text-[#8A857D]">
                         {Math.round(tx.platformFeeSek)}
                       </td>
-                      <td className="px-5 sm:px-7 py-3.5 text-sm font-medium tabular-nums text-[#2C3B2E]">
+                      <td className="px-5 sm:px-7 py-3.5 text-sm font-medium tabular-nums text-[#2C2621]">
                         {Math.round(tx.amountNetSek)}
                       </td>
                       <td className="px-5 sm:px-7 py-3.5 text-xs text-[#8A857D] whitespace-nowrap">
@@ -479,7 +479,7 @@ export default function RevenueAnalyticsPanel({
             role="dialog"
             aria-modal="true"
             aria-label="Request payout"
-            className="relative z-10 w-full sm:max-w-md bg-[#FFFFFF] rounded-t-3xl sm:rounded-xl shadow-2xl p-5 sm:p-6 space-y-4"
+            className="relative z-10 w-full sm:max-w-md bg-[#FFFFFF] rounded-t-3xl sm:rounded-sm shadow-2xl p-5 sm:p-6 space-y-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -496,7 +496,7 @@ export default function RevenueAnalyticsPanel({
               <button
                 type="button"
                 onClick={() => setPayoutOpen(false)}
-                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-xl bg-[#F0EFEA] flex items-center justify-center"
+                className="h-11 w-11 min-h-[44px] min-w-[44px] rounded-sm bg-[#F0EFEA] flex items-center justify-center"
                 aria-label="Close"
               >
                 <X size={18} />
@@ -504,7 +504,7 @@ export default function RevenueAnalyticsPanel({
             </div>
 
             {!connectReady ? (
-              <div className="rounded-xl border border-clikd-lilac/60 bg-[#FDF4FF] px-4 py-4 space-y-3">
+              <div className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/60 px-4 py-4 space-y-3">
                 <p className="text-sm font-medium text-[#2C2621]">
                   Connect Bank Account with Stripe Express to enable 1-Click payouts
                 </p>
@@ -512,7 +512,7 @@ export default function RevenueAnalyticsPanel({
                   type="button"
                   disabled={connectMutation.isPending}
                   onClick={() => connectMutation.mutate()}
-                  className="h-11 min-h-[44px] w-full rounded-xl bg-[#2C3B2E] text-white text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="h-11 min-h-[44px] w-full rounded-sm bg-[#F0EFEA] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   {connectMutation.isPending ? (
                     <Loader2 className="animate-spin" size={16} />
@@ -527,7 +527,7 @@ export default function RevenueAnalyticsPanel({
                 type="button"
                 disabled={payoutMutation.isPending || wallet < 100}
                 onClick={() => payoutMutation.mutate()}
-                className="h-11 min-h-[44px] w-full rounded-xl bg-clikd-pink text-white text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                className="h-11 min-h-[44px] w-full rounded-sm bg-[#F0EFEA] text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {payoutMutation.isPending ? (
                   <Loader2 className="animate-spin" size={16} />

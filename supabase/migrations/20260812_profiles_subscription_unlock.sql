@@ -20,7 +20,8 @@ WHERE p.id = u.id
     lower(u.email) IN (
       'ebbabrobeck@gmail.com',
       'ebbabrobeck@test.se',
-      'hello@clikd.app'
+      'hello@clikd.app',
+      'contact@ugcbyfelicia.se'
     )
     OR coalesce(p.full_name, '') ILIKE '%Ebba%'
     OR coalesce(p.display_name, '') ILIKE '%Ebba%'

@@ -1,24 +1,24 @@
 /**
- * Platforms still awaiting public API approval (YouTube, Pinterest, Google).
+ * Platforms still awaiting public API approval (YouTube, Google).
+ * Pinterest is approved and available to every creator again.
  *
- * Until approvals land, these stay visible only for allowlisted staff accounts
- * (hello@clikd.app). Flip the unlock below — or set the env var — to show them
- * for every creator again.
+ * Until remaining approvals land, gated platforms stay visible only for
+ * allowlisted staff accounts (hello@clikd.app). Flip the unlock below — or
+ * set the env var — to show them for every creator again.
  *
- * Unlock (pick ONE):
+ * Unlock remaining gates (pick ONE):
  *   1. Set PENDING_API_PLATFORMS_PUBLIC = true in this file, OR
  *   2. Set CLIKD_PENDING_API_PLATFORMS_PUBLIC=true in .env.local / production
  */
 
 import { CLIKD_QA_ACCOUNT } from '@/lib/test-accounts';
 
-/** Flip to `true` when YouTube / Pinterest / Google APIs are approved for all users. */
+/** Flip to `true` when YouTube / Google APIs are approved for all users. */
 export const PENDING_API_PLATFORMS_PUBLIC = false;
 
 /** Platforms gated behind the allowlist while approvals are pending. */
 export const PENDING_API_PLATFORMS = [
   'youtube',
-  'pinterest',
   'google',
 ] as const;
 
