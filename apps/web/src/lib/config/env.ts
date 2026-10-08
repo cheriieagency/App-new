@@ -62,13 +62,24 @@ export const openaiEnv = {
 };
 
 // ---------------------------------------------------------------------------
-// 2. Meta / Instagram Graph API
+// 2. Meta / Instagram Graph API (Facebook Login → Pages + linked IG)
 // ---------------------------------------------------------------------------
 export const metaEnv = {
   appId: () => readEnv('META_APP_ID'),
   appSecret: () => readEnv('META_APP_SECRET'),
   webhookVerifyToken: () => readEnv('META_WEBHOOK_VERIFY_TOKEN'),
   requiredKeys: ['META_APP_ID', 'META_APP_SECRET', 'META_WEBHOOK_VERIFY_TOKEN'] as const,
+};
+
+// ---------------------------------------------------------------------------
+// 2b. Instagram Login API (Instagram-only — no Facebook Page)
+// ---------------------------------------------------------------------------
+export const instagramEnv = {
+  /** process.env.INSTAGRAM_APP_ID — Instagram app client id */
+  appId: () => readEnv('INSTAGRAM_APP_ID'),
+  /** process.env.INSTAGRAM_APP_SECRET — Instagram app client secret */
+  appSecret: () => readEnv('INSTAGRAM_APP_SECRET'),
+  requiredKeys: ['INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET'] as const,
 };
 
 // ---------------------------------------------------------------------------

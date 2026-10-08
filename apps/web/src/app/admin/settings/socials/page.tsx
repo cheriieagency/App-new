@@ -153,7 +153,7 @@ export default function AdminSocialSettingsPage() {
         <p>Redirecting to sign in…</p>
         <Link
           href={SIGN_IN_HREF}
-          className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] text-[#F9F8F6] text-sm font-medium"
+          className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] text-[#2C2621] text-sm font-medium hover:bg-[#E6E3DB]"
         >
           Sign in
         </Link>
@@ -167,22 +167,22 @@ export default function AdminSocialSettingsPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center gap-3">
           <Link
             href="/admin?tab=settings"
-            className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-2 rounded-xl text-sm font-medium text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]"
+            className="inline-flex items-center gap-1.5 h-8 min-h-[32px] px-2 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D] hover:text-[#2C2621] hover:bg-[#F0EFEA]"
           >
-            <ArrowLeft size={15} /> {t('admin.settings')}
+            <ArrowLeft size={14} /> {t('admin.settings')}
           </Link>
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="hidden sm:inline-flex h-8 w-8 rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] items-center justify-center text-[#8A857D]">
+            <span className="hidden sm:inline-flex h-8 w-8 rounded-sm bg-[#F0EFEA] border border-[#E6E3DB] items-center justify-center text-[#8A857D]">
               <Settings size={14} />
             </span>
-            <h1 className="font-playfair text-base sm:text-lg font-medium text-[#2C2621] truncate tracking-tight">
+            <h1 className="font-playfair text-[20px] sm:text-[22px] font-medium text-[#2C2621] truncate tracking-tight">
               {t('admin.connectedAccounts')}
             </h1>
           </div>
           <LanguageSwitcher />
           <Link
             href="/planner"
-            className="inline-flex items-center gap-1.5 h-11 min-h-[44px] px-3 rounded-xl text-xs font-medium text-[#8A857D] bg-[#F0EFEA] hover:bg-[#F0EFEA] border border-[#E6E3DB]"
+            className="inline-flex items-center gap-1.5 h-8 min-h-[32px] px-2.5 rounded-sm text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D] bg-[#F0EFEA] hover:bg-[#E6E3DB] hover:text-[#2C2621]"
           >
             <CalendarDays size={14} /> {t('admin.planner')}
           </Link>

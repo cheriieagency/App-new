@@ -181,15 +181,15 @@ function ConnectedAccountChip({
           width={28}
           height={28}
           sizes="28px"
-          className="w-7 h-7 rounded-full object-cover border border-[rgba(44,59,46,0.2)] flex-shrink-0"
+          className="w-7 h-7 rounded-full object-cover border border-[#E6E3DB] flex-shrink-0"
         />
       ) : (
-        <span className="w-7 h-7 rounded-full bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.2)] flex items-center justify-center flex-shrink-0 text-[10px] font-medium text-[#2C3B2E] uppercase">
+        <span className="w-7 h-7 rounded-full bg-[#F0EFEA] border border-[#E6E3DB] flex items-center justify-center flex-shrink-0 text-[10px] font-medium text-[#2C2621] uppercase">
           {account.platform === 'tiktok_business' ? 'TB' : account.platform.slice(0, 2)}
         </span>
       )}
       <div className="min-w-0">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-[#2C3B2E]">
+        <p className="text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D]">
           {platformLabel}
         </p>
         <p className="text-xs font-medium text-[#2C2621] truncate">{label}</p>
@@ -241,9 +241,9 @@ function ConnectOrConnectedButton({
           type="button"
           disabled
           aria-pressed="true"
-          className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.2)] text-[#2C3B2E] text-sm font-medium cursor-default"
+          className="w-full inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-3.5 rounded-sm bg-[#F0EFEA] border border-[#E6E3DB] text-[#2C2621] text-xs font-medium cursor-default"
         >
-          <CheckCircle2 size={16} strokeWidth={2.5} />
+          <CheckCircle2 size={14} strokeWidth={2.5} />
           Connected ·{' '}
           {account.platform === 'tiktok_business'
             ? 'TikTok Business'
@@ -257,7 +257,7 @@ function ConnectOrConnectedButton({
           <button
             type="button"
             onClick={onDisconnect}
-            className="mt-2 w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-[rgba(184,92,56,0.28)] bg-[#FFFFFF] text-[#B85C38] text-xs font-medium hover:bg-[rgba(184,92,56,0.08)] transition-colors"
+            className="mt-2 w-full inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-3.5 rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] text-[#8A857D] text-[11px] font-medium hover:bg-[#F0EFEA] hover:text-[#2C2621] transition-colors"
           >
             <Unplug size={14} />
             {disconnectLabel}
@@ -268,7 +268,7 @@ function ConnectOrConnectedButton({
             type="button"
             disabled={switchBusy}
             onClick={onSwitchAccount}
-            className="mt-2 w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] text-[#2C2621] text-xs font-medium hover:bg-[#F0EFEA] disabled:opacity-60 transition-colors"
+            className="mt-2 w-full inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-3.5 rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] text-[#8A857D] text-[11px] font-medium hover:bg-[#F0EFEA] hover:text-[#2C2621] disabled:opacity-60 transition-colors"
           >
             {switchBusy ? (
               <Loader2 size={14} className="animate-spin" />
@@ -289,7 +289,7 @@ function ConnectOrConnectedButton({
         onClick={onConnect}
         disabled={connectBusy}
         title={helperHint}
-        className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl text-white text-sm font-medium  transition-colors disabled:opacity-60 ${idleClassName}`}
+        className={`inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-3.5 rounded-sm text-sm font-medium transition-colors disabled:opacity-60 ${idleClassName}`}
       >
         {connectBusy ? (
           <Loader2 size={16} className="animate-spin" />
@@ -541,10 +541,11 @@ export default function SocialAccountsPanel({
   const startConnect = (platform: SocialPlatform) => {
     // Live OAuth — always bind to active workspace.
     if (platform === 'instagram') {
+      // Instagram Login API — no Facebook Page required.
       void handleConnectPlatform(
         'Instagram',
         withWorkspaceQuery(
-          '/api/auth/meta/login?target=instagram',
+          '/api/auth/instagram-only/login',
           activeWorkspaceId
         ),
         'instagram'
@@ -595,13 +596,10 @@ export default function SocialAccountsPanel({
     toggle.mutate({ platform, connect: true });
   };
 
-  const startMetaConnect = (target: 'instagram' | 'facebook' | 'both') => {
+  /** Facebook Login → Pages + linked IG (existing Meta flow). */
+  const startMetaConnect = (target: 'facebook' | 'both') => {
     const label =
-      target === 'instagram'
-        ? 'Instagram'
-        : target === 'facebook'
-          ? 'Facebook'
-          : 'Instagram & Facebook';
+      target === 'facebook' ? 'Facebook' : 'Instagram & Facebook';
     void handleConnectPlatform(
       label,
       withWorkspaceQuery(
@@ -609,6 +607,15 @@ export default function SocialAccountsPanel({
         activeWorkspaceId
       ),
       target === 'both' ? 'instagram' : target
+    );
+  };
+
+  /** Instagram Login API — IG only, no Facebook Page. */
+  const startInstagramOnlyConnect = () => {
+    void handleConnectPlatform(
+      'Instagram',
+      withWorkspaceQuery('/api/auth/instagram-only/login', activeWorkspaceId),
+      'instagram'
     );
   };
 
@@ -878,7 +885,7 @@ export default function SocialAccountsPanel({
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] p-10 text-center text-sm text-[#8A857D] font-medium">
+      <div className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] p-10 text-center text-sm text-[#8A857D] font-medium">
         {t('common.loading')}
       </div>
     );
@@ -898,19 +905,19 @@ export default function SocialAccountsPanel({
   return (
     <div className="space-y-5">
       {!compact && activeWorkspace ? (
-        <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+        <div className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D]">
+            <p className="text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D]">
               Managing API Connections for
             </p>
             <p className="text-sm font-medium text-[#2C2621] truncate mt-0.5">
               {activeWorkspace.name}{' '}
-              <span className="font-mono text-xs font-medium text-[#8A857D]">
+              <span className="font-mono text-[11px] font-medium text-[#8A857D]">
                 {activeWorkspace.handle}
               </span>
             </p>
           </div>
-          <p className="text-[11px] font-medium text-[#8A857D]">
+          <p className="text-[10px] font-medium text-[#8A857D]">
             Connections stay private to this workspace.
           </p>
         </div>
@@ -918,10 +925,10 @@ export default function SocialAccountsPanel({
 
       {!compact && (
         <div className="min-w-0">
-          <h2 className="font-playfair font-medium text-2xl sm:text-3xl text-[#2C2621] tracking-tight">
+          <h2 className="font-playfair font-medium text-[20px] sm:text-[24px] text-[#2C2621] tracking-tight">
             {t('socials.title')}
           </h2>
-          <p className="text-sm sm:text-[15px] text-[#8A857D] font-medium mt-2 max-w-2xl leading-relaxed">
+          <p className="text-[11px] sm:text-xs text-[#8A857D] font-medium mt-1.5 max-w-2xl leading-relaxed">
             {t('socials.subtitle')}
           </p>
         </div>
@@ -932,7 +939,7 @@ export default function SocialAccountsPanel({
       {!compact ? <WorkspaceOAuthGuideBanner /> : null}
 
       {!compact && (
-        <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3">
+        <div className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3">
           <div className="min-w-0">
             <p className="text-sm font-medium text-[#2C2621]">
               {t('connectMetaAccountsTitle')}
@@ -950,7 +957,7 @@ export default function SocialAccountsPanel({
               type="button"
               onClick={() => resyncMetaWebhooks.mutate()}
               disabled={resyncMetaWebhooks.isPending || !activeWorkspaceId}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] bg-[#F0EFEA] text-[#2C2621] text-sm font-medium hover:bg-[#FFFFFF] disabled:opacity-50 transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-8 min-h-[32px] px-2.5 rounded-sm bg-transparent text-[9px] font-medium uppercase tracking-[0.08em] text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C2621] disabled:opacity-50 transition-colors"
             >
               {resyncMetaWebhooks.isPending ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -964,13 +971,13 @@ export default function SocialAccountsPanel({
             <ConnectOrConnectedButton
               connected={Boolean(byPlatform.get('instagram')?.connected)}
               account={byPlatform.get('instagram') ?? null}
-              onConnect={() => startMetaConnect('instagram')}
+              onConnect={startInstagramOnlyConnect}
               onDisconnect={() =>
                 setDisconnectTarget(byPlatform.get('instagram') ?? null)
               }
               disconnectLabel={t('socials.disconnectAccount')}
               idleLabel="Connect Instagram Only"
-              idleClassName="bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-95"
+              idleClassName="bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621]"
               icon={<InstagramIcon size={16} />}
               connectBusy={connectingPlatform === 'Instagram'}
             />
@@ -983,7 +990,7 @@ export default function SocialAccountsPanel({
               }
               disconnectLabel={t('socials.disconnectAccount')}
               idleLabel="Connect Facebook Page Only"
-              idleClassName="bg-[#2C3B2E] hover:bg-[#166fe5]"
+              idleClassName="bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621]"
               icon={<FacebookIcon size={16} />}
               connectBusy={connectingPlatform === 'Facebook'}
             />
@@ -994,7 +1001,7 @@ export default function SocialAccountsPanel({
                   type="button"
                   disabled
                   aria-pressed="true"
-                  className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.2)] text-[#2C3B2E] text-sm font-medium cursor-default"
+                  className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] border border-[#E6E3DB] text-[#2C2621] text-sm font-medium cursor-default"
                 >
                   <CheckCircle2 size={16} strokeWidth={2.5} />
                   Connected ✓
@@ -1016,7 +1023,7 @@ export default function SocialAccountsPanel({
                 type="button"
                 onClick={() => startMetaConnect('both')}
                 disabled={connectingPlatform === 'Instagram & Facebook'}
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-white text-sm font-medium  transition-colors disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 h-10 min-h-[40px] px-3.5 rounded-sm bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621] text-sm font-medium transition-colors disabled:opacity-60"
               >
                 {connectingPlatform === 'Instagram & Facebook' ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -1032,7 +1039,7 @@ export default function SocialAccountsPanel({
 
       {!compact && (
         <div className="space-y-3 sm:space-y-4">
-          <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-4 w-full">
+          <div className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-4 w-full">
             <div className="min-w-0">
               <p className="text-sm font-medium text-[#2C2621] flex items-center gap-2">
                 <TikTokIcon size={16} />
@@ -1048,7 +1055,7 @@ export default function SocialAccountsPanel({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Profile — Login Kit */}
-              <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] px-3.5 py-3 space-y-2">
+              <div className="rounded-sm border border-[#E6E3DB] bg-[#F9F8F6] px-3.5 py-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-[#2C2621]">
@@ -1059,7 +1066,7 @@ export default function SocialAccountsPanel({
                     </p>
                   </div>
                   {byPlatform.get('tiktok')?.connected ? (
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.2)] text-[#2C3B2E] px-2.5 py-1 text-[10px] font-medium">
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#F0EFEA] border border-[#E6E3DB] text-[#2C2621] px-2.5 py-1 text-[10px] font-medium">
                       <CheckCircle2 size={12} strokeWidth={2.5} />
                       Connected
                     </span>
@@ -1082,14 +1089,14 @@ export default function SocialAccountsPanel({
                   switchLabel={t('socials.switchAccount')}
                   switchBusy={isSwitchingTikTok}
                   idleLabel={t('connectTikTokProfile')}
-                  idleClassName="bg-[#0F172A] hover:bg-[#1e293b]"
+                  idleClassName="bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621]"
                   icon={<TikTokIcon size={16} />}
                   connectBusy={connectingPlatform === 'TikTok Profile'}
                 />
               </div>
 
               {/* Business — Marketing / DMs / Ads */}
-              <div className="rounded-xl border border-[#E6E3DB] bg-[#F9F8F6] px-3.5 py-3 space-y-2">
+              <div className="rounded-sm border border-[#E6E3DB] bg-[#F9F8F6] px-3.5 py-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-[#2C2621]">
@@ -1100,7 +1107,7 @@ export default function SocialAccountsPanel({
                     </p>
                   </div>
                   {byPlatform.get('tiktok_business')?.connected ? (
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[rgba(44,59,46,0.08)] border border-[rgba(44,59,46,0.2)] text-[#2C3B2E] px-2.5 py-1 text-[10px] font-medium">
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#F0EFEA] border border-[#E6E3DB] text-[#2C2621] px-2.5 py-1 text-[10px] font-medium">
                       <CheckCircle2 size={12} strokeWidth={2.5} />
                       Connected
                     </span>
@@ -1127,7 +1134,7 @@ export default function SocialAccountsPanel({
                   switchLabel={t('socials.switchAccount')}
                   switchBusy={isSwitchingTikTok}
                   idleLabel={t('connectTikTokBusiness')}
-                  idleClassName="bg-[#2C3B2E] hover:bg-[#243228]"
+                  idleClassName="bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621]"
                   icon={<TikTokIcon size={16} />}
                   connectBusy={connectingPlatform === 'TikTok Business'}
                 />
@@ -1136,7 +1143,7 @@ export default function SocialAccountsPanel({
           </div>
 
           {showYouTube ? (
-          <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
+          <div className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
             <div className="min-w-0">
               <p className="text-sm font-medium text-[#2C2621]">
                 Connect YouTube
@@ -1167,7 +1174,7 @@ export default function SocialAccountsPanel({
                 }
                 disconnectLabel={t('socials.disconnectAccount')}
                 idleLabel="Connect YouTube"
-                idleClassName="bg-[#FF0000] hover:bg-[#e60000]"
+                idleClassName="bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621]"
                 icon={<YouTubeIcon size={16} />}
                 connectBusy={connectingPlatform === 'YouTube'}
               />
@@ -1175,7 +1182,7 @@ export default function SocialAccountsPanel({
           </div>
           ) : null}
 
-          <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
+          <div className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
             <div className="min-w-0">
               <p className="text-sm font-medium text-[#2C2621]">
                 Connect LinkedIn
@@ -1206,7 +1213,7 @@ export default function SocialAccountsPanel({
                 }
                 disconnectLabel={t('socials.disconnectAccount')}
                 idleLabel="Connect LinkedIn"
-                idleClassName="bg-[#0A66C2] hover:bg-[#0958a8]"
+                idleClassName="bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621]"
                 icon={<LinkedInIcon size={16} />}
                 connectBusy={connectingPlatform === 'LinkedIn'}
               />
@@ -1214,7 +1221,7 @@ export default function SocialAccountsPanel({
           </div>
 
           {showPinterest ? (
-          <div className="rounded-xl border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
+          <div className="rounded-sm border border-[#E6E3DB] bg-[#FFFFFF] px-4 py-4 sm:px-5 space-y-3 w-full">
             <div className="min-w-0">
               <p className="text-sm font-medium text-[#2C2621]">
                 Connect Pinterest Account
@@ -1245,7 +1252,7 @@ export default function SocialAccountsPanel({
                 }
                 disconnectLabel={t('socials.disconnectAccount')}
                 idleLabel="Connect Pinterest Account"
-                idleClassName="bg-[#E60023] hover:bg-[#c4001a]"
+                idleClassName="bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621]"
                 icon={<PinterestIcon size={16} />}
                 connectBusy={connectingPlatform === 'Pinterest'}
               />
@@ -1270,21 +1277,21 @@ export default function SocialAccountsPanel({
           return (
             <div
               key={platform}
-              className={`rounded-xl border bg-[#FFFFFF] p-4 sm:p-5 flex flex-col gap-4  transition-colors ${
+              className={`rounded-sm border bg-[#FFFFFF] p-4 sm:p-5 flex flex-col gap-4  transition-colors ${
                 connected
-                  ? 'border-[rgba(44,59,46,0.35)] ring-1 ring-[rgba(44,59,46,0.12)]'
+                  ? 'border-[#E6E3DB] ring-1 ring-[#E6E3DB]'
                   : 'border-[#E6E3DB] hover:border-[#E6E3DB]'
               }`}
             >
               <div className="flex items-start gap-3">
-                <span className="w-10 h-10 rounded-xl bg-[#F0EFEA] border border-[#E6E3DB] flex items-center justify-center flex-shrink-0">
+                <span className="w-10 h-10 rounded-sm bg-[#F0EFEA] border border-[#E6E3DB] flex items-center justify-center flex-shrink-0">
                   <Icon size={18} style={{ color: meta.color }} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-medium text-[#2C2621]">{PLATFORM_TITLES[platform]}</p>
                     {connected ? (
-                      <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-md border text-[#2C3B2E] bg-[rgba(44,59,46,0.08)] border-[rgba(44,59,46,0.2)]">
+                      <span className="inline-flex items-center gap-1 font-mono text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-md border text-[#2C2621] bg-[#F0EFEA] border-[#E6E3DB]">
                         <CheckCircle2 size={10} strokeWidth={2.75} />
                         Connected ✓
                       </span>
@@ -1304,7 +1311,7 @@ export default function SocialAccountsPanel({
                           width={44}
                           height={44}
                           sizes="44px"
-                          className="w-11 h-11 rounded-full object-cover border-2 border-[rgba(44,59,46,0.35)]"
+                          className="w-11 h-11 rounded-full object-cover border-2 border-[#E6E3DB]"
                         />
                       ) : (
                         <div className="w-11 h-11 rounded-full bg-[#F0EFEA] border border-[#E6E3DB]" />
@@ -1335,7 +1342,7 @@ export default function SocialAccountsPanel({
                             href={acc.company_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[11px] font-medium text-[#2C3B2E] hover:underline mt-0.5 inline-block truncate max-w-full"
+                            className="text-[11px] font-medium text-[#2C2621] hover:underline mt-0.5 inline-block truncate max-w-full"
                           >
                             Company page →
                           </a>
@@ -1355,7 +1362,7 @@ export default function SocialAccountsPanel({
                   type="button"
                   disabled={pending}
                   onClick={() => setDisconnectTarget(acc ?? null)}
-                  className="h-11 min-h-[44px] rounded-xl font-medium text-xs inline-flex items-center justify-center gap-2 border border-[rgba(184,92,56,0.28)] bg-[#FFFFFF] text-[#B85C38] hover:bg-[rgba(184,92,56,0.08)] transition-colors disabled:opacity-50"
+                  className="h-10 min-h-[40px] rounded-sm font-medium text-xs inline-flex items-center justify-center gap-2 border border-[#E6E3DB] bg-[#FFFFFF] text-[#8A857D] hover:bg-[#F0EFEA] hover:text-[#2C2621] transition-colors disabled:opacity-50"
                 >
                   {pending ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -1369,7 +1376,7 @@ export default function SocialAccountsPanel({
                   type="button"
                   disabled={pending}
                   onClick={() => startConnect(platform)}
-                  className="h-11 min-h-[44px] rounded-xl font-medium text-xs inline-flex items-center justify-center gap-2 bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] transition-colors disabled:opacity-50"
+                  className="h-11 min-h-[44px] rounded-sm font-medium text-xs inline-flex items-center justify-center gap-2 bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621] transition-colors disabled:opacity-50"
                 >
                   {pending ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -1387,12 +1394,12 @@ export default function SocialAccountsPanel({
 
       {/* Simulated OAuth authorization popup */}
       <Dialog open={Boolean(oauthPlatform)} onOpenChange={(open) => !open && setOauthPlatform(null)}>
-        <DialogContent className="max-w-[min(420px,94vw)] rounded-xl border-[#E6E3DB] bg-[#FFFFFF] p-0 gap-0 overflow-hidden ">
+        <DialogContent className="max-w-[min(420px,94vw)] rounded-sm border-[#E6E3DB] bg-[#FFFFFF] p-0 gap-0 overflow-hidden ">
           <div className="bg-[#F9F8F6] border-b border-[#E6E3DB] px-5 py-4 flex items-center gap-3">
             <ClikdMark size={36} className="rounded-[11px] " />
             <div className="min-w-0">
               <p className="font-playfair font-medium text-[17px] text-[#2C2621] leading-none">
-                Clikd<span className="text-[#2C3B2E]">.</span>
+                Clikd<span className="text-[#2C2621]">.</span>
               </p>
               <p className="text-[11px] text-[#8A857D] font-medium mt-1">
                 OAuth authorization · Demo
@@ -1401,7 +1408,7 @@ export default function SocialAccountsPanel({
             <button
               type="button"
               onClick={() => setOauthPlatform(null)}
-              className="ml-auto h-9 w-9 rounded-xl flex items-center justify-center text-[#8A857D] hover:bg-[#F0EFEA]"
+              className="ml-auto h-9 w-9 rounded-sm flex items-center justify-center text-[#8A857D] hover:bg-[#F0EFEA]"
               aria-label={t('common.close')}
             >
               <X size={16} />
@@ -1419,7 +1426,7 @@ export default function SocialAccountsPanel({
                 </p>
               </div>
 
-              <div className="rounded-xl border border-[#E6E3DB] bg-[#F0EFEA]/80 p-3.5">
+              <div className="rounded-sm border border-[#E6E3DB] bg-[#F0EFEA]/80 p-3.5">
                 <p className="text-[10px] font-mono font-medium uppercase tracking-[0.14em] text-[#8A857D] mb-2">
                   {t('socials.permissions')}
                 </p>
@@ -1429,7 +1436,7 @@ export default function SocialAccountsPanel({
                       key={perm}
                       className="flex items-center gap-2 text-[12px] font-medium text-[#2C2621]"
                     >
-                      <CheckCircle2 size={13} className="text-[#2C3B2E] flex-shrink-0" />
+                      <CheckCircle2 size={13} className="text-[#2C2621] flex-shrink-0" />
                       <span className="font-mono text-[11px]">{perm}</span>
                     </li>
                   ))}
@@ -1439,14 +1446,14 @@ export default function SocialAccountsPanel({
               <button
                 type="button"
                 onClick={grantPermission}
-                className="w-full min-h-[48px] rounded-xl bg-[#2C3B2E] hover:bg-[#243228] text-[#F9F8F6] text-sm font-medium transition-colors"
+                className="w-full min-h-[48px] rounded-sm bg-[#F0EFEA] hover:bg-[#E6E3DB] text-[#2C2621] text-sm font-medium transition-colors"
               >
                 {t('socials.grantPermission')}
               </button>
               <button
                 type="button"
                 onClick={() => setOauthPlatform(null)}
-                className="w-full min-h-[44px] rounded-xl border border-[#E6E3DB] text-sm font-medium text-[#8A857D] hover:bg-[#F0EFEA]"
+                className="w-full min-h-[44px] rounded-sm border border-[#E6E3DB] text-sm font-medium text-[#8A857D] hover:bg-[#F0EFEA]"
               >
                 {t('socials.cancel')}
               </button>
@@ -1460,7 +1467,7 @@ export default function SocialAccountsPanel({
         open={Boolean(disconnectTarget)}
         onOpenChange={(open) => !open && setDisconnectTarget(null)}
       >
-        <DialogContent className="max-w-[min(400px,94vw)] rounded-xl">
+        <DialogContent className="max-w-[min(400px,94vw)] rounded-sm">
           <DialogHeader>
             <DialogTitle className="font-playfair font-medium text-xl text-[#2C2621]">
               {t('socials.disconnectTitle')}
@@ -1473,7 +1480,7 @@ export default function SocialAccountsPanel({
             <button
               type="button"
               onClick={() => setDisconnectTarget(null)}
-              className="min-h-[44px] px-4 rounded-xl border border-[#E6E3DB] text-sm font-medium text-[#8A857D] hover:bg-[#F0EFEA]"
+              className="min-h-[44px] px-4 rounded-sm border border-[#E6E3DB] text-sm font-medium text-[#8A857D] hover:bg-[#F0EFEA]"
             >
               {t('socials.cancel')}
             </button>
@@ -1481,7 +1488,7 @@ export default function SocialAccountsPanel({
               type="button"
               disabled={isDisconnecting}
               onClick={() => void confirmDisconnect()}
-              className="min-h-[44px] px-4 rounded-xl bg-[#B85C38] hover:bg-[#a04f30] disabled:opacity-60 text-white text-sm font-medium inline-flex items-center justify-center gap-2"
+              className="min-h-[44px] px-4 rounded-sm bg-[#F0EFEA] hover:bg-[#E6E3DB] disabled:opacity-60 text-[#2C2621] text-sm font-medium inline-flex items-center justify-center gap-2"
             >
               {isDisconnecting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

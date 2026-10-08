@@ -2606,7 +2606,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   toastTikTokSwitchFailed: 'Could not switch TikTok account',
   connectMetaAccountsTitle: 'Connect Meta accounts',
   connectMetaAccountsSub:
-    'Connect Instagram and Facebook separately, or link both in one Meta Suite login.',
+    'Connect Instagram Only (Instagram Login — no Facebook Page), Facebook Page Only, or both via Meta Suite (Facebook Login).',
   resyncMetaWebhooks: 'Re-sync Meta Webhooks',
   connectTikTokTitle: 'Connect TikTok Account',
   connectTikTokSub:
@@ -4165,7 +4165,7 @@ landingHeroLine1: 'The All-in-One Creator Engine',
   toastTikTokSwitchFailed: 'Kunde inte byta TikTok-konto',
   connectMetaAccountsTitle: 'Koppla Meta-konton',
   connectMetaAccountsSub:
-    'Koppla Instagram och Facebook separat, eller båda via en Meta Suite-inloggning.',
+    'Koppla enbart Instagram (Instagram Login — ingen Facebook-sida), enbart Facebook-sida, eller båda via Meta Suite (Facebook-inloggning).',
   resyncMetaWebhooks: 'Synka om Meta-webhooks',
   connectTikTokTitle: 'Koppla TikTok-konto',
   connectTikTokSub:
