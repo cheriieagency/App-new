@@ -56,6 +56,7 @@ export function getInstagramOnlyCallbackUrl(
   }
 
   const fromEnv =
+    process.env.INSTAGRAM_ONLY_REDIRECT_URI?.trim() ||
     process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI?.trim() ||
     process.env.INSTAGRAM_REDIRECT_URI?.trim() ||
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
